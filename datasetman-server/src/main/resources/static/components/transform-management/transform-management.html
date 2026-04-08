@@ -1,0 +1,69 @@
+<div class="transform-management">
+    <div class="db-table-card">
+        <div class="table-toolbar">
+            <button class="toolbar-btn green" type="button" id="registerTransformBtn">注册Transform</button>
+            <button class="toolbar-btn blue" type="button" id="refreshBtn">刷新</button>
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Transform别名</th>
+                        <th>类名</th>
+                        <th>文件路径</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- 数据将通过JavaScript动态加载 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 注册Transform弹窗 -->
+<div id="transformModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>注册Transform</h3>
+            <span class="close-btn" id="closeModal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="transformForm">
+                <div class="form-group">
+                    <label for="transformName">Transform别名 <span class="required">*</span></label>
+                    <input type="text" id="transformName" name="transformName" placeholder="例如：row_sum" required>
+                </div>
+                <div class="form-group">
+                    <label for="className">类名 <span class="required">*</span></label>
+                    <input type="text" id="className" name="className" placeholder="例如：RowSumTransformer" required>
+                </div>
+                <div class="form-group">
+                    <label>上传Python脚本 <span class="required">*</span></label>
+                    <div class="upload-area" id="uploadArea">
+                        <input type="file" id="transformFile" accept=".py" style="display: none;">
+                        <div class="upload-placeholder">
+                            <svg class="upload-icon" viewBox="0 0 24 24">
+                                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+                            </svg>
+                            <p>点击或拖拽上传Python脚本(.py)</p>
+                            <p class="upload-hint">脚本需包含transform(self, rows)方法</p>
+                        </div>
+                        <div class="upload-file-info" id="fileInfo" style="display: none;">
+                            <span class="file-name" id="fileName"></span>
+                            <span class="file-size" id="fileSize"></span>
+                            <button type="button" class="file-remove" id="removeFile">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="cancelBtn">取消</button>
+                    <button type="submit" class="btn-primary" id="saveBtn">注册</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

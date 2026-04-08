@@ -1,0 +1,120 @@
+<div class="job-orchestration">
+    <div class="db-table-card">
+        <div class="table-toolbar">
+            <button class="toolbar-btn green" type="button" id="createJobBtn">编排作业</button>
+            <button class="toolbar-btn blue" type="button" id="refreshBtn">刷新</button>
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>作业名称</th>
+                        <th>任务类型</th>
+                        <th>数据流方式</th>
+                        <th>输出目标</th>
+                        <th>调度规则</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- 数据将通过JavaScript动态加载 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 编排作业弹窗 -->
+<div id="jobModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+            <h3>编排Transform作业</h3>
+            <span class="close-btn" id="closeModal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="jobForm">
+                <div class="form-section">
+                    <h4>基本信息</h4>
+                    <div class="form-group">
+                        <label for="jobName">作业名称 <span class="required">*</span></label>
+                        <input type="text" id="jobName" name="jobName" placeholder="请输入作业名称" required>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>任务配置</h4>
+                    <div class="form-group">
+                        <label for="taskType">任务类型 <span class="required">*</span></label>
+                        <select id="taskType" name="taskType" required>
+                            <option value="">请选择</option>
+                            <option value="IGinX">IGinX</option>
+                            <option value="python">Python</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dataset">数据集 <span class="required">*</span></label>
+                        <select id="dataset" name="dataset" required>
+                            <option value="">请选择数据集</option>
+                            <option value="dataset_01">dataset_01</option>
+                            <option value="dataset_02">dataset_02</option>
+                            <option value="user_dataset">user_dataset</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="transformFunc">Transform函数 <span class="required">*</span></label>
+                        <select id="transformFunc" name="transformFunc" required>
+                            <option value="">请选择函数</option>
+                            <option value="row_sum">row_sum (RowSumTransformer)</option>
+                            <option value="data_clean">data_clean (DataCleanTransformer)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>数据流配置</h4>
+                    <div class="form-group">
+                        <label>数据流动方式 <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="dataFlow" value="stream" checked>
+                                <span>流式 (stream)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="dataFlow" value="batch">
+                                <span>批式 (batch)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="outputTarget">输出目标 <span class="required">*</span></label>
+                        <select id="outputTarget" name="outputTarget" required>
+                            <option value="None">None</option>
+                            <option value="IGinX">IGinX</option>
+                            <option value="file">文件系统</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="filePathGroup" style="display: none;">
+                        <label for="exportFile">导出文件路径</label>
+                        <input type="text" id="exportFile" name="exportFile" placeholder="例如：/path/to/export.txt">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>调度配置</h4>
+                    <div class="form-group">
+                        <label for="schedule">调度规则 (Cron表达式) <span class="required">*</span></label>
+                        <input type="text" id="schedule" name="schedule" placeholder="0 0/1 * 1/1 * ? *" value="0 0/1 * 1/1 * ? *">
+                        <small class="form-hint">每分钟执行一次</small>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="cancelBtn">取消</button>
+                    <button type="submit" class="btn-primary" id="saveBtn">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

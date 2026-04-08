@@ -1,0 +1,39 @@
+<div class="dataset-dialog">
+    <div class="dialog-header">
+        <h3 class="dialog-title" id="dialogTitle">创建数据集</h3>
+        <button class="close-btn" id="closeBtn">&times;</button>
+    </div>
+    
+    <form id="datasetForm">
+        <div class="form-group">
+            <label class="form-label required">数据集名称</label>
+            <input type="text" class="form-control" id="datasetName" placeholder="请输入数据集名称" required>
+            <div class="error-message" id="datasetNameError">请输入数据集名称</div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label required">SQL定义</label>
+            <textarea class="form-control sql-textarea" id="datasetSql" placeholder="请输入SQL查询语句" required></textarea>
+            <div class="error-message" id="datasetSqlError">请输入SQL定义</div>
+            <div class="form-hint">支持标准SQL语法，可引用多个数据源</div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">数据源</label>
+            <div class="datasource-tags" id="datasourceTags">
+                <!-- 数据源标签将动态生成 -->
+            </div>
+            <button type="button" class="btn-add-source" id="addDatasourceBtn">+ 添加数据源</button>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">描述</label>
+            <textarea class="form-control desc-textarea" id="datasetDesc" placeholder="请输入数据集描述（可选）"></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="button" class="btn-cancel" id="cancelBtn">取消</button>
+            <button type="submit" class="btn-submit" id="submitBtn">保存</button>
+        </div>
+    </form>
+</div>
