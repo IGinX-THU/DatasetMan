@@ -24,15 +24,15 @@
     </div>
 </div>
 
-<!-- 注册Transform弹窗 -->
-<div id="transformModal" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width: 600px;">
+<!-- 注册Transform弹窗 - 照搬 association-rules 结构 -->
+<div class="modal-mask" id="modalMask" hidden>
+    <div class="modal">
         <div class="modal-header">
-            <h3>注册Transform</h3>
-            <span class="close-btn" id="closeModal">&times;</span>
+            <span id="modalTitle">注册Transform</span>
+            <button class="modal-close" id="modalClose">×</button>
         </div>
-        <div class="modal-body">
-            <form id="transformForm">
+        <div class="modal-body" id="modalBody">
+            <form id="transformForm" class="transform-form">
                 <div class="form-group">
                     <label for="transformName">Transform别名 <span class="required">*</span></label>
                     <input type="text" id="transformName" name="transformName" placeholder="例如：row_sum" required>
@@ -59,11 +59,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-actions">
-                    <button type="button" class="btn-secondary" id="cancelBtn">取消</button>
-                    <button type="submit" class="btn-primary" id="saveBtn">注册</button>
-                </div>
             </form>
+        </div>
+        <div class="modal-footer" id="modalFooter">
+            <button type="button" class="btn btn-cancel" id="cancelBtn">取消</button>
+            <button type="submit" class="btn btn-confirm" id="saveBtn" form="transformForm">注册</button>
         </div>
     </div>
 </div>

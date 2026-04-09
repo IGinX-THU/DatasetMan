@@ -57,7 +57,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'dataSourceList',
             'importData',
             'userManagement',
-            'datasetHistory'
+            'datasetHistory',
+            'transformJob'
         ];
         
         components.forEach(componentId => {
@@ -416,6 +417,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'showAssociationRules':
                         console.log('关联规则配置菜单被点击');
                         showComponent('associationRules');
+                        break;
+                    case 'showTransformJobs':
+                        console.log('编排Transform作业菜单被点击');
+                        showComponent('transformJob');
                         break;
                     case 'showVisualAnalysis':
                         console.log('数值与曲线分析菜单被点击');
@@ -818,6 +823,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         break;
                     case 'showAssociationRules':
                         showComponent('associationRules');
+                        break;
+                    case 'showTransformJobs':
+                        showComponent('transformJob');
                         break;
                     default:
                         console.warn(`未知的按钮动作: ${action}`);

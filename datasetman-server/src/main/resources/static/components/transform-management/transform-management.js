@@ -91,10 +91,10 @@ class TransformManagement extends HTMLElement {
         }
 
         // 点击遮罩关闭
-        const modal = this.querySelector('#transformModal');
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
+        const modalMask = this.querySelector('#modalMask');
+        if (modalMask) {
+            modalMask.addEventListener('click', (e) => {
+                if (e.target === modalMask) {
                     this.hideModal();
                 }
             });
@@ -102,14 +102,20 @@ class TransformManagement extends HTMLElement {
     }
 
     showModal() {
-        const modal = this.querySelector('#transformModal');
-        modal.style.display = 'flex';
+        const modalMask = this.querySelector('#modalMask');
+        if (modalMask) {
+            modalMask.hidden = false;
+            modalMask.style.display = 'flex';
+        }
         this.clearForm();
     }
 
     hideModal() {
-        const modal = this.querySelector('#transformModal');
-        modal.style.display = 'none';
+        const modalMask = this.querySelector('#modalMask');
+        if (modalMask) {
+            modalMask.hidden = true;
+            modalMask.style.display = 'none';
+        }
         this.clearFile();
     }
 

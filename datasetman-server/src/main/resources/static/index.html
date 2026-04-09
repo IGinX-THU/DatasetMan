@@ -109,7 +109,6 @@
                 <span class="dropdown-trigger">作业</span>
                 <ul class="dropdown-menu">
                     <li id="menu-job-orchestration">编排Transform作业</li>
-                    <li id="menu-job-execution">Transform任务执行</li>
                 </ul>
             </span>
         <span class="tab dropdown" id="functionDropdown">
@@ -241,10 +240,8 @@
             <transform-management id="transformManagement"></transform-management>
             <!-- UDF管理组件 -->
             <udf-management id="udfManagement"></udf-management>
-            <!-- 作业编排组件 -->
-            <job-orchestration id="jobOrchestration"></job-orchestration>
-            <!-- 作业执行监控组件 -->
-            <job-execution id="jobExecution"></job-execution>
+            <!-- Transform作业编排组件 -->
+            <transform-job id="transformJob"></transform-job>
             <!-- 数据可视化组件 -->
             <data-visualization id="dataVisualization"></data-visualization>
             <!-- 数据库表格组件 -->
@@ -300,10 +297,9 @@
 <script src="./components/dataset-dialog/dataset-dialog.js"></script>
 <script src="./components/transform-management/transform-management.js"></script>
 <script src="./components/udf-management/udf-management.js"></script>
-<script src="./components/job-orchestration/job-orchestration.js"></script>
-<script src="./components/job-execution/job-execution.js"></script>
-<script src="./components/data-visualization/data-visualization.js"></script>
+<script src="./components/transform-job/transform-job.js"></script>
 <script src="./components/common-pagination/common-pagination.js"></script>
+<script src="./components/data-visualization/data-visualization.js"></script>
 <script src="./components/database-table/database-table.js"></script>
 <script src="./components/user-management/user-management.js"></script>
 <script src="./components/change-password/change-password.js"></script>

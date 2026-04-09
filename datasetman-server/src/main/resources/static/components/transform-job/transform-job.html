@@ -1,0 +1,62 @@
+<div class="transform-job">
+    <div class="filter-card">
+        <div class="filter-header">筛选</div>
+        <div class="filter-rows" id="filterRows">
+            <div class="filter-row">
+                <div class="filter-field">
+                    <span class="filter-label">作业名称</span>
+                    <input class="filter-input" type="text" placeholder="请输入作业名称" />
+                </div>
+                <div class="filter-field">
+                    <span class="filter-label">状态</span>
+                    <select class="filter-input">
+                        <option value="">全部</option>
+                        <option value="active">运行中</option>
+                        <option value="completed">已完成</option>
+                        <option value="failed">失败</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="filter-actions">
+            <div class="filter-spacer"></div>
+            <button class="filter-btn outline" type="button" id="resetFilters">重置</button>
+            <button class="filter-btn solid" type="button" id="applyFilters">查询</button>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-toolbar">
+            <button class="toolbar-btn green" type="button" id="addJobBtn">新增</button>
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>作业名称</th>
+                        <th>作业类型</th>
+                        <th>数据流</th>
+                        <th>输出目标</th>
+                        <th>调度策略</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+        <common-pagination id="pagination"></common-pagination>
+    </div>
+</div>
+
+<div class="modal-mask" id="modalMask" hidden>
+    <div class="modal">
+        <div class="modal-header">
+            <span id="modalTitle">提示</span>
+            <button class="modal-close" id="modalClose">×</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-footer" id="modalFooter"></div>
+    </div>
+</div>

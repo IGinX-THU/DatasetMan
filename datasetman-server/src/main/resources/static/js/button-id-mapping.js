@@ -60,6 +60,10 @@ const BUTTON_ID_MAP = {
     'btn-dataset-delete': {
         text: '删除',
         action: 'handleDeleteDataset'
+    },
+    'btn-job': {
+        text: '作业',
+        action: 'showTransformJobs'
     }
 };
 
@@ -132,6 +136,10 @@ const MENU_ID_MAP = {
     'menu-dataset-delete': {
         text: '删除数据集',
         action: 'handleDeleteDataset'
+    },
+    'menu-job-orchestration': {
+        text: '编排Transform作业',
+        action: 'showTransformJobs'
     }
 };
 
