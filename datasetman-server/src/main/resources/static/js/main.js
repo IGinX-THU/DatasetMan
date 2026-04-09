@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 隐藏所有可能的组件
         const components = [
             'registerEmbedded',
-            'modelUpload', 
+            'modelUpload',
             'modelDownload',
             'modelEdit',
             'parsingRules',
@@ -56,7 +56,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'modelDetail',
             'dataSourceList',
             'importData',
-            'userManagement'
+            'userManagement',
+            'datasetHistory'
         ];
         
         components.forEach(componentId => {

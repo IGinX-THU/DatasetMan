@@ -3,7 +3,6 @@ class DatasetDialog extends HTMLElement {
         super();
         this.mode = 'create'; // 'create' or 'edit'
         this.datasetData = null;
-        this.datasources = [];
         this.attachShadow({ mode: 'open' });
     }
 
@@ -18,374 +17,272 @@ class DatasetDialog extends HTMLElement {
                 :host {
                     display: none;
                     position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0, 0, 0, 0.5);
+                    inset: 0;
+                    background: rgba(15, 23, 42, 0.35);
                     align-items: center;
                     justify-content: center;
-                    z-index: 9999;
+                    z-index: 2000;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
                 }
                 
                 :host(.show) {
                     display: flex;
                 }
                 
-                .dataset-dialog {
+                .modal {
                     background: white;
                     border-radius: 8px;
                     width: 90%;
                     max-width: 600px;
                     max-height: 90vh;
                     overflow-y: auto;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
                 }
                 
-                .dialog-header {
+                .modal-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 16px 20px;
-                    border-bottom: 1px solid #e8e8e8;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    border-radius: 8px 8px 0 0;
+                    padding: 12px 16px;
+                    border-bottom: 1px solid #e2e6ef;
                 }
                 
-                .dialog-title {
+                .modal-title {
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: #1f2329;
                     margin: 0;
-                    font-size: 18px;
-                    font-weight: 600;
-                    color: white;
                 }
                 
-                .close-btn {
-                    background: none;
+                .modal-close {
                     border: none;
-                    font-size: 24px;
-                    color: white;
+                    background: transparent;
+                    font-size: 18px;
                     cursor: pointer;
+                    color: #8c8c8c;
                     padding: 0;
-                    width: 28px;
-                    height: 28px;
+                    width: 24px;
+                    height: 24px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     border-radius: 4px;
-                    transition: background 0.3s;
                 }
                 
-                .close-btn:hover {
-                    background: rgba(255, 255, 255, 0.2);
+                .modal-close:hover {
+                    background: #f5f5f5;
+                    color: #595959;
                 }
                 
-                form {
-                    padding: 20px;
+                .modal-body {
+                    padding: 16px;
                 }
                 
-                .form-group {
-                    margin-bottom: 20px;
+                .modal-footer {
+                    padding: 12px 16px 16px;
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 8px;
                 }
                 
-                .form-label {
-                    display: block;
-                    font-size: 14px;
-                    font-weight: 500;
-                    color: #262626;
-                    margin-bottom: 8px;
-                }
-                
-                .form-label.required::after {
-                    content: ' *';
-                    color: #ff4d4f;
-                }
-                
-                .form-control {
-                    width: 100%;
-                    padding: 10px 12px;
-                    border: 1px solid #d9d9d9;
+                .modal-btn {
+                    padding: 6px 14px;
                     border-radius: 4px;
-                    font-size: 14px;
-                    transition: all 0.3s;
+                    border: 1px solid #e2e6ef;
+                    background: white;
+                    cursor: pointer;
+                    font-size: 12px;
+                    transition: all 0.2s;
+                }
+                
+                .modal-btn:hover {
+                    border-color: #4c89ff;
+                    color: #4c89ff;
+                }
+                
+                .modal-btn.primary {
+                    background: #4c89ff;
+                    color: #fff;
+                    border-color: #4c89ff;
+                }
+                
+                .modal-btn.primary:hover {
+                    background: #3d7bf7;
+                }
+                
+                /* 表单样式 - 复用 parsing-rules */
+                .modal-form {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 16px;
+                }
+                
+                .modal-form-row {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 12px;
+                }
+                
+                .modal-label {
+                    min-width: 80px;
+                    color: #5f6b7a;
+                    font-size: 12px;
+                    padding-top: 8px;
+                }
+                
+                .modal-input-wrapper {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+                
+                .modal-input {
+                    flex: 1;
+                    border: 1px solid #e2e6ef;
+                    border-radius: 4px;
+                    padding: 8px 12px;
+                    font-size: 13px;
+                    background: #fafbff;
+                    transition: all 0.2s;
                     box-sizing: border-box;
                 }
                 
-                .form-control:focus {
-                    border-color: #1890ff;
+                .modal-input:focus {
+                    border-color: #4c89ff;
                     outline: none;
-                    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-                }
-                
-                .sql-textarea {
-                    min-height: 120px;
-                    font-family: 'Consolas', 'Monaco', monospace;
-                    resize: vertical;
-                }
-                
-                .desc-textarea {
-                    min-height: 80px;
-                    resize: vertical;
-                }
-                
-                .form-hint {
-                    font-size: 12px;
-                    color: #8c8c8c;
-                    margin-top: 6px;
-                }
-                
-                .error-message {
-                    display: none;
-                    color: #ff4d4f;
-                    font-size: 12px;
-                    margin-top: 6px;
-                }
-                
-                .form-control.error {
-                    border-color: #ff4d4f;
-                }
-                
-                .form-control.error + .error-message {
-                    display: block;
-                }
-                
-                .datasource-tags {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 8px;
-                    margin-bottom: 10px;
-                }
-                
-                .datasource-tag {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    padding: 6px 12px;
-                    background: #e6f7ff;
-                    border: 1px solid #91d5ff;
-                    border-radius: 4px;
-                    font-size: 13px;
-                    color: #1890ff;
-                }
-                
-                .datasource-tag .remove-tag {
-                    cursor: pointer;
-                    font-size: 14px;
-                    line-height: 1;
-                }
-                
-                .datasource-tag .remove-tag:hover {
-                    color: #ff4d4f;
-                }
-                
-                .btn-add-source {
-                    padding: 6px 12px;
-                    border: 1px dashed #d9d9d9;
                     background: white;
+                }
+                
+                .modal-textarea {
+                    flex: 1;
+                    border: 1px solid #e2e6ef;
                     border-radius: 4px;
+                    padding: 8px 12px;
                     font-size: 13px;
-                    color: #595959;
-                    cursor: pointer;
-                    transition: all 0.3s;
+                    background: #fafbff;
+                    resize: vertical;
+                    min-height: 80px;
+                    font-family: 'Consolas', 'Monaco', monospace;
+                    box-sizing: border-box;
                 }
                 
-                .btn-add-source:hover {
-                    border-color: #1890ff;
-                    color: #1890ff;
+                .modal-textarea:focus {
+                    border-color: #4c89ff;
+                    outline: none;
+                    background: white;
                 }
                 
-                .form-actions {
+                /* 测试按钮行 */
+                .test-row {
                     display: flex;
-                    justify-content: flex-end;
+                    align-items: center;
                     gap: 12px;
-                    padding-top: 10px;
-                    border-top: 1px solid #e8e8e8;
+                    margin-top: 4px;
                 }
                 
-                .btn-cancel,
-                .btn-submit {
-                    padding: 10px 24px;
+                .btn-test {
+                    padding: 6px 16px;
                     border-radius: 4px;
-                    font-size: 14px;
-                    cursor: pointer;
-                    transition: all 0.3s;
                     border: none;
-                }
-                
-                .btn-cancel {
-                    background: #f0f0f0;
-                    color: #595959;
-                }
-                
-                .btn-cancel:hover {
-                    background: #d9d9d9;
-                }
-                
-                .btn-submit {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: #52c41a;
                     color: white;
+                    cursor: pointer;
+                    font-size: 12px;
+                    transition: all 0.2s;
                 }
                 
-                .btn-submit:hover {
-                    opacity: 0.9;
+                .btn-test:hover {
+                    background: #389e0d;
                 }
                 
-                .btn-submit:disabled {
+                .btn-test:disabled {
                     background: #bfbfbf;
                     cursor: not-allowed;
                 }
                 
-                .btn-submit.loading {
-                    position: relative;
-                    color: transparent;
-                }
-                
-                .btn-submit.loading::after {
-                    content: '';
-                    position: absolute;
-                    width: 16px;
-                    height: 16px;
-                    top: 50%;
-                    left: 50%;
-                    margin-left: -8px;
-                    margin-top: -8px;
-                    border: 2px solid #ffffff;
-                    border-radius: 50%;
-                    border-top-color: transparent;
-                    animation: spinner 0.8s linear infinite;
-                }
-                
-                @keyframes spinner {
-                    to { transform: rotate(360deg); }
-                }
-                
-                /* Datasource Selection Modal */
-                .datasource-modal {
-                    display: none;
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0, 0, 0, 0.5);
-                    z-index: 10000;
-                    align-items: center;
-                    justify-content: center;
-                }
-                
-                .datasource-modal.show {
-                    display: flex;
-                }
-                
-                .datasource-modal-content {
-                    background: white;
-                    border-radius: 8px;
-                    width: 90%;
-                    max-width: 400px;
-                    max-height: 80vh;
+                /* 执行结果显示区 */
+                .result-area {
+                    margin-top: 8px;
+                    border: 1px solid #e2e6ef;
+                    border-radius: 6px;
+                    padding: 12px;
+                    background: #f8f9fa;
+                    min-height: 150px;
+                    max-height: 300px;
                     overflow-y: auto;
                 }
                 
-                .datasource-modal-header {
-                    padding: 16px 20px;
-                    border-bottom: 1px solid #e8e8e8;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
+                .result-placeholder {
+                    color: #999;
+                    font-size: 12px;
+                    text-align: center;
+                    padding: 50px 0;
                 }
                 
-                .datasource-modal-header h4 {
-                    margin: 0;
-                    font-size: 16px;
+                .result-content {
+                    font-family: 'Consolas', 'Monaco', monospace;
+                    font-size: 12px;
+                    line-height: 1.5;
+                    white-space: pre-wrap;
+                    word-break: break-all;
                 }
                 
-                .datasource-list {
-                    padding: 10px 0;
+                .result-success {
+                    color: #52c41a;
                 }
                 
-                .datasource-option {
-                    padding: 12px 20px;
-                    cursor: pointer;
-                    transition: background 0.3s;
+                .result-error {
+                    color: #ff4d4f;
                 }
                 
-                .datasource-option:hover {
-                    background: #f5f5f5;
-                }
-                
-                .datasource-option.selected {
-                    background: #e6f7ff;
-                    color: #1890ff;
-                }
-                
-                @media (max-width: 768px) {
-                    .dataset-dialog {
-                        width: 95%;
-                        max-height: 95vh;
-                    }
-                    
-                    .form-actions {
-                        flex-direction: column-reverse;
-                    }
-                    
-                    .btn-cancel,
-                    .btn-submit {
-                        width: 100%;
-                    }
+                .result-loading {
+                    color: #4c89ff;
                 }
             </style>
             
-            <div class="dataset-dialog">
-                <div class="dialog-header">
-                    <h3 class="dialog-title" id="dialogTitle">创建数据集</h3>
-                    <button class="close-btn" id="closeBtn">&times;</button>
+            <div class="modal" id="datasetModal">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="dialogTitle">创建数据集</h3>
+                    <button class="modal-close" id="closeBtn">&times;</button>
                 </div>
                 
-                <form id="datasetForm">
-                    <div class="form-group">
-                        <label class="form-label required">数据集名称</label>
-                        <input type="text" class="form-control" id="datasetName" placeholder="请输入数据集名称" required>
-                        <div class="error-message" id="datasetNameError">请输入数据集名称</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label required">SQL定义</label>
-                        <textarea class="form-control sql-textarea" id="datasetSql" placeholder="请输入SQL查询语句" required></textarea>
-                        <div class="error-message" id="datasetSqlError">请输入SQL定义</div>
-                        <div class="form-hint">支持标准SQL语法，可引用多个数据源</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">数据源</label>
-                        <div class="datasource-tags" id="datasourceTags"></div>
-                        <button type="button" class="btn-add-source" id="addDatasourceBtn">+ 添加数据源</button>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">描述</label>
-                        <textarea class="form-control desc-textarea" id="datasetDesc" placeholder="请输入数据集描述（可选）"></textarea>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" class="btn-cancel" id="cancelBtn">取消</button>
-                        <button type="submit" class="btn-submit" id="submitBtn">保存</button>
-                    </div>
-                </form>
-            </div>
-            
-            <!-- 数据源选择弹窗 -->
-            <div class="datasource-modal" id="datasourceModal">
-                <div class="datasource-modal-content">
-                    <div class="datasource-modal-header">
-                        <h4>选择数据源</h4>
-                        <button class="close-btn" id="closeDatasourceModal" style="color: #666; font-size: 20px;">&times;</button>
-                    </div>
-                    <div class="datasource-list" id="datasourceList">
-                        <div class="datasource-option" data-source="IoTDB">IoTDB - 时序数据库</div>
-                        <div class="datasource-option" data-source="MySQL">MySQL - 关系型数据库</div>
-                        <div class="datasource-option" data-source="MongoDB">MongoDB - 文档数据库</div>
-                        <div class="datasource-option" data-source="Kafka">Kafka - 消息队列</div>
-                        <div class="datasource-option" data-source="HDFS">HDFS - 分布式文件系统</div>
-                    </div>
+                <div class="modal-body">
+                    <form class="modal-form" id="datasetForm">
+                        <!-- 名称 -->
+                        <div class="modal-form-row">
+                            <label class="modal-label">名称 :</label>
+                            <div class="modal-input-wrapper">
+                                <input type="text" class="modal-input" id="datasetName" placeholder="请输入数据集名称" />
+                            </div>
+                        </div>
+                        
+                        <!-- SQL -->
+                        <div class="modal-form-row">
+                            <label class="modal-label">SQL :</label>
+                            <div class="modal-input-wrapper">
+                                <textarea class="modal-textarea" id="datasetSql" placeholder="请输入SQL查询语句" rows="3"></textarea>
+                                <div class="test-row">
+                                    <button type="button" class="btn-test" id="testBtn">测试</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 执行结果显示区 -->
+                        <div class="modal-form-row">
+                            <label class="modal-label">执行结果显示 :</label>
+                            <div class="modal-input-wrapper">
+                                <div class="result-area" id="resultArea">
+                                    <div class="result-placeholder">执行结果将显示在这里</div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="modal-btn" id="cancelBtn">取消</button>
+                    <button type="button" class="modal-btn primary" id="submitBtn">保存</button>
                 </div>
             </div>
         `;
@@ -396,37 +293,20 @@ class DatasetDialog extends HTMLElement {
         this.shadowRoot.querySelector('#closeBtn').addEventListener('click', () => this.hide());
         this.shadowRoot.querySelector('#cancelBtn').addEventListener('click', () => this.hide());
         
-        // 表单提交
-        this.shadowRoot.querySelector('#datasetForm').addEventListener('submit', (e) => this.handleSubmit(e));
+        // 保存按钮
+        this.shadowRoot.querySelector('#submitBtn').addEventListener('click', () => this.handleSubmit());
         
-        // 添加数据源
-        this.shadowRoot.querySelector('#addDatasourceBtn').addEventListener('click', () => this.showDatasourceModal());
-        
-        // 关闭数据源弹窗
-        this.shadowRoot.querySelector('#closeDatasourceModal').addEventListener('click', () => this.hideDatasourceModal());
-        this.shadowRoot.querySelector('#datasourceModal').addEventListener('click', (e) => {
-            if (e.target.id === 'datasourceModal') this.hideDatasourceModal();
-        });
-        
-        // 数据源选择
-        this.shadowRoot.querySelectorAll('.datasource-option').forEach(option => {
-            option.addEventListener('click', (e) => this.selectDatasource(e.target.dataset.source));
-        });
-        
-        // 点击遮罩关闭
-        this.addEventListener('click', (e) => {
-            if (e.target === this) this.hide();
-        });
+        // 测试按钮
+        this.shadowRoot.querySelector('#testBtn').addEventListener('click', () => this.handleTest());
     }
 
     // 显示弹窗 - 创建模式
     showCreate() {
         this.mode = 'create';
         this.datasetData = null;
-        this.datasources = [];
         this.resetForm();
-        this.shadowRoot.querySelector('#dialogTitle').textContent = '创建数据集';
-        this.shadowRoot.querySelector('#submitBtn').textContent = '创建';
+        this.shadowRoot.querySelector('#dialogTitle').textContent = '新增数据集';
+        this.shadowRoot.querySelector('#submitBtn').textContent = '保存';
         this.classList.add('show');
     }
 
@@ -434,7 +314,6 @@ class DatasetDialog extends HTMLElement {
     showEdit(datasetData) {
         this.mode = 'edit';
         this.datasetData = datasetData;
-        this.datasources = datasetData.datasources || [];
         this.fillForm(datasetData);
         this.shadowRoot.querySelector('#dialogTitle').textContent = '编辑数据集';
         this.shadowRoot.querySelector('#submitBtn').textContent = '保存';
@@ -447,90 +326,95 @@ class DatasetDialog extends HTMLElement {
 
     resetForm() {
         this.shadowRoot.querySelector('#datasetForm').reset();
-        this.shadowRoot.querySelector('#datasetName').classList.remove('error');
-        this.shadowRoot.querySelector('#datasetSql').classList.remove('error');
-        this.renderDatasourceTags();
+        this.clearResult();
     }
 
     fillForm(data) {
         this.shadowRoot.querySelector('#datasetName').value = data.name || data.datasetName || '';
         this.shadowRoot.querySelector('#datasetSql').value = data.sql || '';
-        this.shadowRoot.querySelector('#datasetDesc').value = data.description || data.desc || '';
-        this.renderDatasourceTags();
+        this.clearResult();
     }
 
-    renderDatasourceTags() {
-        const container = this.shadowRoot.querySelector('#datasourceTags');
-        container.innerHTML = this.datasources.map(source => `
-            <span class="datasource-tag">
-                ${source}
-                <span class="remove-tag" data-source="${source}">&times;</span>
-            </span>
-        `).join('');
-        
-        // 绑定删除标签事件
-        container.querySelectorAll('.remove-tag').forEach(tag => {
-            tag.addEventListener('click', (e) => {
-                const source = e.target.dataset.source;
-                this.datasources = this.datasources.filter(s => s !== source);
-                this.renderDatasourceTags();
-            });
-        });
+    clearResult() {
+        const resultArea = this.shadowRoot.querySelector('#resultArea');
+        resultArea.innerHTML = '<div class="result-placeholder">执行结果将显示在这里</div>';
     }
 
-    showDatasourceModal() {
-        this.shadowRoot.querySelector('#datasourceModal').classList.add('show');
-    }
-
-    hideDatasourceModal() {
-        this.shadowRoot.querySelector('#datasourceModal').classList.remove('show');
-    }
-
-    selectDatasource(source) {
-        if (!this.datasources.includes(source)) {
-            this.datasources.push(source);
-            this.renderDatasourceTags();
-        }
-        this.hideDatasourceModal();
+    showResult(content, type = 'success') {
+        const resultArea = this.shadowRoot.querySelector('#resultArea');
+        const className = type === 'success' ? 'result-success' : 
+                         type === 'error' ? 'result-error' : 
+                         type === 'loading' ? 'result-loading' : '';
+        resultArea.innerHTML = `<div class="result-content ${className}">${content}</div>`;
     }
 
     validateForm() {
-        let isValid = true;
-        
         const name = this.shadowRoot.querySelector('#datasetName').value.trim();
         const sql = this.shadowRoot.querySelector('#datasetSql').value.trim();
         
         if (!name) {
-            this.shadowRoot.querySelector('#datasetName').classList.add('error');
-            isValid = false;
-        } else {
-            this.shadowRoot.querySelector('#datasetName').classList.remove('error');
+            this.showResult('请输入数据集名称', 'error');
+            return false;
         }
         
         if (!sql) {
-            this.shadowRoot.querySelector('#datasetSql').classList.add('error');
-            isValid = false;
-        } else {
-            this.shadowRoot.querySelector('#datasetSql').classList.remove('error');
+            this.showResult('请输入SQL查询语句', 'error');
+            return false;
         }
         
-        return isValid;
+        return true;
     }
 
-    async handleSubmit(e) {
-        e.preventDefault();
+    async handleTest() {
+        if (!this.validateForm()) {
+            return;
+        }
         
+        const testBtn = this.shadowRoot.querySelector('#testBtn');
+        testBtn.disabled = true;
+        testBtn.textContent = '测试中...';
+        this.showResult('正在执行SQL测试...', 'loading');
+        
+        try {
+            const sql = this.shadowRoot.querySelector('#datasetSql').value.trim();
+            
+            // 模拟API调用 - 实际使用时替换为真实API
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // 模拟成功响应
+            const mockResult = {
+                columns: ['id', 'name', 'value', 'timestamp'],
+                rows: [
+                    [1, 'sample1', 100.5, '2025-04-08 10:00:00'],
+                    [2, 'sample2', 200.3, '2025-04-08 10:01:00'],
+                    [3, 'sample3', 150.0, '2025-04-08 10:02:00']
+                ],
+                rowCount: 3,
+                executionTime: '45ms'
+            };
+            
+            this.showResult(`SQL执行成功!\n\n执行时间: ${mockResult.executionTime}\n返回行数: ${mockResult.rowCount}\n\n列: ${mockResult.columns.join(', ')}\n\n数据示例:\n${JSON.stringify(mockResult.rows, null, 2)}`, 'success');
+            
+        } catch (error) {
+            console.error('SQL测试失败:', error);
+            this.showResult(`测试失败: ${error.message}`, 'error');
+        } finally {
+            testBtn.disabled = false;
+            testBtn.textContent = '测试';
+        }
+    }
+
+    async handleSubmit() {
         if (!this.validateForm()) return;
         
         const submitBtn = this.shadowRoot.querySelector('#submitBtn');
         submitBtn.disabled = true;
-        submitBtn.classList.add('loading');
+        submitBtn.textContent = '保存中...';
+        this.showResult('正在保存数据集...', 'loading');
         
         const formData = {
             name: this.shadowRoot.querySelector('#datasetName').value.trim(),
-            sql: this.shadowRoot.querySelector('#datasetSql').value.trim(),
-            description: this.shadowRoot.querySelector('#datasetDesc').value.trim(),
-            datasources: this.datasources
+            sql: this.shadowRoot.querySelector('#datasetSql').value.trim()
         };
         
         try {
@@ -569,15 +453,19 @@ class DatasetDialog extends HTMLElement {
                 }
             }));
             
-            this.showToast(this.mode === 'create' ? '数据集创建成功' : '数据集保存成功', 'success');
-            this.hide();
+            this.showResult(this.mode === 'create' ? '数据集创建成功!' : '数据集保存成功!', 'success');
+            
+            // 延迟关闭弹窗
+            setTimeout(() => {
+                this.hide();
+            }, 1000);
             
         } catch (error) {
             console.error(this.mode === 'create' ? '创建数据集失败:' : '保存数据集失败:', error);
-            this.showToast((this.mode === 'create' ? '创建失败: ' : '保存失败: ') + error.message, 'error');
+            this.showResult((this.mode === 'create' ? '创建失败: ' : '保存失败: ') + error.message, 'error');
         } finally {
             submitBtn.disabled = false;
-            submitBtn.classList.remove('loading');
+            submitBtn.textContent = '保存';
         }
     }
 

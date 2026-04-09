@@ -161,10 +161,8 @@ class DatasetHistory extends HTMLElement {
                 }
                 
                 .horizontal-timeline {
-                    display: flex;
-                    gap: 24px;
-                    overflow-x: auto;
-                    padding: 10px 0;
+                    height: 200px;
+                    width: 100%;
                 }
                 
                 .timeline-item {
@@ -428,6 +426,24 @@ class DatasetHistory extends HTMLElement {
     hide() {
         this.removeAttribute('show');
         this.datasetInfo = null;
+
+        // 清理图表实例和观察器
+        if (this._lineageChart) {
+            this._lineageChart.dispose();
+            this._lineageChart = null;
+        }
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+            this._resizeObserver = null;
+        }
+        if (this._timelineChart) {
+            this._timelineChart.dispose();
+            this._timelineChart = null;
+        }
+        if (this._timelineResizeObserver) {
+            this._timelineResizeObserver.disconnect();
+            this._timelineResizeObserver = null;
+        }
     }
 
     renderOverview() {
@@ -451,44 +467,145 @@ class DatasetHistory extends HTMLElement {
     }
 
     async loadHistory() {
-        // 模拟加载历史数据
-        this.historyData = [
-            {
-                version: 'v1.0.1',
-                developer: 'admin',
-                date: this.datasetInfo?.updateTime || '2024-01-20',
-                action: '修改数据集'
-            },
-            {
-                version: 'v1.0.0',
-                developer: 'admin',
-                date: this.datasetInfo?.createTime || '2024-01-15',
-                action: '创建数据集'
-            }
-        ];
-
-        this.renderTimeline();
+        // 使用ECharts渲染版本历史时间线
+        this.renderVersionTimeline();
     }
 
-    renderTimeline() {
-        const timelineList = this.shadowRoot.querySelector('#timelineList');
-        if (!timelineList) return;
-
-        if (this.historyData.length === 0) {
-            timelineList.innerHTML = '<div class="empty-state">暂无历史记录</div>';
+    renderVersionTimeline() {
+        const timelineContainer = this.shadowRoot.querySelector('#timelineList');
+        if (!timelineContainer || typeof echarts === 'undefined') {
+            if (timelineContainer) {
+                timelineContainer.innerHTML = '<div class="empty-state">图表库加载失败</div>';
+            }
             return;
         }
 
-        timelineList.innerHTML = this.historyData.map((item, index) => `
-            <div class="timeline-item ${index === 0 ? 'active' : ''}">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-version">${item.version}</div>
-                    <div class="timeline-developer">${item.developer}</div>
-                    <div class="timeline-date">${item.date}</div>
-                </div>
-            </div>
-        `).join('');
+        // 清除之前的图表实例
+        const existingChart = echarts.getInstanceByDom(timelineContainer);
+        if (existingChart) {
+            existingChart.dispose();
+        }
+
+        timelineContainer.innerHTML = '';
+
+        // 延迟初始化以确保容器有正确尺寸
+        setTimeout(() => {
+            const chart = echarts.init(timelineContainer);
+
+            const option = {
+                title: {
+                    text: `数据集 ${this.datasetInfo?.name || 'dataset02'} 版本变更时间线`,
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 14,
+                        fontWeight: 'normal',
+                        color: '#1f2329'
+                    }
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function(params) {
+                        const d = params.data;
+                        return `版本：${d.version}<br>
+时间：${d.time}<br>
+操作人：${d.user}<br>
+IP：${d.ip}<br>
+Transform作业：${d.job}<br>
+UDF函数：${d.func}<br>
+SQL：${d.sql}<br>
+变化：${d.change}`;
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    data: ['V1', 'V2', 'V3', 'V4'],
+                    axisLabel: {
+                        interval: 0,
+                        margin: 20,
+                        fontSize: 12,
+                        color: '#5f6b7a'
+                    },
+                    axisLine: { lineStyle: { color: '#e2e6ef' } },
+                    axisTick: { show: false }
+                },
+                yAxis: {
+                    show: false,
+                    min: -1,
+                    max: 1
+                },
+                grid: {
+                    left: '5%',
+                    right: '5%',
+                    top: '25%',
+                    bottom: '20%',
+                    containLabel: true
+                },
+                series: [{
+                    type: 'scatter',
+                    symbolSize: 30,
+                    itemStyle: { color: '#1890ff' },
+                    label: {
+                        show: true,
+                        formatter: '{b}',
+                        position: 'top',
+                        distance: 15,
+                        fontSize: 12,
+                        color: '#1f2329',
+                        fontWeight: 'bold'
+                    },
+                    data: [
+                        {
+                            value: 0, version: 'V1',
+                            time: '2025-04-07 10:00',
+                            user: 'engineer', ip: '192.168.1.10',
+                            job: 'transform_task_001',
+                            func: 'data_clean()',
+                            sql: 'CREATE TABLE dataset02',
+                            change: '数据集初始化创建'
+                        },
+                        {
+                            value: 0, version: 'V2',
+                            time: '2025-04-07 10:10',
+                            user: 'system', ip: '10.0.0.1',
+                            job: 'transform_udf_upgrade',
+                            func: 'filter_null()',
+                            sql: 'ALTER TABLE dataset02 ADD COLUMN status',
+                            change: 'UDF升级，新增空值过滤'
+                        },
+                        {
+                            value: 0, version: 'V3',
+                            time: '2025-04-07 10:30',
+                            user: 'engineer', ip: '192.168.1.10',
+                            job: 'transform_data_refresh',
+                            func: 'refresh_data()',
+                            sql: 'INSERT OVERWRITE dataset02',
+                            change: '全量数据刷新'
+                        },
+                        {
+                            value: 0, version: 'V4',
+                            time: '2025-04-07 11:00',
+                            user: 'admin', ip: '192.168.1.100',
+                            job: 'transform_schema_optimize',
+                            func: 'optimize_schema()',
+                            sql: 'OPTIMIZE TABLE dataset02',
+                            change: '表结构优化，增加索引'
+                        }
+                    ]
+                }]
+            };
+
+            chart.setOption(option);
+
+            // 监听容器尺寸变化
+            const resizeObserver = new ResizeObserver(() => {
+                chart.resize();
+            });
+            resizeObserver.observe(timelineContainer);
+
+            // 存储图表实例和观察器以便清理
+            this._timelineChart = chart;
+            this._timelineResizeObserver = resizeObserver;
+        }, 100);
     }
 
     renderLineageGraph() {
@@ -500,71 +617,87 @@ class DatasetHistory extends HTMLElement {
             return;
         }
 
-        graphContainer.innerHTML = '';
-        const chart = echarts.init(graphContainer);
+        // 清除之前的图表实例
+        const existingChart = echarts.getInstanceByDom(graphContainer);
+        if (existingChart) {
+            existingChart.dispose();
+        }
 
-        const option = {
-            tooltip: {
-                formatter: function(params) {
-                    if (params.dataType === 'edge') {
-                        return `UDF函数：${params.data.func}
+        graphContainer.innerHTML = '';
+
+        // 延迟初始化以确保容器有正确尺寸
+        setTimeout(() => {
+            const chart = echarts.init(graphContainer);
+
+            const option = {
+                tooltip: {
+                    formatter: function(params) {
+                        if (params.dataType === 'edge') {
+                            return `UDF函数：${params.data.func}
 Transform作业：${params.data.job}
 SQL：${params.data.sql}
 操作人：${params.data.user}
 时间：${params.data.time}
 IP：${params.data.ip}
 变化：${params.data.change}`;
+                        }
+                        return params.name;
                     }
-                    return params.name;
-                }
-            },
-            series: [{
-                type: 'graph',
-                layout: 'force',
-                symbolSize: 50,
-                roam: true,
-                label: { show: true, fontSize: 12 },
-                edgeSymbol: ['none', 'arrow'],
-                edgeSymbolSize: [0, 10],
-                edgeLabel: { show: true, formatter: '{c}', fontSize: 10 },
-                force: { repulsion: 800, edgeLength: 200 },
-                data: [
-                    { name: 'dataset01' },
-                    { name: 'dataset02' },
-                    { name: 'dataset03' },
-                    { name: 'dataset04' },
-                    { name: 'dataset05' }
-                ],
-                links: [
-                    {
-                        source: 'dataset01', target: 'dataset02', value: 'UDF清洗',
-                        func: 'data_clean()', job: 'transform_task_001', sql: 'SELECT clean(*) FROM dataset01',
-                        user: 'engineer', time: '2025-04-07 10:00', ip: '192.168.1.10', change: '空值过滤、格式标准化'
-                    },
-                    {
-                        source: 'dataset02', target: 'dataset03', value: 'UDF特征提取',
-                        func: 'feature_extract()', job: 'transform_task_002', sql: 'SELECT feature(*) FROM dataset02',
-                        user: 'algorithm', time: '2025-04-07 11:00', ip: '192.168.1.11', change: '提取数据特征'
-                    },
-                    {
-                        source: 'dataset03', target: 'dataset04', value: 'Transform归一化',
-                        func: 'normalize()', job: 'transform_task_003', sql: 'INSERT INTO dataset04 SELECT * FROM dataset03',
-                        user: 'system', time: '2025-04-07 12:00', ip: '10.0.0.1', change: '数据归一化处理'
-                    },
-                    {
-                        source: 'dataset04', target: 'dataset05', value: 'UDF统计计算',
-                        func: 'stat_calc()', job: 'transform_task_004', sql: 'CREATE TABLE dataset05 AS SELECT * FROM dataset04',
-                        user: 'analyst', time: '2025-04-07 14:00', ip: '192.168.1.12', change: '生成业务统计结果'
-                    }
-                ]
-            }]
-        };
+                },
+                series: [{
+                    type: 'graph',
+                    layout: 'force',
+                    symbolSize: 50,
+                    roam: true,
+                    label: { show: true, fontSize: 12 },
+                    edgeSymbol: ['none', 'arrow'],
+                    edgeSymbolSize: [0, 10],
+                    edgeLabel: { show: true, formatter: '{c}', fontSize: 10 },
+                    force: { repulsion: 800, edgeLength: 200 },
+                    data: [
+                        { name: 'dataset01' },
+                        { name: 'dataset02' },
+                        { name: 'dataset03' },
+                        { name: 'dataset04' },
+                        { name: 'dataset05' }
+                    ],
+                    links: [
+                        {
+                            source: 'dataset01', target: 'dataset02', value: 'UDF清洗',
+                            func: 'data_clean()', job: 'transform_task_001', sql: 'SELECT clean(*) FROM dataset01',
+                            user: 'engineer', time: '2025-04-07 10:00', ip: '192.168.1.10', change: '空值过滤、格式标准化'
+                        },
+                        {
+                            source: 'dataset02', target: 'dataset03', value: 'UDF特征提取',
+                            func: 'feature_extract()', job: 'transform_task_002', sql: 'SELECT feature(*) FROM dataset02',
+                            user: 'algorithm', time: '2025-04-07 11:00', ip: '192.168.1.11', change: '提取数据特征'
+                        },
+                        {
+                            source: 'dataset03', target: 'dataset04', value: 'Transform归一化',
+                            func: 'normalize()', job: 'transform_task_003', sql: 'INSERT INTO dataset04 SELECT * FROM dataset03',
+                            user: 'system', time: '2025-04-07 12:00', ip: '10.0.0.1', change: '数据归一化处理'
+                        },
+                        {
+                            source: 'dataset04', target: 'dataset05', value: 'UDF统计计算',
+                            func: 'stat_calc()', job: 'transform_task_004', sql: 'CREATE TABLE dataset05 AS SELECT * FROM dataset04',
+                            user: 'analyst', time: '2025-04-07 14:00', ip: '192.168.1.12', change: '生成业务统计结果'
+                        }
+                    ]
+                }]
+            };
 
-        chart.setOption(option);
+            chart.setOption(option);
 
-        window.addEventListener('resize', () => {
-            chart.resize();
-        });
+            // 监听容器尺寸变化
+            const resizeObserver = new ResizeObserver(() => {
+                chart.resize();
+            });
+            resizeObserver.observe(graphContainer);
+
+            // 存储图表实例和观察器以便清理
+            this._lineageChart = chart;
+            this._resizeObserver = resizeObserver;
+        }, 100);
     }
 
     showDeleteConfirmDialog() {
