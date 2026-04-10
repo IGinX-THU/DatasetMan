@@ -60,7 +60,10 @@ document.addEventListener('DOMContentLoaded', function() {
             'datasetHistory',
             'transformJob',
             'transformManagement',
-            'udfManagement'
+            'udfManagement',
+            'fileSystemBrowser',
+            'keyValueViewer',
+            'semiStructuredViewer'
         ];
         
         components.forEach(componentId => {
@@ -1636,6 +1639,18 @@ function showVisualAnalysis() {
         showComponent('databaseTable', tableName);
     }
 
+    function showFileSystemBrowser(path) {
+        showComponent('fileSystemBrowser', path);
+    }
+
+    function showKeyValueViewer(path) {
+        showComponent('keyValueViewer', path);
+    }
+
+    function showSemiStructuredViewer(path) {
+        showComponent('semiStructuredViewer', path);
+    }
+
     // 从树中获取所有可用的测点
     function getAvailablePointsFromTree() {
         const points = [];
@@ -1936,15 +1951,27 @@ function showVisualAnalysis() {
                     if (fullPath && isLeaf) {
                         console.log('点击了叶子节点:', fullPath);
                         selectedDataSource = fullPath;
-                        
+
                         // 检查是否为relational开头的路径，如果是则使用data-table跳转逻辑
                         if (fullPath.startsWith('relational')) {
                             // 获取父节点路径作为tableName
                             const pathParts = fullPath.split('.');
                             const parentPath = pathParts.slice(0, -1).join('.');
                             showDatabaseTable(parentPath);
+                        } else if (fullPath.startsWith('time_series')) {
+                            // time_series 使用 data-visualization 页面
+                            showDataVisualization(fullPath);
+                        } else if (fullPath.startsWith('file_system')) {
+                            // file_system 使用 file-system-browser 页面
+                            showFileSystemBrowser(fullPath);
+                        } else if (fullPath.startsWith('key_value')) {
+                            // key_value 使用 key-value-viewer 页面
+                            showKeyValueViewer(fullPath);
+                        } else if (fullPath.startsWith('semi_structured')) {
+                            // semi_structured 使用 semi-structured-viewer 页面
+                            showSemiStructuredViewer(fullPath);
                         } else {
-                            // 使用 dataSource.type === 1 的逻辑跳转到 data-visualization 页面
+                            // 其他类型也使用 data-visualization 页面
                             showDataVisualization(fullPath);
                         }
                         
