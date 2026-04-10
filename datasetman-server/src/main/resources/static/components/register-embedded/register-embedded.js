@@ -381,12 +381,7 @@ class RegisterDataResourceEmbedded extends HTMLElement {
             this.showMessage('请填写必填字段并选择有效的数据源类型', 'error');
             return false;
         }
-        
-        // 模式前缀不能包含"_system"
-        if (data.schemaPrefix && data.schemaPrefix.includes('_system')) {
-            this.showMessage('模式前缀不能包含"_system"', 'error');
-            return false;
-        }
+
         
         // 特定类型验证
         switch(data.storageEngineType) {

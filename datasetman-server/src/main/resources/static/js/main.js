@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 隐藏所有组件的函数
     function hideAllComponents() {
         console.log('🔄 隐藏所有组件');
-        
+
         // 隐藏所有可能的组件
         const components = [
             'registerEmbedded',
@@ -58,7 +58,9 @@ document.addEventListener('DOMContentLoaded', function() {
             'importData',
             'userManagement',
             'datasetHistory',
-            'transformJob'
+            'transformJob',
+            'transformManagement',
+            'udfManagement'
         ];
         
         components.forEach(componentId => {
@@ -462,6 +464,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (changePasswordComponent) {
                         changePasswordComponent.show();
                     }
+                } else if (menuId === 'menu-transform-management') {
+                    console.log('Transform管理菜单被点击');
+                    showComponent('transformManagement');
+                } else if (menuId === 'menu-udf-management') {
+                    console.log('UDF管理菜单被点击');
+                    showComponent('udfManagement');
                 } else {
                     console.warn(`未找到菜单ID ${menuId} 的对应动作`);
                 }
@@ -826,6 +834,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         break;
                     case 'showTransformJobs':
                         showComponent('transformJob');
+                        break;
+                    case 'showTransformManagement':
+                        showComponent('transformManagement');
+                        break;
+                    case 'showUdfManagement':
+                        showComponent('udfManagement');
                         break;
                     default:
                         console.warn(`未知的按钮动作: ${action}`);
@@ -1585,20 +1599,20 @@ function showVisualAnalysis() {
 // 通用显示组件函数
     function showComponent(componentId, ...args) {
         console.log(`显示组件: ${componentId}`, args);
-        
+
         // 弹窗组件不需要清空工作区
         const modalComponents = ['registerEmbedded', 'importData', 'modelUpload', 'modelDownload', 'modelEdit'];
         if (!modalComponents.includes(componentId)) {
             // 先清空工作区
             clearWorkspace();
         }
-        
+
         console.log(`🔍 尝试获取组件: ${componentId}`);
         const component = document.getElementById(componentId);
         console.log(`🔍 获取到的组件:`, component);
         console.log(`🔍 组件类型:`, component ? component.constructor.name : 'null');
         console.log(`🔍 组件是否有show方法:`, component ? typeof component.show : 'null');
-        
+
         if (component && typeof component.show === 'function') {
             component.show(...args);
             console.log(`✅ 组件 ${componentId} 已显示`);

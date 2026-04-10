@@ -102,12 +102,188 @@ class TransformManagement extends HTMLElement {
     }
 
     showModal() {
-        const modalMask = this.querySelector('#modalMask');
-        if (modalMask) {
-            modalMask.hidden = false;
-            modalMask.style.display = 'flex';
+        const dialogHtml = `
+            <div class="dialog-mask" style="
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            ">
+                <div class="dialog-content" style="
+                    background: white;
+                    border-radius: 8px;
+                    padding: 24px;
+                    max-width: 600px;
+                    width: 90%;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                    max-height: 90vh;
+                    overflow-y: auto;
+                ">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2329;">注册Transform</h3>
+                    <form id="transformForm" style="margin-bottom: 24px;">
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; color: #1f2329; font-size: 14px;">Transform名称</label>
+                            <input type="text" id="transformName" placeholder="请输入Transform名称" style="
+                                width: 100%;
+                                padding: 8px 12px;
+                                border: 1px solid #c9cdd4;
+                                border-radius: 4px;
+                                font-size: 14px;
+                                color: #1f2329;
+                                background: white;
+                            " required>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; color: #1f2329; font-size: 14px;">类名</label>
+                            <input type="text" id="className" placeholder="请输入类名" style="
+                                width: 100%;
+                                padding: 8px 12px;
+                                border: 1px solid #c9cdd4;
+                                border-radius: 4px;
+                                font-size: 14px;
+                                color: #1f2329;
+                                background: white;
+                            " required>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; color: #1f2329; font-size: 14px;">Python脚本</label>
+                            <div id="uploadArea" style="
+                                border: 2px dashed #c9cdd4;
+                                border-radius: 6px;
+                                padding: 32px;
+                                text-align: center;
+                                cursor: pointer;
+                                transition: border-color 0.2s;
+                                background: #f8f9fa;
+                            ">
+                                <div class="upload-placeholder" style="display: block;">
+                                    <div style="font-size: 32px; color: #646a73; margin-bottom: 8px;">📄</div>
+                                    <p style="margin: 0; color: #646a73; font-size: 14px;">点击或拖拽上传Python脚本</p>
+                                    <p style="margin: 4px 0 0 0; color: #999; font-size: 12px;">仅支持 .py 文件</p>
+                                </div>
+                                <div id="fileInfo" style="display: none; align-items: center; gap: 12px;">
+                                    <div style="flex: 1;">
+                                        <div id="fileName" style="color: #1f2329; font-size: 14px; font-weight: 500;"></div>
+                                        <div id="fileSize" style="color: #646a73; font-size: 12px;"></div>
+                                    </div>
+                                    <button type="button" id="removeFile" style="
+                                        padding: 4px 8px;
+                                        border: 1px solid #c9cdd4;
+                                        border-radius: 4px;
+                                        background: white;
+                                        color: #1f2329;
+                                        cursor: pointer;
+                                        font-size: 12px;
+                                    ">×</button>
+                                </div>
+                                <input type="file" id="transformFile" accept=".py" style="display: none;">
+                            </div>
+                        </div>
+                    </form>
+                    <div class="dialog-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button class="cancel-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #c9cdd4;
+                            border-radius: 4px;
+                            background: white;
+                            color: #1f2329;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">取消</button>
+                        <button class="confirm-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #4c89ff;
+                            border-radius: 4px;
+                            background: #4c89ff;
+                            color: white;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">确定</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const dialog = document.createElement('div');
+        dialog.innerHTML = dialogHtml;
+        document.body.appendChild(dialog);
+
+        const cancelBtn = dialog.querySelector('.cancel-btn');
+        const confirmBtn = dialog.querySelector('.confirm-btn');
+        const form = dialog.querySelector('#transformForm');
+        const uploadArea = dialog.querySelector('#uploadArea');
+        const fileInput = dialog.querySelector('#transformFile');
+        const removeFile = dialog.querySelector('#removeFile');
+
+        this.selectedFile = null;
+
+        if (uploadArea) {
+            uploadArea.addEventListener('click', () => fileInput?.click());
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#4c89ff';
+                uploadArea.style.background = '#f8faff';
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.borderColor = '#c9cdd4';
+                uploadArea.style.background = '#f8f9fa';
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#c9cdd4';
+                uploadArea.style.background = '#f8f9fa';
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.handleFileInDialog(files[0], dialog);
+                }
+            });
         }
-        this.clearForm();
+
+        if (fileInput) {
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    this.handleFileInDialog(e.target.files[0], dialog);
+                }
+            });
+        }
+
+        if (removeFile) {
+            removeFile.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.clearFileInDialog(dialog);
+            });
+        }
+
+        const closeDialog = () => {
+            document.body.removeChild(dialog);
+            this.selectedFile = null;
+        };
+
+        cancelBtn.addEventListener('click', closeDialog);
+
+        confirmBtn.addEventListener('click', () => {
+            const name = form.querySelector('#transformName')?.value.trim();
+            const className = form.querySelector('#className')?.value.trim();
+
+            if (!name || !className) {
+                this.showMessage('请填写完整信息', 'error');
+                return;
+            }
+
+            if (!this.selectedFile) {
+                this.showMessage('请上传Python脚本文件', 'error');
+                return;
+            }
+
+            closeDialog();
+            this.registerTransform(name, className, this.selectedFile);
+        });
     }
 
     hideModal() {
@@ -119,13 +295,7 @@ class TransformManagement extends HTMLElement {
         this.clearFile();
     }
 
-    clearForm() {
-        this.querySelector('#transformName').value = '';
-        this.querySelector('#className').value = '';
-        this.clearFile();
-    }
-
-    handleFile(file) {
+    handleFileInDialog(file, dialog) {
         if (!file.name.endsWith('.py')) {
             this.showMessage('仅支持 Python 脚本文件 (.py)', 'error');
             return;
@@ -133,30 +303,32 @@ class TransformManagement extends HTMLElement {
 
         this.selectedFile = file;
 
-        const fileInfo = this.querySelector('#fileInfo');
-        const fileName = this.querySelector('#fileName');
-        const fileSize = this.querySelector('#fileSize');
-        const uploadArea = this.querySelector('#uploadArea');
-        const uploadPlaceholder = this.querySelector('.upload-placeholder');
+        const fileInfo = dialog.querySelector('#fileInfo');
+        const fileName = dialog.querySelector('#fileName');
+        const fileSize = dialog.querySelector('#fileSize');
+        const uploadArea = dialog.querySelector('#uploadArea');
+        const uploadPlaceholder = dialog.querySelector('.upload-placeholder');
 
         fileName.textContent = file.name;
         fileSize.textContent = this.formatFileSize(file.size);
         fileInfo.style.display = 'flex';
         uploadPlaceholder.style.display = 'none';
-        uploadArea.classList.add('has-file');
+        uploadArea.style.borderColor = '#4c89ff';
+        uploadArea.style.background = '#f8faff';
     }
 
-    clearFile() {
+    clearFileInDialog(dialog) {
         this.selectedFile = null;
 
-        const fileInfo = this.querySelector('#fileInfo');
-        const fileInput = this.querySelector('#transformFile');
-        const uploadArea = this.querySelector('#uploadArea');
-        const uploadPlaceholder = this.querySelector('.upload-placeholder');
+        const fileInfo = dialog.querySelector('#fileInfo');
+        const fileInput = dialog.querySelector('#transformFile');
+        const uploadArea = dialog.querySelector('#uploadArea');
+        const uploadPlaceholder = dialog.querySelector('.upload-placeholder');
 
         fileInfo.style.display = 'none';
         uploadPlaceholder.style.display = 'block';
-        uploadArea.classList.remove('has-file');
+        uploadArea.style.borderColor = '#c9cdd4';
+        uploadArea.style.background = '#f8f9fa';
 
         if (fileInput) {
             fileInput.value = '';
@@ -171,25 +343,12 @@ class TransformManagement extends HTMLElement {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    async registerTransform() {
-        const name = this.querySelector('#transformName').value.trim();
-        const className = this.querySelector('#className').value.trim();
-
-        if (!name || !className) {
-            this.showMessage('请填写完整信息', 'error');
-            return;
-        }
-
-        if (!this.selectedFile) {
-            this.showMessage('请上传Python脚本文件', 'error');
-            return;
-        }
-
+    async registerTransform(name, className, file) {
         const transform = {
             id: Date.now(),
             name,
             className,
-            filePath: `data/script/${this.selectedFile.name}`,
+            filePath: `data/script/${file.name}`,
             createTime: new Date().toLocaleString()
         };
 
@@ -197,7 +356,6 @@ class TransformManagement extends HTMLElement {
             // 模拟注册
             this.transforms.push(transform);
             this.showMessage('Transform注册成功', 'success');
-            this.hideModal();
             this.renderTable();
         } catch (error) {
             this.showMessage('注册失败，请重试', 'error');
@@ -269,11 +427,72 @@ class TransformManagement extends HTMLElement {
         const transform = this.transforms.find(t => t.id === id);
         if (!transform) return;
 
-        if (confirm(`确定要永久删除Transform "${transform.name}" 吗？此操作不可恢复！`)) {
+        const dialogHtml = `
+            <div class="dialog-mask" style="
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            ">
+                <div class="dialog-content" style="
+                    background: white;
+                    border-radius: 8px;
+                    padding: 24px;
+                    max-width: 400px;
+                    width: 90%;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                ">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2329;">确认删除</h3>
+                    <p style="margin: 0 0 24px 0; color: #646a73; line-height: 1.5;">
+                        确定要删除Transform "${transform.name}" 吗？<br><br>
+                        <span style="color: #f5222d;">此操作不可恢复！</span>
+                    </p>
+                    <div class="dialog-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button class="cancel-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #c9cdd4;
+                            border-radius: 4px;
+                            background: white;
+                            color: #1f2329;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">取消</button>
+                        <button class="confirm-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #f5222d;
+                            border-radius: 4px;
+                            background: #f5222d;
+                            color: white;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">确认删除</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const dialog = document.createElement('div');
+        dialog.innerHTML = dialogHtml;
+        document.body.appendChild(dialog);
+
+        const cancelBtn = dialog.querySelector('.cancel-btn');
+        const confirmBtn = dialog.querySelector('.confirm-btn');
+
+        const closeDialog = () => {
+            document.body.removeChild(dialog);
+        };
+
+        cancelBtn.addEventListener('click', closeDialog);
+
+        confirmBtn.addEventListener('click', () => {
+            closeDialog();
             this.transforms = this.transforms.filter(t => t.id !== id);
             this.renderTable();
             this.showMessage('Transform删除成功', 'success');
-        }
+        });
     }
 
     showMessage(message, type = 'success') {

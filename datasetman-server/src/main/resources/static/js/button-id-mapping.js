@@ -64,6 +64,14 @@ const BUTTON_ID_MAP = {
     'btn-job': {
         text: '作业',
         action: 'showTransformJobs'
+    },
+    'btn-func-transform': {
+        text: 'Transform',
+        action: 'showTransformManagement'
+    },
+    'btn-func-udf': {
+        text: 'UDF',
+        action: 'showUdfManagement'
     }
 };
 
