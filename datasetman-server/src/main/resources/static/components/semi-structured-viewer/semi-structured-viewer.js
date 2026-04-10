@@ -72,8 +72,8 @@ class SemiStructuredViewer extends HTMLElement {
         const allNodes = leftSidebarTree.querySelectorAll('.tree-node');
         let leafNode = null;
         for (const node of allNodes) {
-            const nodeText = node.querySelector('span')?.textContent?.trim();
-            if (nodeText === path) {
+            const fullPath = node.getAttribute('data-full-path');
+            if (fullPath === path) {
                 leafNode = node;
                 break;
             }
@@ -94,9 +94,9 @@ class SemiStructuredViewer extends HTMLElement {
         // 获取父节点的所有子节点
         const children = parentNode.querySelectorAll('.tree-node');
         children.forEach(child => {
-            const childText = child.querySelector('span')?.textContent?.trim();
-            if (childText) {
-                paths.push(childText);
+            const childPath = child.getAttribute('data-full-path');
+            if (childPath) {
+                paths.push(childPath);
             }
         });
 
