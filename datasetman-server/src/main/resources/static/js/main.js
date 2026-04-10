@@ -1817,9 +1817,21 @@ function showVisualAnalysis() {
             // 根据节点类型选择图标
             let iconHtml = '';
             if (hasChildren) {
-                // 有子节点：检查是否为relational开头的根节点，显示数据库图标，否则显示文件夹图标
+                // 有子节点：检查是否为relational开头的根节点，显示数据库图标
                 if (level === 0 && (node.name.startsWith('relational'))) {
-                    iconHtml = `<i class="icon db-icon"></i>`;
+                    iconHtml = `<i class="icon relational-icon">🗄️</i>`;
+                } else if (level === 0 && (node.name.startsWith('file_system'))) {
+                    // file_system 为文件系统图标
+                    iconHtml = `<i class="icon file-system-icon">📁</i>`;
+                } else if (level === 0 && (node.name.startsWith('semi_structured'))) {
+                    // semi_structured 为 mongodb 图标
+                    iconHtml = `<i class="icon mongo-icon">🍃</i>`;
+                } else if (level === 0 && (node.name.startsWith('key_value'))) {
+                    // key_value 为 redis 图标
+                    iconHtml = `<i class="icon redis-icon">⚡</i>`;
+                } else if (level === 0 && (node.name.startsWith('time_series'))) {
+                    // time_series 为时序数据图标
+                    iconHtml = `<i class="icon timeseries-icon">📈</i>`;
                 } else {
                     iconHtml = `<i class="icon folder-icon"></i>`;
                 }
