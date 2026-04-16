@@ -2,6 +2,8 @@ class FileSystemBrowser extends HTMLElement {
     constructor() {
         super();
         this.currentPath = '';
+        this.currentImageUrl = null;
+        this.currentFileName = null;
     }
 
     connectedCallback() {
@@ -182,13 +184,17 @@ class FileSystemBrowser extends HTMLElement {
             const imageUrl = URL.createObjectURL(blob);
             console.log('ObjectURL创建成功:', imageUrl);
 
+            // 存储当前图片信息用于下载
+            this.currentImageUrl = imageUrl;
+            this.currentFileName = fileName;
+
             fileGrid.innerHTML = `
                 <div class="file-preview">
                     <div class="preview-header">
                         <span class="file-name">${fileName}</span>
                     </div>
-                    <div class="preview-content">
-                        <img src="${imageUrl}" alt="${fileName}" style="max-width: 100%; max-height: 600px; border-radius: 8px;"
+                    <div class="preview-content" style="display: flex; justify-content: center; align-items: center; background: #f5f5f5; padding: 20px; border-radius: 8px;">
+                        <img src="${imageUrl}" alt="${fileName}" style="max-width: 100%; max-height: none; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
                              onload="console.log('图片加载成功')"
                              onerror="console.error('图片加载失败'); this.parentElement.innerHTML='<div style=\\'padding: 20px; text-align: center; color: #999;\\'>图片无法显示</div>'">
                     </div>
@@ -265,8 +271,18 @@ class FileSystemBrowser extends HTMLElement {
 
     downloadSelected() {
         console.log('下载文件');
-        if (window.CommonUtils && window.CommonUtils.showToast) {
-            window.CommonUtils.showToast('文件下载成功', 'success');
+        if (this.currentImageUrl && this.currentFileName) {
+            const link = document.createElement('a');
+            link.href = this.currentImageUrl;
+            link.download = this.currentFileName;
+            link.click();
+            if (window.CommonUtils && window.CommonUtils.showToast) {
+                window.CommonUtils.showToast('文件下载成功', 'success');
+            }
+        } else {
+            if (window.CommonUtils && window.CommonUtils.showToast) {
+                window.CommonUtils.showToast('没有可下载的文件', 'error');
+            }
         }
     }
 
