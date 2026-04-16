@@ -11,6 +11,7 @@ class SemiStructuredViewer extends HTMLElement {
                 <div class="ss-toolbar">
                     <div class="breadcrumb" id="breadcrumb"></div>
                     <div class="toolbar-actions">
+                        <button class="toolbar-btn green" type="button" id="copyBtn">复制</button>
                         <button class="toolbar-btn blue" type="button" id="refreshBtn">刷新</button>
                     </div>
                 </div>
@@ -36,11 +37,21 @@ class SemiStructuredViewer extends HTMLElement {
 
     initEventListeners() {
         const refreshBtn = this.querySelector('#refreshBtn');
+        const copyBtn = this.querySelector('#copyBtn');
         const modalClose = this.querySelector('#modalClose');
         const modalMask = this.querySelector('#modalMask');
 
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => this.loadDocuments());
+        }
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                if (this.currentDocument) {
+                    const jsonStr = JSON.stringify(this.currentDocument, null, 2);
+                    this.copyToClipboard(jsonStr);
+                }
+            });
         }
 
         if (modalClose) {
@@ -168,21 +179,46 @@ class SemiStructuredViewer extends HTMLElement {
         const ssList = this.querySelector('#ssList');
         if (!ssList) return;
 
-        ssList.innerHTML = documents.map((doc, index) => {
-            const idField = doc._id || doc.id || index;
-            const jsonStr = JSON.stringify(doc, null, 2);
-            
-            return `
+        // 只取第一个文档
+        const doc = documents[0];
+        if (!doc) {
+            ssList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无文档数据</div>';
+            return;
+        }
+
+        // 存储当前文档用于复制
+        this.currentDocument = doc;
+
+        const idField = doc._id || doc.id;
+        const jsonStr = JSON.stringify(doc, null, 2);
+
+        ssList.innerHTML = `
             <div class="ss-item" data-id="${idField}">
                 <div class="ss-header">
-                    <div class="ss-id">Document ${index + 1} (${idField})</div>
+                    <div class="ss-id">${idField ? `Document (${idField})` : 'Document'}</div>
                 </div>
                 <div class="ss-content">
                     <pre class="json-viewer">${this.escapeHtml(jsonStr)}</pre>
                 </div>
             </div>
         `;
-        }).join('');
+    }
+
+    copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            if (window.CommonUtils && window.CommonUtils.showToast) {
+                window.CommonUtils.showToast('复制成功', 'success');
+            } else {
+                alert('复制成功');
+            }
+        }).catch(err => {
+            console.error('复制失败:', err);
+            if (window.CommonUtils && window.CommonUtils.showToast) {
+                window.CommonUtils.showToast('复制失败', 'error');
+            } else {
+                alert('复制失败');
+            }
+        });
     }
 
     escapeHtml(str) {
