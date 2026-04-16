@@ -197,12 +197,20 @@ class FileSystemBrowser extends HTMLElement {
                         <span class="file-name">${fileName}</span>
                     </div>
                     <div class="preview-content">
-                        <img src="${imageUrl}" alt="${fileName}"
+                        <img src="${imageUrl}" alt="${fileName}" class="preview-image"
                              onload="console.log('图片加载成功')"
                              onerror="console.error('图片加载失败'); this.parentElement.innerHTML='<div style=\\'padding: 20px; text-align: center; color: #999;\\'>图片无法显示</div>'">
                     </div>
                 </div>
             `;
+
+            // 添加图片点击事件，在新标签页打开
+            const previewImage = fileGrid.querySelector('.preview-image');
+            if (previewImage) {
+                previewImage.addEventListener('click', () => {
+                    window.open(imageUrl, '_blank');
+                });
+            }
         } catch (error) {
             console.error('图片数据转换失败:', error);
             fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">图片数据格式错误: ' + error.message + '</div>';
