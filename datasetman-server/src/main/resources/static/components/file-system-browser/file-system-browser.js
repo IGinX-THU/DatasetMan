@@ -202,13 +202,70 @@ class FileSystemBrowser extends HTMLElement {
                              onerror="console.error('图片加载失败'); this.parentElement.innerHTML='<div style=\\'padding: 20px; text-align: center; color: #999;\\'>图片无法显示</div>'">
                     </div>
                 </div>
+                <div class="lightbox" id="lightbox" style="display: none;">
+                    <div class="lightbox-toolbar">
+                        <button class="lightbox-btn" id="zoomOut">-</button>
+                        <span class="lightbox-zoom" id="zoomLevel">100%</span>
+                        <button class="lightbox-btn" id="zoomIn">+</button>
+                        <button class="lightbox-btn lightbox-close" id="lightboxClose">×</button>
+                    </div>
+                    <div class="lightbox-content-wrapper">
+                        <img src="${imageUrl}" alt="${fileName}" class="lightbox-content" id="lightboxImage">
+                    </div>
+                </div>
             `;
 
-            // 添加图片点击事件，在新标签页打开
+            // 添加图片点击事件，打开浮窗
             const previewImage = fileGrid.querySelector('.preview-image');
-            if (previewImage) {
+            const lightbox = fileGrid.querySelector('#lightbox');
+            const lightboxClose = fileGrid.querySelector('#lightboxClose');
+            const lightboxImage = fileGrid.querySelector('#lightboxImage');
+            const zoomIn = fileGrid.querySelector('#zoomIn');
+            const zoomOut = fileGrid.querySelector('#zoomOut');
+            const zoomLevel = fileGrid.querySelector('#zoomLevel');
+
+            let currentZoom = 1;
+
+            const updateZoom = () => {
+                lightboxImage.style.transform = `scale(${currentZoom})`;
+                zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
+            };
+
+            if (previewImage && lightbox) {
                 previewImage.addEventListener('click', () => {
-                    window.open(imageUrl, '_blank');
+                    lightbox.style.display = 'flex';
+                    currentZoom = 1;
+                    updateZoom();
+                });
+            }
+
+            if (lightboxClose && lightbox) {
+                lightboxClose.addEventListener('click', () => {
+                    lightbox.style.display = 'none';
+                });
+            }
+
+            if (lightbox) {
+                lightbox.addEventListener('click', (e) => {
+                    if (e.target === lightbox) {
+                        lightbox.style.display = 'none';
+                    }
+                });
+            }
+
+            if (zoomIn) {
+                zoomIn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    currentZoom = Math.min(currentZoom + 0.25, 5);
+                    updateZoom();
+                });
+            }
+
+            if (zoomOut) {
+                zoomOut.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    currentZoom = Math.max(currentZoom - 0.25, 0.25);
+                    updateZoom();
                 });
             }
         } catch (error) {
