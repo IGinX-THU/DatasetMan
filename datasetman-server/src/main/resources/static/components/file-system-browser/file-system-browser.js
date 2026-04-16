@@ -129,14 +129,20 @@ class FileSystemBrowser extends HTMLElement {
         
         // 根据文件后缀判断文件类型
         const fileExtension = fileName.split('.').pop().toLowerCase();
-        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'];
         const videoExtensions = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv'];
+        const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
+        const textExtensions = ['txt', 'csv', 'json', 'xml', 'html', 'htm', 'md', 'log', 'css', 'js', 'java', 'py', 'sql'];
+        const documentExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
         const isImage = imageExtensions.includes(fileExtension);
         const isVideo = videoExtensions.includes(fileExtension);
-        const isMedia = isImage || isVideo;
+        const isAudio = audioExtensions.includes(fileExtension);
+        const isText = textExtensions.includes(fileExtension);
+        const isDocument = documentExtensions.includes(fileExtension);
+        const isPreviewable = isImage || isVideo || isAudio || isText;
 
-        if (isMedia && records.length > 0) {
-            // 显示媒体预览
+        if (isPreviewable && records.length > 0) {
+            // 显示文件预览
             // 如果有多条记录，按照key顺序合并解码后的字节数组
             let binaryData;
             if (records.length > 1) {
@@ -155,16 +161,59 @@ class FileSystemBrowser extends HTMLElement {
                 }
                 // 将合并后的字节数组重新编码为Base64传递给渲染函数
                 binaryData = this.uint8ArrayToBase64(mergedArray);
-                console.log('合并了', records.length, '条记录的媒体数据，总长度:', totalLength);
+                console.log('合并了', records.length, '条记录的文件数据，总长度:', totalLength);
             } else {
                 binaryData = records[0][fileColumn];
             }
 
+            // 根据文件类型调用相应的预览方法
             if (isImage) {
                 this.renderImagePreview(binaryData, fileName);
             } else if (isVideo) {
                 this.renderVideoPreview(binaryData, fileName);
+            } else if (isAudio) {
+                this.renderAudioPreview(binaryData, fileName);
+            } else if (isText) {
+                this.renderTextPreview(binaryData, fileName);
             }
+        } else if (isDocument && records.length > 0) {
+            // 文档文件，提供下载提示
+            let binaryData;
+            if (records.length > 1) {
+                const sortedRecords = [...records].sort((a, b) => a.key - b.key);
+                const byteArrays = sortedRecords.map(r => this.base64ToUint8Array(r[fileColumn]));
+                const totalLength = byteArrays.reduce((sum, arr) => sum + arr.length, 0);
+                const mergedArray = new Uint8Array(totalLength);
+                let offset = 0;
+                for (const arr of byteArrays) {
+                    mergedArray.set(arr, offset);
+                    offset += arr.length;
+                }
+                binaryData = this.uint8ArrayToBase64(mergedArray);
+                console.log('合并了', records.length, '条记录的文档数据，总长度:', totalLength);
+            } else {
+                binaryData = records[0][fileColumn];
+            }
+            this.renderDocumentPreview(binaryData, fileName);
+        } else if (records.length > 0) {
+            // 不支持在线预览的文件，提供下载提示
+            let binaryData;
+            if (records.length > 1) {
+                const sortedRecords = [...records].sort((a, b) => a.key - b.key);
+                const byteArrays = sortedRecords.map(r => this.base64ToUint8Array(r[fileColumn]));
+                const totalLength = byteArrays.reduce((sum, arr) => sum + arr.length, 0);
+                const mergedArray = new Uint8Array(totalLength);
+                let offset = 0;
+                for (const arr of byteArrays) {
+                    mergedArray.set(arr, offset);
+                    offset += arr.length;
+                }
+                binaryData = this.uint8ArrayToBase64(mergedArray);
+                console.log('合并了', records.length, '条记录的文件数据，总长度:', totalLength);
+            } else {
+                binaryData = records[0][fileColumn];
+            }
+            this.renderDownloadPreview(binaryData, fileName);
         } else {
             // 显示文件列表
             const files = records.map(record => ({
@@ -174,6 +223,203 @@ class FileSystemBrowser extends HTMLElement {
             }));
             this.renderFiles(files);
         }
+    }
+
+    renderAudioPreview(binaryData, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        try {
+            console.log('开始处理音频数据，文件名:', fileName);
+
+            if (!binaryData || binaryData.length === 0) {
+                throw new Error('音频数据为空');
+            }
+
+            const uint8Array = this.base64ToUint8Array(binaryData);
+            console.log('转换后的Uint8Array长度:', uint8Array.length);
+
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+            const mimeTypes = {
+                'mp3': 'audio/mpeg',
+                'wav': 'audio/wav',
+                'ogg': 'audio/ogg',
+                'flac': 'audio/flac',
+                'aac': 'audio/aac',
+                'm4a': 'audio/mp4'
+            };
+            const mimeType = mimeTypes[fileExtension] || 'audio/mpeg';
+
+            const blob = new Blob([uint8Array], { type: mimeType });
+            const audioUrl = URL.createObjectURL(blob);
+
+            this.currentImageUrl = audioUrl;
+            this.currentFileName = fileName;
+
+            fileGrid.classList.add('has-preview');
+
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${fileName}</span>
+                    </div>
+                    <div class="preview-content">
+                        <audio src="${audioUrl}" controls class="preview-audio"
+                               onerror="console.error('音频加载失败'); this.parentElement.innerHTML='<div style=\\'padding: 20px; text-align: center; color: #999;\\'>音频无法显示</div>'">
+                        </audio>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            console.error('音频数据转换失败:', error);
+            fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">音频数据格式错误: ' + error.message + '</div>';
+        }
+    }
+
+    renderTextPreview(binaryData, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        try {
+            console.log('开始处理文本数据，文件名:', fileName);
+
+            if (!binaryData || binaryData.length === 0) {
+                throw new Error('文本数据为空');
+            }
+
+            const uint8Array = this.base64ToUint8Array(binaryData);
+            const decoder = new TextDecoder('utf-8');
+            const textContent = decoder.decode(uint8Array);
+
+            this.currentImageUrl = null;
+            this.currentFileName = fileName;
+
+            fileGrid.classList.add('has-preview');
+
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${fileName}</span>
+                    </div>
+                    <div class="preview-content">
+                        <pre class="preview-text">${this.escapeHtml(textContent)}</pre>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            console.error('文本数据转换失败:', error);
+            fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">文本数据格式错误: ' + error.message + '</div>';
+        }
+    }
+
+    renderDocumentPreview(binaryData, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        try {
+            console.log('开始处理文档数据，文件名:', fileName);
+
+            if (!binaryData || binaryData.length === 0) {
+                throw new Error('文档数据为空');
+            }
+
+            const uint8Array = this.base64ToUint8Array(binaryData);
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+            const mimeTypes = {
+                'pdf': 'application/pdf',
+                'doc': 'application/msword',
+                'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'xls': 'application/vnd.ms-excel',
+                'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'ppt': 'application/vnd.ms-powerpoint',
+                'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+            };
+            const mimeType = mimeTypes[fileExtension] || 'application/octet-stream';
+
+            const blob = new Blob([uint8Array], { type: mimeType });
+            const documentUrl = URL.createObjectURL(blob);
+
+            this.currentImageUrl = documentUrl;
+            this.currentFileName = fileName;
+
+            fileGrid.classList.add('has-preview');
+
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${fileName}</span>
+                    </div>
+                    <div class="preview-content">
+                        <div class="document-preview-info">
+                            <p>此文件类型不支持在线预览</p>
+                            <button class="download-btn" id="downloadDocumentBtn">下载文件</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const downloadBtn = fileGrid.querySelector('#downloadDocumentBtn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', () => {
+                    this.downloadSelected();
+                });
+            }
+        } catch (error) {
+            console.error('文档数据转换失败:', error);
+            fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">文档数据格式错误: ' + error.message + '</div>';
+        }
+    }
+
+    renderDownloadPreview(binaryData, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        try {
+            console.log('开始处理文件数据，文件名:', fileName);
+
+            if (!binaryData || binaryData.length === 0) {
+                throw new Error('文件数据为空');
+            }
+
+            const uint8Array = this.base64ToUint8Array(binaryData);
+            const blob = new Blob([uint8Array], { type: 'application/octet-stream' });
+            const fileUrl = URL.createObjectURL(blob);
+
+            this.currentImageUrl = fileUrl;
+            this.currentFileName = fileName;
+
+            fileGrid.classList.add('has-preview');
+
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${fileName}</span>
+                    </div>
+                    <div class="preview-content">
+                        <div class="document-preview-info">
+                            <p>此文件类型不支持在线预览</p>
+                            <button class="download-btn" id="downloadFileBtn">下载文件</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const downloadBtn = fileGrid.querySelector('#downloadFileBtn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', () => {
+                    this.downloadSelected();
+                });
+            }
+        } catch (error) {
+            console.error('文件数据转换失败:', error);
+            fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">文件数据格式错误: ' + error.message + '</div>';
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     renderVideoPreview(binaryData, fileName) {
