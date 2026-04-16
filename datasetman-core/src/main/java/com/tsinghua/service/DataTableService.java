@@ -72,7 +72,21 @@ public class DataTableService {
                 for (IginXColumn column: header.getColumns()) {
                     Object value = record.getValue(column.getName());
                     if (value instanceof byte[]) {
-                        recordMap.put(column.getName(), ConvertUtil.bytesToString((byte[]) value));
+//                        // 根据列名判断是二进制数据还是文本数据
+//                        if (ConvertUtil.isBinaryColumn(column.getName())) {
+//                            // 二进制数据（如图片）使用Base64编码
+//                            recordMap.put(column.getName(), ConvertUtil.bytesToBase64((byte[]) value));
+//                        } else {
+//                            // 文本数据使用UTF-8解码
+//                            recordMap.put(column.getName(), ConvertUtil.bytesToString((byte[]) value));
+//                        }
+                        if (ConvertUtil.isValidUtf8((byte[]) value)) {
+                            // 文本数据使用UTF-8解码
+                            recordMap.put(column.getName(), ConvertUtil.bytesToString((byte[]) value));
+                        } else {
+                            // 二进制数据（如图片）使用Base64编码
+                            recordMap.put(column.getName(), ConvertUtil.bytesToBase64((byte[]) value));
+                        }
                     } else {
                         recordMap.put(column.getName(), value);
                     }

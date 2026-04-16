@@ -9,6 +9,7 @@ import org.springframework.beans.BeanUtils;
 
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.*;
 
 
@@ -72,6 +73,77 @@ public class ConvertUtil {
             return ""; // 或 return null
         }
         return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 将字节数组编码为 Base64 字符串
+     * 用于传输二进制数据（如图片）
+     */
+    public static String bytesToBase64(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return "";
+        }
+        return Base64.getEncoder().encodeToString(bytes);
+    }
+
+    /**
+     * 将 Base64 字符串解码为字节数组
+     * 用于接收二进制数据（如图片）
+     */
+    public static byte[] base64ToBytes(String base64) {
+        if (base64 == null || base64.isEmpty()) {
+            return new byte[0];
+        }
+        return Base64.getDecoder().decode(base64);
+    }
+
+    /**
+     * 判断列名是否表示二进制数据（如图片）
+     * 根据列名中的文件扩展名判断
+     *
+     * @param columnName 列名，例如 "file_system.images.win11\jpg"
+     * @return true 表示二进制数据，false 表示文本数据
+     */
+    public static boolean isBinaryColumn(String columnName) {
+        if (columnName == null || columnName.isEmpty()) {
+            return false;
+        }
+
+        // 获取列名的最后一部分（文件扩展名）
+        String[] parts = columnName.split("\\\\");
+        String lastPart = parts[parts.length - 1].toLowerCase();
+
+        // 常见的二进制文件扩展名
+        Set<String> binaryExtensions = new HashSet<>(Arrays.asList(
+            "jpg", "jpeg", "png", "gif", "bmp", "webp",  // 图片
+            "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",  // 文档
+            "zip", "rar", "7z", "tar", "gz",  // 压缩文件
+            "mp3", "mp4", "avi", "mov", "wav",  // 音视频
+            "exe", "dll", "so", "bin"  // 可执行文件和二进制文件
+        ));
+
+        return binaryExtensions.contains(lastPart);
+    }
+
+    /**
+     * 判断字节数组是否为有效的UTF-8文本
+     * 作为备用判断方法
+     *
+     * @param bytes 字节数组
+     * @return true 表示可能是有效的UTF-8文本，false 表示可能是二进制数据
+     */
+    public static boolean isValidUtf8(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return true;
+        }
+
+        try {
+            String str = new String(bytes, StandardCharsets.UTF_8);
+            // 检查是否包含替换字符（表示解码失败）
+            return !str.contains("\uFFFD");
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -405,7 +477,14 @@ public class ConvertUtil {
             for (int i=0; i<=header.size() -1; i++){
                 Object value = row.get(i);
                 if (value instanceof byte[]) {
-                    rs.put(header.get(i), new String((byte[]) value, StandardCharsets.UTF_8));
+                    // 根据列名判断是二进制数据还是文本数据
+                    if (isBinaryColumn(header.get(i))) {
+                        // 二进制数据（如图片）使用Base64编码
+                        rs.put(header.get(i), bytesToBase64((byte[]) value));
+                    } else {
+                        // 文本数据使用UTF-8解码
+                        rs.put(header.get(i), bytesToString((byte[]) value));
+                    }
                 } else {
                     rs.put(header.get(i), row.get(i));
                 }

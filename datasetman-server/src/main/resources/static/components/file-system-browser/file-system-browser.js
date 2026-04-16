@@ -114,7 +114,8 @@ class FileSystemBrowser extends HTMLElement {
         }
 
         // 从列名中提取文件名（例如：file_system.images.win10\jpg -> win10.jpg）
-        const fileName = fileColumn.split('\\').pop().replace('\\', '.');
+        const parts = fileColumn.split('\\');
+        const fileName = parts[parts.length - 2] + '.' + parts[parts.length - 1];
         
         // 根据文件后缀判断是否为图片
         const fileExtension = fileName.split('.').pop().toLowerCase();
@@ -141,14 +142,45 @@ class FileSystemBrowser extends HTMLElement {
         if (!fileGrid) return;
 
         try {
-            // 将二进制字符串转换为Uint8Array
-            const uint8Array = this.stringToUint8Array(binaryData);
-            
+            console.log('开始处理图片数据，文件名:', fileName);
+            console.log('原始数据长度:', binaryData ? binaryData.length : 'null');
+
+            if (!binaryData || binaryData.length === 0) {
+                throw new Error('图片数据为空');
+            }
+
+            // 后端现在使用Base64编码，直接解码
+            const uint8Array = this.base64ToUint8Array(binaryData);
+            console.log('转换后的Uint8Array长度:', uint8Array.length);
+
+            // 检查JPEG文件头 (FF D8 FF)
+            if (uint8Array.length >= 2) {
+                console.log('文件头前两个字节:', uint8Array[0].toString(16), uint8Array[1].toString(16));
+                if (uint8Array[0] !== 0xFF || uint8Array[1] !== 0xD8) {
+                    console.warn('警告：不是标准的JPEG文件头');
+                }
+            }
+
+            // 根据文件扩展名确定MIME类型
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+            const mimeTypes = {
+                'jpg': 'image/jpeg',
+                'jpeg': 'image/jpeg',
+                'png': 'image/png',
+                'gif': 'image/gif',
+                'bmp': 'image/bmp',
+                'webp': 'image/webp'
+            };
+            const mimeType = mimeTypes[fileExtension] || 'image/jpeg';
+            console.log('使用的MIME类型:', mimeType);
+
             // 创建Blob
-            const blob = new Blob([uint8Array], { type: 'image/jpeg' });
-            
+            const blob = new Blob([uint8Array], { type: mimeType });
+            console.log('Blob创建成功，大小:', blob.size, 'bytes');
+
             // 创建ObjectURL
             const imageUrl = URL.createObjectURL(blob);
+            console.log('ObjectURL创建成功:', imageUrl);
 
             fileGrid.innerHTML = `
                 <div class="file-preview">
@@ -156,14 +188,26 @@ class FileSystemBrowser extends HTMLElement {
                         <span class="file-name">${fileName}</span>
                     </div>
                     <div class="preview-content">
-                        <img src="${imageUrl}" alt="${fileName}" style="max-width: 100%; max-height: 600px; border-radius: 8px;">
+                        <img src="${imageUrl}" alt="${fileName}" style="max-width: 100%; max-height: 600px; border-radius: 8px;"
+                             onload="console.log('图片加载成功')"
+                             onerror="console.error('图片加载失败'); this.parentElement.innerHTML='<div style=\\'padding: 20px; text-align: center; color: #999;\\'>图片无法显示</div>'">
                     </div>
                 </div>
             `;
         } catch (error) {
             console.error('图片数据转换失败:', error);
-            fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">图片数据格式错误</div>';
+            fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">图片数据格式错误: ' + error.message + '</div>';
         }
+    }
+
+    base64ToUint8Array(base64) {
+        // 解码Base64字符串为Uint8Array
+        const binaryString = atob(base64);
+        const uint8Array = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            uint8Array[i] = binaryString.charCodeAt(i);
+        }
+        return uint8Array;
     }
 
     stringToUint8Array(str) {
