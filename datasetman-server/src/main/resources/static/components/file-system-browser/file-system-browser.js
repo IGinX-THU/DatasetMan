@@ -188,13 +188,16 @@ class FileSystemBrowser extends HTMLElement {
             this.currentImageUrl = imageUrl;
             this.currentFileName = fileName;
 
+            // 添加has-preview类以启用全屏预览布局
+            fileGrid.classList.add('has-preview');
+
             fileGrid.innerHTML = `
                 <div class="file-preview">
                     <div class="preview-header">
                         <span class="file-name">${fileName}</span>
                     </div>
-                    <div class="preview-content" style="display: flex; justify-content: center; align-items: center; background: #f5f5f5; padding: 20px; border-radius: 8px;">
-                        <img src="${imageUrl}" alt="${fileName}" style="max-width: 100%; max-height: none; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+                    <div class="preview-content">
+                        <img src="${imageUrl}" alt="${fileName}"
                              onload="console.log('图片加载成功')"
                              onerror="console.error('图片加载失败'); this.parentElement.innerHTML='<div style=\\'padding: 20px; text-align: center; color: #999;\\'>图片无法显示</div>'">
                     </div>
