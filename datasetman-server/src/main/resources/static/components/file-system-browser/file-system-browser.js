@@ -71,7 +71,13 @@ class FileSystemBrowser extends HTMLElement {
 
     async loadFiles() {
         console.log('加载文件系统数据:', this.currentPath);
-        
+
+        // 显示loading
+        const fileGrid = this.querySelector('#fileGrid');
+        if (fileGrid) {
+            fileGrid.innerHTML = '<div class="loading">加载中...</div>';
+        }
+
         // 调用API获取文件数据
         try {
             const result = await window.AppConfig.post('data', 'query', {
@@ -79,10 +85,12 @@ class FileSystemBrowser extends HTMLElement {
             });
 
             if (result.success && result.data) {
-                this.renderQueryResult(result.data);
+                // 使用setTimeout让loading有机会渲染
+                setTimeout(() => {
+                    this.renderQueryResult(result.data);
+                }, 0);
             } else {
                 console.error('查询失败:', result.message);
-                const fileGrid = this.querySelector('#fileGrid');
                 if (fileGrid) {
                     fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">查询失败: ' + (result.message || '未知错误') + '</div>';
                 }
