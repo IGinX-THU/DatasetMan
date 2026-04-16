@@ -119,13 +119,16 @@ class FileSystemBrowser extends HTMLElement {
         const parts = fileColumn.split('\\');
         const fileName = parts[parts.length - 2] + '.' + parts[parts.length - 1];
         
-        // 根据文件后缀判断是否为图片
+        // 根据文件后缀判断文件类型
         const fileExtension = fileName.split('.').pop().toLowerCase();
         const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+        const videoExtensions = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv'];
         const isImage = imageExtensions.includes(fileExtension);
+        const isVideo = videoExtensions.includes(fileExtension);
+        const isMedia = isImage || isVideo;
 
-        if (isImage && records.length > 0) {
-            // 显示图片预览
+        if (isMedia && records.length > 0) {
+            // 显示媒体预览
             // 如果有多条记录，按照key顺序合并解码后的字节数组
             let binaryData;
             if (records.length > 1) {
@@ -144,11 +147,16 @@ class FileSystemBrowser extends HTMLElement {
                 }
                 // 将合并后的字节数组重新编码为Base64传递给渲染函数
                 binaryData = this.uint8ArrayToBase64(mergedArray);
-                console.log('合并了', records.length, '条记录的图片数据，总长度:', totalLength);
+                console.log('合并了', records.length, '条记录的媒体数据，总长度:', totalLength);
             } else {
                 binaryData = records[0][fileColumn];
             }
-            this.renderImagePreview(binaryData, fileName);
+
+            if (isImage) {
+                this.renderImagePreview(binaryData, fileName);
+            } else if (isVideo) {
+                this.renderVideoPreview(binaryData, fileName);
+            }
         } else {
             // 显示文件列表
             const files = records.map(record => ({
@@ -157,6 +165,69 @@ class FileSystemBrowser extends HTMLElement {
                 size: 'N/A'
             }));
             this.renderFiles(files);
+        }
+    }
+
+    renderVideoPreview(binaryData, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        try {
+            console.log('开始处理视频数据，文件名:', fileName);
+            console.log('原始数据长度:', binaryData ? binaryData.length : 'null');
+
+            if (!binaryData || binaryData.length === 0) {
+                throw new Error('视频数据为空');
+            }
+
+            // 后端现在使用Base64编码，直接解码
+            const uint8Array = this.base64ToUint8Array(binaryData);
+            console.log('转换后的Uint8Array长度:', uint8Array.length);
+
+            // 根据文件扩展名确定MIME类型
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+            const mimeTypes = {
+                'mp4': 'video/mp4',
+                'avi': 'video/x-msvideo',
+                'mov': 'video/quicktime',
+                'mkv': 'video/x-matroska',
+                'webm': 'video/webm',
+                'flv': 'video/x-flv',
+                'wmv': 'video/x-ms-wmv'
+            };
+            const mimeType = mimeTypes[fileExtension] || 'video/mp4';
+            console.log('使用的MIME类型:', mimeType);
+
+            // 创建Blob
+            const blob = new Blob([uint8Array], { type: mimeType });
+            console.log('Blob创建成功，大小:', blob.size, 'bytes');
+
+            // 创建ObjectURL
+            const videoUrl = URL.createObjectURL(blob);
+            console.log('ObjectURL创建成功:', videoUrl);
+
+            // 存储当前视频信息用于下载
+            this.currentImageUrl = videoUrl;
+            this.currentFileName = fileName;
+
+            // 添加has-preview类以启用全屏预览布局
+            fileGrid.classList.add('has-preview');
+
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${fileName}</span>
+                    </div>
+                    <div class="preview-content">
+                        <video src="${videoUrl}" controls class="preview-video"
+                               onerror="console.error('视频加载失败'); this.parentElement.innerHTML='<div style=\\'padding: 20px; text-align: center; color: #999;\\'>视频无法显示</div>'">
+                        </video>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            console.error('视频数据转换失败:', error);
+            fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">视频数据格式错误: ' + error.message + '</div>';
         }
     }
 
