@@ -126,7 +126,28 @@ class FileSystemBrowser extends HTMLElement {
 
         if (isImage && records.length > 0) {
             // 显示图片预览
-            const binaryData = records[0][fileColumn];
+            // 如果有多条记录，按照key顺序合并解码后的字节数组
+            let binaryData;
+            if (records.length > 1) {
+                // 按key排序
+                const sortedRecords = [...records].sort((a, b) => a.key - b.key);
+                // 分别解码每个Base64字符串为Uint8Array，然后合并
+                const byteArrays = sortedRecords.map(r => this.base64ToUint8Array(r[fileColumn]));
+                // 计算总长度
+                const totalLength = byteArrays.reduce((sum, arr) => sum + arr.length, 0);
+                // 创建合并后的Uint8Array
+                const mergedArray = new Uint8Array(totalLength);
+                let offset = 0;
+                for (const arr of byteArrays) {
+                    mergedArray.set(arr, offset);
+                    offset += arr.length;
+                }
+                // 将合并后的字节数组重新编码为Base64传递给渲染函数
+                binaryData = this.uint8ArrayToBase64(mergedArray);
+                console.log('合并了', records.length, '条记录的图片数据，总长度:', totalLength);
+            } else {
+                binaryData = records[0][fileColumn];
+            }
             this.renderImagePreview(binaryData, fileName);
         } else {
             // 显示文件列表
@@ -282,6 +303,16 @@ class FileSystemBrowser extends HTMLElement {
             uint8Array[i] = binaryString.charCodeAt(i);
         }
         return uint8Array;
+    }
+
+    uint8ArrayToBase64(uint8Array) {
+        // 将Uint8Array编码为Base64字符串
+        let binary = '';
+        const len = uint8Array.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(uint8Array[i]);
+        }
+        return btoa(binary);
     }
 
     stringToUint8Array(str) {
