@@ -34,7 +34,31 @@ class FileSystemBrowser extends HTMLElement {
             </div>
         `;
 
+        this.loadLibraries();
         this.initEventListeners();
+    }
+
+    loadLibraries() {
+        // 加载PDF.js
+        if (typeof pdfjsLib === 'undefined') {
+            const pdfScript = document.createElement('script');
+            pdfScript.src = '/lib/pdfjs/pdf.min.js';
+            pdfScript.onload = () => {
+                console.log('PDF.js加载成功');
+                pdfjsLib.GlobalWorkerOptions.workerSrc = '/lib/pdfjs/pdf.worker.min.js';
+            };
+            document.head.appendChild(pdfScript);
+        }
+
+        // 加载docx-preview
+        if (typeof docx === 'undefined') {
+            const docxScript = document.createElement('script');
+            docxScript.src = '/lib/docx-preview/docx-preview.min.js';
+            docxScript.onload = () => {
+                console.log('docx-preview加载成功');
+            };
+            document.head.appendChild(docxScript);
+        }
     }
 
     initEventListeners() {
@@ -325,10 +349,22 @@ class FileSystemBrowser extends HTMLElement {
 
             const uint8Array = this.base64ToUint8Array(binaryData);
             const fileExtension = fileName.split('.').pop().toLowerCase();
+
+            // PDF文件使用PDF.js预览
+            if (fileExtension === 'pdf') {
+                this.renderPdfPreview(uint8Array, fileName);
+                return;
+            }
+
+            // Word文档使用docx-preview预览
+            if (fileExtension === 'docx') {
+                this.renderDocxPreview(uint8Array, fileName);
+                return;
+            }
+
+            // 其他文档类型（Office等）暂不支持在线预览
             const mimeTypes = {
-                'pdf': 'application/pdf',
                 'doc': 'application/msword',
-                'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 'xls': 'application/vnd.ms-excel',
                 'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'ppt': 'application/vnd.ms-powerpoint',
@@ -367,6 +403,197 @@ class FileSystemBrowser extends HTMLElement {
         } catch (error) {
             console.error('文档数据转换失败:', error);
             fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">文档数据格式错误: ' + error.message + '</div>';
+        }
+    }
+
+    renderPdfPreview(uint8Array, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        fileGrid.classList.add('has-preview');
+
+        fileGrid.innerHTML = `
+            <div class="file-preview">
+                <div class="preview-header" style="display: flex; align-items: center; justify-content: space-between;">
+                    <span class="file-name">${fileName}</span>
+                    <div id="pdfPagination" style="display: none; align-items: center;">
+                        <button class="toolbar-btn" id="prevPageBtn" style="padding: 4px 12px; margin-right: 8px; border: 1px solid #1976D2; background: #1976D2; color: #fff; cursor: pointer; border-radius: 4px;">上一页</button>
+                        <span id="pageInfo" style="margin-right: 8px; font-size: 13px; color: #666;">第 1 页 / 共 1 页</span>
+                        <button class="toolbar-btn" id="nextPageBtn" style="padding: 4px 12px; border: 1px solid #1976D2; background: #1976D2; color: #fff; cursor: pointer; border-radius: 4px;">下一页</button>
+                    </div>
+                </div>
+                <div class="preview-content">
+                    <div id="pdfContainer" style="width: 100%; height: 600px; overflow: auto; display: flex; justify-content: center;">
+                        <div id="pdfLoader" style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                            <div style="text-align: center;">
+                                <div style="margin-bottom: 10px;">正在加载PDF...</div>
+                            </div>
+                        </div>
+                        <canvas id="pdfCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 使用PDF.js渲染PDF
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '/lib/pdfjs/pdf.worker.min.js';
+            
+            const loadingTask = pdfjsLib.getDocument(uint8Array);
+            loadingTask.promise.then((pdf) => {
+                console.log('PDF加载成功，页数:', pdf.numPages);
+                
+                const pdfLoader = fileGrid.querySelector('#pdfLoader');
+                if (pdfLoader) {
+                    pdfLoader.style.display = 'none';
+                }
+
+                const pdfContainer = fileGrid.querySelector('#pdfContainer');
+                const canvas = fileGrid.querySelector('#pdfCanvas');
+                const pagination = fileGrid.querySelector('#pdfPagination');
+                const pageInfo = fileGrid.querySelector('#pageInfo');
+                const prevBtn = fileGrid.querySelector('#prevPageBtn');
+                const nextBtn = fileGrid.querySelector('#nextPageBtn');
+                
+                let currentPage = 1;
+                const totalPages = pdf.numPages;
+                
+                pagination.style.display = 'flex';
+                pageInfo.textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+                
+                const renderPage = (pageNum) => {
+                    pdf.getPage(pageNum).then((page) => {
+                        const viewport = page.getViewport({ scale: 1.5 });
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+
+                        const renderContext = {
+                            canvasContext: canvas.getContext('2d'),
+                            viewport: viewport
+                        };
+                        
+                        page.render(renderContext).promise.then(() => {
+                            console.log(`PDF第${pageNum}页渲染完成`);
+                        }).catch((error) => {
+                            console.error('PDF渲染失败:', error);
+                        });
+                    });
+                };
+                
+                renderPage(currentPage);
+                
+                prevBtn.addEventListener('click', () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        pageInfo.textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+                        renderPage(currentPage);
+                    }
+                });
+                
+                nextBtn.addEventListener('click', () => {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        pageInfo.textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+                        renderPage(currentPage);
+                    }
+                });
+            }).catch((error) => {
+                console.error('PDF加载失败:', error);
+                fileGrid.innerHTML = `
+                    <div class="file-preview">
+                        <div class="preview-header">
+                            <span class="file-name">${fileName}</span>
+                        </div>
+                        <div class="preview-content">
+                            <div class="document-preview-info">
+                                <p>PDF加载失败: ${error.message}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            console.error('PDF.js未加载');
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${fileName}</span>
+                    </div>
+                    <div class="preview-content">
+                        <div class="document-preview-info">
+                            <p>PDF.js库未加载</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    renderDocxPreview(uint8Array, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        fileGrid.classList.add('has-preview');
+
+        fileGrid.innerHTML = `
+            <div class="file-preview">
+                <div class="preview-header">
+                    <span class="file-name">${fileName}</span>
+                </div>
+                <div class="preview-content">
+                    <div id="docxContainer" style="width: 100%; height: 600px; overflow: auto;">
+                        <div id="docxLoader" style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                            <div style="text-align: center;">
+                                <div style="margin-bottom: 10px;">正在加载Word文档...</div>
+                            </div>
+                        </div>
+                        <div id="docxViewer" style="padding: 20px;"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 使用docx-preview渲染Word文档
+        if (typeof docx !== 'undefined') {
+            const blob = new Blob([uint8Array], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            
+            docx.renderAsync(blob, fileGrid.querySelector('#docxViewer'))
+                .then(() => {
+                    console.log('Word文档渲染完成');
+                    const docxLoader = fileGrid.querySelector('#docxLoader');
+                    if (docxLoader) {
+                        docxLoader.style.display = 'none';
+                    }
+                })
+                .catch((error) => {
+                    console.error('Word文档渲染失败:', error);
+                    fileGrid.innerHTML = `
+                        <div class="file-preview">
+                            <div class="preview-header">
+                                <span class="file-name">${fileName}</span>
+                            </div>
+                            <div class="preview-content">
+                                <div class="document-preview-info">
+                                    <p>Word文档加载失败: ${error.message}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+        } else {
+            console.error('docx-preview库未加载');
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${fileName}</span>
+                    </div>
+                    <div class="preview-content">
+                        <div class="document-preview-info">
+                            <p>docx-preview库未加载</p>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
     }
 
