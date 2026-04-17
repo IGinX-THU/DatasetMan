@@ -439,6 +439,11 @@ class FileSystemBrowser extends HTMLElement {
         if (typeof pdfjsLib !== 'undefined') {
             pdfjsLib.GlobalWorkerOptions.workerSrc = '/lib/pdfjs/pdf.worker.min.js';
             
+            // 设置当前文件信息以便下载
+            const blob = new Blob([uint8Array], { type: 'application/pdf' });
+            this.currentImageUrl = URL.createObjectURL(blob);
+            this.currentFileName = fileName;
+            
             const loadingTask = pdfjsLib.getDocument(uint8Array);
             loadingTask.promise.then((pdf) => {
                 console.log('PDF加载成功，页数:', pdf.numPages);
@@ -547,7 +552,7 @@ class FileSystemBrowser extends HTMLElement {
                                 <div style="margin-bottom: 10px;">正在加载Word文档...</div>
                             </div>
                         </div>
-                        <div id="docxViewer" style="padding: 20px;"></div>
+                        <div id="docxViewer" style="padding: 20px; font-family: 'Times New Roman', serif; line-height: 1.6;"></div>
                     </div>
                 </div>
             </div>
@@ -555,6 +560,11 @@ class FileSystemBrowser extends HTMLElement {
 
         // 使用mammoth渲染Word文档
         if (typeof mammoth !== 'undefined') {
+            // 设置当前文件信息以便下载
+            const blob = new Blob([uint8Array], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            this.currentImageUrl = URL.createObjectURL(blob);
+            this.currentFileName = fileName;
+            
             mammoth.convertToHtml({arrayBuffer: uint8Array})
                 .then((result) => {
                     console.log('Word文档渲染完成');
@@ -564,7 +574,25 @@ class FileSystemBrowser extends HTMLElement {
                     }
                     const docxViewer = fileGrid.querySelector('#docxViewer');
                     if (docxViewer) {
-                        docxViewer.innerHTML = result.value;
+                        // 添加样式以改善格式显示
+                        const styledHtml = `
+                            <style>
+                                #docxViewer h1 { font-size: 24px; font-weight: bold; margin: 20px 0 10px 0; color: #333; }
+                                #docxViewer h2 { font-size: 20px; font-weight: bold; margin: 18px 0 9px 0; color: #444; }
+                                #docxViewer h3 { font-size: 18px; font-weight: bold; margin: 16px 0 8px 0; color: #555; }
+                                #docxViewer p { margin: 10px 0; text-align: justify; }
+                                #docxViewer table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+                                #docxViewer th, #docxViewer td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                #docxViewer th { background-color: #f5f5f5; font-weight: bold; }
+                                #docxViewer ul, #docxViewer ol { margin: 10px 0; padding-left: 20px; }
+                                #docxViewer li { margin: 5px 0; }
+                                #docxViewer strong { font-weight: bold; }
+                                #docxViewer em { font-style: italic; }
+                                #docxViewer u { text-decoration: underline; }
+                            </style>
+                            ${result.value}
+                        `;
+                        docxViewer.innerHTML = styledHtml;
                     }
                 })
                 .catch((error) => {
