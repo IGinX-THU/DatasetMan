@@ -131,3 +131,13 @@
     font-size: 14px;
     word-break: break-all;
 }
+
+.kv-hash {
+    background: #f9f9f9;
+    border-left: 3px solid #FF9800;
+}
+
+.kv-hash-icon {
+    font-size: 16px;
+    margin-bottom: 8px;
+}

@@ -58,7 +58,17 @@ class KeyValueViewer extends HTMLElement {
 
     setPath(path) {
         this.currentPath = path;
+        this.hashKeyPath = null;
+        this.hashValuePath = null;
         this.loadKeys();
+    }
+
+    setHashPaths(hashKey, hashValue) {
+        this.hashKeyPath = hashKey;
+        this.hashValuePath = hashValue;
+        // 设置父路径为hash节点的路径（去掉.key和.value后缀）
+        const parentPath = hashKey.substring(0, hashKey.lastIndexOf('.'));
+        this.currentPath = parentPath;
     }
 
     async loadKeys() {
@@ -66,8 +76,15 @@ class KeyValueViewer extends HTMLElement {
         
         // 调用API获取键值对数据
         try {
+            let paths = [this.currentPath];
+            
+            // 如果是hash结构，添加key和value路径
+            if (this.hashKeyPath && this.hashValuePath) {
+                paths = [this.hashKeyPath, this.hashValuePath];
+            }
+            
             const result = await window.AppConfig.post('data', 'query', {
-                paths: [this.currentPath]
+                paths: paths
             });
 
             if (result.success && result.data) {
@@ -100,6 +117,31 @@ class KeyValueViewer extends HTMLElement {
             return;
         }
 
+        // 如果是hash结构，将key和value记录合并为hash条目
+        if (this.hashKeyPath && this.hashValuePath) {
+            // 查找key和value对应的列名（精确匹配）
+            const keyColumn = header.find(h => h === this.hashKeyPath);
+            const valueColumn = header.find(h => h === this.hashValuePath);
+            
+            if (keyColumn && valueColumn && records.length > 0) {
+                const record = records[0];
+                const keyValue = record[keyColumn];
+                const valueValue = record[valueColumn];
+                
+                if (keyValue !== undefined && valueValue !== undefined) {
+                    const keys = [{
+                        key: keyValue,
+                        type: this.inferType(valueValue),
+                        value: valueValue,
+                        isHash: true
+                    }];
+                    
+                    this.renderKeys(keys);
+                    return;
+                }
+            }
+        }
+
         // 将查询结果转换为键值对格式
         const keys = records.map(record => {
             const key = record.key;
@@ -130,7 +172,8 @@ class KeyValueViewer extends HTMLElement {
         if (!kvTree) return;
 
         kvTree.innerHTML = keys.map(kv => `
-            <div class="kv-item" data-key="${kv.key}" data-type="${kv.type}">
+            <div class="kv-item ${kv.isHash ? 'kv-hash' : ''}" data-key="${kv.key}" data-type="${kv.type}">
+                ${kv.isHash ? '<div class="kv-hash-icon">🔑</div>' : ''}
                 <div class="kv-key">${kv.key}</div>
                 <div class="kv-type">类型: ${kv.type}</div>
                 <div class="kv-value">${this.formatValue(kv.value)}</div>

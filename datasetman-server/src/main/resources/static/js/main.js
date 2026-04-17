@@ -1643,8 +1643,18 @@ function showVisualAnalysis() {
         showComponent('fileSystemBrowser', path);
     }
 
-    function showKeyValueViewer(path) {
-        showComponent('keyValueViewer', path);
+    function showKeyValueViewer(path, siblingPath) {
+        const viewer = document.querySelector('key-value-viewer');
+        if (viewer && siblingPath) {
+            // key或value节点：设置两个路径并显示组件
+            const keyPath = path.endsWith('.key') ? path : siblingPath;
+            const valuePath = path.endsWith('.value') ? path : siblingPath;
+            viewer.setHashPaths(keyPath, valuePath);
+            showComponent('keyValueViewer');
+        } else {
+            // 普通路径：传递path给showComponent
+            showComponent('keyValueViewer', path);
+        }
     }
 
     function showSemiStructuredViewer(path) {
@@ -1948,12 +1958,21 @@ function showVisualAnalysis() {
                     // 获取节点的完整路径
                     const fullPath = this.getAttribute('data-full-path');
                     const isLeaf = this.getAttribute('data-is-leaf') === 'true';
+                    
                     if (fullPath && isLeaf) {
-                        console.log('点击了叶子节点:', fullPath);
                         selectedDataSource = fullPath;
 
-                        // 检查是否为relational开头的路径，如果是则使用data-table跳转逻辑
-                        if (fullPath.startsWith('relational')) {
+                        // 检查是否为key或value节点，如果是则查询hash结构
+                        const parts = fullPath.split('.');
+                        const lastPart = parts[parts.length - 1];
+                        if (lastPart === 'key' || lastPart === 'value') {
+                            // 构造兄弟节点的路径
+                            const siblingPath = lastPart === 'key' 
+                                ? fullPath.replace(/\.key$/, '.value')
+                                : fullPath.replace(/\.value$/, '.key');
+                            // 传递key和value路径给key-value-viewer
+                            showKeyValueViewer(fullPath, siblingPath);
+                        } else if (fullPath.startsWith('relational')) {
                             // 获取父节点路径作为tableName
                             const pathParts = fullPath.split('.');
                             const parentPath = pathParts.slice(0, -1).join('.');
