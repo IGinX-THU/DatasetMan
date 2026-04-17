@@ -59,6 +59,16 @@ class FileSystemBrowser extends HTMLElement {
             };
             document.head.appendChild(mammothScript);
         }
+
+        // 加载SheetJS
+        if (typeof XLSX === 'undefined') {
+            const xlsxScript = document.createElement('script');
+            xlsxScript.src = '/lib/xlsx/xlsx.full.min.js';
+            xlsxScript.onload = () => {
+                console.log('SheetJS加载成功');
+            };
+            document.head.appendChild(xlsxScript);
+        }
     }
 
     initEventListeners() {
@@ -356,17 +366,21 @@ class FileSystemBrowser extends HTMLElement {
                 return;
             }
 
-            // Word文档使用docx-preview预览
+            // Word文档使用mammoth预览
             if (fileExtension === 'docx') {
                 this.renderDocxPreview(uint8Array, fileName);
+                return;
+            }
+
+            // Excel文件使用SheetJS预览
+            if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+                this.renderXlsxPreview(uint8Array, fileName);
                 return;
             }
 
             // 其他文档类型（Office等）暂不支持在线预览
             const mimeTypes = {
                 'doc': 'application/msword',
-                'xls': 'application/vnd.ms-excel',
-                'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'ppt': 'application/vnd.ms-powerpoint',
                 'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
             };
@@ -620,6 +634,105 @@ class FileSystemBrowser extends HTMLElement {
                     <div class="preview-content">
                         <div class="document-preview-info">
                             <p>mammoth库未加载</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    renderXlsxPreview(uint8Array, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        fileGrid.classList.add('has-preview');
+
+        fileGrid.innerHTML = `
+            <div class="file-preview">
+                <div class="preview-header">
+                    <span class="file-name">${fileName}</span>
+                </div>
+                <div class="preview-content">
+                    <div id="xlsxContainer" style="width: 100%; height: 600px; overflow: auto;">
+                        <div id="xlsxLoader" style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                            <div style="text-align: center;">
+                                <div style="margin-bottom: 10px;">正在加载Excel文件...</div>
+                            </div>
+                        </div>
+                        <div id="xlsxViewer" style="padding: 20px;"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 使用SheetJS渲染Excel文件
+        if (typeof XLSX !== 'undefined') {
+            // 设置当前文件信息以便下载
+            const blob = new Blob([uint8Array], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            this.currentImageUrl = URL.createObjectURL(blob);
+            this.currentFileName = fileName;
+            
+            try {
+                const workbook = XLSX.read(uint8Array, { type: 'array' });
+                const xlsxLoader = fileGrid.querySelector('#xlsxLoader');
+                if (xlsxLoader) {
+                    xlsxLoader.style.display = 'none';
+                }
+                const xlsxViewer = fileGrid.querySelector('#xlsxViewer');
+                if (xlsxViewer) {
+                    // 渲染所有工作表
+                    let html = '<div style="margin-bottom: 20px;">';
+                    workbook.SheetNames.forEach((sheetName, index) => {
+                        const worksheet = workbook.Sheets[sheetName];
+                        const htmlTable = XLSX.utils.sheet_to_html(worksheet);
+                        html += `
+                            <div style="margin-bottom: 30px;">
+                                <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #333;">工作表: ${sheetName}</h3>
+                                <div style="overflow-x: auto;">
+                                    ${htmlTable}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    
+                    // 添加表格样式
+                    const styledHtml = `
+                        <style>
+                            #xlsxViewer table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+                            #xlsxViewer th, #xlsxViewer td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
+                            #xlsxViewer th { background-color: #f5f5f5; font-weight: bold; }
+                            #xlsxViewer tr:nth-child(even) { background-color: #f9f9f9; }
+                        </style>
+                        ${html}
+                    `;
+                    xlsxViewer.innerHTML = styledHtml;
+                }
+            } catch (error) {
+                console.error('Excel文件渲染失败:', error);
+                fileGrid.innerHTML = `
+                    <div class="file-preview">
+                        <div class="preview-header">
+                            <span class="file-name">${fileName}</span>
+                        </div>
+                        <div class="preview-content">
+                            <div class="document-preview-info">
+                                <p>Excel文件加载失败: ${error.message}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            console.error('SheetJS库未加载');
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${fileName}</span>
+                    </div>
+                    <div class="preview-content">
+                        <div class="document-preview-info">
+                            <p>SheetJS库未加载</p>
                         </div>
                     </div>
                 </div>
