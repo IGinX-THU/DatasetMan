@@ -202,6 +202,132 @@ class SemiStructuredViewer extends HTMLElement {
         this.renderDocuments(documents);
     }
 
+    buildJsonTree(data, key = null, isRoot = true) {
+        if (data === null) {
+            return `<span class="json-null">null</span>`;
+        }
+
+        if (typeof data === 'boolean') {
+            return `<span class="json-boolean">${data}</span>`;
+        }
+
+        if (typeof data === 'number') {
+            return `<span class="json-number">${data}</span>`;
+        }
+
+        if (typeof data === 'string') {
+            return `<span class="json-string">"${this.escapeHtml(data)}"</span>`;
+        }
+
+        if (Array.isArray(data)) {
+            if (data.length === 0) {
+                return `<span class="json-bracket">[]</span>`;
+            }
+
+            const nodeId = `node-${Math.random().toString(36).substr(2, 9)}`;
+            const preview = this.getArrayPreview(data);
+
+            let html = `
+                <div class="json-item">
+                    <span class="json-toggle expanded" data-target="${nodeId}"></span>
+                    <span class="json-bracket">[</span>
+                    <span class="json-preview" id="${nodeId}-preview">${preview}</span>
+                    <span class="json-bracket">]</span>
+                </div>
+                <div class="json-children" id="${nodeId}">
+            `;
+
+            data.forEach((item, index) => {
+                html += `
+                    <div class="json-node">
+                        ${this.buildJsonTree(item, index, false)}${index < data.length - 1 ? '<span class="json-comma">,</span>' : ''}
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            return html;
+        }
+
+        if (typeof data === 'object') {
+            const keys = Object.keys(data);
+            if (keys.length === 0) {
+                return `<span class="json-bracket">{}</span>`;
+            }
+
+            const nodeId = `node-${Math.random().toString(36).substr(2, 9)}`;
+            const preview = this.getObjectPreview(data);
+
+            let html = `
+                <div class="json-item">
+                    <span class="json-toggle expanded" data-target="${nodeId}"></span>
+                    <span class="json-bracket">{</span>
+                    <span class="json-preview" id="${nodeId}-preview">${preview}</span>
+                    <span class="json-bracket">}</span>
+                </div>
+                <div class="json-children" id="${nodeId}">
+            `;
+
+            keys.forEach((k, index) => {
+                html += `
+                    <div class="json-node">
+                        <span class="json-key">"${this.escapeHtml(k)}"</span>
+                        <span class="json-bracket">:</span>
+                        ${this.buildJsonTree(data[k], k, false)}${index < keys.length - 1 ? '<span class="json-comma">,</span>' : ''}
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            return html;
+        }
+
+        return `<span class="json-string">"${this.escapeHtml(String(data))}"</span>`;
+    }
+
+    getArrayPreview(arr) {
+        if (arr.length === 0) return '';
+        const preview = arr.slice(0, 3).map(item => {
+            if (typeof item === 'string') return `"${item.substring(0, 20)}${item.length > 20 ? '...' : ''}"`;
+            if (typeof item === 'object') return '{...}';
+            return String(item);
+        }).join(', ');
+        return arr.length > 3 ? `${preview}...` : preview;
+    }
+
+    getObjectPreview(obj) {
+        const keys = Object.keys(obj);
+        if (keys.length === 0) return '';
+        const preview = keys.slice(0, 3).join(', ');
+        return keys.length > 3 ? `${preview}...` : preview;
+    }
+
+    initToggleListeners() {
+        const toggles = this.querySelectorAll('.json-toggle');
+        toggles.forEach(toggle => {
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const targetId = toggle.getAttribute('data-target');
+                const children = this.querySelector(`#${targetId}`);
+                const preview = this.querySelector(`#${targetId}-preview`);
+
+                if (children && preview) {
+                    if (toggle.classList.contains('expanded')) {
+                        toggle.classList.remove('expanded');
+                        toggle.classList.add('collapsed');
+                        children.classList.add('collapsed');
+                        preview.style.display = 'inline';
+                    } else {
+                        toggle.classList.remove('collapsed');
+                        toggle.classList.add('expanded');
+                        children.classList.remove('collapsed');
+                        preview.style.display = 'none';
+                    }
+                }
+            });
+        });
+    }
+
     renderDocuments(documents) {
         const ssList = this.querySelector('#ssList');
         if (!ssList) return;
@@ -216,7 +342,7 @@ class SemiStructuredViewer extends HTMLElement {
         // 存储当前文档用于复制
         this.currentDocument = doc;
 
-        const jsonStr = JSON.stringify(doc, null, 2);
+        const jsonTree = this.buildJsonTree(doc, null, true);
 
         ssList.innerHTML = `
             <div class="ss-item" data-id="${key}">
@@ -224,10 +350,13 @@ class SemiStructuredViewer extends HTMLElement {
                     <div class="ss-id">${key !== undefined ? `Document (${key})` : 'Document'}</div>
                 </div>
                 <div class="ss-content">
-                    <pre class="json-viewer">${this.escapeHtml(jsonStr)}</pre>
+                    <div class="json-tree json-node-root">${jsonTree}</div>
                 </div>
             </div>
         `;
+
+        // Initialize toggle listeners
+        this.initToggleListeners();
     }
 
     copyToClipboard(text) {
