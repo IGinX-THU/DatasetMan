@@ -50,14 +50,14 @@ class FileSystemBrowser extends HTMLElement {
             document.head.appendChild(pdfScript);
         }
 
-        // 加载docx-preview
-        if (typeof docx === 'undefined') {
-            const docxScript = document.createElement('script');
-            docxScript.src = '/lib/docx-preview/docx-preview.min.js';
-            docxScript.onload = () => {
-                console.log('docx-preview加载成功');
+        // 加载mammoth
+        if (typeof mammoth === 'undefined') {
+            const mammothScript = document.createElement('script');
+            mammothScript.src = '/lib/mammoth/mammoth.browser.min.js';
+            mammothScript.onload = () => {
+                console.log('mammoth加载成功');
             };
-            document.head.appendChild(docxScript);
+            document.head.appendChild(mammothScript);
         }
     }
 
@@ -553,16 +553,18 @@ class FileSystemBrowser extends HTMLElement {
             </div>
         `;
 
-        // 使用docx-preview渲染Word文档
-        if (typeof docx !== 'undefined') {
-            const blob = new Blob([uint8Array], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-            
-            docx.renderAsync(blob, fileGrid.querySelector('#docxViewer'))
-                .then(() => {
+        // 使用mammoth渲染Word文档
+        if (typeof mammoth !== 'undefined') {
+            mammoth.convertToHtml({arrayBuffer: uint8Array})
+                .then((result) => {
                     console.log('Word文档渲染完成');
                     const docxLoader = fileGrid.querySelector('#docxLoader');
                     if (docxLoader) {
                         docxLoader.style.display = 'none';
+                    }
+                    const docxViewer = fileGrid.querySelector('#docxViewer');
+                    if (docxViewer) {
+                        docxViewer.innerHTML = result.value;
                     }
                 })
                 .catch((error) => {
@@ -581,7 +583,7 @@ class FileSystemBrowser extends HTMLElement {
                     `;
                 });
         } else {
-            console.error('docx-preview库未加载');
+            console.error('mammoth库未加载');
             fileGrid.innerHTML = `
                 <div class="file-preview">
                     <div class="preview-header">
@@ -589,7 +591,7 @@ class FileSystemBrowser extends HTMLElement {
                     </div>
                     <div class="preview-content">
                         <div class="document-preview-info">
-                            <p>docx-preview库未加载</p>
+                            <p>mammoth库未加载</p>
                         </div>
                     </div>
                 </div>
