@@ -153,6 +153,35 @@ class SemiStructuredViewer extends HTMLElement {
         this.renderBreadcrumb();
     }
 
+    flattenToNested(flatObj) {
+        const result = {};
+        for (const key in flatObj) {
+            if (key === 'key') continue; // Skip the key field
+            
+            // Remove the prefix 'semi_structured.myDatabase.users.'
+            const fieldPath = key.replace(/^semi_structured\.[^.]+\.[^.]+\./, '');
+            
+            // Split by dots and build nested structure
+            const parts = fieldPath.split('.');
+            let current = result;
+            
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                if (i === parts.length - 1) {
+                    // Last part, set the value
+                    current[part] = flatObj[key];
+                } else {
+                    // Not the last part, create or get nested object
+                    if (!current[part]) {
+                        current[part] = {};
+                    }
+                    current = current[part];
+                }
+            }
+        }
+        return result;
+    }
+
     renderQueryResult(data) {
         const ssList = this.querySelector('#ssList');
         if (!ssList) return;
@@ -163,13 +192,11 @@ class SemiStructuredViewer extends HTMLElement {
             return;
         }
 
-        // 将查询结果转换为文档格式
+        // 将查询结果转换为文档格式，并转换为嵌套结构，同时保留key
         const documents = records.map(record => {
-            const doc = {};
-            header.forEach(key => {
-                doc[key] = record[key];
-            });
-            return doc;
+            const key = record.key;
+            const nestedDoc = this.flattenToNested(record);
+            return { key, doc: nestedDoc };
         });
 
         this.renderDocuments(documents);
@@ -180,7 +207,7 @@ class SemiStructuredViewer extends HTMLElement {
         if (!ssList) return;
 
         // 只取第一个文档
-        const doc = documents[0];
+        const { key, doc } = documents[0];
         if (!doc) {
             ssList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无文档数据</div>';
             return;
@@ -189,13 +216,12 @@ class SemiStructuredViewer extends HTMLElement {
         // 存储当前文档用于复制
         this.currentDocument = doc;
 
-        const idField = doc._id || doc.id;
         const jsonStr = JSON.stringify(doc, null, 2);
 
         ssList.innerHTML = `
-            <div class="ss-item" data-id="${idField}">
+            <div class="ss-item" data-id="${key}">
                 <div class="ss-header">
-                    <div class="ss-id">${idField ? `Document (${idField})` : 'Document'}</div>
+                    <div class="ss-id">${key !== undefined ? `Document (${key})` : 'Document'}</div>
                 </div>
                 <div class="ss-content">
                     <pre class="json-viewer">${this.escapeHtml(jsonStr)}</pre>
