@@ -213,22 +213,81 @@ class KeyValueViewer extends HTMLElement {
         if (!kvTree) return;
 
         kvTree.innerHTML = keys.map(kv => `
-            <div class="kv-item ${kv.isHash ? 'kv-hash' : ''}" data-key="${kv.key}" data-type="${kv.type}">
-                ${kv.isHash ? '<div class="kv-hash-icon">🔑</div>' : ''}
-                <div class="kv-key">${kv.key}</div>
-                <div class="kv-type">类型: ${kv.type}</div>
+            <div class="kv-item ${kv.isHash ? 'kv-hash' : ''}" data-key="${kv.key}" data-type="${kv.type}" data-value="${this.escapeHtml(String(kv.value))}">
+                <button class="kv-copy-btn kv-type-badge ${kv.type}" title="复制">复制</button>
+                <div class="kv-item-header">
+                    ${kv.isHash ? '<div class="kv-hash-icon">🔑</div>' : ''}
+                    <div class="kv-key">${this.escapeHtml(kv.key)}</div>
+                </div>
                 <div class="kv-value">${this.formatValue(kv.value)}</div>
             </div>
         `).join('');
 
         // 添加点击事件
         kvTree.querySelectorAll('.kv-item').forEach(item => {
-            item.addEventListener('click', () => {
+            item.addEventListener('click', (e) => {
+                if (e.target.classList.contains('kv-copy-btn')) return;
                 const key = item.getAttribute('data-key');
                 const type = item.getAttribute('data-type');
                 console.log('点击键值对:', key, type);
             });
         });
+
+        // 添加复制按钮事件
+        kvTree.querySelectorAll('.kv-copy-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const value = e.target.closest('.kv-item').getAttribute('data-value');
+                this.copyToClipboard(value);
+                this.showToast('已复制到剪贴板');
+            });
+        });
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    copyToClipboard(text) {
+        navigator.clipboard.writeText(text).catch(err => {
+            console.error('复制失败:', err);
+            // 降级方案
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        });
+    }
+
+    showToast(message) {
+        if (window.CommonUtils && window.CommonUtils.showToast) {
+            window.CommonUtils.showToast(message, 'success');
+        } else {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: #333;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 10000;
+            animation: slideIn 0.3s ease-out;
+            font-size: 14px;
+        `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
     }
 
     formatValue(value) {
