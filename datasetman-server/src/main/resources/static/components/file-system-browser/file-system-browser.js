@@ -804,6 +804,31 @@ class FileSystemBrowser extends HTMLElement {
                 throw new Error('视频数据为空');
             }
 
+            // 检查文件大小，超过50MB的文件建议下载而非预览
+            const fileSizeMB = (binaryData.length * 0.75) / (1024 * 1024); // Base64编码后约为原始大小的4/3
+            if (fileSizeMB > 50) {
+                console.log('文件过大(' + fileSizeMB.toFixed(2) + 'MB)，建议下载而非预览');
+                fileGrid.innerHTML = `
+                    <div class="file-preview">
+                        <div class="preview-header">
+                            <span class="file-name">${fileName}</span>
+                        </div>
+                        <div class="preview-content">
+                            <div class="document-preview-info">
+                                <p>文件过大(${fileSizeMB.toFixed(2)}MB)，不支持在线预览</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // 设置下载信息
+                const uint8Array = this.base64ToUint8Array(binaryData);
+                const blob = new Blob([uint8Array], { type: 'video/mp4' });
+                this.currentImageUrl = URL.createObjectURL(blob);
+                this.currentFileName = fileName;
+                return;
+            }
+
             // 后端现在使用Base64编码，直接解码
             const uint8Array = this.base64ToUint8Array(binaryData);
             console.log('转换后的Uint8Array长度:', uint8Array.length);
