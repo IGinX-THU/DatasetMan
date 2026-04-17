@@ -19,12 +19,14 @@ public class Test {
         List<String> paths = new ArrayList<>();
 //        paths.add("file_system.fs.image.win10\\jpg");
 //        paths.add("file_system.fs.video.win7\\mp4");
-        paths.add("file_system.fs.audio.M500001VfvsJ21xFqb\\mp3");
-        paths.add("file_system.fs.doc.DEMO\\docx");
-        paths.add("file_system.fs.doc.SQLManual\\pdf");
-        paths.add("file_system.fs.doc.relational\\test_1774598630240\\xlsx");
-        paths.add("file_system.fs.doc.tree\\txt");
-        paths.add("file_system.fs.doc.userManualC\\pdf");
+//        paths.add("file_system.fs.audio.M500001VfvsJ21xFqb\\mp3");
+//        paths.add("file_system.fs.doc.DEMO\\docx");
+//        paths.add("file_system.fs.doc.SQLManual\\pdf");
+//        paths.add("file_system.fs.doc.relational\\test_1774598630240\\xlsx");
+//        paths.add("file_system.fs.doc.tree\\txt");
+//        paths.add("file_system.fs.doc.userManualC\\pdf");
+        paths.add("key_value.red.hash*");
+//        paths.add("key_value.red.hash.value");
         long startTime = 0L;
         long endTime = Long.MAX_VALUE;
 

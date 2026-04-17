@@ -1643,13 +1643,12 @@ function showVisualAnalysis() {
         showComponent('fileSystemBrowser', path);
     }
 
-    function showKeyValueViewer(path, siblingPath) {
+    function showKeyValueViewer(path) {
         const viewer = document.querySelector('key-value-viewer');
-        if (viewer && siblingPath) {
-            // key或value节点：设置两个路径并显示组件
-            const keyPath = path.endsWith('.key') ? path : siblingPath;
-            const valuePath = path.endsWith('.value') ? path : siblingPath;
-            viewer.setHashPaths(keyPath, valuePath);
+        // 检查是否为通配符路径（hash结构）
+        if (path.includes('*')) {
+            // hash结构：设置通配符路径并显示组件
+            viewer.setWildcardPath(path);
             showComponent('keyValueViewer');
         } else {
             // 普通路径：传递path给showComponent
@@ -1966,12 +1965,10 @@ function showVisualAnalysis() {
                         const parts = fullPath.split('.');
                         const lastPart = parts[parts.length - 1];
                         if (lastPart === 'key' || lastPart === 'value') {
-                            // 构造兄弟节点的路径
-                            const siblingPath = lastPart === 'key' 
-                                ? fullPath.replace(/\.key$/, '.value')
-                                : fullPath.replace(/\.value$/, '.key');
-                            // 传递key和value路径给key-value-viewer
-                            showKeyValueViewer(fullPath, siblingPath);
+                            // 使用通配符模式查询hash结构
+                            const parentPath = parts.slice(0, -1).join('.');
+                            const wildcardPath = parentPath + '*';
+                            showKeyValueViewer(wildcardPath);
                         } else if (fullPath.startsWith('relational')) {
                             // 获取父节点路径作为tableName
                             const pathParts = fullPath.split('.');

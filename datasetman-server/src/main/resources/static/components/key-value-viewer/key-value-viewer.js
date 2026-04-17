@@ -60,6 +60,7 @@ class KeyValueViewer extends HTMLElement {
         this.currentPath = path;
         this.hashKeyPath = null;
         this.hashValuePath = null;
+        this.wildcardPath = null;
         this.loadKeys();
     }
 
@@ -71,6 +72,14 @@ class KeyValueViewer extends HTMLElement {
         this.currentPath = parentPath;
     }
 
+    setWildcardPath(wildcardPath) {
+        this.wildcardPath = wildcardPath;
+        // 设置父路径为通配符路径去掉*
+        this.currentPath = wildcardPath.replace('*', '');
+        this.hashKeyPath = null;
+        this.hashValuePath = null;
+    }
+
     async loadKeys() {
         console.log('加载键值对数据:', this.currentPath);
         
@@ -78,8 +87,11 @@ class KeyValueViewer extends HTMLElement {
         try {
             let paths = [this.currentPath];
             
-            // 如果是hash结构，添加key和value路径
-            if (this.hashKeyPath && this.hashValuePath) {
+            // 如果是通配符路径（hash结构），使用通配符路径
+            if (this.wildcardPath) {
+                paths = [this.wildcardPath];
+            } else if (this.hashKeyPath && this.hashValuePath) {
+                // 如果是hash结构，添加key和value路径
                 paths = [this.hashKeyPath, this.hashValuePath];
             }
             
@@ -115,6 +127,35 @@ class KeyValueViewer extends HTMLElement {
         if (!records || records.length === 0) {
             kvTree.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无键值对数据</div>';
             return;
+        }
+
+        // 如果是通配符路径（hash结构），将key和value记录合并为hash条目
+        if (this.wildcardPath) {
+            // 查找以.key和.value结尾的列
+            const keyColumn = header.find(h => h.endsWith('.key'));
+            const valueColumn = header.find(h => h.endsWith('.value'));
+            
+            if (keyColumn && valueColumn && records.length > 0) {
+                const keys = records.map(record => {
+                    const keyValue = record[keyColumn];
+                    const valueValue = record[valueColumn];
+                    
+                    if (keyValue !== undefined && valueValue !== undefined) {
+                        return {
+                            key: keyValue,
+                            type: this.inferType(valueValue),
+                            value: valueValue,
+                            isHash: true
+                        };
+                    }
+                    return null;
+                }).filter(k => k !== null);
+                
+                if (keys.length > 0) {
+                    this.renderKeys(keys);
+                    return;
+                }
+            }
         }
 
         // 如果是hash结构，将key和value记录合并为hash条目
