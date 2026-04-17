@@ -808,15 +808,14 @@ class FileSystemBrowser extends HTMLElement {
             const fileSizeMB = (binaryData.length * 0.75) / (1024 * 1024); // Base64编码后约为原始大小的4/3
             if (fileSizeMB > 50) {
                 console.log('文件过大(' + fileSizeMB.toFixed(2) + 'MB)，建议下载而非预览');
+                fileGrid.classList.add('has-preview');
                 fileGrid.innerHTML = `
                     <div class="file-preview">
                         <div class="preview-header">
                             <span class="file-name">${fileName}</span>
                         </div>
                         <div class="preview-content">
-                            <div class="document-preview-info">
-                                <p>文件过大(${fileSizeMB.toFixed(2)}MB)，不支持在线预览</p>
-                            </div>
+                            <div style="color: #999;">文件过大(${fileSizeMB.toFixed(2)}MB)，不支持在线预览</div>
                         </div>
                     </div>
                 `;
