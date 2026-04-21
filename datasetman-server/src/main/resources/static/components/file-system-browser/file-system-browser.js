@@ -114,21 +114,15 @@ class FileSystemBrowser extends HTMLElement {
 
         // 调用API获取文件数据
         try {
-            const result = await window.AppConfig.post('data', 'query', {
+            // 使用流式查询接口处理大文件，现在返回二进制数据
+            const blob = await window.AppConfig.postBinary('data', 'fs/query', {
                 paths: [this.currentPath]
             });
-
-            if (result.success && result.data) {
-                // 使用setTimeout让loading有机会渲染
-                setTimeout(() => {
-                    this.renderQueryResult(result.data);
-                }, 0);
-            } else {
-                console.error('查询失败:', result.message);
-                if (fileGrid) {
-                    fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">查询失败: ' + (result.message || '未知错误') + '</div>';
-                }
-            }
+            
+            // 使用setTimeout让loading有机会渲染
+            setTimeout(() => {
+                this.renderBinaryPreview(blob, this.currentPath);
+            }, 0);
         } catch (error) {
             console.error('查询文件数据失败:', error);
             const fileGrid = this.querySelector('#fileGrid');
@@ -138,6 +132,98 @@ class FileSystemBrowser extends HTMLElement {
         }
 
         this.renderBreadcrumb();
+    }
+
+    renderBinaryPreview(blob, filePath) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        // 从路径提取文件名
+        const fileName = filePath.split('\\').pop().split('/').pop();
+        
+        // 根据文件后缀判断文件类型
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'];
+        const videoExtensions = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv'];
+        const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
+        const textExtensions = ['txt', 'csv', 'json', 'xml', 'html', 'htm', 'md', 'log', 'css', 'js', 'java', 'py', 'sql'];
+        const documentExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+        const isImage = imageExtensions.includes(fileExtension);
+        const isVideo = videoExtensions.includes(fileExtension);
+        const isAudio = audioExtensions.includes(fileExtension);
+        const isText = textExtensions.includes(fileExtension);
+        const isDocument = documentExtensions.includes(fileExtension);
+        const isPreviewable = isImage || isVideo || isAudio || isText;
+
+        if (isPreviewable) {
+            // 创建预览内容
+            fileGrid.classList.add('has-preview');
+            
+            if (isImage) {
+                const imageUrl = URL.createObjectURL(blob);
+                fileGrid.innerHTML = `
+                    <div class="file-preview">
+                        <div class="preview-content">
+                            <img src="${imageUrl}" alt="${fileName}" style="max-width: 100%; max-height: 600px; object-fit: contain;">
+                        </div>
+                    </div>
+                `;
+            } else if (isVideo) {
+                const videoUrl = URL.createObjectURL(blob);
+                fileGrid.innerHTML = `
+                    <div class="file-preview">
+                        <div class="preview-content">
+                            <video controls style="max-width: 100%; max-height: 600px;">
+                                <source src="${videoUrl}" type="video/${fileExtension}">
+                                您的浏览器不支持视频播放。
+                            </video>
+                        </div>
+                    </div>
+                `;
+            } else if (isAudio) {
+                const audioUrl = URL.createObjectURL(blob);
+                fileGrid.innerHTML = `
+                    <div class="file-preview">
+                        <div class="preview-content">
+                            <audio controls style="width: 100%;">
+                                <source src="${audioUrl}" type="audio/${fileExtension}">
+                                您的浏览器不支持音频播放。
+                            </audio>
+                        </div>
+                    </div>
+                `;
+            } else if (isText) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const textContent = e.target.result;
+                    fileGrid.innerHTML = `
+                        <div class="file-preview">
+                            <div class="preview-content">
+                                <pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 600px; overflow: auto;">${this.escapeHtml(textContent)}</pre>
+                            </div>
+                        </div>
+                    `;
+                };
+                reader.readAsText(blob);
+            }
+        } else {
+            // 不支持预览的文件类型
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-content">
+                        <div style="color: #999; text-align: center; padding: 20px;">
+                            此文件类型不支持在线预览
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     renderQueryResult(data) {
@@ -804,9 +890,9 @@ class FileSystemBrowser extends HTMLElement {
                 throw new Error('视频数据为空');
             }
 
-            // 检查文件大小，超过50MB的文件建议下载而非预览
+            // 检查文件大小，超过500MB的文件建议下载而非预览（流式查询支持大文件预览）
             const fileSizeMB = (binaryData.length * 0.75) / (1024 * 1024); // Base64编码后约为原始大小的4/3
-            if (fileSizeMB > 50) {
+            if (fileSizeMB > 5000) {
                 console.log('文件过大(' + fileSizeMB.toFixed(2) + 'MB)，建议下载而非预览');
                 fileGrid.classList.add('has-preview');
                 fileGrid.innerHTML = `

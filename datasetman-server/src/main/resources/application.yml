@@ -6,7 +6,7 @@ jwt:
 
 # 服务器配置
 server:
-  port: 8080
+  port: 8081
   servlet:
     context-path: /
     # 针对 Tomcat 服务器的最大请求大小设置

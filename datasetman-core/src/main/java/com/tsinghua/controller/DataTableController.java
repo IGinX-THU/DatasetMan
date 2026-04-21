@@ -51,6 +51,17 @@ public class DataTableController {
     }
 
     /**
+     * 流式文件查询，专门用于大文件查询
+     */
+    @ApiOperation("流式文件查询")
+    @PostMapping("/fs/query")
+    @RequirePermission(Permission.DATA_READ)
+    @OperationLog(value = "流式文件查询", type = OperationLog.OperationType.QUERY, recordResult = false)
+    public void queryFileData(@Validated @RequestBody DataQueryRequest request, HttpServletResponse response) {
+        dataTableService.queryDataStreaming(request, response);
+    }
+
+    /**
      * 导入数据
      */
     @ApiOperation("导入数据")

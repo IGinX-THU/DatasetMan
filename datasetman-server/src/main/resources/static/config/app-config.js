@@ -5,7 +5,7 @@
 window.AppConfig = {
     // API基础配置
     api: {
-        baseURL: 'http://localhost:8080', // 可配置的API域名
+        baseURL: 'http://localhost:8081', // 可配置的API域名
         // 前端请求超时时间（毫秒），建议略小于后端超时时间
         timeout: 55000,
         headers: {
@@ -43,6 +43,7 @@ window.AppConfig = {
         // 数据查询相关
         data: {
             query: '/api/data/query',
+            'fs/query': '/api/data/fs/query',
             'relational/query': '/api/data/relational/query',
             'relational/count': '/api/data/relational/count',
             'relational/export': '/api/data/relational/export',
@@ -296,6 +297,28 @@ window.AppConfig = {
         });
     },
 
+    // POST请求（返回二进制数据）
+    async postBinary(module, endpoint, data = {}) {
+        const url = this.getApiUrl(module, endpoint);
+        const headers = this.getAuthHeaders();
+        headers['Content-Type'] = 'application/json';
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                this.handleAuthFailure();
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return await response.blob();
+    },
+
     // PUT请求
     async put(module, endpoint, data = {}) {
         const url = this.getApiUrl(module, endpoint);
@@ -329,6 +352,16 @@ window.AppConfig = {
         if (!window.location.pathname.includes('/login.html')) {
             window.location.href = '/login.html';
         }
+    },
+
+    // 下载Blob文件
+    downloadBlob(fileName, url) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     },
 
     // 获取refresh token

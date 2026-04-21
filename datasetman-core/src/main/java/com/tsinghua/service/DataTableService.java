@@ -7,6 +7,7 @@ import cn.edu.tsinghua.iginx.session_v2.QueryClient;
 import cn.edu.tsinghua.iginx.session_v2.query.*;
 import cn.edu.tsinghua.iginx.thrift.*;
 import cn.edu.tsinghua.iginx.utils.Pair;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tsinghua.dto.*;
 import com.tsinghua.model.Result;
 import com.tsinghua.util.ConvertUtil;
@@ -37,6 +38,8 @@ public class DataTableService {
     private static final int CHUNK_SIZE = 1024 * 1024; // 1MB，与源码一致
 
     private static final String KEY = "key";
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private Session iginxSession;
@@ -275,6 +278,97 @@ public class DataTableService {
         DeleteClient deleteClient = iginxClient.getDeleteClient();
         // 删除多个时间序列在 [startTime, endTime) 这段时间上的数据
         deleteClient.deleteMeasurementsData(request.getPaths(), request.getStartTime(), request.getEndTime());
+    }
+
+    /**
+     * 流式查询数据，专门用于大文件查询
+     * 使用Consumer查询IginX放入队列，从队列流式写入HTTP响应（二进制数据）
+     */
+    public void queryDataStreaming(DataQueryRequest request, HttpServletResponse response) {
+        try {
+            log.info("开始流式查询，路径: {}", request.getPaths());
+            QueryClient queryClient = iginxClient.getQueryClient();
+
+            Set<String> paths = new HashSet<>(request.getPaths());
+            long startKey = Optional.ofNullable(request.getStartTime()).orElse(0L);
+            long endKey = Optional.ofNullable(request.getEndTime()).orElse(Long.MAX_VALUE);
+
+            // 设置响应头为二进制流
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.setContentType("application/octet-stream");
+            response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
+            response.setHeader(HttpHeaders.PRAGMA, "no-cache");
+            response.setHeader(HttpHeaders.EXPIRES, "0");
+
+            OutputStream outputStream = response.getOutputStream();
+
+            // 使用队列进行线程间通信
+            final java.util.concurrent.BlockingQueue<byte[]> queue = new java.util.concurrent.LinkedBlockingQueue<>();
+            final int[] recordCount = {0};
+            final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+
+            // 启动Consumer线程查询IginX并放入队列
+            Thread consumerThread = new Thread(() -> {
+                try {
+                    queryClient.query(
+                        SimpleQuery.builder()
+                            .addMeasurements(paths)
+                            .startKey(startKey)
+                            .endKey(endKey)
+                            .build(),
+                        record -> {
+                            for (IginXColumn column: record.getHeader().getColumns()) {
+                                Object value = record.getValue(column.getName());
+                                if (value instanceof byte[]) {
+                                    try {
+                                        queue.put((byte[]) value);
+                                        recordCount[0]++;
+                                    } catch (InterruptedException e) {
+                                        log.error("放入队列失败", e);
+                                    }
+                                }
+                            }
+                        }
+                    );
+                } catch (Exception e) {
+                    log.error("Consumer线程异常", e);
+                } finally {
+                    latch.countDown();
+                }
+            });
+
+            consumerThread.start();
+
+            // 主线程从队列取出数据流式写入HTTP响应
+            try {
+                Thread.sleep(1000);
+                
+                byte[] data;
+                while (true) {
+                    data = queue.poll(1, java.util.concurrent.TimeUnit.SECONDS);
+                    if (data == null) {
+                        // 队列为空，检查Consumer是否完成
+                        if (latch.await(100, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                            // Consumer已完成，队列也为空，退出循环
+                            break;
+                        }
+                        // Consumer未完成，继续等待
+                        continue;
+                    }
+                    outputStream.write(data);
+                    outputStream.flush();
+                }
+            } catch (InterruptedException e) {
+                log.error("从队列取数据被中断", e);
+            }
+
+            outputStream.close();
+            log.info("流式查询完成，写入记录数: {}", recordCount[0]);
+
+        } catch (IOException e) {
+            log.error("流式查询失败", e);
+            throw new RuntimeException("流式查询失败: " + e.getMessage(), e);
+        }
     }
 
 }

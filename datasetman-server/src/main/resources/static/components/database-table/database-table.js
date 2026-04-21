@@ -25,14 +25,7 @@ class DatabaseTable extends HTMLElement {
 
     async connectedCallback() {
         await this.loadResources();
-        
-        // 只有在没有tableName时才使用seedData
-        if (!this.tableName) {
-            this.seedData();
-            this.totalCount = this.data.length;
-            this.renderTable();
-        }
-        
+
         // 初始化分页组件
         this.initPagination();
         
