@@ -492,6 +492,41 @@ class DatasetHistory extends HTMLElement {
         setTimeout(() => {
             const chart = echarts.init(timelineContainer);
 
+            // 分支数据：漫威TVA风格的时间线
+            const nodes = [
+                { id: 'V1', name: 'V1', x: 0, y: 0, symbolSize: 20, itemStyle: { color: '#1890ff' },
+                  time: '2025-04-07 10:00', user: 'engineer', ip: '192.168.1.10',
+                  job: 'transform_task_001', func: 'data_clean()', sql: 'CREATE TABLE dataset02', change: '数据集初始化创建' },
+                { id: 'V2', name: 'V2', x: 100, y: 0, symbolSize: 20, itemStyle: { color: '#1890ff' },
+                  time: '2025-04-07 10:10', user: 'system', ip: '10.0.0.1',
+                  job: 'transform_udf_upgrade', func: 'filter_null()', sql: 'ALTER TABLE dataset02 ADD COLUMN status', change: 'UDF升级，新增空值过滤' },
+                { id: 'V3', name: 'V3', x: 200, y: 50, symbolSize: 20, itemStyle: { color: '#52c41a' },
+                  time: '2025-04-07 10:20', user: 'engineer', ip: '192.168.1.10',
+                  job: 'transform_data_refresh', func: 'refresh_data()', sql: 'INSERT OVERWRITE dataset02', change: '全量数据刷新' },
+                { id: 'V4', name: 'V4', x: 200, y: -50, symbolSize: 20, itemStyle: { color: '#faad14' },
+                  time: '2025-04-07 10:30', user: 'admin', ip: '192.168.1.100',
+                  job: 'transform_schema_optimize', func: 'optimize_schema()', sql: 'OPTIMIZE TABLE dataset02', change: '表结构优化，增加索引' },
+                { id: 'V5', name: 'V5', x: 300, y: 50, symbolSize: 20, itemStyle: { color: '#52c41a' },
+                  time: '2025-04-07 10:40', user: 'algorithm', ip: '192.168.1.11',
+                  job: 'transform_feature_extract', func: 'feature_extract()', sql: 'SELECT feature(*) FROM dataset02', change: '特征提取功能' },
+                { id: 'V6', name: 'V6', x: 300, y: -50, symbolSize: 20, itemStyle: { color: '#faad14' },
+                  time: '2025-04-07 10:50', user: 'analyst', ip: '192.168.1.12',
+                  job: 'transform_stat_calc', func: 'stat_calc()', sql: 'CREATE TABLE dataset05 AS SELECT * FROM dataset04', change: '生成业务统计结果' },
+                { id: 'V7', name: 'V7', x: 400, y: 0, symbolSize: 20, itemStyle: { color: '#722ed1' },
+                  time: '2025-04-07 11:00', user: 'admin', ip: '192.168.1.100',
+                  job: 'merge_branches', func: 'merge()', sql: 'MERGE INTO dataset02', change: '合并所有分支' }
+            ];
+
+            const links = [
+                { source: 'V1', target: 'V2', lineStyle: { color: '#1890ff', curveness: 0 } },
+                { source: 'V2', target: 'V3', lineStyle: { color: '#52c41a', curveness: 0.3 } },
+                { source: 'V2', target: 'V4', lineStyle: { color: '#faad14', curveness: -0.3 } },
+                { source: 'V3', target: 'V5', lineStyle: { color: '#52c41a', curveness: 0 } },
+                { source: 'V4', target: 'V6', lineStyle: { color: '#faad14', curveness: 0 } },
+                { source: 'V5', target: 'V7', lineStyle: { color: '#722ed1', curveness: -0.3 } },
+                { source: 'V6', target: 'V7', lineStyle: { color: '#722ed1', curveness: 0.3 } }
+            ];
+
             const option = {
                 title: {
                     text: `数据集 ${this.datasetInfo?.name || 'dataset02'} 版本变更时间线`,
@@ -503,10 +538,12 @@ class DatasetHistory extends HTMLElement {
                     }
                 },
                 tooltip: {
-                    trigger: 'item',
                     formatter: function(params) {
+                        if (params.dataType === 'edge') {
+                            return '版本流转';
+                        }
                         const d = params.data;
-                        return `版本：${d.version}<br>
+                        return `版本：${d.name}<br>
 时间：${d.time}<br>
 操作人：${d.user}<br>
 IP：${d.ip}<br>
@@ -516,81 +553,30 @@ SQL：${d.sql}<br>
 变化：${d.change}`;
                     }
                 },
-                xAxis: {
-                    type: 'category',
-                    data: ['V1', 'V2', 'V3', 'V4'],
-                    axisLabel: {
-                        interval: 0,
-                        margin: 20,
-                        fontSize: 12,
-                        color: '#5f6b7a'
-                    },
-                    axisLine: { lineStyle: { color: '#e2e6ef' } },
-                    axisTick: { show: false }
-                },
-                yAxis: {
-                    show: false,
-                    min: -1,
-                    max: 1
-                },
-                grid: {
-                    left: '5%',
-                    right: '5%',
-                    top: '25%',
-                    bottom: '20%',
-                    containLabel: true
-                },
+                xAxis: { show: false },
+                yAxis: { show: false },
                 series: [{
-                    type: 'scatter',
-                    symbolSize: 30,
-                    itemStyle: { color: '#1890ff' },
+                    type: 'graph',
+                    layout: 'none',
+                    symbolSize: 25,
+                    roam: true,
                     label: {
                         show: true,
-                        formatter: '{b}',
-                        position: 'top',
-                        distance: 15,
                         fontSize: 12,
-                        color: '#1f2329',
-                        fontWeight: 'bold'
+                        fontWeight: 'bold',
+                        color: '#1f2329'
                     },
-                    data: [
-                        {
-                            value: 0, version: 'V1',
-                            time: '2025-04-07 10:00',
-                            user: 'engineer', ip: '192.168.1.10',
-                            job: 'transform_task_001',
-                            func: 'data_clean()',
-                            sql: 'CREATE TABLE dataset02',
-                            change: '数据集初始化创建'
-                        },
-                        {
-                            value: 0, version: 'V2',
-                            time: '2025-04-07 10:10',
-                            user: 'system', ip: '10.0.0.1',
-                            job: 'transform_udf_upgrade',
-                            func: 'filter_null()',
-                            sql: 'ALTER TABLE dataset02 ADD COLUMN status',
-                            change: 'UDF升级，新增空值过滤'
-                        },
-                        {
-                            value: 0, version: 'V3',
-                            time: '2025-04-07 10:30',
-                            user: 'engineer', ip: '192.168.1.10',
-                            job: 'transform_data_refresh',
-                            func: 'refresh_data()',
-                            sql: 'INSERT OVERWRITE dataset02',
-                            change: '全量数据刷新'
-                        },
-                        {
-                            value: 0, version: 'V4',
-                            time: '2025-04-07 11:00',
-                            user: 'admin', ip: '192.168.1.100',
-                            job: 'transform_schema_optimize',
-                            func: 'optimize_schema()',
-                            sql: 'OPTIMIZE TABLE dataset02',
-                            change: '表结构优化，增加索引'
-                        }
-                    ]
+                    edgeSymbol: ['circle', 'arrow'],
+                    edgeSymbolSize: [4, 10],
+                    edgeLabel: {
+                        fontSize: 10
+                    },
+                    data: nodes,
+                    links: links,
+                    lineStyle: {
+                        width: 2,
+                        opacity: 0.8
+                    }
                 }]
             };
 
