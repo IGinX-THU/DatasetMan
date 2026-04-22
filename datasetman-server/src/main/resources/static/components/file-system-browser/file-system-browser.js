@@ -4,6 +4,52 @@ class FileSystemBrowser extends HTMLElement {
         this.currentPath = '';
         this.currentImageUrl = null;
         this.currentFileName = null;
+        this.currentVideoPlayer = null;
+        this.videoJsLoaded = false;
+    }
+
+    loadVideoJs(callback) {
+        if (this.videoJsLoaded && typeof videojs !== 'undefined') {
+            callback();
+            return;
+        }
+
+        // 加载video.js CSS
+        if (!document.querySelector('link[href*="video-js.css"]')) {
+            const cssLink = document.createElement('link');
+            cssLink.rel = 'stylesheet';
+            cssLink.href = '/lib/videojs/video-js.css';
+            document.head.appendChild(cssLink);
+        }
+
+        // 加载video.js JS
+        if (!document.querySelector('script[src*="video.min.js"]')) {
+            const script = document.createElement('script');
+            script.src = '/lib/videojs/video.min.js';
+            script.onload = () => {
+                this.videoJsLoaded = true;
+                callback();
+            };
+            script.onerror = () => {
+                console.error('video.js加载失败，回退到原生播放器');
+                callback();
+            };
+            document.head.appendChild(script);
+        } else {
+            this.videoJsLoaded = true;
+            callback();
+        }
+    }
+
+    cleanupVideoPlayer() {
+        if (this.currentVideoPlayer) {
+            try {
+                this.currentVideoPlayer.dispose();
+            } catch (e) {
+                console.error('清理video.js播放器失败:', e);
+            }
+            this.currentVideoPlayer = null;
+        }
     }
 
     connectedCallback() {
@@ -148,6 +194,9 @@ class FileSystemBrowser extends HTMLElement {
         const fileGrid = this.querySelector('#fileGrid');
         if (!fileGrid) return;
 
+        // 清理之前的video.js播放器
+        this.cleanupVideoPlayer();
+
         // 从路径提取文件名（例如：file_system.fs.video.zkfdv4\mp4 -> zkfdv4.mp4）
         // 支持反斜杠和正斜杠分隔符
         const pathParts = filePath.replace(/\//g, '\\').split('\\');
@@ -234,107 +283,98 @@ class FileSystemBrowser extends HTMLElement {
                 const videoBlob = new Blob([blob], { type: mimeTypes[0] });
                 const videoUrl = URL.createObjectURL(videoBlob);
                 
-                // 创建多个source标签以提高兼容性
-                let sourcesHtml = mimeTypes.map(type => 
-                    `<source src="${videoUrl}" type="${type}">`
-                ).join('');
-                
-                fileGrid.innerHTML = `
-                    <div class="file-preview">
-                        <div class="preview-header">
-                            <span class="file-name">${fileName}</span>
-                        </div>
-                        <div class="preview-content">
-                            <video id="videoPlayer" controls style="max-width: 100%; max-height: 600px;">
-                                ${sourcesHtml}
-                                您的浏览器不支持视频播放。
-                            </video>
-                            <div id="videoError" style="color: red; display: none; margin-top: 10px;"></div>
-                        </div>
-                    </div>
-                `;
-                
-                console.log('视频MIME类型尝试:', mimeTypes);
-                console.log('视频Blob大小:', blob.size, '字节');
-                
                 // 存储当前视频信息用于下载
                 this.currentImageUrl = videoUrl;
                 this.currentFileName = fileName;
                 
-                // 添加视频加载错误处理
-                const videoElement = document.getElementById('videoPlayer');
-                const errorDiv = document.getElementById('videoError');
-                
-                videoElement.addEventListener('loadstart', () => {
-                    console.log('视频开始加载');
-                });
-                
-                videoElement.addEventListener('progress', () => {
-                    console.log('视频加载进度:', videoElement.buffered.length > 0 ? videoElement.buffered.end(0) : 0);
-                });
-                
-                videoElement.addEventListener('loadedmetadata', () => {
-                    console.log('视频元数据加载成功，时长:', videoElement.duration, '秒');
-                    console.log('视频尺寸:', videoElement.videoWidth, 'x', videoElement.videoHeight);
-                    console.log('视频当前时间:', videoElement.currentTime);
+                // 使用video.js播放器
+                this.loadVideoJs(() => {
+                    fileGrid.innerHTML = `
+                        <div class="file-preview">
+                            <div class="preview-header">
+                                <span class="file-name">${fileName}</span>
+                            </div>
+                            <div class="preview-content">
+                                <video id="videoPlayer" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" style="max-width: 100%; max-height: 600px;">
+                                    <source src="${videoUrl}" type="${mimeTypes[0]}">
+                                    您的浏览器不支持视频播放。
+                                </video>
+                                <div id="videoError" style="color: red; display: none; margin-top: 10px;"></div>
+                            </div>
+                        </div>
+                    `;
                     
-                    let hasError = false;
-                    let errorMessages = [];
+                    console.log('视频MIME类型尝试:', mimeTypes);
+                    console.log('视频Blob大小:', blob.size, '字节');
                     
-                    if (videoElement.duration === Infinity || isNaN(videoElement.duration)) {
-                        hasError = true;
-                        errorMessages.push('视频时长无法获取');
-                    }
+                    // 初始化video.js播放器
+                    const player = videojs('videoPlayer', {
+                        fluid: true,
+                        responsive: true,
+                        playbackRates: [0.5, 1, 1.5, 2],
+                        html5: {
+                            vhs: {
+                                overrideNative: true
+                            },
+                            nativeAudioTracks: false,
+                            nativeVideoTracks: false
+                        },
+                        errorDisplay: true
+                    });
                     
-                    if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
-                        hasError = true;
-                        errorMessages.push('视频尺寸为0，可能视频编码格式不被浏览器支持');
-                    }
+                    const errorDiv = document.getElementById('videoError');
                     
-                    if (hasError) {
+                    // video.js错误处理
+                    player.on('error', () => {
+                        const error = player.error();
+                        console.error('Video.js错误:', error);
                         errorDiv.style.display = 'block';
                         errorDiv.innerHTML = `
                             <div style="margin-bottom: 10px;">
-                                <strong>视频播放问题：</strong>${errorMessages.join('，')}
+                                <strong>视频加载失败</strong>
                             </div>
                             <div style="font-size: 12px; color: #666;">
-                                可能原因：视频编码格式（如H.265/HEVC、MPEG-2等）不被浏览器支持。<br>
-                                建议点击右上角"下载视频"按钮，使用本地播放器（如VLC、PotPlayer）播放。
+                                错误代码: ${error ? error.code : 'unknown'}<br>
+                                错误消息: ${error ? error.message : 'unknown'}<br>
+                                可能原因：视频编码格式不被浏览器支持或文件损坏。<br>
+                                建议使用工具栏下载按钮下载后，使用本地播放器（如VLC、PotPlayer）播放。
                             </div>
                         `;
-                    }
-                });
-                
-                videoElement.addEventListener('canplay', () => {
-                    console.log('视频可以播放');
-                });
-                
-                videoElement.addEventListener('canplaythrough', () => {
-                    console.log('视频可以流畅播放');
-                });
-                
-                videoElement.addEventListener('error', (e) => {
-                    console.error('视频加载错误:', e);
-                    console.error('错误代码:', videoElement.error ? videoElement.error.code : 'unknown');
-                    console.error('错误消息:', videoElement.error ? videoElement.error.message : 'unknown');
-                    errorDiv.style.display = 'block';
-                    errorDiv.innerHTML = `
-                        <div style="margin-bottom: 10px;">
-                            <strong>视频加载失败</strong>
-                        </div>
-                        <div style="font-size: 12px; color: #666;">
-                            可能原因：视频编码格式不被浏览器支持或文件损坏。<br>
-                            建议点击右上角"下载视频"按钮，使用本地播放器（如VLC、PotPlayer）播放。
-                        </div>
-                    `;
-                });
-                
-                videoElement.addEventListener('stalled', () => {
-                    console.warn('视频加载停滞');
-                });
-                
-                videoElement.addEventListener('waiting', () => {
-                    console.log('视频缓冲中...');
+                    });
+                    
+                    player.on('loadedmetadata', () => {
+                        console.log('视频元数据加载成功，时长:', player.duration(), '秒');
+                        console.log('视频尺寸:', player.videoWidth(), 'x', player.videoHeight());
+                        
+                        let hasError = false;
+                        let errorMessages = [];
+                        
+                        if (player.duration() === Infinity || isNaN(player.duration())) {
+                            hasError = true;
+                            errorMessages.push('视频时长无法获取');
+                        }
+                        
+                        if (player.videoWidth() === 0 || player.videoHeight() === 0) {
+                            hasError = true;
+                            errorMessages.push('视频尺寸为0，可能视频编码格式不被浏览器支持');
+                        }
+                        
+                        if (hasError) {
+                            errorDiv.style.display = 'block';
+                            errorDiv.innerHTML = `
+                                <div style="margin-bottom: 10px;">
+                                    <strong>视频播放问题：</strong>${errorMessages.join('，')}
+                                </div>
+                                <div style="font-size: 12px; color: #666;">
+                                    可能原因：视频编码格式（如H.265/HEVC、MPEG-2等）不被浏览器支持。<br>
+                                    建议使用工具栏下载按钮下载后，使用本地播放器（如VLC、PotPlayer）播放。
+                                </div>
+                            `;
+                        }
+                    });
+                    
+                    // 保存player实例以便清理
+                    this.currentVideoPlayer = player;
                 });
             } else if (isAudio) {
                 const audioUrl = URL.createObjectURL(blob);
