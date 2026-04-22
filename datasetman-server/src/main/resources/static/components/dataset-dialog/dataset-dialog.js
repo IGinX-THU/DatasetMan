@@ -32,8 +32,8 @@ class DatasetDialog extends HTMLElement {
                 .modal {
                     background: white;
                     border-radius: 8px;
-                    width: 90%;
-                    max-width: 600px;
+                    width: 95%;
+                    max-width: 800px;
                     max-height: 90vh;
                     overflow-y: auto;
                     box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
@@ -162,7 +162,7 @@ class DatasetDialog extends HTMLElement {
                     font-size: 13px;
                     background: #fafbff;
                     resize: vertical;
-                    min-height: 80px;
+                    min-height: 250px;
                     font-family: 'Consolas', 'Monaco', monospace;
                     box-sizing: border-box;
                 }
@@ -376,24 +376,19 @@ class DatasetDialog extends HTMLElement {
         this.showResult('正在执行SQL测试...', 'loading');
         
         try {
+            const name = this.shadowRoot.querySelector('#datasetName').value.trim();
             const sql = this.shadowRoot.querySelector('#datasetSql').value.trim();
             
-            // 模拟API调用 - 实际使用时替换为真实API
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const result = await window.AppConfig.post('dataset', 'testsql', {
+                datasetName: name,
+                datasetSql: sql
+            });
             
-            // 模拟成功响应
-            const mockResult = {
-                columns: ['id', 'name', 'value', 'timestamp'],
-                rows: [
-                    [1, 'sample1', 100.5, '2025-04-08 10:00:00'],
-                    [2, 'sample2', 200.3, '2025-04-08 10:01:00'],
-                    [3, 'sample3', 150.0, '2025-04-08 10:02:00']
-                ],
-                rowCount: 3,
-                executionTime: '45ms'
-            };
-            
-            this.showResult(`SQL执行成功!\n\n执行时间: ${mockResult.executionTime}\n返回行数: ${mockResult.rowCount}\n\n列: ${mockResult.columns.join(', ')}\n\n数据示例:\n${JSON.stringify(mockResult.rows, null, 2)}`, 'success');
+            if (result.success) {
+                this.showResult(JSON.stringify(result.data, null, 2), 'success');
+            } else {
+                this.showResult(`测试失败: ${result.message || 'SQL执行失败'}`, 'error');
+            }
             
         } catch (error) {
             console.error('SQL测试失败:', error);
@@ -413,52 +408,33 @@ class DatasetDialog extends HTMLElement {
         this.showResult('正在保存数据集...', 'loading');
         
         const formData = {
-            name: this.shadowRoot.querySelector('#datasetName').value.trim(),
-            sql: this.shadowRoot.querySelector('#datasetSql').value.trim()
+            datasetName: this.shadowRoot.querySelector('#datasetName').value.trim(),
+            datasetSql: this.shadowRoot.querySelector('#datasetSql').value.trim()
         };
         
         try {
-            const token = localStorage.getItem('token');
-            let url = '/api/datasets';
-            let method = 'POST';
+            const result = await window.AppConfig.post('dataset', 'save', formData);
             
-            if (this.mode === 'edit' && this.datasetData) {
-                const datasetId = this.datasetData.id || this.datasetData.datasetId;
-                url = `/api/datasets/${datasetId}`;
-                method = 'PUT';
+            if (result.success) {
+                // 触发成功事件
+                this.dispatchEvent(new CustomEvent('dataset-saved', {
+                    bubbles: true,
+                    composed: true,
+                    detail: {
+                        mode: this.mode,
+                        data: result
+                    }
+                }));
+                
+                this.showResult(this.mode === 'create' ? '数据集创建成功!' : '数据集保存成功!', 'success');
+                
+                // 延迟关闭弹窗
+                setTimeout(() => {
+                    this.hide();
+                }, 1000);
+            } else {
+                this.showResult(result.message || (this.mode === 'create' ? '创建失败' : '保存失败'), 'error');
             }
-            
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(formData)
-            });
-            
-            if (!response.ok) {
-                throw new Error(this.mode === 'create' ? '创建失败' : '保存失败');
-            }
-            
-            const result = await response.json();
-            
-            // 触发成功事件
-            this.dispatchEvent(new CustomEvent('dataset-saved', {
-                bubbles: true,
-                composed: true,
-                detail: {
-                    mode: this.mode,
-                    data: result
-                }
-            }));
-            
-            this.showResult(this.mode === 'create' ? '数据集创建成功!' : '数据集保存成功!', 'success');
-            
-            // 延迟关闭弹窗
-            setTimeout(() => {
-                this.hide();
-            }, 1000);
             
         } catch (error) {
             console.error(this.mode === 'create' ? '创建数据集失败:' : '保存数据集失败:', error);

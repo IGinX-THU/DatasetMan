@@ -114,6 +114,11 @@ window.AppConfig = {
             'delete': '/api/task/delete',
             'upload-report': '/api/task/upload-report',
             'package-download': '/api/task/package-download'
+        },
+        // 数据集相关
+        dataset: {
+            save: '/api/dataset/save',
+            testsql: '/api/dataset/testsql'
         }
     },
     
