@@ -640,7 +640,7 @@ class DatasetHistory extends HTMLElement {
         setTimeout(() => {
             const chart = echarts.init(timelineContainer);
 
-            // 分支数据：漫威TVA风格的时间线
+            // 分支数据：时间线风格（按时间从左到右排列，不完全对齐）
             const nodes = [
                 { id: 'V1', name: 'V1', x: 50, y: 100, symbolSize: 25, itemStyle: { color: '#1890ff' },
                   time: '2025-04-07 10:00', user: 'engineer', ip: '192.168.1.10',
@@ -648,19 +648,19 @@ class DatasetHistory extends HTMLElement {
                 { id: 'V2', name: 'V2', x: 150, y: 100, symbolSize: 25, itemStyle: { color: '#1890ff' },
                   time: '2025-04-07 10:10', user: 'system', ip: '10.0.0.1',
                   job: 'transform_udf_upgrade', func: 'filter_null()', sql: 'ALTER TABLE dataset02 ADD COLUMN status', change: 'UDF升级，新增空值过滤' },
-                { id: 'V3', name: 'V3', x: 250, y: 150, symbolSize: 25, itemStyle: { color: '#52c41a' },
+                { id: 'V3', name: 'V3', x: 260, y: 160, symbolSize: 25, itemStyle: { color: '#52c41a' },
                   time: '2025-04-07 10:20', user: 'engineer', ip: '192.168.1.10',
                   job: 'transform_data_refresh', func: 'refresh_data()', sql: 'INSERT OVERWRITE dataset02', change: '全量数据刷新' },
-                { id: 'V4', name: 'V4', x: 250, y: 50, symbolSize: 25, itemStyle: { color: '#faad14' },
+                { id: 'V4', name: 'V4', x: 240, y: 40, symbolSize: 25, itemStyle: { color: '#faad14' },
                   time: '2025-04-07 10:30', user: 'admin', ip: '192.168.1.100',
                   job: 'transform_schema_optimize', func: 'optimize_schema()', sql: 'OPTIMIZE TABLE dataset02', change: '表结构优化，增加索引' },
-                { id: 'V5', name: 'V5', x: 350, y: 150, symbolSize: 25, itemStyle: { color: '#52c41a' },
+                { id: 'V5', name: 'V5', x: 370, y: 160, symbolSize: 25, itemStyle: { color: '#52c41a' },
                   time: '2025-04-07 10:40', user: 'algorithm', ip: '192.168.1.11',
                   job: 'transform_feature_extract', func: 'feature_extract()', sql: 'SELECT feature(*) FROM dataset02', change: '特征提取功能' },
-                { id: 'V6', name: 'V6', x: 350, y: 50, symbolSize: 25, itemStyle: { color: '#faad14' },
+                { id: 'V6', name: 'V6', x: 330, y: 40, symbolSize: 25, itemStyle: { color: '#faad14' },
                   time: '2025-04-07 10:50', user: 'analyst', ip: '192.168.1.12',
                   job: 'transform_stat_calc', func: 'stat_calc()', sql: 'CREATE TABLE dataset05 AS SELECT * FROM dataset04', change: '生成业务统计结果' },
-                { id: 'V7', name: 'V7', x: 450, y: 100, symbolSize: 25, itemStyle: { color: '#722ed1' },
+                { id: 'V7', name: 'V7', x: 480, y: 100, symbolSize: 25, itemStyle: { color: '#722ed1' },
                   time: '2025-04-07 11:00', user: 'admin', ip: '192.168.1.100',
                   job: 'merge_branches', func: 'merge()', sql: 'MERGE INTO dataset02', change: '合并所有分支' }
             ];
