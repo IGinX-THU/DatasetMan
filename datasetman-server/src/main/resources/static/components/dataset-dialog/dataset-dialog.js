@@ -409,7 +409,8 @@ class DatasetDialog extends HTMLElement {
         
         const formData = {
             datasetName: this.shadowRoot.querySelector('#datasetName').value.trim(),
-            datasetSql: this.shadowRoot.querySelector('#datasetSql').value.trim()
+            datasetSql: this.shadowRoot.querySelector('#datasetSql').value.trim(),
+            parent: this.datasetData?.timestamp || 0
         };
         
         try {

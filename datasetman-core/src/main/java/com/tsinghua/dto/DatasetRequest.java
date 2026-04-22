@@ -16,4 +16,7 @@ public class DatasetRequest {
     @NotBlank(message = "数据集SQL不能为空")
     private String datasetSql;
 
+    @ApiModelProperty(value = "上个版本")
+    private long parent;
+
 }

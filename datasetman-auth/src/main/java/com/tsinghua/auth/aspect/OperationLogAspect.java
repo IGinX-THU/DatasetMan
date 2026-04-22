@@ -71,7 +71,7 @@ public class OperationLogAspect {
         String operator = getCurrentUser();
         
         // 获取IP地址
-        String clientIp = getClientIp(request);
+        String clientIp = getClientIp();
         
         // 获取请求参数
         Map<String, Object> params = getMethodParameters(joinPoint, signature);
@@ -144,7 +144,7 @@ public class OperationLogAspect {
     /**
      * 获取当前用户
      */
-    private String getCurrentUser() {
+    public static String getCurrentUser() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null && authentication.isAuthenticated()) {
@@ -159,7 +159,12 @@ public class OperationLogAspect {
     /**
      * 获取客户端IP地址
      */
-    private String getClientIp(HttpServletRequest request) {
+    public static String getClientIp() {
+
+        // 获取请求信息
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        HttpServletRequest request = attributes != null ? attributes.getRequest() : null;
+
         if (request == null) {
             return "未知";
         }

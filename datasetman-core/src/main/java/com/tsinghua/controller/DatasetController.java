@@ -27,7 +27,8 @@ public class DatasetController {
     @RequirePermission(Permission.MODEL_UPDATE)
     @OperationLog(value = "保存模型元数据", type = OperationLog.OperationType.UPDATE)
     public Result<Void> saveDataset(@Validated @RequestBody DatasetRequest request) {
-        return Result.success("");
+        datasetService.saveDataset(request);
+        return Result.success("保存成功");
     }
 
     @ApiOperation("测试SQL")
