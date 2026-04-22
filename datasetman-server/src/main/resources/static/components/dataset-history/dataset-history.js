@@ -739,7 +739,7 @@ class DatasetHistory extends HTMLElement {
             // 创建节点ID映射
             const nodeMap = new Map(nodes.map(d => [d.id, d]));
 
-            // 自定义路径生成器：从父节点开始曲线分叉，曲线结束点水平对齐，然后水平直线到子节点
+            // 自定义路径生成器：同一父节点的所有子节点曲线结束点x坐标对齐，圆心向内弯曲
             const linkPath = function(d) {
                 const source = nodeMap.get(d.source);
                 const target = nodeMap.get(d.target);
@@ -749,13 +749,17 @@ class DatasetHistory extends HTMLElement {
                 const tx = target.x - 15;
                 const ty = target.y;
                 
-                // 曲线结束点：基于父节点x坐标，确保同一父节点的所有子节点曲线结束点水平对齐
-                const curveEndX = sx + (tx - sx) * 0.6;
+                // 曲线结束点：基于父节点x坐标 + 固定偏移
+                const curveEndX = sx + 80;
                 
-                // 贝塞尔曲线控制点：从父节点开始，平滑过渡到子节点y
-                const cp1x = sx + (curveEndX - sx) * 0.4;
+                // 贝塞尔曲线控制点：圆心向内弯曲
+                // 控制点在曲线中段，y值在sy和ty之间
+                const midX = (sx + curveEndX) / 2;
+                const midY = (sy + ty) / 2;
+                
+                const cp1x = midX;
                 const cp1y = sy;
-                const cp2x = sx + (curveEndX - sx) * 0.6;
+                const cp2x = midX;
                 const cp2y = ty;
                 
                 // 曲线 + 水平收尾
