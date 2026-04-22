@@ -642,25 +642,25 @@ class DatasetHistory extends HTMLElement {
 
             // 分支数据：漫威TVA风格的时间线
             const nodes = [
-                { id: 'V1', name: 'V1', x: 0, y: 0, symbolSize: 20, itemStyle: { color: '#1890ff' },
+                { id: 'V1', name: 'V1', x: 50, y: 100, symbolSize: 25, itemStyle: { color: '#1890ff' },
                   time: '2025-04-07 10:00', user: 'engineer', ip: '192.168.1.10',
                   job: 'transform_task_001', func: 'data_clean()', sql: 'CREATE TABLE dataset02', change: '数据集初始化创建' },
-                { id: 'V2', name: 'V2', x: 100, y: 0, symbolSize: 20, itemStyle: { color: '#1890ff' },
+                { id: 'V2', name: 'V2', x: 150, y: 100, symbolSize: 25, itemStyle: { color: '#1890ff' },
                   time: '2025-04-07 10:10', user: 'system', ip: '10.0.0.1',
                   job: 'transform_udf_upgrade', func: 'filter_null()', sql: 'ALTER TABLE dataset02 ADD COLUMN status', change: 'UDF升级，新增空值过滤' },
-                { id: 'V3', name: 'V3', x: 200, y: 50, symbolSize: 20, itemStyle: { color: '#52c41a' },
+                { id: 'V3', name: 'V3', x: 250, y: 150, symbolSize: 25, itemStyle: { color: '#52c41a' },
                   time: '2025-04-07 10:20', user: 'engineer', ip: '192.168.1.10',
                   job: 'transform_data_refresh', func: 'refresh_data()', sql: 'INSERT OVERWRITE dataset02', change: '全量数据刷新' },
-                { id: 'V4', name: 'V4', x: 200, y: -50, symbolSize: 20, itemStyle: { color: '#faad14' },
+                { id: 'V4', name: 'V4', x: 250, y: 50, symbolSize: 25, itemStyle: { color: '#faad14' },
                   time: '2025-04-07 10:30', user: 'admin', ip: '192.168.1.100',
                   job: 'transform_schema_optimize', func: 'optimize_schema()', sql: 'OPTIMIZE TABLE dataset02', change: '表结构优化，增加索引' },
-                { id: 'V5', name: 'V5', x: 300, y: 50, symbolSize: 20, itemStyle: { color: '#52c41a' },
+                { id: 'V5', name: 'V5', x: 350, y: 150, symbolSize: 25, itemStyle: { color: '#52c41a' },
                   time: '2025-04-07 10:40', user: 'algorithm', ip: '192.168.1.11',
                   job: 'transform_feature_extract', func: 'feature_extract()', sql: 'SELECT feature(*) FROM dataset02', change: '特征提取功能' },
-                { id: 'V6', name: 'V6', x: 300, y: -50, symbolSize: 20, itemStyle: { color: '#faad14' },
+                { id: 'V6', name: 'V6', x: 350, y: 50, symbolSize: 25, itemStyle: { color: '#faad14' },
                   time: '2025-04-07 10:50', user: 'analyst', ip: '192.168.1.12',
                   job: 'transform_stat_calc', func: 'stat_calc()', sql: 'CREATE TABLE dataset05 AS SELECT * FROM dataset04', change: '生成业务统计结果' },
-                { id: 'V7', name: 'V7', x: 400, y: 0, symbolSize: 20, itemStyle: { color: '#722ed1' },
+                { id: 'V7', name: 'V7', x: 450, y: 100, symbolSize: 25, itemStyle: { color: '#722ed1' },
                   time: '2025-04-07 11:00', user: 'admin', ip: '192.168.1.100',
                   job: 'merge_branches', func: 'merge()', sql: 'MERGE INTO dataset02', change: '合并所有分支' }
             ];
@@ -710,9 +710,15 @@ SQL：${d.sql}<br>
                     roam: true,
                     label: {
                         show: true,
-                        fontSize: 12,
+                        position: 'bottom',
+                        formatter: function(params) {
+                            return `${params.data.name}\n${params.data.time}`;
+                        },
+                        fontSize: 10,
                         fontWeight: 'bold',
-                        color: '#1f2329'
+                        color: '#333',
+                        padding: [5, 0, 0, 0],
+                        lineHeight: 14
                     },
                     edgeSymbol: ['circle', 'arrow'],
                     edgeSymbolSize: [4, 10],
@@ -1004,7 +1010,7 @@ WITH TRANSFORM OPTIONS (
                 <div class="popup-body" style="padding:15px;">
                     <div class="popup-field" style="margin-bottom:12px;">
                         <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">数据集类型：</label>
-                        <span class="field-value"><span class="field-tag" style="background-color:#e3f2fd;color:#2196F3;border-radius:3px;font-size:10px;margin-right:5px;padding:2px6px;">${params.data.datasetType}</span></span>
+                        <span class="field-value"><span class="field-tag" style="background-color:#e3f2fd;color:#2196F3;border-radius:3px;font-size:10px;margin-right:5px;padding:2px 6px;">${params.data.datasetType}</span></span>
                     </div>
                     <div class="popup-field" style="margin-bottom:12px;">
                         <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">所属库：</label>
