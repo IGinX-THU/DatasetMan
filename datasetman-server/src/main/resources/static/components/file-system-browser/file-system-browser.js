@@ -69,6 +69,16 @@ class FileSystemBrowser extends HTMLElement {
             };
             document.head.appendChild(xlsxScript);
         }
+
+        // 加载pptx-preview
+        if (typeof pptxPreview === 'undefined') {
+            const pptxPreviewScript = document.createElement('script');
+            pptxPreviewScript.src = '/lib/pptx-preview/pptx-preview.umd.js';
+            pptxPreviewScript.onload = () => {
+                console.log('pptx-preview加载成功');
+            };
+            document.head.appendChild(pptxPreviewScript);
+        }
     }
 
     initEventListeners() {
@@ -169,17 +179,110 @@ class FileSystemBrowser extends HTMLElement {
                     </div>
                 `;
             } else if (isVideo) {
-                const videoUrl = URL.createObjectURL(blob);
+                // 检查blob大小
+                if (blob.size === 0) {
+                    console.error('视频数据为空，Blob大小为0字节');
+                    fileGrid.innerHTML = `
+                        <div class="file-preview">
+                            <div class="preview-content">
+                                <div style="color: red; text-align: center; padding: 20px;">
+                                    视频数据为空，无法播放。请检查后端日志。
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // 尝试多种MIME类型以提高兼容性
+                const mimeTypes = [
+                    `video/${fileExtension}`,
+                    'video/mp4',
+                    'video/webm',
+                    'video/ogg',
+                    'video/quicktime',
+                    'video/x-msvideo',
+                    'video/x-matroska'
+                ];
+                
+                const videoBlob = new Blob([blob], { type: mimeTypes[0] });
+                const videoUrl = URL.createObjectURL(videoBlob);
+                
+                // 创建多个source标签以提高兼容性
+                let sourcesHtml = mimeTypes.map(type => 
+                    `<source src="${videoUrl}" type="${type}">`
+                ).join('');
+                
                 fileGrid.innerHTML = `
                     <div class="file-preview">
                         <div class="preview-content">
-                            <video controls style="max-width: 100%; max-height: 600px;">
-                                <source src="${videoUrl}" type="video/${fileExtension}">
+                            <video id="videoPlayer" controls style="max-width: 100%; max-height: 600px;">
+                                ${sourcesHtml}
                                 您的浏览器不支持视频播放。
                             </video>
+                            <div id="videoError" style="color: red; display: none; margin-top: 10px;"></div>
+                            <div id="videoFallback" style="display: none; margin-top: 10px;">
+                                <button onclick="window.AppConfig.downloadBlob('${fileName}', '${videoUrl}')" style="padding: 8px 16px; cursor: pointer;">下载视频</button>
+                            </div>
                         </div>
                     </div>
                 `;
+                
+                console.log('视频MIME类型尝试:', mimeTypes);
+                console.log('视频Blob大小:', blob.size, '字节');
+                
+                // 添加视频加载错误处理
+                const videoElement = document.getElementById('videoPlayer');
+                const errorDiv = document.getElementById('videoError');
+                
+                videoElement.addEventListener('loadstart', () => {
+                    console.log('视频开始加载');
+                });
+                
+                videoElement.addEventListener('progress', () => {
+                    console.log('视频加载进度:', videoElement.buffered.length > 0 ? videoElement.buffered.end(0) : 0);
+                });
+                
+                videoElement.addEventListener('loadedmetadata', () => {
+                    console.log('视频元数据加载成功，时长:', videoElement.duration, '秒');
+                    console.log('视频尺寸:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+                    console.log('视频当前时间:', videoElement.currentTime);
+                    
+                    if (videoElement.duration === Infinity || isNaN(videoElement.duration)) {
+                        errorDiv.style.display = 'block';
+                        errorDiv.textContent = '视频时长无法获取，可能元数据损坏';
+                    }
+                    
+                    if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+                        errorDiv.style.display = 'block';
+                        errorDiv.textContent = '视频尺寸为0，可能视频轨道损坏';
+                    }
+                });
+                
+                videoElement.addEventListener('canplay', () => {
+                    console.log('视频可以播放');
+                });
+                
+                videoElement.addEventListener('canplaythrough', () => {
+                    console.log('视频可以流畅播放');
+                });
+                
+                videoElement.addEventListener('error', (e) => {
+                    console.error('视频加载错误:', e);
+                    console.error('错误代码:', videoElement.error ? videoElement.error.code : 'unknown');
+                    console.error('错误消息:', videoElement.error ? videoElement.error.message : 'unknown');
+                    errorDiv.style.display = 'block';
+                    errorDiv.textContent = '视频加载失败，可能是不支持的编码格式或文件损坏。请尝试下载后使用本地播放器播放。';
+                    document.getElementById('videoFallback').style.display = 'block';
+                });
+                
+                videoElement.addEventListener('stalled', () => {
+                    console.warn('视频加载停滞');
+                });
+                
+                videoElement.addEventListener('waiting', () => {
+                    console.log('视频缓冲中...');
+                });
             } else if (isAudio) {
                 const audioUrl = URL.createObjectURL(blob);
                 fileGrid.innerHTML = `
@@ -206,6 +309,44 @@ class FileSystemBrowser extends HTMLElement {
                 };
                 reader.readAsText(blob);
             }
+        } else if (isDocument) {
+            // 文档文件，转换为Uint8Array后调用相应的预览方法
+            console.log('处理文档文件，blob类型:', typeof blob, '构造函数:', blob?.constructor?.name);
+            
+            // 使用Blob的arrayBuffer()方法（Promise-based）转换为ArrayBuffer
+            if (blob instanceof Blob) {
+                blob.arrayBuffer().then(arrayBuffer => {
+                    const uint8Array = new Uint8Array(arrayBuffer);
+                    this.handleDocumentPreview(uint8Array, fileExtension, fileName, fileGrid);
+                }).catch(error => {
+                    console.error('Blob转换为ArrayBuffer失败:', error);
+                    fileGrid.innerHTML = `
+                        <div class="file-preview">
+                            <div class="preview-content">
+                                <div style="color: #999; text-align: center; padding: 20px;">
+                                    文件读取失败: ${error.message}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else if (blob instanceof ArrayBuffer) {
+                const uint8Array = new Uint8Array(blob);
+                this.handleDocumentPreview(uint8Array, fileExtension, fileName, fileGrid);
+            } else if (blob instanceof Uint8Array) {
+                this.handleDocumentPreview(blob, fileExtension, fileName, fileGrid);
+            } else {
+                console.error('未知的blob类型:', typeof blob, blob);
+                fileGrid.innerHTML = `
+                    <div class="file-preview">
+                        <div class="preview-content">
+                            <div style="color: #999; text-align: center; padding: 20px;">
+                                文件数据格式错误
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
         } else {
             // 不支持预览的文件类型
             fileGrid.innerHTML = `
@@ -218,6 +359,60 @@ class FileSystemBrowser extends HTMLElement {
                 </div>
             `;
         }
+    }
+
+    handleDocumentPreview(uint8Array, fileExtension, fileName, fileGrid) {
+        // 检查数据是否为空
+        if (!uint8Array || uint8Array.length === 0) {
+            console.error('文档数据为空，无法预览');
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-content">
+                        <div style="color: #999; text-align: center; padding: 20px;">
+                            文件数据为空，无法预览。请检查文件是否存在或后端是否正确返回数据。
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        console.log('文档数据长度:', uint8Array.length, '字节');
+
+        // PDF文件使用PDF.js预览
+        if (fileExtension === 'pdf') {
+            this.renderPdfPreview(uint8Array, fileName);
+            return;
+        }
+
+        // Word文档使用mammoth预览
+        if (fileExtension === 'docx') {
+            this.renderDocxPreview(uint8Array, fileName);
+            return;
+        }
+
+        // Excel文件使用SheetJS预览
+        if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+            this.renderXlsxPreview(uint8Array, fileName);
+            return;
+        }
+
+        // PowerPoint文件使用PptxViewJS预览
+        if (fileExtension === 'pptx' || fileExtension === 'ppt') {
+            this.renderPptxPreview(uint8Array, fileName);
+            return;
+        }
+
+        // 其他文档类型暂不支持在线预览
+        fileGrid.innerHTML = `
+            <div class="file-preview">
+                <div class="preview-content">
+                    <div style="color: #999; text-align: center; padding: 20px;">
+                        此文件类型不支持在线预览
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     escapeHtml(text) {
@@ -461,6 +656,12 @@ class FileSystemBrowser extends HTMLElement {
             // Excel文件使用SheetJS预览
             if (fileExtension === 'xlsx' || fileExtension === 'xls') {
                 this.renderXlsxPreview(uint8Array, fileName);
+                return;
+            }
+
+            // PowerPoint文件使用PptxViewJS预览
+            if (fileExtension === 'pptx' || fileExtension === 'ppt') {
+                this.renderPptxPreview(uint8Array, fileName);
                 return;
             }
 
@@ -819,6 +1020,108 @@ class FileSystemBrowser extends HTMLElement {
                     <div class="preview-content">
                         <div class="document-preview-info">
                             <p>SheetJS库未加载</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    renderPptxPreview(uint8Array, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        fileGrid.classList.add('has-preview');
+
+        fileGrid.innerHTML = `
+            <div class="file-preview">
+                <div class="preview-header">
+                    <span class="file-name">${fileName}</span>
+                </div>
+                <div class="preview-content">
+                    <div id="pptxContainer" style="width: 100%; height: 600px; overflow: auto;">
+                        <div id="pptxLoader" style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                            <div style="text-align: center;">
+                                <div style="margin-bottom: 10px;">正在加载PowerPoint文件...</div>
+                            </div>
+                        </div>
+                        <div id="pptxWrapper" style="width: 100%; height: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 使用pptx-preview渲染PowerPoint文件
+        if (typeof pptxPreview !== 'undefined' && pptxPreview.init) {
+            // 设置当前文件信息以便下载
+            const blob = new Blob([uint8Array], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+            this.currentImageUrl = URL.createObjectURL(blob);
+            this.currentFileName = fileName;
+
+            const pptxLoader = fileGrid.querySelector('#pptxLoader');
+            const pptxWrapper = fileGrid.querySelector('#pptxWrapper');
+
+            try {
+                console.log('开始加载PowerPoint文件，uint8Array长度:', uint8Array.length);
+
+                // 获取ArrayBuffer
+                const arrayBuffer = uint8Array.buffer.slice(uint8Array.byteOffset, uint8Array.byteOffset + uint8Array.byteLength);
+                console.log('ArrayBuffer长度:', arrayBuffer.byteLength);
+
+                // 初始化pptx-preview预览器
+                const pptxPreviewer = pptxPreview.init(pptxWrapper, {
+                    width: 960,
+                    height: 540
+                });
+
+                // 调用preview方法预览文件
+                pptxPreviewer.preview(arrayBuffer)
+                    .then(() => {
+                        console.log('PowerPoint文件加载成功');
+                        if (pptxLoader) {
+                            pptxLoader.style.display = 'none';
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('PowerPoint加载失败:', error);
+                        fileGrid.innerHTML = `
+                            <div class="file-preview">
+                                <div class="preview-header">
+                                    <span class="file-name">${fileName}</span>
+                                </div>
+                                <div class="preview-content">
+                                    <div class="document-preview-info">
+                                        <p>PowerPoint文件加载失败: ${error.message}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+            } catch (error) {
+                console.error('PowerPoint渲染失败:', error);
+                fileGrid.innerHTML = `
+                    <div class="file-preview">
+                        <div class="preview-header">
+                            <span class="file-name">${fileName}</span>
+                        </div>
+                        <div class="preview-content">
+                            <div class="document-preview-info">
+                                <p>PowerPoint文件渲染失败: ${error.message}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            console.error('pptx-preview库未加载');
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${fileName}</span>
+                    </div>
+                    <div class="preview-content">
+                        <div class="document-preview-info">
+                            <p>pptx-preview库未加载</p>
                         </div>
                     </div>
                 </div>

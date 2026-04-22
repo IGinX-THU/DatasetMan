@@ -290,8 +290,8 @@ public class DataTableService {
             QueryClient queryClient = iginxClient.getQueryClient();
 
             Set<String> paths = new HashSet<>(request.getPaths());
-            long startKey = Optional.ofNullable(request.getStartTime()).orElse(0L);
-            long endKey = Optional.ofNullable(request.getEndTime()).orElse(Long.MAX_VALUE);
+            long startKey = 0L;
+            long endKey = Long.MAX_VALUE;
 
             // 设置响应头为二进制流
             response.setStatus(HttpServletResponse.SC_OK);
@@ -305,6 +305,7 @@ public class DataTableService {
             // 使用队列进行线程间通信
             final java.util.concurrent.BlockingQueue<byte[]> queue = new java.util.concurrent.LinkedBlockingQueue<>();
             final int[] recordCount = {0};
+            final long[] totalBytes = {0};
             final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
 
             // 启动Consumer线程查询IginX并放入队列
@@ -320,9 +321,11 @@ public class DataTableService {
                             for (IginXColumn column: record.getHeader().getColumns()) {
                                 Object value = record.getValue(column.getName());
                                 if (value instanceof byte[]) {
+                                    byte[] bytes = (byte[]) value;
                                     try {
-                                        queue.put((byte[]) value);
+                                        queue.put(bytes);
                                         recordCount[0]++;
+                                        totalBytes[0] += bytes.length;
                                     } catch (InterruptedException e) {
                                         log.error("放入队列失败", e);
                                     }
@@ -341,7 +344,7 @@ public class DataTableService {
 
             // 主线程从队列取出数据流式写入HTTP响应
             try {
-                Thread.sleep(1000);
+                final long[] writtenBytes = {0};
                 
                 byte[] data;
                 while (true) {
@@ -357,13 +360,14 @@ public class DataTableService {
                     }
                     outputStream.write(data);
                     outputStream.flush();
+                    writtenBytes[0] += data.length;
                 }
+                
+                log.info("Consumer完成，放入队列记录数: {}, 总字节数: {}", recordCount[0], totalBytes[0]);
+                log.info("流式查询完成，写入记录数: {}, 写入字节数: {}", recordCount[0], writtenBytes[0]);
             } catch (InterruptedException e) {
                 log.error("从队列取数据被中断", e);
             }
-
-            outputStream.close();
-            log.info("流式查询完成，写入记录数: {}", recordCount[0]);
 
         } catch (IOException e) {
             log.error("流式查询失败", e);
