@@ -195,8 +195,8 @@ class RegisterDataResourceEmbedded extends HTMLElement {
         const port = this.shadowRoot.getElementById('port')?.value;
         
         // 获取通用配置字段
-        const hasData = this.shadowRoot.getElementById('hasData')?.checked || false;
-        const isReadOnly = this.shadowRoot.getElementById('isReadOnly')?.checked || false;
+        const hasData = true;
+        const isReadOnly = true;
         const dataPrefix = this.shadowRoot.getElementById('dataPrefix')?.value;
         const schemaPrefix = this.shadowRoot.getElementById('schemaPrefix')?.value;
         
