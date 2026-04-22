@@ -50,8 +50,15 @@
             </div>
             
             <div class="form-group">
-                <label class="form-label">模式前缀</label>
-                <input type="text" class="form-control" id="schemaPrefix" placeholder="请输入模式前缀（可选）">
+                <label class="form-label required">模式前缀</label>
+                <select class="form-control form-select" id="schemaPrefix" required>
+                    <option value="">请选择模式前缀</option>
+                    <option value="time_series">time_series（时序数据）</option>
+                    <option value="file_system">file_system（文件数据）</option>
+                    <option value="relational">relational（关系数据）</option>
+                    <option value="semi_structured">semi_structured（半结构化数据）</option>
+                    <option value="key_value">key_value（键值数据）</option>
+                </select>
             </div>
             
             <!-- 认证字段容器 -->
@@ -102,8 +109,8 @@
                     <input type="text" class="form-control" id="dataDir" placeholder="请输入IGinX数据存储目录">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">历史数据文件读取目录</label>
-                    <input type="text" class="form-control" id="dummyDir" placeholder="请输入历史数据文件读取目录">
+                    <label class="form-label required">历史数据文件读取目录</label>
+                    <input type="text" class="form-control" id="dummyDir" placeholder="请输入历史数据文件读取目录" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">历史数据的数据路径前缀</label>

@@ -99,48 +99,55 @@ class RegisterDataResourceEmbedded extends HTMLElement {
 
     toggleEngineField() {
         const dataSourceType = this.shadowRoot.getElementById('dataSourceType');
-        
+
         // Hide all storage-specific fields first
         const allFieldGroups = this.shadowRoot.querySelectorAll('.storage-specific-fields');
         allFieldGroups.forEach(group => group.style.display = 'none');
-        
+
         // Hide auth fields by default
         const authFields = this.shadowRoot.getElementById('authFields');
         if (authFields) {
             authFields.style.display = 'none';
         }
-        
-        // 先清除relational的自动填充设置
-        this.clearRelationalSettings();
-        
+
+        // Clear schema prefix selection
+        const schemaPrefixSelect = this.shadowRoot.getElementById('schemaPrefix');
+        if (schemaPrefixSelect) {
+            schemaPrefixSelect.value = '';
+        }
+
         if (dataSourceType) {
             // Show relevant fields based on storage engine type
             switch(dataSourceType.value) {
                 case '1': // IoTDB 1.2
                     this.showFieldGroup('iotdbFields');
                     authFields.style.display = 'block';
+                    this.setSchemaPrefix('time_series');
                     break;
                 case '2': // InfluxDB
                     this.showFieldGroup('influxdbFields');
                     authFields.style.display = 'block';
+                    this.setSchemaPrefix('time_series');
                     break;
                 case '3': // Filesystem
                     this.showFieldGroup('filesystemFields');
                     // authFields remains hidden
+                    this.setSchemaPrefix('file_system');
                     break;
                 case '4': // Relational
                     this.showFieldGroup('relationalFields');
                     authFields.style.display = 'block';
-                    // 自动填充模式前缀为"relational"并勾选只读
-                    this.autoFillRelationalSettings();
+                    this.setSchemaPrefix('relational');
                     break;
                 case '5': // MongoDB
                     this.showFieldGroup('mongodbFields');
                     // authFields remains hidden
+                    this.setSchemaPrefix('semi_structured');
                     break;
                 case '6': // Redis
                     this.showFieldGroup('redisFields');
                     authFields.style.display = 'block';
+                    this.setSchemaPrefix('key_value');
                     break;
             }
         }
@@ -153,38 +160,11 @@ class RegisterDataResourceEmbedded extends HTMLElement {
         }
     }
 
-    autoFillRelationalSettings() {
-        // 自动填充模式前缀为"relational"
-        const schemaPrefixInput = this.shadowRoot.getElementById('schemaPrefix');
-        if (schemaPrefixInput) {
-            // 只有当输入框为空时才自动填充，避免覆盖用户手动输入的内容
-            if (!schemaPrefixInput.value || schemaPrefixInput.value.trim() === '') {
-                schemaPrefixInput.value = 'relational';
-                console.log('自动填充模式前缀为: relational');
-            }
-        }
-
-        // 自动勾选"是否只读"
-        const isReadOnlyCheckbox = this.shadowRoot.getElementById('isReadOnly');
-        if (isReadOnlyCheckbox) {
-            isReadOnlyCheckbox.checked = true;
-            console.log('自动勾选"是否只读"');
-        }
-    }
-
-    clearRelationalSettings() {
-        // 清除模式前缀（仅当值为"relational"时清除）
-        const schemaPrefixInput = this.shadowRoot.getElementById('schemaPrefix');
-        if (schemaPrefixInput && schemaPrefixInput.value === 'relational') {
-            schemaPrefixInput.value = '';
-            console.log('清除自动填充的模式前缀');
-        }
-
-        // 取消勾选"是否只读"（仅当是自动勾选时取消）
-        const isReadOnlyCheckbox = this.shadowRoot.getElementById('isReadOnly');
-        if (isReadOnlyCheckbox && isReadOnlyCheckbox.checked) {
-            isReadOnlyCheckbox.checked = false;
-            console.log('取消勾选"是否只读"');
+    setSchemaPrefix(value) {
+        const schemaPrefixSelect = this.shadowRoot.getElementById('schemaPrefix');
+        if (schemaPrefixSelect) {
+            schemaPrefixSelect.value = value;
+            console.log('自动选择模式前缀为:', value);
         }
     }
 
@@ -382,7 +362,12 @@ class RegisterDataResourceEmbedded extends HTMLElement {
             return false;
         }
 
-        
+        // 模式前缀必填验证
+        if (!data.schemaPrefix || data.schemaPrefix.trim() === '') {
+            this.showMessage('请选择模式前缀', 'error');
+            return false;
+        }
+
         // 特定类型验证
         switch(data.storageEngineType) {
             case 2: // InfluxDB - URL必填
@@ -391,9 +376,13 @@ class RegisterDataResourceEmbedded extends HTMLElement {
                     return false;
                 }
                 break;
-            case 3: // Filesystem - iginxPort必填
+            case 3: // Filesystem - iginxPort必填, dummyDir必填（因为hasData默认为true）
                 if (!data.iginxPort) {
                     this.showMessage('IGinX节点端口为必填项', 'error');
+                    return false;
+                }
+                if (!data.dummyDir) {
+                    this.showMessage('历史数据文件读取目录为必填项', 'error');
                     return false;
                 }
                 break;
