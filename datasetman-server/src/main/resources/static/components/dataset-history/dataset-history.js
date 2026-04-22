@@ -231,9 +231,77 @@ class DatasetHistory extends HTMLElement {
                 
                 /* 血缘图谱区域 */
                 .lineage-container {
-                    height: 600px;
+                    height: 400px;
                     width: 100%;
                     padding: var(--spacing-md);
+                }
+
+                #lineageChart {
+                    flex: 1;
+                    width: 100%;
+                    height: 800px;
+                    background-color: #fff;
+                    border: 1px solid #e0e0e0;
+                }
+
+                /* 视图控制栏 */
+                .chart-controls {
+                    padding: 10px 15px;
+                    background-color: #f5f5f5;
+                    border-bottom: 1px solid #e0e0e0;
+                    display: flex;
+                    gap: 15px;
+                    align-items: center;
+                }
+
+                .control-btn {
+                    padding: 6px 12px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 4px;
+                    background-color: #fff;
+                    cursor: pointer;
+                    font-size: 12px;
+                }
+
+                .control-btn:hover {
+                    background-color: #e3f2fd;
+                    border-color: #2196F3;
+                    color: #2196F3;
+                }
+
+                .switch {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 12px;
+                }
+
+                .switch-btn {
+                    width: 40px;
+                    height: 20px;
+                    background-color: #e0e0e0;
+                    border-radius: 10px;
+                    position: relative;
+                    cursor: pointer;
+                }
+
+                .switch-btn.on {
+                    background-color: #2196F3;
+                }
+
+                .switch-dot {
+                    width: 16px;
+                    height: 16px;
+                    background-color: #fff;
+                    border-radius: 50%;
+                    position: absolute;
+                    top: 2px;
+                    left: 2px;
+                    transition: left 0.2s;
+                }
+
+                .switch-btn.on .switch-dot {
+                    left: 22px;
                 }
                 
                 .graph-placeholder {
@@ -366,23 +434,38 @@ class DatasetHistory extends HTMLElement {
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- 下半部分：版本历史区域 -->
-                    <div class="version-history-section">
-                        <div class="section-title">版本历史</div>
-                        <div class="horizontal-timeline" id="timelineList">
-                            <!-- 时间线项目将通过JS动态生成 -->
+                </div>
+                
+                <!-- 第二个card：版本历史 -->
+                <div class="dataset-lineage-card">
+                    <div class="lineage-header">版本历史</div>
+                    <div class="lineage-container">
+                        <div id="lineageGraph" class="graph-placeholder">
+                            版本历史加载中...
                         </div>
                     </div>
                 </div>
                 
-                <!-- 第二个card：血缘图谱 -->
+                <!-- 第三个card：血缘图谱 -->
                 <div class="dataset-lineage-card">
                     <div class="lineage-header">血缘图谱</div>
-                    <div class="lineage-container">
-                        <div id="lineageGraph" class="graph-placeholder">
-                            血缘图谱加载中...
+                    
+                    <!-- 视图控制栏 -->
+                    <div class="chart-controls">
+                        <div class="switch">
+                            <span>旁系血缘</span>
+                            <div class="switch-btn on" id="sideLineageSwitch">
+                                <div class="switch-dot"></div>
+                            </div>
                         </div>
+                        <button class="control-btn" id="focusProduct">聚焦数据集</button>
+                        <button class="control-btn" id="zoomIn">放大 (+10%)</button>
+                        <button class="control-btn" id="zoomOut">缩小 (-10%)</button>
+                        <button class="control-btn" id="zoomReset">重置视图</button>
+                    </div>
+                    
+                    <div id="lineageChart" class="graph-placeholder">
+                        血缘图谱加载中...
                     </div>
                 </div>
             </div>
@@ -401,7 +484,7 @@ class DatasetHistory extends HTMLElement {
                 }));
             });
         }
-        
+
         // 删除按钮
         const deleteBtn = this.shadowRoot.querySelector('#deleteBtn');
         console.log('删除按钮元素:', deleteBtn);
@@ -412,6 +495,68 @@ class DatasetHistory extends HTMLElement {
             });
         } else {
             console.error('未找到删除按钮元素');
+        }
+
+        // 血缘图谱控制栏
+        this.initLineageControls();
+    }
+
+    initLineageControls() {
+        // 旁系血缘开关
+        const sideLineageSwitch = this.shadowRoot.querySelector('#sideLineageSwitch');
+        if (sideLineageSwitch) {
+            sideLineageSwitch.addEventListener('click', () => {
+                sideLineageSwitch.classList.toggle('on');
+                // TODO: 实现旁系血缘切换逻辑
+            });
+        }
+
+        // 聚焦数据集按钮
+        const focusProductBtn = this.shadowRoot.querySelector('#focusProduct');
+        if (focusProductBtn) {
+            focusProductBtn.addEventListener('click', () => {
+                if (this._lineageChart) {
+                    this._lineageChart.dispatchAction({
+                        type: 'restore'
+                    });
+                }
+            });
+        }
+
+        // 放大按钮
+        const zoomInBtn = this.shadowRoot.querySelector('#zoomIn');
+        if (zoomInBtn) {
+            zoomInBtn.addEventListener('click', () => {
+                if (this._lineageChart) {
+                    const option = this._lineageChart.getOption();
+                    option.series[0].zoom = (option.series[0].zoom || 1) * 1.1;
+                    this._lineageChart.setOption(option);
+                }
+            });
+        }
+
+        // 缩小按钮
+        const zoomOutBtn = this.shadowRoot.querySelector('#zoomOut');
+        if (zoomOutBtn) {
+            zoomOutBtn.addEventListener('click', () => {
+                if (this._lineageChart) {
+                    const option = this._lineageChart.getOption();
+                    option.series[0].zoom = (option.series[0].zoom || 1) * 0.9;
+                    this._lineageChart.setOption(option);
+                }
+            });
+        }
+
+        // 重置视图按钮
+        const zoomResetBtn = this.shadowRoot.querySelector('#zoomReset');
+        if (zoomResetBtn) {
+            zoomResetBtn.addEventListener('click', () => {
+                if (this._lineageChart) {
+                    this._lineageChart.dispatchAction({
+                        type: 'restore'
+                    });
+                }
+            });
         }
     }
 
@@ -444,6 +589,9 @@ class DatasetHistory extends HTMLElement {
             this._timelineResizeObserver.disconnect();
             this._timelineResizeObserver = null;
         }
+
+        // 清理弹窗
+        this.removePopup();
     }
 
     renderOverview() {
@@ -472,7 +620,7 @@ class DatasetHistory extends HTMLElement {
     }
 
     renderVersionTimeline() {
-        const timelineContainer = this.shadowRoot.querySelector('#timelineList');
+        const timelineContainer = this.shadowRoot.querySelector('#lineageGraph');
         if (!timelineContainer || typeof echarts === 'undefined') {
             if (timelineContainer) {
                 timelineContainer.innerHTML = '<div class="empty-state">图表库加载失败</div>';
@@ -595,7 +743,7 @@ SQL：${d.sql}<br>
     }
 
     renderLineageGraph() {
-        const graphContainer = this.shadowRoot.querySelector('#lineageGraph');
+        const graphContainer = this.shadowRoot.querySelector('#lineageChart');
         if (!graphContainer || typeof echarts === 'undefined') {
             if (graphContainer) {
                 graphContainer.innerHTML = '<div class="graph-placeholder">图表库加载失败</div>';
@@ -615,64 +763,186 @@ SQL：${d.sql}<br>
         setTimeout(() => {
             const chart = echarts.init(graphContainer);
 
-            const option = {
-                tooltip: {
-                    formatter: function(params) {
-                        if (params.dataType === 'edge') {
-                            return `UDF函数：${params.data.func}
-Transform作业：${params.data.job}
-SQL：${params.data.sql}
-操作人：${params.data.user}
-时间：${params.data.time}
-IP：${params.data.ip}
-变化：${params.data.change}`;
-                        }
-                        return params.name;
-                    }
-                },
+            const iginxConfig = {
+                tooltip: { trigger: 'none', enterable: true },
                 series: [{
                     type: 'graph',
                     layout: 'force',
-                    symbolSize: 50,
+                    force: { repulsion: 450, edgeLength: 280, gravity: 0.05, layoutAnimation: true },
                     roam: true,
-                    label: { show: true, fontSize: 12 },
+                    draggable: true,
+                    symbolSize: [200, 70],
+                    symbol: 'rect',
+                    itemStyle: { 
+                        color: '#E3F2FD', 
+                        borderColor: '#2196F3', 
+                        borderWidth: 1, 
+                        borderRadius: 6 
+                    },
+                    label: {
+                        show: true,
+                        formatter: function(params) {
+                            var [name, db] = params.name.split('|');
+                            var type = params.data.datasetType || '作业';
+                            return `${name}\n[${type}] ${db}`;
+                        },
+                        fontSize: 12, 
+                        color: '#333', 
+                        lineHeight: 20, 
+                        position: 'center'
+                    },
+                    lineStyle: { 
+                        color: '#2196F3', 
+                        width: 1.8, 
+                        curveness: 0.1, 
+                        opacity: 0.8 
+                    },
                     edgeSymbol: ['none', 'arrow'],
-                    edgeSymbolSize: [0, 10],
-                    edgeLabel: { show: true, formatter: '{c}', fontSize: 10 },
-                    force: { repulsion: 800, edgeLength: 200 },
+                    edgeSymbolSize: [0, 12],
                     data: [
-                        { name: 'dataset01' },
-                        { name: 'dataset02' },
-                        { name: 'dataset03' },
-                        { name: 'dataset04' },
-                        { name: 'dataset05' }
+                        {
+                            id: 'iginx_raw',
+                            name: 'RAW_DATA|IGinX',
+                            type: 'dataset',
+                            datasetType: '原始时序数据',
+                            database: 'IGinX',
+                            operator: '张三',
+                            operateTime: '2024-05-01 09:00:00',
+                            operateIp: '192.168.1.101',
+                            udfFunction: '无（原始数据未处理）',
+                            transformJob: '无',
+                            sqlScript: '无',
+                            changeProcess: '从设备采集系统导入原始时序数据，包含device_001-device_100共100台设备的温度采集值，采集频率1分钟/次，数据格式为原始JSON。',
+                            description: 'IGinX原始时序数据集，存储设备实时温度采集数据，未经过任何清洗和标准化处理，存在空值、异常值和单位不统一问题。',
+                            potentialUsers: '数据采集组、数据清洗组',
+                            itemStyle: { color: '#E8F5E9', borderColor: '#4CAF50' }
+                        },
+                        {
+                            id: 'demo_product_v1',
+                            name: 'DEMO_PRODUCT|demo1',
+                            type: 'dataset',
+                            datasetType: '清洗后数据',
+                            database: 'IGinX/demo1',
+                            operator: '张三',
+                            operateTime: '2024-05-10 14:00:00',
+                            operateIp: '192.168.1.108',
+                            udfFunction: 'basic_clean_udf（空值/异常值过滤）',
+                            transformJob: 'clean_job_001（单次清洗作业）',
+                            sqlScript: 'SELECT device_id, time, temperature FROM RAW_DATA WHERE temperature IS NOT NULL AND temperature BETWEEN 0 AND 100;',
+                            changeProcess: '1. 过滤空值：移除temperature字段为空的记录；2. 异常值过滤：保留0-100℃范围内的温度值；3. 数据裁剪：仅保留device_001-device_050共50台核心设备数据；4. 格式转换：将JSON转为IGinX标准列式存储。',
+                            description: '基于原始数据完成初步清洗的数据集，解决了空值和明显异常值问题，保留核心设备数据，为后续标准化打下基础。',
+                            potentialUsers: '数据分析师、算法组（初步测试）',
+                            itemStyle: { color: '#FFF3E0', borderColor: '#FF9800' }
+                        },
+                        {
+                            id: 'demo_product_v2',
+                            name: 'DEMO_PRODUCT|ABBY2',
+                            type: 'dataset',
+                            datasetType: '标准化业务数据',
+                            database: 'IGinX/ABBY2',
+                            operator: '张三',
+                            operateTime: '2024-05-20 14:30:25',
+                            operateIp: '192.168.1.108',
+                            udfFunction: 'data_clean_udf（完整清洗函数）',
+                            transformJob: 'transform_job_001（V2.1批量转换作业）',
+                            sqlScript: `-- IGinX Transform批量转换SQL（V2.1）
+-- 作者：张三 时间：2024-05-20
+SELECT 
+    time AS collect_time,
+    device_id AS device_code,
+    data_clean_udf(temperature) AS temperature_℃,
+    device_model,
+    collect_location
+FROM IGinX.raw_data 
+WHERE 
+    device_id LIKE 'device_001%' 
+    AND collect_time >= '2024-05-01 00:00:00'
+INTO DEMO_PRODUCT V2.1
+PARTITION BY collect_time
+WITH TRANSFORM OPTIONS (
+    'batch_size' = '10000',
+    'parallelism' = '8'
+);`,
+                            changeProcess: '1. 字段清洗：调用data_clean_udf完成温度值的空值填充、类型转换、华氏度转摄氏度、范围校验；2. 字段重命名：time→collect_time（采集时间）、device_id→device_code（设备编码），提升可读性；3. 维度补充：关联设备档案表，新增device_model（设备型号）、collect_location（采集地点）字段；4. 分区优化：按collect_time字段分区，提升时间范围查询性能；5. 批量处理：设置8并行度，批量处理896万条数据，总耗时4分45秒。',
+                            description: 'DEMO_PRODUCT数据集最终生产版本，完成了全量数据的清洗、标准化和维度补充，适配线上业务的高性能查询和模型推理需求，数据质量和查询效率均达到生产级别要求。',
+                            potentialUsers: '算法组（李四、王五）、数据分析组（赵六）、业务组（钱七）、运维组（孙八）',
+                            itemStyle: { color: '#E3F2FD', borderColor: '#2196F3' }
+                        },
+                        {
+                            id: 'transform_task',
+                            name: 'TRANSFORM|作业',
+                            type: 'task',
+                            operator: '张三',
+                            operateTime: '2024-05-20 14:30:25',
+                            operateIp: '192.168.1.108',
+                            udfFunction: `def data_clean_udf(value):
+    """
+    IGinX温度数据清洗UDF函数（V2.1）
+    参数：value - 原始温度值（可能为None/字符串/数值）
+    返回：清洗后的浮点型温度值（℃）
+    """
+    if value is None or value == '':
+        return 0.0
+    try:
+        temp = float(value)
+        # 华氏度转摄氏度 (℉ - 32) × 5/9
+        if temp > 100: # 判定为华氏度
+            temp = (temp - 32) * 5 / 9
+        # 范围校验（0-100℃）
+        return max(0.0, min(100.0, temp))
+    except:
+        return 0.0`,
+                            transformJob: `作业详情：
+- 作业ID：transform_job_001
+- 作业名称：DEMO_PRODUCT V2.1批量转换
+- 作业类型：IGinX Transform批量处理
+- 作业版本：V2.1
+- 运行状态：成功（success）
+- 运行时长：4分45秒
+- 处理数据量：896万条
+- 并行度：8
+- 批处理大小：10000条/批`,
+                            sqlScript: `-- IGinX Transform批量转换SQL（V2.1）
+-- 作者：张三 时间：2024-05-20
+-- 功能：从原始数据生成标准化业务数据集
+SELECT 
+    time AS collect_time,          -- 采集时间（重命名）
+    device_id AS device_code,      -- 设备编码（重命名）
+    data_clean_udf(temperature) AS temperature_℃, -- 清洗后的温度值
+    device_model,                  -- 设备型号（关联补充）
+    collect_location               -- 采集地点（关联补充）
+FROM IGinX.raw_data 
+WHERE 
+    device_id LIKE 'device_001%'   -- 仅保留核心设备
+    AND collect_time >= '2024-05-01 00:00:00' -- 时间范围过滤
+INTO DEMO_PRODUCT V2.1            -- 输出到V2.1版本
+PARTITION BY collect_time         -- 按采集时间分区
+WITH TRANSFORM OPTIONS (
+    'batch_size' = '10000',        -- 批处理大小
+    'parallelism' = '8'            -- 并行度
+);`,
+                            changeProcess: '本次作业是DEMO_PRODUCT数据集的最终生产版本转换，基于V1.0-V1.1的迭代优化，重点解决了三个核心问题：1. UDF函数性能优化：将原有逐行处理改为批量处理，性能提升8倍；2. 数据分区不合理：新增按时间分区，查询效率提升90%；3. 维度信息缺失：关联设备档案表补充型号和地点字段，满足业务分析需求。最终生成的V2.1版本数据集完全满足线上使用要求。',
+                            description: 'IGinX Transform批量转换作业，负责将清洗后的数据集转换为标准化的生产版本数据集，包含完整的UDF函数调用、字段映射、分区配置和批量处理逻辑，是数据集从测试版到生产版的核心转换环节。',
+                            potentialUsers: '算法组（李四、王五）、数据分析组（赵六）、业务组（钱七）、运维组（孙八）',
+                            symbolSize: 25,
+                            itemStyle: { color: '#F44336', borderColor: '#F44336' }
+                        }
                     ],
                     links: [
-                        {
-                            source: 'dataset01', target: 'dataset02', value: 'UDF清洗',
-                            func: 'data_clean()', job: 'transform_task_001', sql: 'SELECT clean(*) FROM dataset01',
-                            user: 'engineer', time: '2025-04-07 10:00', ip: '192.168.1.10', change: '空值过滤、格式标准化'
-                        },
-                        {
-                            source: 'dataset02', target: 'dataset03', value: 'UDF特征提取',
-                            func: 'feature_extract()', job: 'transform_task_002', sql: 'SELECT feature(*) FROM dataset02',
-                            user: 'algorithm', time: '2025-04-07 11:00', ip: '192.168.1.11', change: '提取数据特征'
-                        },
-                        {
-                            source: 'dataset03', target: 'dataset04', value: 'Transform归一化',
-                            func: 'normalize()', job: 'transform_task_003', sql: 'INSERT INTO dataset04 SELECT * FROM dataset03',
-                            user: 'system', time: '2025-04-07 12:00', ip: '10.0.0.1', change: '数据归一化处理'
-                        },
-                        {
-                            source: 'dataset04', target: 'dataset05', value: 'UDF统计计算',
-                            func: 'stat_calc()', job: 'transform_task_004', sql: 'CREATE TABLE dataset05 AS SELECT * FROM dataset04',
-                            user: 'analyst', time: '2025-04-07 14:00', ip: '192.168.1.12', change: '生成业务统计结果'
-                        }
+                        { source: 'iginx_raw', target: 'demo_product_v1', type: 'direct' },
+                        { source: 'demo_product_v1', target: 'transform_task', type: 'task' },
+                        { source: 'transform_task', target: 'demo_product_v2', type: 'task' }
                     ]
-                }]
+                }],
+                visualMap: { show: false, dimension: 1, categories: ['dataset', 'task'], inRange: { color: ['#2196F3', '#F44336'] } }
             };
 
-            chart.setOption(option);
+            chart.setOption(iginxConfig);
+
+            // 点击事件：显示详细弹窗
+            chart.on('click', (params) => {
+                this.showPopup(params);
+            });
 
             // 监听容器尺寸变化
             const resizeObserver = new ResizeObserver(() => {
@@ -684,6 +954,166 @@ IP：${params.data.ip}
             this._lineageChart = chart;
             this._resizeObserver = resizeObserver;
         }, 100);
+    }
+
+    showPopup(params) {
+        // 移除旧弹窗
+        var oldPopup = document.querySelector('.data-popup');
+        if (oldPopup) oldPopup.remove();
+        if (!params.data) return;
+
+        // 计算弹窗位置
+        var chartDom = this.shadowRoot.querySelector('#lineageChart');
+        var chartRect = chartDom.getBoundingClientRect();
+        var popupX = chartRect.left + params.event.offsetX + 15;
+        var popupY = chartRect.top + params.event.offsetY + 15;
+
+        var popup = document.createElement('div');
+        popup.className = 'data-popup';
+        popup.style.left = popupX + 'px';
+        popup.style.top = popupY + 'px';
+        popup.style.cssText = `
+            width: 500px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            background: #fff;
+            position: absolute;
+            z-index: 9999;
+            font-size: 12px;
+            left: ${popupX}px;
+            top: ${popupY}px;
+        `;
+
+        // 数据集节点弹窗（含类型/所属库）
+        if (params.data.type === 'dataset') {
+            popup.innerHTML = `
+                <div class="popup-header" style="
+                    padding: 10px 15px;
+                    background: #fafafa;
+                    border-bottom: 1px solid #e0e0e0;
+                    font-weight: bold;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 14px;
+                ">
+                    <span>📊 ${params.name.split('|')[0]}</span>
+                    <span class="popup-close" style="cursor:pointer;font-size:18px;">&times;</span>
+                </div>
+                <div class="popup-body" style="padding:15px;">
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">数据集类型：</label>
+                        <span class="field-value"><span class="field-tag" style="background-color:#e3f2fd;color:#2196F3;border-radius:3px;font-size:10px;margin-right:5px;padding:2px6px;">${params.data.datasetType}</span></span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">所属库：</label>
+                        <span class="field-value">${params.data.database}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">操作人：</label>
+                        <span class="field-value">${params.data.operator}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">操作时间：</label>
+                        <span class="field-value">${params.data.operateTime}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">操作IP：</label>
+                        <span class="field-value">${params.data.operateIp}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">UDF函数：</label>
+                        <span class="field-value"><pre style="background:#f8f9fa;padding:8px;border-radius:4px;margin:0;overflow-x:auto;">${params.data.udfFunction}</pre></span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">Transform作业：</label>
+                        <span class="field-value multi-line" style="white-space:pre-wrap;">${params.data.transformJob}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">SQL脚本：</label>
+                        <span class="field-value"><pre style="background:#f8f9fa;padding:8px;border-radius:4px;margin:0;overflow-x:auto;">${params.data.sqlScript}</pre></span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">变化过程：</label>
+                        <span class="field-value multi-line" style="white-space:pre-wrap;">${params.data.changeProcess}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">描述信息：</label>
+                        <span class="field-value multi-line" style="white-space:pre-wrap;">${params.data.description}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">潜在用户：</label>
+                        <span class="field-value">${params.data.potentialUsers}</span>
+                    </div>
+                </div>
+            `;
+        }
+        // 作业节点弹窗
+        else if (params.data.type === 'task') {
+            popup.innerHTML = `
+                <div class="popup-header" style="
+                    padding: 10px 15px;
+                    background: #fafafa;
+                    border-bottom: 1px solid #e0e0e0;
+                    font-weight: bold;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 14px;
+                ">
+                    <span>⚙️ IGinX Transform作业</span>
+                    <span class="popup-close" style="cursor:pointer;font-size:18px;">&times;</span>
+                </div>
+                <div class="popup-body" style="padding:15px;">
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">操作人：</label>
+                        <span class="field-value">${params.data.operator}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">操作时间：</label>
+                        <span class="field-value">${params.data.operateTime}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">操作IP：</label>
+                        <span class="field-value">${params.data.operateIp}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">UDF函数：</label>
+                        <span class="field-value"><pre style="background:#f8f9fa;padding:8px;border-radius:4px;margin:0;overflow-x:auto;">${params.data.udfFunction}</pre></span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">Transform作业：</label>
+                        <span class="field-value multi-line" style="white-space:pre-wrap;">${params.data.transformJob}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">SQL脚本：</label>
+                        <span class="field-value"><pre style="background:#f8f9fa;padding:8px;border-radius:4px;margin:0;overflow-x:auto;">${params.data.sqlScript}</pre></span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">变化过程：</label>
+                        <span class="field-value multi-line" style="white-space:pre-wrap;">${params.data.changeProcess}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">描述信息：</label>
+                        <span class="field-value multi-line" style="white-space:pre-wrap;">${params.data.description}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">潜在用户：</label>
+                        <span class="field-value">${params.data.potentialUsers}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 添加弹窗并绑定关闭事件
+        document.body.appendChild(popup);
+        popup.querySelector('.popup-close').onclick = () => popup.remove();
+    }
+
+    removePopup() {
+        const popup = document.querySelector('.data-popup');
+        if (popup) popup.remove();
     }
 
     showDeleteConfirmDialog() {
