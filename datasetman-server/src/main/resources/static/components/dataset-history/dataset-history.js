@@ -581,13 +581,13 @@ class DatasetHistory extends HTMLElement {
             this._resizeObserver.disconnect();
             this._resizeObserver = null;
         }
-        if (this._timelineChart) {
-            this._timelineChart.dispose();
-            this._timelineChart = null;
-        }
         if (this._timelineResizeObserver) {
             this._timelineResizeObserver.disconnect();
             this._timelineResizeObserver = null;
+        }
+        if (this._timelineSvg) {
+            this._timelineSvg.remove();
+            this._timelineSvg = null;
         }
 
         // 清理弹窗
@@ -621,130 +621,237 @@ class DatasetHistory extends HTMLElement {
 
     renderVersionTimeline() {
         const timelineContainer = this.shadowRoot.querySelector('#lineageGraph');
-        if (!timelineContainer || typeof echarts === 'undefined') {
-            if (timelineContainer) {
-                timelineContainer.innerHTML = '<div class="empty-state">图表库加载失败</div>';
-            }
+        if (!timelineContainer) {
             return;
         }
 
-        // 清除之前的图表实例
-        const existingChart = echarts.getInstanceByDom(timelineContainer);
-        if (existingChart) {
-            existingChart.dispose();
+        // 检查D3.js是否加载（通过window全局对象）
+        if (typeof window.d3 === 'undefined') {
+            timelineContainer.innerHTML = '<div class="empty-state">D3.js库加载失败</div>';
+            return;
         }
 
+        // 清除之前的图表
         timelineContainer.innerHTML = '';
 
         // 延迟初始化以确保容器有正确尺寸
         setTimeout(() => {
-            const chart = echarts.init(timelineContainer);
+            const width = timelineContainer.clientWidth || 800;
+            const height = timelineContainer.clientHeight || 400;
 
-            // 分支数据：时间线风格（按时间从左到右排列，不完全对齐）
-            const nodes = [
-                { id: 'V1', name: 'V1', x: 50, y: 100, symbolSize: 25, itemStyle: { color: '#1890ff' },
-                  time: '2025-04-07 10:00', user: 'engineer', ip: '192.168.1.10',
-                  job: 'transform_task_001', func: 'data_clean()', sql: 'CREATE TABLE dataset02', change: '数据集初始化创建' },
-                { id: 'V2', name: 'V2', x: 150, y: 100, symbolSize: 25, itemStyle: { color: '#1890ff' },
-                  time: '2025-04-07 10:10', user: 'system', ip: '10.0.0.1',
-                  job: 'transform_udf_upgrade', func: 'filter_null()', sql: 'ALTER TABLE dataset02 ADD COLUMN status', change: 'UDF升级，新增空值过滤' },
-                { id: 'V3', name: 'V3', x: 260, y: 160, symbolSize: 25, itemStyle: { color: '#52c41a' },
-                  time: '2025-04-07 10:20', user: 'engineer', ip: '192.168.1.10',
-                  job: 'transform_data_refresh', func: 'refresh_data()', sql: 'INSERT OVERWRITE dataset02', change: '全量数据刷新' },
-                { id: 'V4', name: 'V4', x: 240, y: 40, symbolSize: 25, itemStyle: { color: '#faad14' },
-                  time: '2025-04-07 10:30', user: 'admin', ip: '192.168.1.100',
-                  job: 'transform_schema_optimize', func: 'optimize_schema()', sql: 'OPTIMIZE TABLE dataset02', change: '表结构优化，增加索引' },
-                { id: 'V5', name: 'V5', x: 370, y: 160, symbolSize: 25, itemStyle: { color: '#52c41a' },
-                  time: '2025-04-07 10:40', user: 'algorithm', ip: '192.168.1.11',
-                  job: 'transform_feature_extract', func: 'feature_extract()', sql: 'SELECT feature(*) FROM dataset02', change: '特征提取功能' },
-                { id: 'V6', name: 'V6', x: 330, y: 40, symbolSize: 25, itemStyle: { color: '#faad14' },
-                  time: '2025-04-07 10:50', user: 'analyst', ip: '192.168.1.12',
-                  job: 'transform_stat_calc', func: 'stat_calc()', sql: 'CREATE TABLE dataset05 AS SELECT * FROM dataset04', change: '生成业务统计结果' },
-                { id: 'V7', name: 'V7', x: 480, y: 100, symbolSize: 25, itemStyle: { color: '#722ed1' },
-                  time: '2025-04-07 11:00', user: 'admin', ip: '192.168.1.100',
-                  job: 'merge_branches', func: 'merge()', sql: 'MERGE INTO dataset02', change: '合并所有分支' }
-            ];
+            // 使用window.d3访问全局D3对象
+            const d3 = window.d3;
 
-            const links = [
-                { source: 'V1', target: 'V2', lineStyle: { color: '#1890ff', curveness: 0 } },
-                { source: 'V2', target: 'V3', lineStyle: { color: '#52c41a', curveness: 0.3 } },
-                { source: 'V2', target: 'V4', lineStyle: { color: '#faad14', curveness: -0.3 } },
-                { source: 'V3', target: 'V5', lineStyle: { color: '#52c41a', curveness: 0 } },
-                { source: 'V4', target: 'V6', lineStyle: { color: '#faad14', curveness: 0 } },
-                { source: 'V5', target: 'V7', lineStyle: { color: '#722ed1', curveness: -0.3 } },
-                { source: 'V6', target: 'V7', lineStyle: { color: '#722ed1', curveness: 0.3 } }
-            ];
+            // 创建SVG
+            const svg = d3.select(timelineContainer)
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
 
-            const option = {
-                title: {
-                    text: `数据集 ${this.datasetInfo?.name || 'dataset02'} 版本变更时间线`,
-                    left: 'center',
-                    textStyle: {
-                        fontSize: 14,
-                        fontWeight: 'normal',
-                        color: '#1f2329'
+            // 添加标题
+            svg.append('text')
+                .attr('x', width / 2)
+                .attr('y', 20)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14px')
+                .attr('font-weight', 'normal')
+                .attr('fill', '#1f2329')
+                .text(`数据集 ${this.datasetInfo?.name || 'dataset02'} 版本变更时间线`);
+
+            // 定义节点数据（tree结构）
+            const treeData = {
+                id: 'V1', name: 'V1', time: '2025-04-07 10:00', color: '#1890ff',
+                user: 'engineer', ip: '192.168.1.10',
+                job: 'transform_task_001', func: 'data_clean()', sql: 'CREATE TABLE dataset02', change: '数据集初始化创建',
+                children: [
+                    {
+                        id: 'V2', name: 'V2', time: '2025-04-07 10:10', color: '#1890ff',
+                        user: 'system', ip: '10.0.0.1',
+                        job: 'transform_udf_upgrade', func: 'filter_null()', sql: 'ALTER TABLE dataset02 ADD COLUMN status', change: 'UDF升级，新增空值过滤',
+                        children: [
+                            {
+                                id: 'V3', name: 'V3', time: '2025-04-07 10:20', color: '#52c41a',
+                                user: 'engineer', ip: '192.168.1.10',
+                                job: 'transform_data_refresh', func: 'refresh_data()', sql: 'INSERT OVERWRITE dataset02', change: '全量数据刷新',
+                                children: [
+                                    {
+                                        id: 'V5', name: 'V5', time: '2025-04-07 10:40', color: '#52c41a',
+                                        user: 'algorithm', ip: '192.168.1.11',
+                                        job: 'transform_feature_extract', func: 'feature_extract()', sql: 'SELECT feature(*) FROM dataset02', change: '特征提取功能'
+                                    }
+                                ]
+                            },
+                            {
+                                id: 'V4', name: 'V4', time: '2025-04-07 10:30', color: '#faad14',
+                                user: 'admin', ip: '192.168.1.100',
+                                job: 'transform_schema_optimize', func: 'optimize_schema()', sql: 'OPTIMIZE TABLE dataset02', change: '表结构优化，增加索引',
+                                children: [
+                                    {
+                                        id: 'V6', name: 'V6', time: '2025-04-07 10:50', color: '#faad14',
+                                        user: 'analyst', ip: '192.168.1.12',
+                                        job: 'transform_stat_calc', func: 'stat_calc()', sql: 'CREATE TABLE dataset05 AS SELECT * FROM dataset04', change: '生成业务统计结果'
+                                    }
+                                ]
+                            }
+                        ]
                     }
-                },
-                tooltip: {
-                    formatter: function(params) {
-                        if (params.dataType === 'edge') {
-                            return '版本流转';
-                        }
-                        const d = params.data;
-                        return `版本：${d.name}<br>
-时间：${d.time}<br>
-操作人：${d.user}<br>
-IP：${d.ip}<br>
-Transform作业：${d.job}<br>
-UDF函数：${d.func}<br>
-SQL：${d.sql}<br>
-变化：${d.change}`;
-                    }
-                },
-                xAxis: { show: false },
-                yAxis: { show: false },
-                series: [{
-                    type: 'graph',
-                    layout: 'none',
-                    symbolSize: 25,
-                    roam: true,
-                    label: {
-                        show: true,
-                        position: 'bottom',
-                        formatter: function(params) {
-                            return `${params.data.name}\n${params.data.time}`;
-                        },
-                        fontSize: 10,
-                        fontWeight: 'bold',
-                        color: '#333',
-                        padding: [5, 0, 0, 0],
-                        lineHeight: 14
-                    },
-                    edgeSymbol: ['circle', 'arrow'],
-                    edgeSymbolSize: [4, 10],
-                    edgeLabel: {
-                        fontSize: 10
-                    },
-                    data: nodes,
-                    links: links,
-                    lineStyle: {
-                        width: 2,
-                        opacity: 0.8
-                    }
-                }]
+                ]
             };
 
-            chart.setOption(option);
+            // 使用D3 tree layout计算分支层级（用于y坐标）
+            const treeLayout = d3.tree()
+                .size([height - 100, 100]);  // 只用于计算y坐标
 
-            // 监听容器尺寸变化
-            const resizeObserver = new ResizeObserver(() => {
-                chart.resize();
-            });
-            resizeObserver.observe(timelineContainer);
+            const root = d3.hierarchy(treeData);
+            treeLayout(root);
 
-            // 存储图表实例和观察器以便清理
-            this._timelineChart = chart;
-            this._timelineResizeObserver = resizeObserver;
+            // 提取所有节点
+            const allNodes = root.descendants();
+
+            // 根据时间计算x坐标
+            const timeScale = d3.scaleTime()
+                .domain(d3.extent(allNodes, d => new Date(d.data.time)))
+                .range([80, width - 80]);
+
+            // 构建节点数组：x根据时间，y根据tree的分支层级
+            const nodes = allNodes.map(d => ({
+                id: d.data.id,
+                name: d.data.name,
+                x: timeScale(new Date(d.data.time)),  // x根据时间
+                y: d.x + 50,  // y根据tree的分支层级
+                time: d.data.time,
+                color: d.data.color,
+                user: d.data.user,
+                ip: d.data.ip,
+                job: d.data.job,
+                func: d.data.func,
+                sql: d.data.sql,
+                change: d.data.change
+            }));
+
+            // 提取连线
+            const links = root.links().map(d => ({
+                source: d.source.data.id,
+                target: d.target.data.id,
+                color: d.target.data.color
+            }));
+
+            // 创建节点ID映射
+            const nodeMap = new Map(nodes.map(d => [d.id, d]));
+
+            // 自定义路径生成器：从父节点开始曲线分叉，曲线结束点水平对齐，然后水平直线到子节点
+            const linkPath = function(d) {
+                const source = nodeMap.get(d.source);
+                const target = nodeMap.get(d.target);
+                
+                const sx = source.x + 15;
+                const sy = source.y;
+                const tx = target.x - 15;
+                const ty = target.y;
+                
+                // 曲线结束点：基于父节点x坐标，确保同一父节点的所有子节点曲线结束点水平对齐
+                const curveEndX = sx + (tx - sx) * 0.6;
+                
+                // 贝塞尔曲线控制点：从父节点开始，平滑过渡到子节点y
+                const cp1x = sx + (curveEndX - sx) * 0.4;
+                const cp1y = sy;
+                const cp2x = sx + (curveEndX - sx) * 0.6;
+                const cp2y = ty;
+                
+                // 曲线 + 水平收尾
+                return `M ${sx} ${sy} 
+                        C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curveEndX} ${ty}
+                        L ${tx} ${ty}`;
+            };
+
+            // 绘制连线
+            const link = svg.append('g')
+                .selectAll('path')
+                .data(links)
+                .enter()
+                .append('path')
+                .attr('d', linkPath)
+                .attr('fill', 'none')
+                .attr('stroke', d => d.color)
+                .attr('stroke-width', 2)
+                .attr('opacity', 0.8);
+
+            // 绘制节点
+            const node = svg.append('g')
+                .selectAll('g')
+                .data(nodes)
+                .enter()
+                .append('g')
+                .attr('transform', d => `translate(${d.x}, ${d.y})`);
+
+            // 节点圆形
+            node.append('circle')
+                .attr('r', 15)
+                .attr('fill', d => d.color)
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 2)
+                .style('cursor', 'pointer')
+                .on('mouseover', function(event, d) {
+                    d3.select(this).attr('stroke-width', 4);
+                    
+                    // 创建tooltip
+                    const tooltip = d3.select('body')
+                        .append('div')
+                        .attr('class', 'd3-tooltip')
+                        .style('position', 'absolute')
+                        .style('background', 'white')
+                        .style('border', '1px solid #ccc')
+                        .style('border-radius', '4px')
+                        .style('padding', '10px')
+                        .style('box-shadow', '0 2px 8px rgba(0,0,0,0.15)')
+                        .style('font-size', '12px')
+                        .style('z-index', '9999')
+                        .style('pointer-events', 'none')
+                        .html(`
+                            <div style="font-weight:bold;margin-bottom:5px;">版本：${d.name}</div>
+                            <div>时间：${d.time}</div>
+                            <div>操作人：${d.user}</div>
+                            <div>IP：${d.ip}</div>
+                            <div>Transform作业：${d.job}</div>
+                            <div>UDF函数：${d.func}</div>
+                            <div>SQL：${d.sql}</div>
+                            <div>变化：${d.change}</div>
+                        `);
+                    
+                    // 定位tooltip
+                    tooltip
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY + 10) + 'px');
+                })
+                .on('mousemove', function(event) {
+                    d3.select('.d3-tooltip')
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY + 10) + 'px');
+                })
+                .on('mouseout', function(event, d) {
+                    d3.select(this).attr('stroke-width', 2);
+                    d3.select('.d3-tooltip').remove();
+                });
+
+            // 节点标签（版本名）
+            node.append('text')
+                .attr('dy', 5)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px')
+                .attr('font-weight', 'bold')
+                .attr('fill', '#fff')
+                .text(d => d.name);
+
+            // 时间标签（节点下方）
+            node.append('text')
+                .attr('dy', 45)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '10px')
+                .attr('fill', '#333')
+                .text(d => d.time);
+
+            // 存储SVG实例以便清理
+            this._timelineSvg = svg;
         }, 100);
     }
 
