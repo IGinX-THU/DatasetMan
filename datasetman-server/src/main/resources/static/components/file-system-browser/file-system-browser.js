@@ -173,6 +173,9 @@ class FileSystemBrowser extends HTMLElement {
                 const imageUrl = URL.createObjectURL(blob);
                 fileGrid.innerHTML = `
                     <div class="file-preview">
+                        <div class="preview-header">
+                            <span class="file-name">${fileName}</span>
+                        </div>
                         <div class="preview-content">
                             <img src="${imageUrl}" alt="${fileName}" style="max-width: 100%; max-height: 600px; object-fit: contain;">
                         </div>
@@ -215,6 +218,9 @@ class FileSystemBrowser extends HTMLElement {
                 
                 fileGrid.innerHTML = `
                     <div class="file-preview">
+                        <div class="preview-header">
+                            <span class="file-name">${fileName}</span>
+                        </div>
                         <div class="preview-content">
                             <video id="videoPlayer" controls style="max-width: 100%; max-height: 600px;">
                                 ${sourcesHtml}
@@ -287,6 +293,9 @@ class FileSystemBrowser extends HTMLElement {
                 const audioUrl = URL.createObjectURL(blob);
                 fileGrid.innerHTML = `
                     <div class="file-preview">
+                        <div class="preview-header">
+                            <span class="file-name">${fileName}</span>
+                        </div>
                         <div class="preview-content">
                             <audio controls style="width: 100%;">
                                 <source src="${audioUrl}" type="audio/${fileExtension}">
@@ -301,6 +310,9 @@ class FileSystemBrowser extends HTMLElement {
                     const textContent = e.target.result;
                     fileGrid.innerHTML = `
                         <div class="file-preview">
+                            <div class="preview-header">
+                                <span class="file-name">${fileName}</span>
+                            </div>
                             <div class="preview-content">
                                 <pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 600px; overflow: auto;">${this.escapeHtml(textContent)}</pre>
                             </div>

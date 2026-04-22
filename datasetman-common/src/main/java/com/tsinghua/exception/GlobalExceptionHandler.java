@@ -73,6 +73,13 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(RuntimeException.class)
     public Result<Void> handleRuntimeException(RuntimeException e) {
+        // 检查是否为响应已提交异常，避免重复写入
+        if (e.getMessage() != null && 
+            (e.getMessage().contains("getWriter() has already been called") || 
+             e.getMessage().contains("getOutputStream() has already been called"))) {
+            log.warn("响应已提交异常，跳过错误响应写入: {}", e.getMessage());
+            throw e; // 重新抛出，让Spring处理
+        }
         log.error("运行时异常", e);
         return Result.error("系统运行异常: " + e.getMessage());
     }

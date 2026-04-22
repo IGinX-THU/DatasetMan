@@ -172,6 +172,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter implements App
      * 处理认证失败
      */
     private void handleAuthenticationFailure(HttpServletResponse response, String message) throws IOException {
+        // 检查响应是否已提交，避免与后续的OutputStream写入冲突
+        if (response.isCommitted()) {
+            log.warn("响应已提交，跳过写入认证失败信息");
+            return;
+        }
+        
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");
         

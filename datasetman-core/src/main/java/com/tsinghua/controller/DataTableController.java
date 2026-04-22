@@ -56,7 +56,6 @@ public class DataTableController {
     @ApiOperation("流式文件查询")
     @PostMapping("/fs/query")
     @RequirePermission(Permission.DATA_READ)
-    @OperationLog(value = "流式文件查询", type = OperationLog.OperationType.QUERY, recordResult = false)
     public void queryFileData(@Validated @RequestBody DataQueryRequest request, HttpServletResponse response) {
         dataTableService.queryDataStreaming(request, response);
     }
