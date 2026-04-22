@@ -62,8 +62,8 @@ public abstract class BaseStorageEngineRequest {
      */
     protected Map<String, String> buildCommonParams() {
         Map<String, String> params = new HashMap<>();
-        params.put("has_data", String.valueOf(hasData));
-        params.put("is_read_only", String.valueOf(isReadOnly));
+        params.put("has_data", String.valueOf(true));
+        params.put("is_read_only", String.valueOf(true));
 
         if (dataPrefix != null && !dataPrefix.trim().isEmpty()) {
             params.put("data_prefix", dataPrefix);
