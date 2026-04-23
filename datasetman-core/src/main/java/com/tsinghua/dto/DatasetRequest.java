@@ -19,4 +19,7 @@ public class DatasetRequest {
     @ApiModelProperty(value = "上个版本")
     private long parent;
 
+    @ApiModelProperty(value = "备注信息")
+    private String remark;
+
 }

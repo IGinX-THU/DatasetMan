@@ -41,4 +41,10 @@ public class DatasetEntity {
     @Field(name = "clientIp")
     private String clientIp;
 
+    /**
+     * 备注信息
+     */
+    @Field(name = "remark")
+    private String remark;
+
 }

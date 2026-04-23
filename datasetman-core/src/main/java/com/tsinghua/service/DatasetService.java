@@ -73,6 +73,7 @@ public class DatasetService {
         datasetEntity.setDatasetName(request.getDatasetName());
         datasetEntity.setDatasetSql(request.getDatasetSql());
         datasetEntity.setParent(request.getParent());
+        datasetEntity.setRemark(request.getRemark());
         datasetEntity.setVersion(version);
         datasetEntity.setStoragePath(storagePath);
         datasetEntity.setCreateTime(timestamp);
