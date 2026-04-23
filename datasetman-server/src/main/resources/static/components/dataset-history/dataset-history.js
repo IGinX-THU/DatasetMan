@@ -745,16 +745,17 @@ class DatasetHistory extends HTMLElement {
             // 提取所有节点，过滤掉虚拟根节点
             const allNodes = root.descendants().filter(d => d.data.id !== 'root');
 
-            // 根据时间计算x坐标
-            const timeScale = d3.scaleTime()
-                .domain(d3.extent(allNodes, d => new Date(d.data.time)))
-                .range([80, width - 80]);
+            // 根据时间计算x坐标，使用点比例尺确保节点有最小间距
+            const timeScale = d3.scalePoint()
+                .domain(allNodes.map(d => d.data.time).sort())
+                .range([80, width - 80])
+                .padding(0.1);
 
             // 构建节点数组：x根据时间，y根据tree的分支层级
             const nodes = allNodes.map(d => ({
                 id: d.data.id,
                 name: d.data.name,
-                x: timeScale(new Date(d.data.time)),  // x根据时间
+                x: timeScale(d.data.time),  // x根据时间（点比例尺直接使用时间字符串）
                 y: d.x + 50,  // y根据tree的分支层级
                 time: d.data.time,
                 timestamp: d.data.timestamp || new Date(d.data.time).getTime(),  // 如果没有timestamp，从time转换
