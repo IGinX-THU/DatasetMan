@@ -962,8 +962,11 @@ class DatasetHistory extends HTMLElement {
                         L ${tx} ${ty}`;
             };
 
+            // 创建主容器用于缩放
+            const mainGroup = svg.append('g');
+
             // 绘制连线
-            const link = svg.append('g')
+            const link = mainGroup.append('g')
                 .selectAll('path')
                 .data(links)
                 .enter()
@@ -975,7 +978,7 @@ class DatasetHistory extends HTMLElement {
                 .attr('opacity', d => d.isMainPath ? 1 : 0.6);
 
             // 绘制节点
-            const node = svg.append('g')
+            const node = mainGroup.append('g')
                 .selectAll('g')
                 .data(nodes)
                 .enter()
@@ -1048,8 +1051,18 @@ class DatasetHistory extends HTMLElement {
                 .attr('fill', '#333')
                 .text(d => d.time);
 
-            // 存储SVG实例以便清理
+            // 添加缩放行为
+            const zoom = d3.zoom()
+                .scaleExtent([0.5, 3])
+                .on('zoom', (event) => {
+                    mainGroup.attr('transform', event.transform);
+                });
+
+            svg.call(zoom);
+
+            // 存储SVG实例和zoom以便清理
             this._timelineSvg = svg;
+            this._timelineZoom = zoom;
         }, 100);
     }
 
