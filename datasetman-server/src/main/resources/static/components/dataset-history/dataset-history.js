@@ -774,7 +774,7 @@ class DatasetHistory extends HTMLElement {
             // 创建节点ID映射
             const nodeMap = new Map(nodes.map(d => [d.id, d]));
 
-            // 自定义路径生成器：先弯后直 - 动态计算分叉点距离
+            // 自定义路径生成器：先弯后直 - 从父节点开始贝塞尔曲线，到相同x坐标转为水平直线
             const linkPath = function(d) {
                 const source = nodeMap.get(d.source);
                 const target = nodeMap.get(d.target);
@@ -787,22 +787,18 @@ class DatasetHistory extends HTMLElement {
                 // 计算父子节点之间的水平距离
                 const horizontalDistance = tx - sx;
                 
-                // 动态计算分叉点：取距离的 1/3，最小 20px，最大 40px
-                const forkOffset = Math.max(20, Math.min(40, horizontalDistance / 3));
-                const forkX = sx + forkOffset;
-                
-                // 曲线结束点：取距离的 2/3
-                const curveEndX = sx + horizontalDistance * 2 / 3;
+                // 曲线段距离：取距离的 1/4（曲线短，直线长）
+                const curveDistance = horizontalDistance / 4;
+                const curveEndX = sx + curveDistance;
 
                 // 贝塞尔曲线控制点
-                const cp1x = forkX;
+                const cp1x = sx + curveDistance * 0.5;
                 const cp1y = sy;
-                const cp2x = forkX;
+                const cp2x = sx + curveDistance * 0.5;
                 const cp2y = ty;
 
-                // 路径：起点 -> 分叉点 -> 贝塞尔曲线 -> 曲线结束点 -> 水平直线 -> 目标点
+                // 路径：起点 -> 贝塞尔曲线 -> 曲线结束点 -> 水平直线 -> 目标点
                 return `M ${sx} ${sy}
-                        L ${forkX} ${sy}
                         C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curveEndX} ${ty}
                         L ${tx} ${ty}`;
             };
