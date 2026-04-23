@@ -46,5 +46,12 @@ public class Test {
         SessionExecuteSqlResult res = session.executeSql(formatSQL);
         res.print(false, "");
 
+        IginXClient client = IginXClientFactory.create();
+        QueryClient queryClient = client.getQueryClient();
+        List<DatasetEntity> pojoList =
+                queryClient.query(
+                        formatSQL,
+                        DatasetEntity.class); // 查询最近一秒内的 pojo 对象
+        client.close();
     }
 }

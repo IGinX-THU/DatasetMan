@@ -1371,34 +1371,28 @@ WITH TRANSFORM OPTIONS (
     async performDelete() {
         console.log('performDelete 被调用, datasetInfo:', this.datasetInfo);
         try {
-            const token = localStorage.getItem('token');
-            const datasetId = this.datasetInfo.id || this.datasetInfo.datasetId;
-            console.log('准备删除数据集, datasetId:', datasetId, 'token:', token ? '存在' : '不存在');
+            const path = this.datasetInfo.storagePath;
+            console.log('准备删除数据集, path:', path);
 
-            const response = await fetch(`/api/datasets/${datasetId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const result = await window.AppConfig.delete('dataset', 'delete', { path });
 
-            if (!response.ok) {
-                throw new Error('删除失败');
+            if (result.success) {
+                this.dispatchEvent(new CustomEvent('show-toast', {
+                    bubbles: true,
+                    composed: true,
+                    detail: { message: '数据集删除成功', type: 'success' }
+                }));
+
+                this.dispatchEvent(new CustomEvent('dataset-deleted', {
+                    bubbles: true,
+                    composed: true,
+                    detail: { path }
+                }));
+
+                this.hide();
+            } else {
+                throw new Error(result.message || '删除失败');
             }
-
-            this.dispatchEvent(new CustomEvent('show-toast', {
-                bubbles: true,
-                composed: true,
-                detail: { message: '数据集删除成功', type: 'success' }
-            }));
-
-            this.dispatchEvent(new CustomEvent('dataset-deleted', {
-                bubbles: true,
-                composed: true,
-                detail: { datasetId }
-            }));
-
-            this.hide();
 
         } catch (error) {
             console.error('删除数据集失败:', error);

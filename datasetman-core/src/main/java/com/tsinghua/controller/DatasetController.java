@@ -50,4 +50,13 @@ public class DatasetController {
         return Result.success(result);
     }
 
+    @ApiOperation("删除数据集")
+    @DeleteMapping( "/delete")
+    @RequirePermission(Permission.MODEL_READ)
+    public Result<Void> deleteDataset(
+            @RequestParam("path") String path) throws Exception {
+        datasetService.deleteDataset(path);
+        return Result.success("删除成功");
+    }
+
 }

@@ -47,4 +47,10 @@ public class DatasetEntity {
     @Field(name = "remark")
     private String remark;
 
+    /**
+     * 逻辑删除
+     */
+    @Field(name = "deleted")
+    private boolean deleted;
+
 }

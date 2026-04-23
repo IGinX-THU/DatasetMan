@@ -319,10 +319,38 @@ class DatasetDialog extends HTMLElement {
     }
 
     // 显示弹窗 - 编辑模式
-    showEdit(datasetData) {
+    async showEdit(datasetData) {
         this.mode = 'edit';
         this.datasetData = datasetData;
-        this.fillForm(datasetData);
+
+        // 如果只有 storagePath，先获取完整数据
+        if (datasetData.storagePath && !datasetData.datasetName) {
+            try {
+                const result = await window.AppConfig.get('dataset', 'metas', { path: datasetData.storagePath });
+                if (result.code === 200 && result.data) {
+                    this.datasetData = result.data;
+                    this.fillForm(result.data);
+                } else {
+                    this.dispatchEvent(new CustomEvent('show-toast', {
+                        bubbles: true,
+                        composed: true,
+                        detail: { message: '获取数据集信息失败: ' + result.message, type: 'error' }
+                    }));
+                    return;
+                }
+            } catch (error) {
+                console.error('获取数据集信息失败:', error);
+                this.dispatchEvent(new CustomEvent('show-toast', {
+                    bubbles: true,
+                    composed: true,
+                    detail: { message: '获取数据集信息失败: ' + error.message, type: 'error' }
+                }));
+                return;
+            }
+        } else {
+            this.fillForm(datasetData);
+        }
+
         this.shadowRoot.querySelector('#dialogTitle').textContent = '编辑数据集';
         this.shadowRoot.querySelector('#submitBtn').textContent = '保存';
         this.classList.add('show');

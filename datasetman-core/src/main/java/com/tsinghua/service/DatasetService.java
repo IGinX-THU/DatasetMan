@@ -4,6 +4,7 @@ import cn.edu.tsinghua.iginx.exception.SessionException;
 import cn.edu.tsinghua.iginx.session.QueryDataSet;
 import cn.edu.tsinghua.iginx.session.Session;
 import cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult;
+import cn.edu.tsinghua.iginx.session_v2.DeleteClient;
 import cn.edu.tsinghua.iginx.session_v2.IginXClient;
 import cn.edu.tsinghua.iginx.session_v2.QueryClient;
 import cn.edu.tsinghua.iginx.session_v2.WriteClient;
@@ -108,6 +109,16 @@ public class DatasetService {
             log.error("查询解析规则失败", e);
             return null;
         }
+    }
+
+    public void deleteDataset(String path) {
+        DatasetEntity datasetEntity = queryMeta(path);
+        datasetEntity.setDeleted(true);
+        datasetEntity.setId(datasetEntity.getCreateTime());
+        WriteClient writeClient = iginxClient.getWriteClient();
+        writeClient.writeMeasurement(datasetEntity);
+        DeleteClient deleteClient = iginxClient.getDeleteClient();
+        deleteClient.deleteMeasurement(path);
     }
 
 }

@@ -397,20 +397,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'showDatasetEdit':
                         console.log('编辑数据集菜单被点击');
                         const selectedDatasetEdit = getSelectedDataset();
-                        const datasetDialogEdit = document.getElementById('datasetDialog');
-                        if (datasetDialogEdit) {
-                            if (selectedDatasetEdit) {
-                                datasetDialogEdit.showEdit(selectedDatasetEdit);
+                        if (selectedDatasetEdit) {
+                            const datasetHistory = document.getElementById('datasetHistory');
+                            if (datasetHistory && datasetHistory.datasetInfo) {
+                                // 复用dataset-history的编辑逻辑
+                                datasetHistory.dispatchEvent(new CustomEvent('edit-dataset', {
+                                    bubbles: true,
+                                    composed: true,
+                                    detail: datasetHistory.datasetInfo
+                                }));
                             } else {
-                                showWorkspaceMessage('请先选择要编辑的数据集', 'warning');
+                                showWorkspaceMessage('请先在详情页查看数据集', 'warning');
                             }
+                        } else {
+                            showWorkspaceMessage('请先选择要编辑的数据集', 'warning');
                         }
                         break;
                     case 'handleDeleteDataset':
                         console.log('删除数据集菜单被点击');
                         const selectedDatasetDelete = getSelectedDataset();
                         if (selectedDatasetDelete) {
-                            showDeleteDatasetConfirmDialog(selectedDatasetDelete);
+                            const datasetHistory = document.getElementById('datasetHistory');
+                            if (datasetHistory && datasetHistory.datasetInfo) {
+                                // 复用dataset-history的删除逻辑
+                                datasetHistory.showDeleteConfirmDialog();
+                            } else {
+                                showWorkspaceMessage('请先在详情页查看数据集', 'warning');
+                            }
                         } else {
                             showWorkspaceMessage('请先选择要删除的数据集', 'warning');
                         }
@@ -583,7 +596,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 显示数据集删除确认对话框
-    function showDeleteDatasetConfirmDialog(dataset) {
+    async function showDeleteDatasetConfirmDialog(dataset) {
+        // 如果只有 storagePath，先获取完整数据
+        if (dataset.storagePath && !dataset.datasetName) {
+            try {
+                const result = await window.AppConfig.get('dataset', 'metas', { path: dataset.storagePath });
+                if (result.code === 200 && result.data) {
+                    dataset = result.data;
+                } else {
+                    showWorkspaceMessage('获取数据集信息失败: ' + result.message, 'error');
+                    return;
+                }
+            } catch (error) {
+                console.error('获取数据集信息失败:', error);
+                showWorkspaceMessage('获取数据集信息失败: ' + error.message, 'error');
+                return;
+            }
+        }
+
         const overlay = document.createElement('div');
         overlay.style.cssText = `
             position: fixed;
@@ -597,7 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
             justify-content: center;
             z-index: 10000;
         `;
-        
+
         const datasetName = dataset.name || dataset.datasetName || '未命名';
         const version = dataset.version || 'v1.0.0';
         
@@ -651,33 +681,28 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmBtn.addEventListener('click', async () => {
             confirmBtn.disabled = true;
             confirmBtn.textContent = '删除中...';
-            
+
             try {
-                const token = localStorage.getItem('token');
-                const datasetId = dataset.id || dataset.datasetId;
-                
-                const response = await fetch(`/api/datasets/${datasetId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
+                const path = dataset.storagePath;
+                console.log('准备删除数据集, path:', path);
+
+                const result = await window.AppConfig.delete('dataset', 'delete', { path });
+
+                if (result.success) {
+                    showToast('数据集删除成功', 'success');
+
+                    // 刷新右侧树
+                    const datasetTree = document.querySelector('.right-sidebar .tree');
+                    if (datasetTree) {
+                        const activeNode = datasetTree.querySelector('.tree-node.active');
+                        if (activeNode) {
+                            activeNode.remove();
+                        }
                     }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('删除失败');
+                } else {
+                    throw new Error(result.message || '删除失败');
                 }
-                
-                showToast('数据集删除成功', 'success');
-                
-                // 刷新右侧树
-                const datasetTree = document.querySelector('.right-sidebar .tree');
-                if (datasetTree) {
-                    const activeNode = datasetTree.querySelector('.tree-node.active');
-                    if (activeNode) {
-                        activeNode.remove();
-                    }
-                }
-                
+
             } catch (error) {
                 console.error('删除数据集失败:', error);
                 showToast('删除失败: ' + error.message, 'error');
@@ -805,27 +830,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         break;
                     case 'showDatasetEdit':
                         console.log('编辑数据集按钮被点击');
-                        const selectedDatasetEdit = getSelectedDataset();
-                        const datasetDialogEdit = document.getElementById('datasetDialog');
-                        if (datasetDialogEdit) {
-                            if (selectedDatasetEdit) {
-                                datasetDialogEdit.showEdit(selectedDatasetEdit);
-                            } else {
-                                showWorkspaceMessage('请先选择要编辑的数据集', 'warning');
-                            }
+                        const datasetHistoryEdit = document.getElementById('datasetHistory');
+                        if (datasetHistoryEdit && datasetHistoryEdit.datasetInfo) {
+                            // 复用dataset-history的编辑逻辑
+                            datasetHistoryEdit.dispatchEvent(new CustomEvent('edit-dataset', {
+                                bubbles: true,
+                                composed: true,
+                                detail: datasetHistoryEdit.datasetInfo
+                            }));
+                        } else {
+                            showWorkspaceMessage('请先在详情页查看数据集', 'warning');
                         }
                         break;
                     case 'handleDeleteDataset':
                         console.log('删除数据集按钮被点击');
-                        try {
-                            const selectedDatasetDelete = getSelectedDataset();
-                            if (selectedDatasetDelete) {
-                                showDeleteDatasetConfirmDialog(selectedDatasetDelete);
-                            } else {
-                                showWorkspaceMessage('请先选择要删除的数据集', 'warning');
-                            }
-                        } catch (error) {
-                            console.error('删除数据集按钮点击出错:', error);
+                        const datasetHistoryDelete = document.getElementById('datasetHistory');
+                        if (datasetHistoryDelete && datasetHistoryDelete.datasetInfo) {
+                            // 复用dataset-history的删除逻辑
+                            datasetHistoryDelete.showDeleteConfirmDialog();
+                        } else {
+                            showWorkspaceMessage('请先在详情页查看数据集', 'warning');
                         }
                         break;
                     case 'showParsingRules':
