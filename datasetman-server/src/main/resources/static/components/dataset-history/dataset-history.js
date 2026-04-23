@@ -413,10 +413,6 @@ class DatasetHistory extends HTMLElement {
                         </div>
                         <div class="basic-info-list">
                             <div class="info-item">
-                                <div class="info-label">创建者</div>
-                                <div class="info-value" id="developer">-</div>
-                            </div>
-                            <div class="info-item">
                                 <div class="info-label">版本号</div>
                                 <div class="info-value" id="version">-</div>
                             </div>
@@ -425,8 +421,12 @@ class DatasetHistory extends HTMLElement {
                                 <div class="info-value" id="createTime">-</div>
                             </div>
                             <div class="info-item">
-                                <div class="info-label">更新时间</div>
-                                <div class="info-value" id="updateTime">-</div>
+                                <div class="info-label">创建者</div>
+                                <div class="info-value" id="developer">-</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">备注信息</div>
+                                <div class="info-value" id="remark">-</div>
                             </div>
                             <div class="info-item full-width">
                                 <div class="info-label">SQL定义</div>
@@ -623,14 +623,14 @@ class DatasetHistory extends HTMLElement {
         
         const nameEl = this.shadowRoot.querySelector('#datasetName');
         const createTimeEl = this.shadowRoot.querySelector('#createTime');
-        const updateTimeEl = this.shadowRoot.querySelector('#updateTime');
+        const remarkEl = this.shadowRoot.querySelector('#remark');
         const sqlEl = this.shadowRoot.querySelector('#datasetSql');
         const developerEl = this.shadowRoot.querySelector('#developer');
         const versionEl = this.shadowRoot.querySelector('#version');
 
         if (nameEl) nameEl.textContent = datasetName;
         if (createTimeEl) createTimeEl.textContent = this.formatTime(this.datasetInfo.createTime) || '-';
-        if (updateTimeEl) updateTimeEl.textContent = this.formatTime(this.datasetInfo.createTime) || '-';
+        if (remarkEl) remarkEl.textContent = this.datasetInfo.remark || '-';
         if (sqlEl) sqlEl.textContent = this.datasetInfo.datasetSql || '-';
         if (developerEl) developerEl.textContent = this.datasetInfo.operator || '-';
         if (versionEl) versionEl.textContent = this.datasetInfo.version || '-';

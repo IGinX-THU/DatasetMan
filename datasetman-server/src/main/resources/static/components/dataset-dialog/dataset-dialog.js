@@ -251,15 +251,23 @@ class DatasetDialog extends HTMLElement {
                     <form class="modal-form" id="datasetForm">
                         <!-- 名称 -->
                         <div class="modal-form-row">
-                            <label class="modal-label">名称 :</label>
+                            <label class="modal-label">名称 <span style="color: red;">*</span> :</label>
                             <div class="modal-input-wrapper">
                                 <input type="text" class="modal-input" id="datasetName" placeholder="请输入数据集名称" />
                             </div>
                         </div>
-                        
+
+                        <!-- 备注 -->
+                        <div class="modal-form-row">
+                            <label class="modal-label">备注 :</label>
+                            <div class="modal-input-wrapper">
+                                <input type="text" class="modal-input" id="datasetRemark" placeholder="请输入描述信息" />
+                            </div>
+                        </div>
+
                         <!-- SQL -->
                         <div class="modal-form-row">
-                            <label class="modal-label">SQL :</label>
+                            <label class="modal-label">SQL <span style="color: red;">*</span> :</label>
                             <div class="modal-input-wrapper">
                                 <textarea class="modal-textarea" id="datasetSql" placeholder="请输入SQL查询语句" rows="3"></textarea>
                                 <div class="test-row">
@@ -410,7 +418,8 @@ class DatasetDialog extends HTMLElement {
         const formData = {
             datasetName: this.shadowRoot.querySelector('#datasetName').value.trim(),
             datasetSql: this.shadowRoot.querySelector('#datasetSql').value.trim(),
-            parent: this.datasetData?.timestamp || 0
+            parent: this.datasetData?.timestamp || 0,
+            remark: this.shadowRoot.querySelector('#datasetRemark')?.value.trim() || ''
         };
         
         try {
