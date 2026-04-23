@@ -120,7 +120,8 @@ window.AppConfig = {
             save: '/api/dataset/save',
             testsql: '/api/dataset/testsql',
             metas: '/api/dataset/metas',
-            delete: '/api/dataset/delete'
+            delete: '/api/dataset/delete',
+            history: '/api/dataset/history'
         }
     },
     

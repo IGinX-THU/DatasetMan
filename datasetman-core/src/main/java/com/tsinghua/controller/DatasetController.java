@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Api(tags = "数据集管理")
 @Slf4j
 @RestController
@@ -57,6 +59,15 @@ public class DatasetController {
             @RequestParam("path") String path) throws Exception {
         datasetService.deleteDataset(path);
         return Result.success("删除成功");
+    }
+
+    @ApiOperation("版本历史")
+    @GetMapping("/history")
+    @RequirePermission(Permission.MODEL_READ)
+    public Result<List<com.tsinghua.dto.DatasetVersionTreeDTO>> getVersionHistory(
+            @RequestParam("datasetName") String datasetName) throws Exception {
+        List<com.tsinghua.dto.DatasetVersionTreeDTO> result = datasetService.getVersionHistory(datasetName);
+        return Result.success(result);
     }
 
 }

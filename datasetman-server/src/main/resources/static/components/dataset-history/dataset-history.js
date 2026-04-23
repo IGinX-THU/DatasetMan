@@ -650,11 +650,32 @@ class DatasetHistory extends HTMLElement {
     }
 
     async loadHistory() {
-        // 使用ECharts渲染版本历史时间线
-        this.renderVersionTimeline();
+        // 调用版本历史接口
+        try {
+            const result = await window.AppConfig.get('dataset', 'history', { datasetName: this.datasetInfo.datasetName });
+
+            if (result.code === 200 && result.data) {
+                this.historyData = result.data;
+                this.renderVersionTimeline(this.historyData);
+            } else {
+                console.error('获取版本历史失败:', result.message);
+                this.dispatchEvent(new CustomEvent('show-toast', {
+                    bubbles: true,
+                    composed: true,
+                    detail: { message: '获取版本历史失败: ' + result.message, type: 'error' }
+                }));
+            }
+        } catch (error) {
+            console.error('获取版本历史失败:', error);
+            this.dispatchEvent(new CustomEvent('show-toast', {
+                bubbles: true,
+                composed: true,
+                detail: { message: '获取版本历史失败: ' + error.message, type: 'error' }
+            }));
+        }
     }
 
-    renderVersionTimeline() {
+    renderVersionTimeline(historyData) {
         const timelineContainer = this.shadowRoot.querySelector('#lineageGraph');
         if (!timelineContainer) {
             return;
@@ -668,6 +689,12 @@ class DatasetHistory extends HTMLElement {
 
         // 清除之前的图表
         timelineContainer.innerHTML = '';
+
+        // 如果没有版本历史数据
+        if (!historyData || historyData.length === 0) {
+            timelineContainer.innerHTML = '<div class="empty-state">暂无版本历史</div>';
+            return;
+        }
 
         // 延迟初始化以确保容器有正确尺寸
         setTimeout(() => {
@@ -691,57 +718,32 @@ class DatasetHistory extends HTMLElement {
                 .attr('font-size', '14px')
                 .attr('font-weight', 'normal')
                 .attr('fill', '#1f2329')
-                .text(`数据集 ${this.datasetInfo?.name || 'dataset02'} 版本变更时间线`);
+                .text(`数据集 ${this.datasetInfo?.datasetName || 'dataset'} 版本变更时间线`);
 
-            // 定义节点数据（tree结构）
-            const treeData = {
-                id: 'V1', name: 'V1', time: '2025-04-07 10:00', color: '#1890ff',
-                user: 'engineer', ip: '192.168.1.10',
-                job: 'transform_task_001', func: 'data_clean()', sql: 'CREATE TABLE dataset02', change: '数据集初始化创建',
-                children: [
-                    {
-                        id: 'V2', name: 'V2', time: '2025-04-07 10:10', color: '#1890ff',
-                        user: 'system', ip: '10.0.0.1',
-                        job: 'transform_udf_upgrade', func: 'filter_null()', sql: 'ALTER TABLE dataset02 ADD COLUMN status', change: 'UDF升级，新增空值过滤',
-                        children: [
-                            {
-                                id: 'V3', name: 'V3', time: '2025-04-07 10:20', color: '#52c41a',
-                                user: 'engineer', ip: '192.168.1.10',
-                                job: 'transform_data_refresh', func: 'refresh_data()', sql: 'INSERT OVERWRITE dataset02', change: '全量数据刷新',
-                                children: [
-                                    {
-                                        id: 'V5', name: 'V5', time: '2025-04-07 10:40', color: '#52c41a',
-                                        user: 'algorithm', ip: '192.168.1.11',
-                                        job: 'transform_feature_extract', func: 'feature_extract()', sql: 'SELECT feature(*) FROM dataset02', change: '特征提取功能'
-                                    }
-                                ]
-                            },
-                            {
-                                id: 'V4', name: 'V4', time: '2025-04-07 10:30', color: '#faad14',
-                                user: 'admin', ip: '192.168.1.100',
-                                job: 'transform_schema_optimize', func: 'optimize_schema()', sql: 'OPTIMIZE TABLE dataset02', change: '表结构优化，增加索引',
-                                children: [
-                                    {
-                                        id: 'V6', name: 'V6', time: '2025-04-07 10:50', color: '#faad14',
-                                        user: 'analyst', ip: '192.168.1.12',
-                                        job: 'transform_stat_calc', func: 'stat_calc()', sql: 'CREATE TABLE dataset05 AS SELECT * FROM dataset04', change: '生成业务统计结果'
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
+            // 后端已返回树形结构，创建虚拟根节点包含所有根节点
+            const virtualRoot = {
+                id: 'root',
+                name: 'root',
+                time: '',
+                timestamp: 0,
+                color: '#fff',
+                user: '',
+                ip: '',
+                sql: '',
+                remark: '',
+                deleted: false,
+                children: historyData
             };
 
             // 使用D3 tree layout计算分支层级（用于y坐标）
             const treeLayout = d3.tree()
                 .size([height - 100, 100]);  // 只用于计算y坐标
 
-            const root = d3.hierarchy(treeData);
+            const root = d3.hierarchy(virtualRoot);
             treeLayout(root);
 
-            // 提取所有节点
-            const allNodes = root.descendants();
+            // 提取所有节点，过滤掉虚拟根节点
+            const allNodes = root.descendants().filter(d => d.data.id !== 'root');
 
             // 根据时间计算x坐标
             const timeScale = d3.scaleTime()
@@ -758,14 +760,12 @@ class DatasetHistory extends HTMLElement {
                 color: d.data.color,
                 user: d.data.user,
                 ip: d.data.ip,
-                job: d.data.job,
-                func: d.data.func,
                 sql: d.data.sql,
-                change: d.data.change
+                remark: d.data.remark
             }));
 
-            // 提取连线
-            const links = root.links().map(d => ({
+            // 提取连线，过滤掉包含虚拟根节点的连线
+            const links = root.links().filter(d => d.source.data.id !== 'root' && d.target.data.id !== 'root').map(d => ({
                 source: d.source.data.id,
                 target: d.target.data.id,
                 color: d.target.data.color
@@ -774,31 +774,35 @@ class DatasetHistory extends HTMLElement {
             // 创建节点ID映射
             const nodeMap = new Map(nodes.map(d => [d.id, d]));
 
-            // 自定义路径生成器：同一父节点的所有子节点曲线结束点x坐标对齐，圆心向内弯曲
+            // 自定义路径生成器：先弯后直 - 动态计算分叉点距离
             const linkPath = function(d) {
                 const source = nodeMap.get(d.source);
                 const target = nodeMap.get(d.target);
-                
+
                 const sx = source.x + 15;
                 const sy = source.y;
                 const tx = target.x - 15;
                 const ty = target.y;
+
+                // 计算父子节点之间的水平距离
+                const horizontalDistance = tx - sx;
                 
-                // 曲线结束点：基于父节点x坐标 + 固定偏移
-                const curveEndX = sx + 80;
+                // 动态计算分叉点：取距离的 1/3，最小 20px，最大 40px
+                const forkOffset = Math.max(20, Math.min(40, horizontalDistance / 3));
+                const forkX = sx + forkOffset;
                 
-                // 贝塞尔曲线控制点：圆心向内弯曲
-                // 控制点在曲线中段，y值在sy和ty之间
-                const midX = (sx + curveEndX) / 2;
-                const midY = (sy + ty) / 2;
-                
-                const cp1x = midX;
+                // 曲线结束点：取距离的 2/3
+                const curveEndX = sx + horizontalDistance * 2 / 3;
+
+                // 贝塞尔曲线控制点
+                const cp1x = forkX;
                 const cp1y = sy;
-                const cp2x = midX;
+                const cp2x = forkX;
                 const cp2y = ty;
-                
-                // 曲线 + 水平收尾
-                return `M ${sx} ${sy} 
+
+                // 路径：起点 -> 分叉点 -> 贝塞尔曲线 -> 曲线结束点 -> 水平直线 -> 目标点
+                return `M ${sx} ${sy}
+                        L ${forkX} ${sy}
                         C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curveEndX} ${ty}
                         L ${tx} ${ty}`;
             };
@@ -832,7 +836,7 @@ class DatasetHistory extends HTMLElement {
                 .style('cursor', 'pointer')
                 .on('mouseover', function(event, d) {
                     d3.select(this).attr('stroke-width', 4);
-                    
+
                     // 创建tooltip
                     const tooltip = d3.select('body')
                         .append('div')
@@ -846,17 +850,17 @@ class DatasetHistory extends HTMLElement {
                         .style('font-size', '12px')
                         .style('z-index', '9999')
                         .style('pointer-events', 'none')
+                        .style('max-width', '400px')
                         .html(`
                             <div style="font-weight:bold;margin-bottom:5px;">版本：${d.name}</div>
                             <div>时间：${d.time}</div>
                             <div>操作人：${d.user}</div>
                             <div>IP：${d.ip}</div>
-                            <div>Transform作业：${d.job}</div>
-                            <div>UDF函数：${d.func}</div>
-                            <div>SQL：${d.sql}</div>
-                            <div>变化：${d.change}</div>
+                            <div style="margin-top:5px;"><strong>SQL：</strong></div>
+                            <div style="word-break:break-all;font-family:monospace;font-size:11px;background:#f5f5f5;padding:5px;border-radius:3px;">${d.sql || '-'}</div>
+                            <div style="margin-top:5px;"><strong>备注：</strong>${d.remark || '-'}</div>
                         `);
-                    
+
                     // 定位tooltip
                     tooltip
                         .style('left', (event.pageX + 10) + 'px')
@@ -874,11 +878,11 @@ class DatasetHistory extends HTMLElement {
 
             // 节点标签（版本名）
             node.append('text')
-                .attr('dy', 5)
+                .attr('dy', 35)
                 .attr('text-anchor', 'middle')
                 .attr('font-size', '12px')
                 .attr('font-weight', 'bold')
-                .attr('fill', '#fff')
+                .attr('fill', '#333')
                 .text(d => d.name);
 
             // 时间标签（节点下方）

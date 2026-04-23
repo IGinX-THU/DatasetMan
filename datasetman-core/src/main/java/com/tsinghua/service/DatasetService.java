@@ -18,9 +18,13 @@ import com.tsinghua.util.ConvertUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.*;
 import org.springframework.util.CollectionUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -121,6 +125,128 @@ public class DatasetService {
         }
         DeleteClient deleteClient = iginxClient.getDeleteClient();
         deleteClient.deleteMeasurement(path);
+    }
+
+    /**
+     * 查询数据集的版本历史
+     * @param datasetName 数据集名称
+     * @return 版本历史树形结构
+     */
+    public List<com.tsinghua.dto.DatasetVersionTreeDTO> getVersionHistory(String datasetName) {
+        try {
+            String sql = "select * from %s where datasetName = '%s' order by createTime desc;";
+            String formatSQL = String.format(sql, META_PREFIX, datasetName);
+            log.info(formatSQL);
+            SessionExecuteSqlResult res = iginxSession.executeSql(formatSQL);
+            List<Map<String, Object>> records = ConvertUtil.getRecords(res);
+
+            if (records.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<DatasetEntity> versionList = new ArrayList<>();
+            for (Map<String, Object> rs : records) {
+                DatasetEntity entity = new DatasetEntity();
+                rs.forEach((k, v) -> {
+                    String fieldName = k.replace(META_PREFIX + ".", "");
+                    ConvertUtil.setEntityField(entity, META_PREFIX, fieldName, v);
+                });
+                versionList.add(entity);
+            }
+
+            // 按创建时间倒序排列（最新的在前）
+            versionList.sort(Comparator.comparing(DatasetEntity::getCreateTime).reversed());
+
+            // 构建树形结构
+            return buildVersionTree(versionList);
+        } catch (Exception e) {
+            log.error("查询版本历史失败", e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 构建版本树形结构
+     * @param versionList 版本列表
+     * @return 树形结构
+     */
+    private List<com.tsinghua.dto.DatasetVersionTreeDTO> buildVersionTree(List<DatasetEntity> versionList) {
+        // 创建节点映射
+        Map<Long, com.tsinghua.dto.DatasetVersionTreeDTO> nodeMap = new HashMap<>();
+        for (DatasetEntity version : versionList) {
+            com.tsinghua.dto.DatasetVersionTreeDTO node = new com.tsinghua.dto.DatasetVersionTreeDTO();
+            node.setId(version.getVersion());
+            node.setName(version.getVersion());
+            node.setTime(formatTimestamp(version.getCreateTime()));
+            node.setTimestamp(version.getCreateTime());
+            node.setParent(version.getParent());
+            node.setColor(version.isDeleted() ? "#d9d9d9" : "#1890ff");
+            node.setUser(version.getOperator() != null ? version.getOperator() : "unknown");
+            node.setIp(version.getClientIp() != null ? version.getClientIp() : "unknown");
+            node.setSql(version.getDatasetSql() != null ? version.getDatasetSql() : "");
+            node.setRemark(version.getRemark() != null ? version.getRemark() : "");
+            node.setDeleted(version.isDeleted());
+            node.setChildren(new ArrayList<>());
+            nodeMap.put(version.getCreateTime(), node);
+        }
+
+        // 构建树形结构
+        List<com.tsinghua.dto.DatasetVersionTreeDTO> treeData = new ArrayList<>();
+        Set<Long> processed = new HashSet<>();
+
+        for (DatasetEntity version : versionList) {
+            if (processed.contains(version.getCreateTime())) {
+                continue;
+            }
+
+            // 找到根节点（parent为0的节点）
+            if (version.getParent() == 0) {
+                com.tsinghua.dto.DatasetVersionTreeDTO node = nodeMap.get(version.getCreateTime());
+                buildTreeRecursive(node, nodeMap, processed);
+                treeData.add(node);
+            }
+        }
+
+        // 如果没有找到根节点，取最新的作为根节点
+        if (treeData.isEmpty() && !versionList.isEmpty()) {
+            DatasetEntity latest = versionList.get(0);
+            com.tsinghua.dto.DatasetVersionTreeDTO node = nodeMap.get(latest.getCreateTime());
+            buildTreeRecursive(node, nodeMap, processed);
+            treeData.add(node);
+        }
+
+        return treeData;
+    }
+
+    /**
+     * 递归构建树
+     * @param node 当前节点
+     * @param nodeMap 节点映射
+     * @param processed 已处理节点
+     */
+    private void buildTreeRecursive(com.tsinghua.dto.DatasetVersionTreeDTO node, Map<Long, com.tsinghua.dto.DatasetVersionTreeDTO> nodeMap, Set<Long> processed) {
+        processed.add(node.getTimestamp());
+
+        // 查找所有parent等于当前节点createTime的节点
+        for (com.tsinghua.dto.DatasetVersionTreeDTO childNode : nodeMap.values()) {
+            if (!processed.contains(childNode.getTimestamp()) && childNode.getParent() != null && childNode.getParent().equals(node.getTimestamp())) {
+                node.getChildren().add(childNode);
+                buildTreeRecursive(childNode, nodeMap, processed);
+            }
+        }
+    }
+
+    /**
+     * 格式化时间戳
+     * @param timestamp 时间戳
+     * @return 格式化后的时间字符串
+     */
+    private String formatTimestamp(Long timestamp) {
+        if (timestamp == null) {
+            return "-";
+        }
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        return sdf.format(new java.util.Date(timestamp));
     }
 
 }
