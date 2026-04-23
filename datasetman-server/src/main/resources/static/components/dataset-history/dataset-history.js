@@ -774,7 +774,25 @@ class DatasetHistory extends HTMLElement {
             // 创建节点ID映射
             const nodeMap = new Map(nodes.map(d => [d.id, d]));
 
-            // 自定义路径生成器：先弯后直 - 从父节点开始贝塞尔曲线，到相同x坐标转为水平直线
+            // 按父节点分组连线，计算每个父节点的统一曲线结束x坐标
+            const linksBySource = new Map();
+            links.forEach(link => {
+                if (!linksBySource.has(link.source)) {
+                    linksBySource.set(link.source, []);
+                }
+                linksBySource.get(link.source).push(link);
+            });
+
+            // 为每个父节点计算统一的曲线结束x坐标（取所有子节点中最小的target x的1/4位置）
+            const curveEndXBySource = new Map();
+            linksBySource.forEach((sourceLinks, sourceId) => {
+                const source = nodeMap.get(sourceId);
+                const minTargetX = Math.min(...sourceLinks.map(link => nodeMap.get(link.target).x));
+                const curveDistance = (minTargetX - source.x) / 4;
+                curveEndXBySource.set(sourceId, source.x + curveDistance);
+            });
+
+            // 自定义路径生成器：先弯后直 - 同一父节点的所有子节点在相同x坐标处转为直线
             const linkPath = function(d) {
                 const source = nodeMap.get(d.source);
                 const target = nodeMap.get(d.target);
@@ -784,14 +802,11 @@ class DatasetHistory extends HTMLElement {
                 const tx = target.x - 15;
                 const ty = target.y;
 
-                // 计算父子节点之间的水平距离
-                const horizontalDistance = tx - sx;
-                
-                // 曲线段距离：取距离的 1/4（曲线短，直线长）
-                const curveDistance = horizontalDistance / 4;
-                const curveEndX = sx + curveDistance;
+                // 使用父节点的统一曲线结束x坐标
+                const curveEndX = curveEndXBySource.get(d.source);
 
                 // 贝塞尔曲线控制点
+                const curveDistance = curveEndX - sx;
                 const cp1x = sx + curveDistance * 0.5;
                 const cp1y = sy;
                 const cp2x = sx + curveDistance * 0.5;
