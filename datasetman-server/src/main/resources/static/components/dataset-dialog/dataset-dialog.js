@@ -3,6 +3,7 @@ class DatasetDialog extends HTMLElement {
         super();
         this.mode = 'create'; // 'create' or 'edit'
         this.datasetData = null;
+        this.isSubmitting = false; // 防止重复提交标志
         this.attachShadow({ mode: 'open' });
     }
 
@@ -300,10 +301,43 @@ class DatasetDialog extends HTMLElement {
         // 关闭按钮
         this.shadowRoot.querySelector('#closeBtn').addEventListener('click', () => this.hide());
         this.shadowRoot.querySelector('#cancelBtn').addEventListener('click', () => this.hide());
-        
-        // 保存按钮
-        this.shadowRoot.querySelector('#submitBtn').addEventListener('click', () => this.handleSubmit());
-        
+
+        // 表单提交事件 - 防止表单默认提交
+        this.shadowRoot.querySelector('#datasetForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+        });
+
+        // 阻止Enter键触发表单提交
+        this.shadowRoot.querySelector('#datasetForm').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+            }
+        });
+
+        // 保存按钮 - 使用防抖函数
+        const submitBtn = this.shadowRoot.querySelector('#submitBtn');
+        let debounceTimer = null;
+
+        submitBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (debounceTimer) return; // 防抖中，直接返回
+
+            debounceTimer = setTimeout(() => {
+                debounceTimer = null;
+            }, 500); // 500ms防抖
+
+            if (this._isSubmitting) return;
+
+            this._isSubmitting = true;
+            submitBtn.disabled = true;
+            submitBtn.style.pointerEvents = 'none';
+            submitBtn.style.opacity = '0.6';
+
+            this.handleSubmit();
+        });
+
         // 测试按钮
         this.shadowRoot.querySelector('#testBtn').addEventListener('click', () => this.handleTest());
     }
@@ -440,22 +474,21 @@ class DatasetDialog extends HTMLElement {
 
     async handleSubmit() {
         if (!this.validateForm()) return;
-        
+
         const submitBtn = this.shadowRoot.querySelector('#submitBtn');
-        submitBtn.disabled = true;
         submitBtn.textContent = '保存中...';
         this.showResult('正在保存数据集...', 'loading');
-        
+
         const formData = {
             datasetName: this.shadowRoot.querySelector('#datasetName').value.trim(),
             datasetSql: this.shadowRoot.querySelector('#datasetSql').value.trim(),
             parent: this.datasetData?.createTime || 0,
             remark: this.shadowRoot.querySelector('#datasetRemark')?.value.trim() || ''
         };
-        
+
         try {
             const result = await window.AppConfig.post('dataset', 'save', formData);
-            
+
             if (result.success) {
                 // 触发成功事件
                 this.dispatchEvent(new CustomEvent('dataset-saved', {
@@ -466,22 +499,29 @@ class DatasetDialog extends HTMLElement {
                         data: result
                     }
                 }));
-                
+
                 this.showResult(this.mode === 'create' ? '数据集创建成功!' : '数据集保存成功!', 'success');
-                
-                // 延迟关闭弹窗
-                setTimeout(() => {
-                    this.hide();
-                }, 1000);
+
+                // 立即关闭弹窗
+                this.hide();
             } else {
                 this.showResult(result.message || (this.mode === 'create' ? '创建失败' : '保存失败'), 'error');
+                // 失败时重新启用按钮
+                this._isSubmitting = false;
+                submitBtn.disabled = false;
+                submitBtn.style.pointerEvents = '';
+                submitBtn.style.opacity = '';
+                submitBtn.textContent = '保存';
             }
-            
+
         } catch (error) {
             console.error(this.mode === 'create' ? '创建数据集失败:' : '保存数据集失败:', error);
             this.showResult((this.mode === 'create' ? '创建失败: ' : '保存失败: ') + error.message, 'error');
-        } finally {
+            // 失败时重新启用按钮
+            this._isSubmitting = false;
             submitBtn.disabled = false;
+            submitBtn.style.pointerEvents = '';
+            submitBtn.style.opacity = '';
             submitBtn.textContent = '保存';
         }
     }
