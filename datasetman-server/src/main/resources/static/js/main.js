@@ -574,13 +574,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return null;
         }
         
-        // 返回数据集信息
-        return {
-            id: nodeName,
-            name: nodeName,
-            datasetName: nodeName,
-            version: 'v1.0.0'
-        };
+        // 获取全路径
+        const fullPath = activeNode.getAttribute('data-full-path');
+        console.log('选中的数据集全路径:', fullPath);
+        
+        // 返回全路径
+        return fullPath;
     }
 
     // 显示数据集删除确认对话框

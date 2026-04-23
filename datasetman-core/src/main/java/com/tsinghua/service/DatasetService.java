@@ -3,25 +3,32 @@ package com.tsinghua.service;
 import cn.edu.tsinghua.iginx.exception.SessionException;
 import cn.edu.tsinghua.iginx.session.QueryDataSet;
 import cn.edu.tsinghua.iginx.session.Session;
+import cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult;
 import cn.edu.tsinghua.iginx.session_v2.IginXClient;
+import cn.edu.tsinghua.iginx.session_v2.QueryClient;
 import cn.edu.tsinghua.iginx.session_v2.WriteClient;
 import cn.edu.tsinghua.iginx.session_v2.write.Point;
 import com.tsinghua.auth.aspect.OperationLogAspect;
 import com.tsinghua.dto.DatasetRequest;
 import com.tsinghua.entity.DatasetEntity;
+import com.tsinghua.entity.ParsingRulesEntity;
 import com.tsinghua.util.CommonUtil;
+import com.tsinghua.util.ConvertUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
 public class DatasetService {
 
     private static final String STORAGE_PREFIX = "datasets";
-    private static final String META_PREFIX = "relational_system.datasets";
+    private static final String META_PREFIX = "relational_system.dataset_meta";
 
     @Autowired
     private Session iginxSession;
@@ -62,17 +69,44 @@ public class DatasetService {
         String clientIp = OperationLogAspect.getClientIp();
 
         DatasetEntity datasetEntity = new DatasetEntity();
-        datasetEntity.setKey(timestamp);
+        datasetEntity.setId(timestamp);
         datasetEntity.setDatasetName(request.getDatasetName());
         datasetEntity.setDatasetSql(request.getDatasetSql());
         datasetEntity.setParent(request.getParent());
         datasetEntity.setVersion(version);
+        datasetEntity.setStoragePath(storagePath);
         datasetEntity.setCreateTime(timestamp);
         datasetEntity.setOperator(operator);
         datasetEntity.setClientIp(clientIp);
 
         writeClient.writeMeasurement(datasetEntity);
 
+    }
+
+    public DatasetEntity queryMeta(String path) {
+        try {
+            String sql = "select * from %s where storagePath = '%s';";
+            String formatSQL = String.format(sql, META_PREFIX, path);
+            log.info(formatSQL);
+            SessionExecuteSqlResult res = iginxSession.executeSql(formatSQL);
+            List<Map<String, Object>> records = ConvertUtil.getRecords(res);
+
+            if (records.isEmpty()) {
+                return null;
+            }
+
+            DatasetEntity entity = new DatasetEntity();
+            Map<String, Object> rs = records.get(0);
+            // 使用ConvertUtil的通用方法设置字段值
+            rs.forEach((k, v) -> {
+                String fieldName = k.replace(META_PREFIX + ".", "");
+                ConvertUtil.setEntityField(entity, META_PREFIX, fieldName, v);
+            });
+            return entity;
+        } catch (Exception e) {
+            log.error("查询解析规则失败", e);
+            return null;
+        }
     }
 
 }

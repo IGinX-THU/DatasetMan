@@ -5,11 +5,11 @@ import cn.edu.tsinghua.iginx.session_v2.annotations.Measurement;
 import lombok.Data;
 
 @Data
-@Measurement(name = "relational_system.datasets")
+@Measurement(name = "relational_system.dataset_meta")
 public class DatasetEntity {
 
     @Field(timestamp = true)
-    private Long key;
+    private Long id;
 
     @Field(name = "datasetName")
     private String datasetName;
@@ -19,6 +19,9 @@ public class DatasetEntity {
 
     @Field(name = "version")
     private String version;
+
+    @Field(name = "storagePath")
+    private String storagePath;
 
     @Field(name = "createTime")
     private Long createTime;

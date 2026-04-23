@@ -560,12 +560,34 @@ class DatasetHistory extends HTMLElement {
         }
     }
 
-    show(dataset) {
-        this.datasetInfo = dataset;
+    async show(path) {
         this.setAttribute('show', '');
-        this.renderOverview();
-        this.loadHistory();
-        this.renderLineageGraph();
+        
+        // 调用 /api/dataset/metas 接口获取数据集详情
+        try {
+            const result = await window.AppConfig.get('dataset', 'metas', { path });
+
+            if (result.code === 200 && result.data) {
+                this.datasetInfo = result.data;
+                this.renderOverview();
+                this.loadHistory();
+                this.renderLineageGraph();
+            } else {
+                console.error('获取数据集详情失败:', result.message);
+                this.dispatchEvent(new CustomEvent('show-toast', {
+                    bubbles: true,
+                    composed: true,
+                    detail: { message: '获取数据集详情失败: ' + result.message, type: 'error' }
+                }));
+            }
+        } catch (error) {
+            console.error('获取数据集详情失败:', error);
+            this.dispatchEvent(new CustomEvent('show-toast', {
+                bubbles: true,
+                composed: true,
+                detail: { message: '获取数据集详情失败: ' + error.message, type: 'error' }
+            }));
+        }
     }
 
     hide() {
@@ -597,7 +619,7 @@ class DatasetHistory extends HTMLElement {
     renderOverview() {
         if (!this.datasetInfo) return;
 
-        const datasetName = this.datasetInfo.name || this.datasetInfo.datasetName || '-';
+        const datasetName = this.datasetInfo.datasetName || '-';
         
         const nameEl = this.shadowRoot.querySelector('#datasetName');
         const createTimeEl = this.shadowRoot.querySelector('#createTime');
@@ -607,11 +629,24 @@ class DatasetHistory extends HTMLElement {
         const versionEl = this.shadowRoot.querySelector('#version');
 
         if (nameEl) nameEl.textContent = datasetName;
-        if (createTimeEl) createTimeEl.textContent = this.datasetInfo.createTime || '-';
-        if (updateTimeEl) updateTimeEl.textContent = this.datasetInfo.updateTime || '-';
-        if (sqlEl) sqlEl.textContent = this.datasetInfo.sql || '-';
-        if (developerEl) developerEl.textContent = this.datasetInfo.developer || this.datasetInfo.creator || 'admin';
-        if (versionEl) versionEl.textContent = this.datasetInfo.version || 'v1.0.0';
+        if (createTimeEl) createTimeEl.textContent = this.formatTime(this.datasetInfo.createTime) || '-';
+        if (updateTimeEl) updateTimeEl.textContent = this.formatTime(this.datasetInfo.createTime) || '-';
+        if (sqlEl) sqlEl.textContent = this.datasetInfo.datasetSql || '-';
+        if (developerEl) developerEl.textContent = this.datasetInfo.operator || '-';
+        if (versionEl) versionEl.textContent = this.datasetInfo.version || '-';
+    }
+
+    formatTime(timestamp) {
+        if (!timestamp) return '-';
+        const date = new Date(timestamp);
+        return date.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
     }
 
     async loadHistory() {

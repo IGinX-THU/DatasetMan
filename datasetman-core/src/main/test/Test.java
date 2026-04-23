@@ -1,6 +1,11 @@
 import cn.edu.tsinghua.iginx.exception.SessionException;
 import cn.edu.tsinghua.iginx.session.Session;
+import cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult;
 import cn.edu.tsinghua.iginx.session.SessionQueryDataSet;
+import cn.edu.tsinghua.iginx.session_v2.IginXClient;
+import cn.edu.tsinghua.iginx.session_v2.IginXClientFactory;
+import cn.edu.tsinghua.iginx.session_v2.QueryClient;
+import com.tsinghua.entity.DatasetEntity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +16,7 @@ public class Test {
     public static void main(String[] args) throws Exception {
         Session session = new Session("127.0.0.1", 6888, "root", "root");
         session.openSession();
-        queryData(session);
+        query(session);
         session.closeSession();
     }
 
@@ -34,4 +39,12 @@ public class Test {
         dataSet.print();
     }
 
+    public static void query(Session session) throws SessionException {
+        String sql = "select * from %s where storagePath = '%s';";
+        String formatSQL = String.format(sql, "relational_system.dataset_meta", "datasets.dataset01.v_260423_095801");
+        System.out.println(formatSQL);
+        SessionExecuteSqlResult res = session.executeSql(formatSQL);
+        res.print(false, "");
+
+    }
 }

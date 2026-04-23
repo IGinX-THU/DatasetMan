@@ -118,7 +118,8 @@ window.AppConfig = {
         // 数据集相关
         dataset: {
             save: '/api/dataset/save',
-            testsql: '/api/dataset/testsql'
+            testsql: '/api/dataset/testsql',
+            metas: '/api/dataset/metas'
         }
     },
     
