@@ -334,12 +334,15 @@ class DatasetDialog extends HTMLElement {
 
     resetForm() {
         this.shadowRoot.querySelector('#datasetForm').reset();
+        this.shadowRoot.querySelector('#datasetName').readOnly = false;
         this.clearResult();
     }
 
     fillForm(data) {
         this.shadowRoot.querySelector('#datasetName').value = data.name || data.datasetName || '';
-        this.shadowRoot.querySelector('#datasetSql').value = data.sql || '';
+        this.shadowRoot.querySelector('#datasetName').readOnly = true;
+        this.shadowRoot.querySelector('#datasetSql').value = data.sql || data.datasetSql || '';
+        this.shadowRoot.querySelector('#datasetRemark').value = data.remark || '';
         this.clearResult();
     }
 
@@ -418,7 +421,7 @@ class DatasetDialog extends HTMLElement {
         const formData = {
             datasetName: this.shadowRoot.querySelector('#datasetName').value.trim(),
             datasetSql: this.shadowRoot.querySelector('#datasetSql').value.trim(),
-            parent: this.datasetData?.timestamp || 0,
+            parent: this.datasetData?.createTime || 0,
             remark: this.shadowRoot.querySelector('#datasetRemark')?.value.trim() || ''
         };
         
