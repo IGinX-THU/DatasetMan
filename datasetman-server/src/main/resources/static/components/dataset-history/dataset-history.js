@@ -1269,14 +1269,34 @@ WITH TRANSFORM OPTIONS (
     }
 
     showDeleteConfirmDialog() {
-        console.log('showDeleteConfirmDialog 被调用, datasetInfo:', this.datasetInfo);
-        if (!this.datasetInfo) {
-            console.error('datasetInfo 为空，无法显示删除对话框');
+        console.log('showDeleteConfirmDialog 被调用');
+
+        // 从右侧树获取选中的节点
+        const rightSidebarTree = document.querySelector('.right-sidebar .tree');
+        if (!rightSidebarTree) {
+            console.error('未找到右侧树');
             return;
         }
 
-        const datasetName = this.datasetInfo.name || this.datasetInfo.datasetName || '未命名';
-        const version = this.datasetInfo.version || 'v1.0.0';
+        const activeNode = rightSidebarTree.querySelector('.tree-node.active');
+        if (!activeNode) {
+            console.error('未找到选中的节点');
+            return;
+        }
+
+        // 获取叶子节点完整路径
+        const fullPath = activeNode.getAttribute('data-full-path');
+        console.log('叶子节点完整路径:', fullPath);
+
+        // 从路径中提取版本（最后一部分）
+        const version = fullPath.split('.').pop();
+        console.log('版本:', version);
+
+        // 获取父节点名称（数据集名）
+        const parentNode = activeNode.closest('.tree-children')?.parentElement;
+        const parentSpan = parentNode?.querySelector('span');
+        const datasetName = parentSpan?.textContent?.trim() || '未命名';
+        console.log('父节点名称（数据集名）:', datasetName);
 
         const overlay = document.createElement('div');
         overlay.style.cssText = `
@@ -1369,11 +1389,26 @@ WITH TRANSFORM OPTIONS (
     }
 
     async performDelete() {
-        console.log('performDelete 被调用, datasetInfo:', this.datasetInfo);
-        try {
-            const path = this.datasetInfo.storagePath;
-            console.log('准备删除数据集, path:', path);
+        console.log('performDelete 被调用');
 
+        // 从右侧树获取选中的节点
+        const rightSidebarTree = document.querySelector('.right-sidebar .tree');
+        if (!rightSidebarTree) {
+            console.error('未找到右侧树');
+            return;
+        }
+
+        const activeNode = rightSidebarTree.querySelector('.tree-node.active');
+        if (!activeNode) {
+            console.error('未找到选中的节点');
+            return;
+        }
+
+        // 获取叶子节点路径（版本）
+        const path = activeNode.getAttribute('data-full-path');
+        console.log('准备删除数据集, path:', path);
+
+        try {
             const result = await window.AppConfig.delete('dataset', 'delete', { path });
 
             if (result.success) {

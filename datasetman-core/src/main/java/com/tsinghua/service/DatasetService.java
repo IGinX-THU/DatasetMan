@@ -113,10 +113,12 @@ public class DatasetService {
 
     public void deleteDataset(String path) {
         DatasetEntity datasetEntity = queryMeta(path);
-        datasetEntity.setDeleted(true);
-        datasetEntity.setId(datasetEntity.getCreateTime());
-        WriteClient writeClient = iginxClient.getWriteClient();
-        writeClient.writeMeasurement(datasetEntity);
+        if (datasetEntity != null) {
+            datasetEntity.setDeleted(true);
+            datasetEntity.setId(datasetEntity.getCreateTime());
+            WriteClient writeClient = iginxClient.getWriteClient();
+            writeClient.writeMeasurement(datasetEntity);
+        }
         DeleteClient deleteClient = iginxClient.getDeleteClient();
         deleteClient.deleteMeasurement(path);
     }

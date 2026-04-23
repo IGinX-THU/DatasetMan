@@ -398,16 +398,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('编辑数据集菜单被点击');
                         const selectedDatasetEdit = getSelectedDataset();
                         if (selectedDatasetEdit) {
-                            const datasetHistory = document.getElementById('datasetHistory');
-                            if (datasetHistory && datasetHistory.datasetInfo) {
-                                // 复用dataset-history的编辑逻辑
-                                datasetHistory.dispatchEvent(new CustomEvent('edit-dataset', {
-                                    bubbles: true,
-                                    composed: true,
-                                    detail: datasetHistory.datasetInfo
-                                }));
-                            } else {
-                                showWorkspaceMessage('请先在详情页查看数据集', 'warning');
+                            const datasetDialogEdit = document.getElementById('datasetDialog');
+                            if (datasetDialogEdit) {
+                                datasetDialogEdit.showEdit({ storagePath: selectedDatasetEdit });
                             }
                         } else {
                             showWorkspaceMessage('请先选择要编辑的数据集', 'warning');
@@ -417,13 +410,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('删除数据集菜单被点击');
                         const selectedDatasetDelete = getSelectedDataset();
                         if (selectedDatasetDelete) {
-                            const datasetHistory = document.getElementById('datasetHistory');
-                            if (datasetHistory && datasetHistory.datasetInfo) {
-                                // 复用dataset-history的删除逻辑
-                                datasetHistory.showDeleteConfirmDialog();
-                            } else {
-                                showWorkspaceMessage('请先在详情页查看数据集', 'warning');
-                            }
+                            showDeleteDatasetConfirmDialog({ storagePath: selectedDatasetDelete });
                         } else {
                             showWorkspaceMessage('请先选择要删除的数据集', 'warning');
                         }
@@ -597,21 +584,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 显示数据集删除确认对话框
     async function showDeleteDatasetConfirmDialog(dataset) {
-        // 如果只有 storagePath，先获取完整数据
-        if (dataset.storagePath && !dataset.datasetName) {
-            try {
-                const result = await window.AppConfig.get('dataset', 'metas', { path: dataset.storagePath });
-                if (result.code === 200 && result.data) {
-                    dataset = result.data;
-                } else {
-                    showWorkspaceMessage('获取数据集信息失败: ' + result.message, 'error');
-                    return;
-                }
-            } catch (error) {
-                console.error('获取数据集信息失败:', error);
-                showWorkspaceMessage('获取数据集信息失败: ' + error.message, 'error');
-                return;
-            }
+        // 如果是字符串路径，包装成对象
+        if (typeof dataset === 'string') {
+            dataset = { storagePath: dataset };
         }
 
         const overlay = document.createElement('div');
@@ -628,7 +603,7 @@ document.addEventListener('DOMContentLoaded', function() {
             z-index: 10000;
         `;
 
-        const datasetName = dataset.name || dataset.datasetName || '未命名';
+        const datasetName = dataset.name || dataset.datasetName || dataset.storagePath || '未命名';
         const version = dataset.version || 'v1.0.0';
         
         overlay.innerHTML = `
@@ -830,26 +805,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         break;
                     case 'showDatasetEdit':
                         console.log('编辑数据集按钮被点击');
-                        const datasetHistoryEdit = document.getElementById('datasetHistory');
-                        if (datasetHistoryEdit && datasetHistoryEdit.datasetInfo) {
-                            // 复用dataset-history的编辑逻辑
-                            datasetHistoryEdit.dispatchEvent(new CustomEvent('edit-dataset', {
-                                bubbles: true,
-                                composed: true,
-                                detail: datasetHistoryEdit.datasetInfo
-                            }));
+                        const selectedDatasetEdit = getSelectedDataset();
+                        if (selectedDatasetEdit) {
+                            const datasetDialogEdit = document.getElementById('datasetDialog');
+                            if (datasetDialogEdit) {
+                                datasetDialogEdit.showEdit({ storagePath: selectedDatasetEdit });
+                            }
                         } else {
-                            showWorkspaceMessage('请先在详情页查看数据集', 'warning');
+                            showWorkspaceMessage('请先选择要编辑的数据集', 'warning');
                         }
                         break;
                     case 'handleDeleteDataset':
                         console.log('删除数据集按钮被点击');
-                        const datasetHistoryDelete = document.getElementById('datasetHistory');
-                        if (datasetHistoryDelete && datasetHistoryDelete.datasetInfo) {
-                            // 复用dataset-history的删除逻辑
-                            datasetHistoryDelete.showDeleteConfirmDialog();
+                        const selectedDatasetDelete = getSelectedDataset();
+                        if (selectedDatasetDelete) {
+                            showDeleteDatasetConfirmDialog({ storagePath: selectedDatasetDelete });
                         } else {
-                            showWorkspaceMessage('请先在详情页查看数据集', 'warning');
+                            showWorkspaceMessage('请先选择要删除的数据集', 'warning');
                         }
                         break;
                     case 'showParsingRules':
@@ -2113,24 +2085,31 @@ function showVisualAnalysis() {
                 rightTreeNodes.forEach(node => {
                     node.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        
+
                         // 确保只处理右侧的节点
                         if (!this.closest('.right-sidebar')) {
                             return;
                         }
-                        
+
                         // 先清除所有选中状态（仅限右侧）
                         rightSidebarTree.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
-                        
+
                         // 设置当前选中
                         this.classList.add('active');
-                        
+
                         // 展开收起（如果有子节点）
                         if (this.querySelector('.tree-children')) {
                             this.classList.toggle('expanded');
                         }
-                        
-                        // 优先处理数据集
+
+                        // 检查是否是叶子节点
+                        const isLeaf = this.getAttribute('data-is-leaf') === 'true';
+                        if (!isLeaf) {
+                            // 父级节点只负责展开和收起，不显示详情
+                            return;
+                        }
+
+                        // 只有叶子节点才显示数据集详情
                         const selectedDataset = getSelectedDataset();
                         if (selectedDataset) {
                             console.log('显示数据集详情:', selectedDataset);
@@ -2140,16 +2119,6 @@ function showVisualAnalysis() {
                                 datasetHistory.show(selectedDataset);
                             }
                             return;
-                        }
-                        
-                        // 向后兼容：处理模型
-                        const selectedModel = getSelectedModel();
-                        const modelDetail = document.getElementById('modelDetail');
-                        if (selectedModel && selectedModel.version && modelDetail) {
-                            console.log('显示模型详情:', selectedModel);
-                            showComponent('modelDetail', selectedModel);
-                        } else {
-                            console.log('未获取到有效信息、点击的是父节点或模型组件不存在');
                         }
                     });
                 });
