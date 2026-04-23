@@ -757,6 +757,7 @@ class DatasetHistory extends HTMLElement {
                 x: timeScale(new Date(d.data.time)),  // x根据时间
                 y: d.x + 50,  // y根据tree的分支层级
                 time: d.data.time,
+                timestamp: d.data.timestamp || new Date(d.data.time).getTime(),  // 如果没有timestamp，从time转换
                 color: d.data.color,
                 user: d.data.user,
                 ip: d.data.ip,
@@ -774,13 +775,156 @@ class DatasetHistory extends HTMLElement {
             // 创建节点ID映射
             const nodeMap = new Map(nodes.map(d => [d.id, d]));
 
-            // 按父节点分组连线，计算每个父节点的统一曲线结束x坐标
+            // 按父节点分组连线
             const linksBySource = new Map();
             links.forEach(link => {
                 if (!linksBySource.has(link.source)) {
                     linksBySource.set(link.source, []);
                 }
                 linksBySource.get(link.source).push(link);
+            });
+
+            // 找到所有根节点（没有父节点的节点）
+            const rootNodes = nodes.filter(node => {
+                return !links.some(link => link.target === node.id);
+            });
+
+            // 找到所有叶子节点（没有子节点的节点）
+            const leafNodes = nodes.filter(node => {
+                return !links.some(link => link.source === node.id);
+            });
+
+            // 计算从根节点到每个叶子节点的所有路径及其总时间差
+            const allPaths = [];
+
+            rootNodes.forEach(rootNode => {
+                leafNodes.forEach(leafNode => {
+                    // 使用DFS找到从根节点到叶子节点的所有路径
+                    const paths = [];
+                    const findPaths = (currentNode, targetNode, currentPath, currentLinks) => {
+                        if (currentNode.id === targetNode.id) {
+                            paths.push({ nodes: [...currentPath], links: [...currentLinks] });
+                            return;
+                        }
+
+                        const childLinks = linksBySource.get(currentNode.id);
+                        if (!childLinks) return;
+
+                        childLinks.forEach(link => {
+                            const nextNode = nodeMap.get(link.target);
+                            findPaths(nextNode, targetNode, [...currentPath, nextNode], [...currentLinks, link]);
+                        });
+                    };
+
+                    findPaths(rootNode, leafNode, [rootNode], []);
+
+                    // 计算每条路径的总时间差
+                    paths.forEach(path => {
+                        let totalTimeDiff = 0;
+                        path.links.forEach(link => {
+                            const source = nodeMap.get(link.source);
+                            const target = nodeMap.get(link.target);
+                            totalTimeDiff += target.timestamp - source.timestamp;
+                        });
+                        allPaths.push({
+                            links: path.links,
+                            totalTimeDiff: totalTimeDiff
+                        });
+                    });
+                });
+            });
+
+            // 找到总时间差最长的路径（从根到叶子）
+            const longestPathByTotal = allPaths.reduce((max, path) => {
+                return path.totalTimeDiff > max.totalTimeDiff ? path : max;
+            }, allPaths[0]);
+
+            const longestTotalPathLinks = new Set(longestPathByTotal?.links || []);
+
+            // 从每个根节点开始，计算最短时间路径（每个分叉选最小时间差）
+            const shortestPathLinks = new Set();
+
+            rootNodes.forEach(rootNode => {
+                let currentNode = rootNode;
+                while (true) {
+                    const childLinks = linksBySource.get(currentNode.id);
+                    if (!childLinks || childLinks.length === 0) break;
+
+                    const linksWithTimeDiff = childLinks.map(link => ({
+                        link: link,
+                        timeDiff: nodeMap.get(link.target).timestamp - currentNode.timestamp
+                    }));
+
+                    const minTimeDiffLink = linksWithTimeDiff.reduce((min, item) => {
+                        return item.timeDiff < min.timeDiff ? item : min;
+                    }, linksWithTimeDiff[0]);
+
+                    shortestPathLinks.add(minTimeDiffLink.link);
+                    currentNode = nodeMap.get(minTimeDiffLink.link.target);
+                }
+            });
+
+            // 从每个根节点开始，计算每个分叉选最大时间差的路径
+            const maxStepPathLinks = new Set();
+
+            rootNodes.forEach(rootNode => {
+                let currentNode = rootNode;
+                while (true) {
+                    const childLinks = linksBySource.get(currentNode.id);
+                    if (!childLinks || childLinks.length === 0) break;
+
+                    const linksWithTimeDiff = childLinks.map(link => ({
+                        link: link,
+                        timeDiff: nodeMap.get(link.target).timestamp - currentNode.timestamp
+                    }));
+
+                    const maxTimeDiffLink = linksWithTimeDiff.reduce((max, item) => {
+                        return item.timeDiff > max.timeDiff ? item : max;
+                    }, linksWithTimeDiff[0]);
+
+                    maxStepPathLinks.add(maxTimeDiffLink.link);
+                    currentNode = nodeMap.get(maxTimeDiffLink.link.target);
+                }
+            });
+
+            // 标记节点和连线的颜色
+            nodes.forEach(node => {
+                const isOnShortestPath = shortestPathLinks.has(links.find(l => l.target === node.id)) ||
+                                        shortestPathLinks.has(links.find(l => l.source === node.id));
+                const isOnMaxStepPath = maxStepPathLinks.has(links.find(l => l.target === node.id)) ||
+                                       maxStepPathLinks.has(links.find(l => l.source === node.id));
+                const isOnLongestTotalPath = longestTotalPathLinks.has(links.find(l => l.target === node.id)) ||
+                                           longestTotalPathLinks.has(links.find(l => l.source === node.id));
+                
+                if (isOnLongestTotalPath) {
+                    node.pathType = 'longestTotal';
+                    node.displayColor = '#1890ff'; // 蓝色
+                } else if (isOnMaxStepPath) {
+                    node.pathType = 'maxStep';
+                    node.displayColor = '#faad14'; // 黄橙色
+                } else if (isOnShortestPath) {
+                    node.pathType = 'shortest';
+                    node.displayColor = '#660099'; // 清华紫色
+                } else {
+                    node.pathType = 'other';
+                    node.displayColor = '#2da44e'; // Git黄绿色
+                }
+            });
+
+            links.forEach(link => {
+                if (longestTotalPathLinks.has(link)) {
+                    link.pathType = 'longestTotal';
+                    link.displayColor = '#1890ff'; // 蓝色
+                } else if (maxStepPathLinks.has(link)) {
+                    link.pathType = 'maxStep';
+                    link.displayColor = '#faad14'; // 黄橙色
+                } else if (shortestPathLinks.has(link)) {
+                    link.pathType = 'shortest';
+                    link.displayColor = '#660099'; // 清华紫色
+                } else {
+                    link.pathType = 'other';
+                    link.displayColor = '#2da44e'; // Git黄绿色
+                }
             });
 
             // 为每个父节点计算统一的曲线结束x坐标（取所有子节点中最小的target x的1/4位置）
@@ -826,9 +970,9 @@ class DatasetHistory extends HTMLElement {
                 .append('path')
                 .attr('d', linkPath)
                 .attr('fill', 'none')
-                .attr('stroke', d => d.color)
-                .attr('stroke-width', 2)
-                .attr('opacity', 0.8);
+                .attr('stroke', d => d.displayColor)
+                .attr('stroke-width', d => d.isMainPath ? 3 : 2)
+                .attr('opacity', d => d.isMainPath ? 1 : 0.6);
 
             // 绘制节点
             const node = svg.append('g')
@@ -840,7 +984,7 @@ class DatasetHistory extends HTMLElement {
 
             // 节点圆形
             node.append('circle')
-                .attr('r', 15)
+                .attr('r', 13)
                 .attr('fill', d => d.color)
                 .attr('stroke', '#fff')
                 .attr('stroke-width', 2)
