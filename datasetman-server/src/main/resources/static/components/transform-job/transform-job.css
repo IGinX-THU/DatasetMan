@@ -874,3 +874,32 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
+
+.dataset-row {
+    display: flex !important;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+    width: 100%;
+    flex-wrap: nowrap;
+}
+
+.dataset-row .dataset-select {
+    flex: 2;
+    min-width: 0;
+}
+
+.dataset-row .version-select {
+    flex: 1;
+    min-width: 0;
+}
+
+.dataset-row .remove-dataset-btn {
+    flex-shrink: 0;
+}
+
+.dataset-list .dataset-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+}
