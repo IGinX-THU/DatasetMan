@@ -120,7 +120,24 @@ class UdfManagement extends HTMLElement {
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
                     max-height: 90vh;
                     overflow-y: auto;
+                    position: relative;
                 ">
+                    <button class="dialog-close-btn" style="
+                        position: absolute;
+                        top: 16px;
+                        right: 16px;
+                        width: 24px;
+                        height: 24px;
+                        border: none;
+                        background: transparent;
+                        font-size: 20px;
+                        cursor: pointer;
+                        color: #8c8c8c;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 4px;
+                    ">&times;</button>
                     <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2329;">注册UDF</h3>
                     <form id="udfForm" style="margin-bottom: 24px;">
                         <div style="margin-bottom: 16px;">
@@ -135,9 +152,9 @@ class UdfManagement extends HTMLElement {
                                 background: white;
                             " required>
                                 <option value="">请选择UDF类型</option>
-                                <option value="UDSF">UDSF (标量函数)</option>
-                                <option value="UDAF">UDAF (聚合函数)</option>
-                                <option value="UDTF">UDTF (表函数)</option>
+                                <option value="UDSF">UDSF</option>
+                                <option value="UDAF">UDAF</option>
+                                <option value="UDTF">UDTF</option>
                             </select>
                         </div>
                         <div style="margin-bottom: 16px;">
@@ -229,6 +246,7 @@ class UdfManagement extends HTMLElement {
 
         const cancelBtn = dialog.querySelector('.cancel-btn');
         const confirmBtn = dialog.querySelector('.confirm-btn');
+        const closeBtn = dialog.querySelector('.dialog-close-btn');
         const form = dialog.querySelector('#udfForm');
         const uploadArea = dialog.querySelector('#uploadArea');
         const fileInput = dialog.querySelector('#udfFile');
@@ -281,6 +299,10 @@ class UdfManagement extends HTMLElement {
             this.selectedFile = null;
         };
 
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeDialog);
+        }
+
         cancelBtn.addEventListener('click', closeDialog);
 
         confirmBtn.addEventListener('click', () => {
@@ -298,8 +320,9 @@ class UdfManagement extends HTMLElement {
                 return;
             }
 
+            const fileToUpload = this.selectedFile;
             closeDialog();
-            this.registerUdf(type, name, className, this.selectedFile);
+            this.registerUdf(type, name, className, fileToUpload);
         });
     }
 
@@ -358,53 +381,60 @@ class UdfManagement extends HTMLElement {
     }
 
     async registerUdf(type, name, className, file) {
-        const udf = {
-            id: Date.now(),
-            type,
-            name,
-            className,
-            filePath: `aa/bb/${file.name}`,
-            createTime: new Date().toLocaleString()
-        };
-
         try {
-            this.udfs.push(udf);
-            this.showMessage('UDF注册成功', 'success');
-            this.renderTable();
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('name', name);
+            formData.append('className', className);
+            formData.append('udfType', type);
+
+            const result = await window.AppConfig.upload('udf', 'register', formData);
+
+            if (result.code === 200) {
+                this.showMessage('UDF注册成功', 'success');
+                this.loadUdfs();
+            } else {
+                this.showMessage(result.message || '注册失败，请重试', 'error');
+            }
         } catch (error) {
+            console.error('注册UDF失败:', error);
             this.showMessage('注册失败，请重试', 'error');
         }
     }
 
     async loadUdfs() {
-        this.udfs = [
-            {
-                id: 1,
-                type: 'UDSF',
-                name: 'sin',
-                className: 'UDFSin',
-                filePath: 'aa/bb/udtf_sin.py',
-                createTime: '2024-01-15 10:30:00'
-            },
-            {
-                id: 2,
-                type: 'UDAF',
-                name: 'avg_custom',
-                className: 'UDFAvgCustom',
-                filePath: 'aa/bb/avg_custom.py',
-                createTime: '2024-01-10 09:15:00'
-            },
-            {
-                id: 3,
-                type: 'UDTF',
-                name: 'split_string',
-                className: 'UDTSplitString',
-                filePath: 'aa/bb/split_string.py',
-                createTime: '2024-01-08 11:20:00'
-            }
-        ];
+        try {
+            const url = window.AppConfig.getApiUrl('udf', 'query').replace('{type}', 'udf');
+            const headers = window.AppConfig.getAuthHeaders();
 
-        this.renderTable();
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: headers
+            });
+
+            const result = await response.json();
+
+            if (result.code === 200 && result.data) {
+                this.udfs = result.data.map((udf, index) => ({
+                    id: index,
+                    name: udf.name,
+                    type: udf.type,
+                    className: udf.className,
+                    fileName: udf.fileName,
+                    ipPortPair: udf.ipPortPair
+                }));
+                this.renderTable();
+            } else {
+                this.showMessage(result.message || '加载UDF列表失败', 'error');
+                this.udfs = [];
+                this.renderTable();
+            }
+        } catch (error) {
+            console.error('加载UDF列表失败:', error);
+            this.showMessage('加载UDF列表失败', 'error');
+            this.udfs = [];
+            this.renderTable();
+        }
     }
 
     renderTable() {
@@ -417,7 +447,7 @@ class UdfManagement extends HTMLElement {
         if (this.udfs.length === 0) {
             newTbody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
                         暂无UDF
                     </td>
                 </tr>
@@ -427,12 +457,11 @@ class UdfManagement extends HTMLElement {
 
         newTbody.innerHTML = this.udfs.map(udf => `
             <tr data-id="${udf.id}">
-                <td>${udf.id}</td>
                 <td>${udf.name}</td>
-                <td><span class="udf-type-badge ${udf.type}">${udf.type}</span></td>
                 <td><code>${udf.className}</code></td>
-                <td>${udf.filePath}</td>
-                <td>${udf.createTime}</td>
+                <td>${udf.fileName}</td>
+                <td>${udf.ipPortPair}</td>
+                <td>${udf.type}</td>
                 <td>
                     <button class="action-btn delete" data-id="${udf.id}">删除</button>
                 </td>
@@ -511,11 +540,36 @@ class UdfManagement extends HTMLElement {
 
         cancelBtn.addEventListener('click', closeDialog);
 
-        confirmBtn.addEventListener('click', () => {
-            closeDialog();
-            this.udfs = this.udfs.filter(u => u.id !== id);
-            this.renderTable();
-            this.showMessage('UDF删除成功', 'success');
+        confirmBtn.addEventListener('click', async () => {
+            try {
+                const udf = this.udfs.find(u => u.id === id);
+                if (!udf) {
+                    this.showMessage('未找到UDF', 'error');
+                    return;
+                }
+
+                const url = window.AppConfig.getApiUrl('udf', 'delete').replace('{name}', encodeURIComponent(udf.name));
+                const headers = window.AppConfig.getAuthHeaders();
+
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: headers
+                });
+
+                const result = await response.json();
+
+                if (result.code === 200) {
+                    closeDialog();
+                    this.udfs = this.udfs.filter(u => u.id !== id);
+                    this.renderTable();
+                    this.showMessage('UDF删除成功', 'success');
+                } else {
+                    this.showMessage(result.message || '删除失败，请重试', 'error');
+                }
+            } catch (error) {
+                console.error('删除UDF失败:', error);
+                this.showMessage('删除失败，请重试', 'error');
+            }
         });
     }
 

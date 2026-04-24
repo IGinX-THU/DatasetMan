@@ -128,6 +128,12 @@ window.AppConfig = {
             register: '/api/function/register/transform',
             delete: '/api/function/delete/{name}',
             query: '/api/function/query/{type}'
+        },
+        // UDF相关
+        udf: {
+            register: '/api/function/register/udf',
+            delete: '/api/function/delete/{name}',
+            query: '/api/function/query/{type}'
         }
     },
     

@@ -121,7 +121,24 @@ class TransformManagement extends HTMLElement {
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
                     max-height: 90vh;
                     overflow-y: auto;
+                    position: relative;
                 ">
+                    <button class="dialog-close-btn" style="
+                        position: absolute;
+                        top: 16px;
+                        right: 16px;
+                        width: 24px;
+                        height: 24px;
+                        border: none;
+                        background: transparent;
+                        font-size: 20px;
+                        cursor: pointer;
+                        color: #8c8c8c;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 4px;
+                    ">&times;</button>
                     <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2329;">注册Transform</h3>
                     <form id="transformForm" style="margin-bottom: 24px;">
                         <div style="margin-bottom: 16px;">
@@ -213,6 +230,7 @@ class TransformManagement extends HTMLElement {
 
         const cancelBtn = dialog.querySelector('.cancel-btn');
         const confirmBtn = dialog.querySelector('.confirm-btn');
+        const closeBtn = dialog.querySelector('.dialog-close-btn');
         const form = dialog.querySelector('#transformForm');
         const uploadArea = dialog.querySelector('#uploadArea');
         const fileInput = dialog.querySelector('#transformFile');
@@ -264,6 +282,10 @@ class TransformManagement extends HTMLElement {
             document.body.removeChild(dialog);
             this.selectedFile = null;
         };
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeDialog);
+        }
 
         cancelBtn.addEventListener('click', closeDialog);
 

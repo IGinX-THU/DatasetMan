@@ -60,4 +60,22 @@ public class FunctionController {
         return Result.success(functionService.query(type));
     }
 
+    @ApiOperation("注册UDF")
+    @PostMapping(value = "/register/udf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @RequirePermission(Permission.MODEL_CREATE)
+    @OperationLog(value = "注册UDF", type = OperationLog.OperationType.CREATE, recordParams = false)
+    public Result<?> registerUDF(
+            @RequestPart("file") MultipartFile file,
+            @RequestParam("name") String udfName,
+            @RequestParam("className") String className,
+            @RequestParam("udfType") String udfType) throws Exception {
+
+        if (file.isEmpty()) {
+            return Result.error("上传文件不能为空。");
+        }
+
+        functionService.registerUDF(file, udfName, className, udfType);
+        return Result.success("注册成功");
+    }
+
 }
