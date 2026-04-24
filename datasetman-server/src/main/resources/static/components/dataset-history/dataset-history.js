@@ -1052,9 +1052,14 @@ class DatasetHistory extends HTMLElement {
                 .attr('fill', '#333')
                 .text(d => d.time);
 
-            // 添加缩放行为
+            // 添加缩放行为（只在鼠标悬停在图上时才允许缩放）
             const zoom = d3.zoom()
                 .scaleExtent([0.5, 3])
+                .filter(event => {
+                    // 只在鼠标悬停在mainGroup或其子元素上时才允许缩放
+                    const target = event.target;
+                    return target === mainGroup.node() || mainGroup.node().contains(target);
+                })
                 .on('zoom', (event) => {
                     mainGroup.attr('transform', event.transform);
                 });
