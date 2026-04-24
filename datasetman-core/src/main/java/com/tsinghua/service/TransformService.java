@@ -1,5 +1,6 @@
 package com.tsinghua.service;
 
+import cn.edu.tsinghua.iginx.exception.SessionException;
 import cn.edu.tsinghua.iginx.session.Session;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,32 +26,31 @@ public class TransformService {
     @Autowired
     private Session iginxSession;
 
-    public void register(MultipartFile file, String name, String className) {
-        try {
-            // 创建函数目录
-            Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "transform");
-            if (!Files.exists(pathDir)) {
-                Files.createDirectories(pathDir);
-                log.info("创建函数目录: {}", pathDir);
-            }
-
-            // 保存文件到函数目录
-            String fileName = file.getOriginalFilename();
-            if (fileName == null || fileName.isEmpty()) {
-                fileName = name + ".py";
-            }
-            Path targetPath = pathDir.resolve(fileName);
-            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
-            log.info("保存Transform文件: {}", targetPath);
-
-            String registerSQL = String.format(CREATE_SQL_FORMATTER, name, className, targetPath.toAbsolutePath());
-            log.info("注册Transform SQL: {}", registerSQL);
-            iginxSession.executeSql(registerSQL);
-
-        } catch (Exception e) {
-            log.error("Transform注册失败", e);
-            throw new RuntimeException("Transform注册失败: " + e.getMessage(), e);
+    public void register(MultipartFile file, String name, String className) throws Exception {
+        // 创建函数目录
+        Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "transform");
+        if (!Files.exists(pathDir)) {
+            Files.createDirectories(pathDir);
+            log.info("创建函数目录: {}", pathDir);
         }
+
+        // 保存文件到函数目录
+        String fileName = file.getOriginalFilename();
+        if (fileName == null || fileName.isEmpty()) {
+            fileName = name + ".py";
+        }
+        Path targetPath = pathDir.resolve(fileName);
+        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        log.info("保存Transform文件: {}", targetPath);
+
+        String registerSQL = String.format(CREATE_SQL_FORMATTER, name, className, targetPath.toAbsolutePath());
+        log.info("注册Transform SQL: {}", registerSQL);
+        iginxSession.executeSql(registerSQL);
+    }
+
+    public void delete(String name) throws SessionException {
+        String registerSQL = String.format(DROP_SQL_FORMATTER, name);
+        iginxSession.executeSql(registerSQL);
     }
 
 }

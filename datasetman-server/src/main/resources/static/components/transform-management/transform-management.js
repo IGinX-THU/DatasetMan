@@ -490,11 +490,36 @@ class TransformManagement extends HTMLElement {
 
         cancelBtn.addEventListener('click', closeDialog);
 
-        confirmBtn.addEventListener('click', () => {
-            closeDialog();
-            this.transforms = this.transforms.filter(t => t.id !== id);
-            this.renderTable();
-            this.showMessage('Transform删除成功', 'success');
+        confirmBtn.addEventListener('click', async () => {
+            try {
+                const transform = this.transforms.find(t => t.id === id);
+                if (!transform) {
+                    this.showMessage('未找到Transform', 'error');
+                    return;
+                }
+
+                const url = window.AppConfig.getApiUrl('transform', 'delete').replace('{name}', encodeURIComponent(transform.name));
+                const headers = window.AppConfig.getAuthHeaders();
+
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: headers
+                });
+
+                const result = await response.json();
+
+                if (result.code === 200) {
+                    closeDialog();
+                    this.transforms = this.transforms.filter(t => t.id !== id);
+                    this.renderTable();
+                    this.showMessage('Transform删除成功', 'success');
+                } else {
+                    this.showMessage(result.message || '删除失败，请重试', 'error');
+                }
+            } catch (error) {
+                console.error('删除Transform失败:', error);
+                this.showMessage('删除失败，请重试', 'error');
+            }
         });
     }
 

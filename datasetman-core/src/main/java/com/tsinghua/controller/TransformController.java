@@ -38,4 +38,14 @@ public class TransformController {
         return Result.success("注册成功");
     }
 
+    @ApiOperation("移除Transform")
+    @DeleteMapping( "/delete/{name}")
+    @RequirePermission(Permission.MODEL_DELETE)
+    @OperationLog(value = "移除Transform", type = OperationLog.OperationType.DELETE)
+    public Result<Void> handleDelete(
+            @PathVariable("name") String name) throws Exception {
+        transformService.delete(name);
+        return Result.success("操作成功");
+    }
+
 }
