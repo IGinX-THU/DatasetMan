@@ -14,7 +14,7 @@ import java.nio.file.StandardCopyOption;
 
 @Slf4j
 @Service
-public class TransformService {
+public class FunctionService {
 
     private static final String SHOW_TIME_SERIES_SQL = "SHOW COLUMNS;";
     private static final String SHOW_FUNCTION_SQL = "SHOW FUNCTIONS;";
@@ -26,7 +26,7 @@ public class TransformService {
     @Autowired
     private Session iginxSession;
 
-    public void register(MultipartFile file, String name, String className) throws Exception {
+    public void registerTransform(MultipartFile file, String name, String className) throws Exception {
         // 创建函数目录
         Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "transform");
         if (!Files.exists(pathDir)) {
@@ -50,6 +50,7 @@ public class TransformService {
 
     public void delete(String name) throws SessionException {
         String registerSQL = String.format(DROP_SQL_FORMATTER, name);
+        log.info("删除Transform SQL: {}", registerSQL);
         iginxSession.executeSql(registerSQL);
     }
 

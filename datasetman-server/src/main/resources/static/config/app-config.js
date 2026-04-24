@@ -125,8 +125,8 @@ window.AppConfig = {
         },
         // Transform相关
         transform: {
-            register: '/api/transform/register',
-            delete: '/api/transform/delete/{name}'
+            register: '/api/function/register/transform',
+            delete: '/api/function/delete/{name}'
         }
     },
     
