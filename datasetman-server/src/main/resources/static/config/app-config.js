@@ -122,6 +122,10 @@ window.AppConfig = {
             metas: '/api/dataset/metas',
             delete: '/api/dataset/delete',
             history: '/api/dataset/history'
+        },
+        // Transform相关
+        transform: {
+            register: '/api/transform/register'
         }
     },
     

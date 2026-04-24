@@ -281,8 +281,9 @@ class TransformManagement extends HTMLElement {
                 return;
             }
 
+            const fileToUpload = this.selectedFile;
             closeDialog();
-            this.registerTransform(name, className, this.selectedFile);
+            this.registerTransform(name, className, fileToUpload);
         });
     }
 
@@ -344,20 +345,22 @@ class TransformManagement extends HTMLElement {
     }
 
     async registerTransform(name, className, file) {
-        const transform = {
-            id: Date.now(),
-            name,
-            className,
-            filePath: `data/script/${file.name}`,
-            createTime: new Date().toLocaleString()
-        };
-
         try {
-            // 模拟注册
-            this.transforms.push(transform);
-            this.showMessage('Transform注册成功', 'success');
-            this.renderTable();
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('name', name);
+            formData.append('className', className);
+
+            const result = await window.AppConfig.upload('transform', 'register', formData);
+
+            if (result.code === 200) {
+                this.showMessage('Transform注册成功', 'success');
+                this.loadTransforms();
+            } else {
+                this.showMessage(result.message || '注册失败，请重试', 'error');
+            }
         } catch (error) {
+            console.error('注册Transform失败:', error);
             this.showMessage('注册失败，请重试', 'error');
         }
     }
