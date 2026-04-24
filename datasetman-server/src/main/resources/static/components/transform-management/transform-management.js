@@ -366,25 +366,38 @@ class TransformManagement extends HTMLElement {
     }
 
     async loadTransforms() {
-        // 模拟数据
-        this.transforms = [
-            {
-                id: 1,
-                name: 'row_sum',
-                className: 'RowSumTransformer',
-                filePath: 'data/script/row_sum.py',
-                createTime: '2024-01-15 10:30:00'
-            },
-            {
-                id: 2,
-                name: 'data_clean',
-                className: 'DataCleanTransformer',
-                filePath: 'data/script/data_clean.py',
-                createTime: '2024-01-10 09:15:00'
-            }
-        ];
+        try {
+            const url = window.AppConfig.getApiUrl('transform', 'query').replace('{type}', 'transform');
+            const headers = window.AppConfig.getAuthHeaders();
 
-        this.renderTable();
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: headers
+            });
+
+            const result = await response.json();
+
+            if (result.code === 200 && result.data) {
+                this.transforms = result.data.map((transform, index) => ({
+                    id: index,
+                    name: transform.name,
+                    className: transform.className,
+                    fileName: transform.fileName,
+                    ipPortPair: transform.ipPortPair,
+                    type: transform.type
+                }));
+                this.renderTable();
+            } else {
+                this.showMessage(result.message || '加载Transform列表失败', 'error');
+                this.transforms = [];
+                this.renderTable();
+            }
+        } catch (error) {
+            console.error('加载Transform列表失败:', error);
+            this.showMessage('加载Transform列表失败', 'error');
+            this.transforms = [];
+            this.renderTable();
+        }
     }
 
     renderTable() {
@@ -407,11 +420,11 @@ class TransformManagement extends HTMLElement {
 
         newTbody.innerHTML = this.transforms.map(transform => `
             <tr data-id="${transform.id}">
-                <td>${transform.id}</td>
                 <td>${transform.name}</td>
                 <td><code>${transform.className}</code></td>
-                <td>${transform.filePath}</td>
-                <td>${transform.createTime}</td>
+                <td>${transform.fileName}</td>
+                <td>${transform.ipPortPair}</td>
+                <td>${transform.type}</td>
                 <td>
                     <button class="action-btn delete" data-id="${transform.id}">删除</button>
                 </td>
