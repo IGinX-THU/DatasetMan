@@ -36,8 +36,8 @@ class TransformJob extends HTMLElement {
         try {
             // 获取筛选条件
             const nameFilter = this.querySelector('.filter-input[type="text"]')?.value.trim();
-            const statusFilter = this.querySelector('.filter-input[type="select"]')?.value;
-            
+            const statusFilter = this.querySelector('select.filter-input')?.value;
+
             // 构建请求对象
             const requestBody = {
                 pageNum: this.currentPage || 1,
@@ -45,7 +45,7 @@ class TransformJob extends HTMLElement {
                 name: nameFilter || null,
                 jobState: statusFilter ? parseInt(statusFilter) : null
             };
-            
+
             console.log('查询参数:', requestBody);
             
             // 调用查询接口
@@ -56,6 +56,7 @@ class TransformJob extends HTMLElement {
                 // 后端直接返回List<TransformJobEntity>，转换为前端所需格式
                 this.data = result.data.map(job => ({
                     id: job.id, // 使用id作为唯一标识
+                    jobId: job.jobId,
                     name: job.name,
                     exportFile: job.exportFiletName,
                     schedule: job.schedule,
@@ -110,10 +111,10 @@ class TransformJob extends HTMLElement {
         }
     }
 
-    async deleteJobFromAPI(id) {
+    async deleteJobFromAPI(createTime) {
         try {
-            const result = await window.AppConfig.delete('job', 'delete', { id });
-            
+            const result = await window.AppConfig.delete('job', 'delete', { createTime });
+
             if (result.success) {
                 this.showToast('作业已删除');
                 this.hideModal();
@@ -234,17 +235,17 @@ class TransformJob extends HTMLElement {
         };
 
         tbody.innerHTML = this.data.map(job => `
-            <tr data-id="${job.id}">
-                <td>${job.id}</td>
+            <tr data-id="${job.createTime}">
+                <td>${job.jobId || '-'}</td>
+                <td>${statusMap[job.jobState] || '未知'}</td>
                 <td>${job.name}</td>
                 <td>${job.exportFile || '-'}</td>
                 <td>${job.schedule || '-'}</td>
-                <td>${statusMap[job.jobState] || '未知'}</td>
                 <td>${job.createtime}</td>
                 <td>
                     <div class="action-buttons">
-                        <button class="action-btn edit" data-id="${job.id}">编辑</button>
-                        <button class="action-btn delete" data-id="${job.id}">删除</button>
+                        <button class="action-btn edit" data-id="${job.createTime}">编辑</button>
+                        <button class="action-btn delete" data-id="${job.createTime}">删除</button>
                     </div>
                 </td>
             </tr>
@@ -490,22 +491,29 @@ class TransformJob extends HTMLElement {
         });
     }
 
-    async showEditModal(id) {
+    async showEditModal(createTime) {
         this.currentAction = 'edit';
-        this.editingJobId = id;
-        
+        this.editingJobId = createTime;
+
         try {
             // 从API获取作业详情
-            const result = await window.AppConfig.get('job', 'detail', { id });
+            const result = await window.AppConfig.get('job', 'detail', { createTime });
             
             if (result.success && result.data) {
                 const job = result.data;
+                // 转换taskType和dataFlowType为字符串，以便前端回显
+                const taskList = job.taskList ? JSON.parse(job.taskList).map(task => ({
+                    ...task,
+                    taskType: task.taskType === 1 ? 'python' : (task.taskType === 0 ? 'iginx' : ''),
+                    dataFlowType: task.dataFlowType === 1 ? 'stream' : (task.dataFlowType === 0 ? 'batch' : '')
+                })) : [];
+                
                 const frontendJob = {
                     id: job.id,
                     name: job.name,
                     exportFile: job.exportFiletName,
                     schedule: job.schedule,
-                    taskList: job.taskList ? JSON.parse(job.taskList) : []
+                    taskList: taskList
                 };
                 
                 const dialogHtml = `
@@ -823,7 +831,7 @@ class TransformJob extends HTMLElement {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="jobName">作业名称 <span class="required">*</span></label>
-                            <input type="text" id="jobName" name="jobName" placeholder="请输入作业名称" value="${job?.jobName || ''}" required>
+                            <input type="text" id="jobName" name="jobName" placeholder="请输入作业名称" value="${job?.name || ''}" required>
                         </div>
                     </div>
                 </div>
@@ -865,8 +873,23 @@ class TransformJob extends HTMLElement {
         const dataFlowType = task?.dataFlowType || '';
         const timeout = task?.timeout || '';
         const dataset = task?.dataset || '';
-        const version = task?.version || '';
         const pyTaskName = task?.pyTaskName || '';
+
+        // 解析dataset路径，提取数据集名称和版本
+        let datasetName = '';
+        let version = '';
+        if (dataset) {
+            if (dataset.startsWith('datasets.')) {
+                const parts = dataset.split('.');
+                if (parts.length >= 3) {
+                    datasetName = parts[1];
+                    version = parts[2];
+                }
+            } else {
+                // 如果不是标准格式，直接使用dataset作为datasetName
+                datasetName = dataset;
+            }
+        }
 
         let configHTML = '';
         if (taskType === 'iginx') {
@@ -874,7 +897,7 @@ class TransformJob extends HTMLElement {
                 <div style="display: flex; gap: 8px;">
                     <select class="dataset-select" style="flex: 2; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
                         <option value="">请选择数据集</option>
-                        <option value="${dataset}" ${dataset ? 'selected' : ''}>${dataset}</option>
+                        <option value="${datasetName}" ${datasetName ? 'selected' : ''}>${datasetName}</option>
                     </select>
                     <select class="version-select" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
                         <option value="">请选择版本</option>
@@ -886,6 +909,7 @@ class TransformJob extends HTMLElement {
             configHTML = `
                 <select class="py-task-name" data-selected="${pyTaskName}" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
                     <option value="">请选择Transform函数</option>
+                    <option value="${pyTaskName}" ${pyTaskName ? 'selected' : ''}>${pyTaskName}</option>
                 </select>
             `;
         } else {
@@ -1079,14 +1103,26 @@ class TransformJob extends HTMLElement {
         }
 
         if (datasetSelect && versionSelect) {
-            this.loadDatasets(datasetSelect);
+            const currentDatasetValue = datasetSelect.value;
+            const currentVersionValue = versionSelect.value;
+            this.loadDatasets(datasetSelect, () => {
+                datasetSelect.value = currentDatasetValue;
+            });
             datasetSelect.addEventListener('change', () => {
                 this.loadDatasetVersions(datasetSelect.value, versionSelect);
             });
+            if (currentDatasetValue) {
+                this.loadDatasetVersions(currentDatasetValue, versionSelect, () => {
+                    versionSelect.value = currentVersionValue;
+                });
+            }
         }
 
         if (pyTaskNameSelect && taskTypeSelect?.value === 'python') {
-            this.loadTransformFunctions(pyTaskNameSelect);
+            const currentPyValue = pyTaskNameSelect.value;
+            this.loadTransformFunctions(pyTaskNameSelect, () => {
+                pyTaskNameSelect.value = currentPyValue;
+            });
         }
     }
 
@@ -1103,7 +1139,7 @@ class TransformJob extends HTMLElement {
         });
     }
 
-    async loadDatasets(selectElement) {
+    async loadDatasets(selectElement, callback) {
         try {
             selectElement.innerHTML = '<option value="">请选择数据集</option>';
             
@@ -1130,6 +1166,8 @@ class TransformJob extends HTMLElement {
                     option.textContent = datasetName;
                     selectElement.appendChild(option);
                 });
+                
+                if (callback) callback();
             } else {
                 console.error('获取数据集失败:', result.message);
             }
@@ -1138,7 +1176,7 @@ class TransformJob extends HTMLElement {
         }
     }
 
-    async loadDatasetVersions(datasetName, selectElement) {
+    async loadDatasetVersions(datasetName, selectElement, callback) {
         try {
             selectElement.innerHTML = '<option value="">请选择版本</option>';
             if (!datasetName) return;
@@ -1166,6 +1204,8 @@ class TransformJob extends HTMLElement {
                     option.textContent = version;
                     selectElement.appendChild(option);
                 });
+                
+                if (callback) callback();
             } else {
                 console.error('获取版本失败:', result.message);
             }
@@ -1174,7 +1214,7 @@ class TransformJob extends HTMLElement {
         }
     }
 
-    async loadTransformFunctions(selectElement) {
+    async loadTransformFunctions(selectElement, callback) {
         try {
             const url = window.AppConfig.getApiUrl('transform', 'query').replace('{type}', 'transform');
             const headers = window.AppConfig.getAuthHeaders();
@@ -1198,12 +1238,13 @@ class TransformJob extends HTMLElement {
                     }
                     selectElement.appendChild(option);
                 });
+                
+                if (callback) callback();
             } else {
-                selectElement.innerHTML = '<option value="">请选择</option>';
+                console.error('获取Transform函数失败:', result.message);
             }
         } catch (error) {
-            console.error('加载Transform函数失败:', error);
-            selectElement.innerHTML = '<option value="">请选择</option>';
+            console.error('加载Transform函数异常:', error);
         }
     }
 

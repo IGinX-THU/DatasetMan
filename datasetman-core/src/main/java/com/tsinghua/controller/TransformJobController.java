@@ -50,8 +50,8 @@ public class TransformJobController {
     @ApiOperation("查询Transform作业详情")
     @GetMapping("/detail")
     @RequirePermission(Permission.RUN_TASK_READ)
-    public Result<?> queryJob(@RequestParam("id") Long id) {
-        TransformJobEntity result = transformJobService.queryJob(id);
+    public Result<?> queryJob(@RequestParam("createTime") Long createTime) {
+        TransformJobEntity result = transformJobService.queryJob(createTime);
         if (result == null) {
             return Result.error("未找到指定的作业");
         }
@@ -62,8 +62,8 @@ public class TransformJobController {
     @DeleteMapping("/delete")
     @RequirePermission(Permission.RUN_TASK_DELETE)
     @OperationLog(value = "删除Transform作业", type = OperationLog.OperationType.DELETE)
-    public Result<Void> deleteJob(@RequestParam("id") Long id) throws Exception {
-        transformJobService.deleteJob(id);
+    public Result<Void> deleteJob(@RequestParam("createTime") Long createTime) throws Exception {
+        transformJobService.deleteJob(createTime);
         return Result.success("操作成功");
     }
 }
