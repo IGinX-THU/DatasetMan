@@ -589,6 +589,10 @@
     font-weight: 500;
 }
 
+.form-group label .required {
+    color: #ef4444;
+}
+
 .form-group input[type="text"],
 .form-group select,
 .form-group textarea {

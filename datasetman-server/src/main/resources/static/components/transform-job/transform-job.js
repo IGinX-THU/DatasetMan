@@ -396,12 +396,13 @@ class TransformJob extends HTMLElement {
         cancelBtn.addEventListener('click', closeDialog);
 
         confirmBtn.addEventListener('click', () => {
+            const jobName = form.querySelector('#jobName')?.value.trim();
             const exportType = form.querySelector('#exportType')?.value;
             const exportFile = form.querySelector('#exportFile')?.value;
             const schedule = form.querySelector('#schedule')?.value.trim();
             const taskList = this.collectTasks();
 
-            if (!exportType || !schedule) {
+            if (!jobName || !exportType || !schedule) {
                 this.showToast('请填写完整作业配置', 'error');
                 return;
             }
@@ -608,12 +609,13 @@ class TransformJob extends HTMLElement {
         cancelBtn.addEventListener('click', closeDialog);
 
         confirmBtn.addEventListener('click', () => {
+            const jobName = form.querySelector('#jobName')?.value.trim();
             const exportType = form.querySelector('#exportType')?.value;
             const exportFile = form.querySelector('#exportFile')?.value;
             const schedule = form.querySelector('#schedule')?.value.trim();
             const taskList = this.collectTasks();
 
-            if (!exportType || !schedule) {
+            if (!jobName || !exportType || !schedule) {
                 this.showToast('请填写完整作业配置', 'error');
                 return;
             }
@@ -724,6 +726,28 @@ class TransformJob extends HTMLElement {
         return `
             <form id="jobForm" class="job-form">
                 <div class="form-section">
+                    <div class="section-title">作业名称</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="jobName">作业名称 <span class="required">*</span></label>
+                            <input type="text" id="jobName" name="jobName" placeholder="请输入作业名称" value="${job?.jobName || ''}" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="params-block" style="margin-bottom: 32px; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+                        <div class="params-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <span style="font-size: 16px; font-weight: 600; color: #1e293b;">任务列表</span>
+                            <button class="add-btn" id="addTask" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; width: 32px; height: 32px; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);">+</button>
+                        </div>
+                        <div class="tasks-list" id="tasksList" style="display: flex; flex-direction: column; gap: 16px;">
+                            ${job?.taskList?.map((task, index) => this.getTaskRowHTML(task, index, job.taskList.length)).join('') || ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
                     <div class="section-title">作业配置</div>
                     <div class="form-row">
                         <div class="form-group">
@@ -745,18 +769,6 @@ class TransformJob extends HTMLElement {
                             <label for="schedule">调度策略 <span class="required">*</span></label>
                             <input type="text" id="schedule" name="schedule" placeholder="请输入调度策略" value="${job?.schedule || ''}" style="margin-bottom: 12px;">
                             <schedule-editor id="scheduleEditor"></schedule-editor>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <div class="params-block" style="margin-bottom: 32px; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
-                        <div class="params-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <span style="font-size: 16px; font-weight: 600; color: #1e293b;">任务列表</span>
-                            <button class="add-btn" id="addTask" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; width: 32px; height: 32px; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);">+</button>
-                        </div>
-                        <div class="tasks-list" id="tasksList" style="display: flex; flex-direction: column; gap: 16px;">
-                            ${job?.taskList?.map((task, index) => this.getTaskRowHTML(task, index, job.taskList.length)).join('') || ''}
                         </div>
                     </div>
                 </div>
@@ -810,7 +822,7 @@ class TransformJob extends HTMLElement {
                     <div style="display: flex; gap: 8px;">
                         <button type="button" class="move-task-up-btn" style="padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer; font-size: 14px;" ${index === 0 ? 'disabled' : ''}>↑</button>
                         <button type="button" class="move-task-down-btn" style="padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer; font-size: 14px;" ${index === totalTasks - 1 ? 'disabled' : ''}>↓</button>
-                        <button type="button" class="remove-task" style="padding: 6px 12px; border: 1px solid #ef4444; border-radius: 6px; background: white; color: #ef4444; cursor: pointer; font-size: 14px;">删除</button>
+                        <button type="button" class="remove-task" style="padding: 6px 12px; border: 1px solid #ef4444; border-radius: 6px; background: white; color: #ef4444; cursor: pointer; font-size: 18px; font-weight: bold;">×</button>
                     </div>
                 </div>
                 <div class="task-body" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
