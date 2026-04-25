@@ -464,7 +464,8 @@ class ScheduleEditor extends HTMLElement {
                 schedule = this.buildAtSchedule();
                 break;
             case 'cron':
-                schedule = this.shadowRoot.getElementById('cron-expression-input').value;
+                const cronInput = this.shadowRoot.getElementById('cron-expression-input');
+                schedule = cronInput ? cronInput.value : '';
                 break;
         }
 

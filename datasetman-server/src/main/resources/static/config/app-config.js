@@ -134,6 +134,14 @@ window.AppConfig = {
             register: '/api/function/register/udf',
             delete: '/api/function/delete/{name}',
             query: '/api/function/query/{type}'
+        },
+        // Transform作业相关
+        job: {
+            save: '/api/job/save',
+            query: '/api/job/query',
+            count: '/api/job/count',
+            detail: '/api/job/detail',
+            delete: '/api/job/delete'
         }
     },
     

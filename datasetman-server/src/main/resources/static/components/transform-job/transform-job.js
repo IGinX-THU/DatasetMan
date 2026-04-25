@@ -33,68 +33,75 @@ class TransformJob extends HTMLElement {
     }
 
     async loadJobsFromAPI() {
-        // 使用模拟数据
-        const mockData = [
-            {
-                id: '1',
-                jobName: '数据清洗作业',
-                jobDesc: '清洗用户数据',
-                jobType: 'batch',
-                dataFlow: 'dataStream1',
-                outputTarget: 'database',
-                schedule: '0 0 * * * ?',
-                tasks: [],
-                status: 'active',
-                updateTime: '2025-01-15 10:30:00',
-                createTime: '1'
-            },
-            {
-                id: '2',
-                jobName: '数据转换作业',
-                jobDesc: '转换数据格式',
-                jobType: 'streaming',
-                dataFlow: 'dataStream2',
-                outputTarget: 'file',
-                schedule: '0 0 2 * * ?',
-                tasks: [],
-                status: 'inactive',
-                updateTime: '2025-01-14 15:20:00',
-                createTime: '2'
-            },
-            {
-                id: '3',
-                jobName: '数据同步作业',
-                jobDesc: '同步源数据',
-                jobType: 'scheduled',
-                dataFlow: 'dataStream3',
-                outputTarget: 'messageQueue',
-                schedule: '0 0 4 * * ?',
-                tasks: [],
-                status: 'active',
-                updateTime: '2025-01-13 09:15:00',
-                createTime: '3'
+        try {
+            // 获取筛选条件
+            const nameFilter = this.querySelector('.filter-input[type="text"]')?.value.trim();
+            const statusFilter = this.querySelector('.filter-input[type="select"]')?.value;
+            
+            // 构建请求对象
+            const requestBody = {
+                pageNum: this.currentPage || 1,
+                pageSize: this.pageSize || 6,
+                name: nameFilter || null,
+                jobState: statusFilter ? parseInt(statusFilter) : null
+            };
+            
+            console.log('查询参数:', requestBody);
+            
+            // 调用查询接口
+            const result = await window.AppConfig.post('job', 'query', requestBody);
+            console.log('查询结果:', result);
+            
+            if (result.success && result.data) {
+                // 后端直接返回List<TransformJobEntity>，转换为前端所需格式
+                this.data = result.data.map(job => ({
+                    id: job.id, // 使用id作为唯一标识
+                    name: job.name,
+                    exportFile: job.exportFiletName,
+                    schedule: job.schedule,
+                    jobState: job.jobState,
+                    createTime: job.createTime,
+                    createtime: new Date(job.createTime).toLocaleString('zh-CN')
+                }));
+                
+                // 同时获取总数用于分页（仅在第一页时）
+                if (this.currentPage === 1) {
+                    await this.loadJobsCount(nameFilter, statusFilter);
+                }
+                
+                console.log('加载的作业数据:', this.data);
+                console.log('当前totalCount:', this.totalCount);
+                
+                // 渲染表格
+                this.renderTable();
+            } else {
+                console.error('加载作业失败:', result.message);
+                this.showToast('加载作业失败', 'error');
             }
-        ];
-
-        this.data = mockData;
-        this.totalCount = mockData.length;
-        this.updatePagination();
-        this.renderTable();
+        } catch (error) {
+            console.error('加载作业失败:', error);
+            this.showToast('网络错误，无法加载作业', 'error');
+        }
     }
 
     async loadJobsCount(name, status) {
         try {
+            // 构建请求对象
             const requestBody = {
                 name: name || null,
-                status: status || null
+                jobState: status ? parseInt(status) : null
             };
             
-            const result = await window.AppConfig.post('transformJob', 'count', requestBody);
+            console.log('查询总量参数:', requestBody);
+            
+            const result = await window.AppConfig.post('job', 'count', requestBody);
+            console.log('总量查询结果:', result);
             
             if (result.success && result.data !== undefined) {
                 this.totalCount = result.data;
                 this.updatePagination();
             } else {
+                console.warn('获取数据总量失败，使用当前数据量');
                 this.totalCount = this.data.length;
             }
         } catch (error) {
@@ -103,11 +110,21 @@ class TransformJob extends HTMLElement {
         }
     }
 
-    async deleteJobFromAPI(createTime) {
-        // 模拟删除成功
-        this.showToast('作业已删除');
-        this.hideModal();
-        this.loadJobsFromAPI();
+    async deleteJobFromAPI(id) {
+        try {
+            const result = await window.AppConfig.delete('job', 'delete', { id });
+            
+            if (result.success) {
+                this.showToast('作业已删除');
+                this.hideModal();
+                this.loadJobsFromAPI();
+            } else {
+                this.showToast(result.message || '删除失败', 'error');
+            }
+        } catch (error) {
+            console.error('删除作业失败:', error);
+            this.showToast('网络错误，删除失败', 'error');
+        }
     }
 
     getJobNameByCreateTime(createTime) {
@@ -138,37 +155,22 @@ class TransformJob extends HTMLElement {
             });
         }
 
+        if (resetFilters) {
+            resetFilters.addEventListener('click', () => {
+                const filterInput = this.querySelector('.filter-input');
+                if (filterInput) {
+                    filterInput.value = '';
+                }
+                this.currentPage = 1;
+                this.loadJobsFromAPI();
+            });
+        }
+
         if (applyFilters) {
             applyFilters.addEventListener('click', () => {
                 this.currentPage = 1;
                 this.loadJobsFromAPI();
             });
-        }
-
-        if (resetFilters) {
-            resetFilters.addEventListener('click', () => {
-                const inputs = this.querySelectorAll('.filter-input');
-                inputs.forEach(input => input.value = '');
-                this.currentPage = 1;
-                this.loadJobsFromAPI();
-            });
-        }
-
-        const pagination = this.querySelector('#pagination');
-        if (pagination) {
-            pagination.addEventListener('page-change', (e) => {
-                this.currentPage = e.detail.page;
-                this.loadJobsFromAPI();
-            });
-        }
-    }
-
-    initPagination() {
-        const pagination = this.querySelector('#pagination');
-        if (pagination) {
-            pagination.totalCount = 0;
-            pagination.currentPage = 1;
-            pagination.pageSize = this.pageSize;
         }
     }
 
@@ -181,6 +183,29 @@ class TransformJob extends HTMLElement {
         }
     }
 
+    initPagination() {
+        const pagination = this.querySelector('#pagination');
+        if (pagination) {
+            pagination.addEventListener('page-change', (e) => {
+                this.currentPage = e.detail.page;
+                this.loadJobsFromAPI();
+            });
+        }
+    }
+
+    // 添加show方法供main.js调用
+    async show(...args) {
+        console.log('TransformJob show() 被调用', args);
+        this.style.display = 'block';
+        // 每次显示时刷新数据
+        await this.loadJobsFromAPI();
+        this.renderTable();
+    }
+
+    hide() {
+        this.style.display = 'none';
+    }
+
     renderTable() {
         const tbody = this.querySelector('#tableBody');
         if (!tbody) return;
@@ -188,7 +213,7 @@ class TransformJob extends HTMLElement {
         if (this.data.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 40px; color: #6b7280;">
+                    <td colspan="7" style="text-align: center; padding: 40px; color: #6b7280;">
                         暂无作业数据
                     </td>
                 </tr>
@@ -196,20 +221,28 @@ class TransformJob extends HTMLElement {
             return;
         }
 
+        const statusMap = {
+            0: '未知',
+            1: '完成',
+            2: '创建',
+            3: '等待运行',
+            4: '运行中',
+            5: '失败中',
+            6: '失败',
+            7: '取消中',
+            8: '取消'
+        };
+
         tbody.innerHTML = this.data.map(job => `
             <tr data-id="${job.id}">
-                <td>${job.jobName}</td>
-                <td>${job.jobType}</td>
-                <td>${job.dataFlow}</td>
-                <td>${job.outputTarget}</td>
-                <td>${job.schedule}</td>
-                <td>
-                    <span class="status-badge ${job.status}">${job.status === 'active' ? '运行中' : '已完成'}</span>
-                </td>
-                <td>${job.updateTime}</td>
+                <td>${job.id}</td>
+                <td>${job.name}</td>
+                <td>${job.exportFile || '-'}</td>
+                <td>${job.schedule || '-'}</td>
+                <td>${statusMap[job.jobState] || '未知'}</td>
+                <td>${job.createtime}</td>
                 <td>
                     <div class="action-buttons">
-                        <button class="action-btn run" data-id="${job.id}">运行</button>
                         <button class="action-btn edit" data-id="${job.id}">编辑</button>
                         <button class="action-btn delete" data-id="${job.id}">删除</button>
                     </div>
@@ -221,9 +254,7 @@ class TransformJob extends HTMLElement {
             const id = e.target.getAttribute('data-id');
             if (!id) return;
 
-            if (e.target.classList.contains('run')) {
-                this.runJob(id);
-            } else if (e.target.classList.contains('edit')) {
+            if (e.target.classList.contains('edit')) {
                 this.showEditModal(id);
             } else if (e.target.classList.contains('delete')) {
                 this.showDeleteConfirm(id);
@@ -297,7 +328,7 @@ class TransformJob extends HTMLElement {
                         border-top: 1px solid #e5e7eb;
                         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
                     ">
-                        <button class="cancel-btn" style="
+                        <button type="button" class="cancel-btn" style="
                             padding: 12px 32px;
                             border-radius: 8px;
                             font-size: 15px;
@@ -310,7 +341,7 @@ class TransformJob extends HTMLElement {
                             letter-spacing: 0.025em;
                             min-width: 120px;
                         ">取消</button>
-                        <button class="confirm-btn" style="
+                        <button type="button" class="confirm-btn" style="
                             padding: 12px 32px;
                             border-radius: 8px;
                             font-size: 15px;
@@ -333,12 +364,28 @@ class TransformJob extends HTMLElement {
         dialog.innerHTML = dialogHtml;
         document.body.appendChild(dialog);
 
+        const dialogMask = dialog.querySelector('.dialog-mask');
+        const dialogContent = dialog.querySelector('.dialog-content');
         const cancelBtn = dialog.querySelector('.cancel-btn');
         const confirmBtn = dialog.querySelector('.confirm-btn');
         const closeBtn = dialog.querySelector('.dialog-close-btn');
         const form = dialog.querySelector('#jobForm');
         const addTaskBtn = dialog.querySelector('#addTask');
         const tasksList = dialog.querySelector('#tasksList');
+
+        // 阻止dialog-content点击事件冒泡到dialog-mask
+        if (dialogContent) {
+            dialogContent.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        // 阻止表单默认提交行为
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+            });
+        }
 
         // Schedule编辑器事件绑定
         const scheduleEditor = form.querySelector('#scheduleEditor');
@@ -355,7 +402,9 @@ class TransformJob extends HTMLElement {
         }
 
         if (addTaskBtn && tasksList) {
-            addTaskBtn.addEventListener('click', () => {
+            addTaskBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 const taskRow = document.createElement('div');
                 taskRow.className = 'task-card';
                 taskRow.innerHTML = this.getTaskRowHTML({}, tasksList.children.length);
@@ -381,13 +430,13 @@ class TransformJob extends HTMLElement {
 
         cancelBtn.addEventListener('click', closeDialog);
 
-        confirmBtn.addEventListener('click', () => {
+        confirmBtn.addEventListener('click', async () => {
             const jobName = form.querySelector('#jobName')?.value.trim();
             const exportFile = form.querySelector('#exportFile')?.value;
             const schedule = form.querySelector('#schedule')?.value.trim();
-            const taskList = this.collectTasks();
+            const taskList = this.collectTasks(tasksList);
 
-            if (!jobName || !exportFile || !schedule) {
+            if (!jobName || !exportFile) {
                 this.showToast('请填写完整作业配置', 'error');
                 return;
             }
@@ -398,220 +447,295 @@ class TransformJob extends HTMLElement {
             }
 
             for (const task of taskList) {
-                if (!task.taskType || !task.timeout) {
+                if (task.taskType === null || task.taskType === undefined || !task.timeout) {
                     this.showToast('请填写完整任务信息', 'error');
                     return;
                 }
-                if (task.taskType === 'python' && !task.dataFlowType) {
+                if (task.taskType === 1 && !task.dataFlowType) {
                     this.showToast('请填写数据流动方式', 'error');
                     return;
                 }
-                if (task.taskType === 'python' && !task.pyTaskName) {
+                if (task.taskType === 1 && !task.pyTaskName) {
                     this.showToast('请选择Transform函数', 'error');
                     return;
                 }
-                if (task.taskType === 'iginx' && !task.dataset) {
+                if (task.taskType === 0 && !task.dataset) {
                     this.showToast('请选择数据集', 'error');
                     return;
                 }
             }
 
-            closeDialog();
-            this.saveJob();
+            const jobData = {
+                name: jobName,
+                exportFiletName: exportFile,
+                schedule,
+                taskList
+            };
+
+            console.log('Job data to save:', jobData);
+
+            try {
+                const result = await window.AppConfig.post('job', 'save', jobData);
+                if (result.success) {
+                    this.showToast('作业创建成功');
+                    closeDialog();
+                    this.loadJobsFromAPI();
+                } else {
+                    this.showToast(result.message || '作业创建失败', 'error');
+                }
+            } catch (error) {
+                console.error('保存作业失败:', error);
+                this.showToast('作业创建失败', 'error');
+            }
         });
     }
 
-    showEditModal(id) {
+    async showEditModal(id) {
         this.currentAction = 'edit';
         this.editingJobId = id;
-        const job = this.data.find(j => j.id === id);
-        if (!job) return;
-
-        const dialogHtml = `
-            <div class="dialog-mask" style="
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 2000;
-            ">
-                <div class="dialog-content" style="
-                    background: white;
-                    border-radius: 12px;
-                    max-width: 1000px;
-                    width: 95%;
-                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-                    max-height: 90vh;
-                    overflow: hidden;
-                    position: relative;
-                    display: flex;
-                    flex-direction: column;
-                ">
-                    <div class="dialog-header" style="
+        
+        try {
+            // 从API获取作业详情
+            const result = await window.AppConfig.get('job', 'detail', { id });
+            
+            if (result.success && result.data) {
+                const job = result.data;
+                const frontendJob = {
+                    id: job.id,
+                    name: job.name,
+                    exportFile: job.exportFiletName,
+                    schedule: job.schedule,
+                    taskList: job.taskList ? JSON.parse(job.taskList) : []
+                };
+                
+                const dialogHtml = `
+                    <div class="dialog-mask" style="
+                        position: fixed;
+                        inset: 0;
+                        background: rgba(0, 0, 0, 0.5);
                         display: flex;
-                        justify-content: space-between;
                         align-items: center;
-                        padding: 24px 32px;
-                        border-bottom: 1px solid #e5e7eb;
-                        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-                    ">
-                        <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #1e293b;">编辑作业</h3>
-                        <button class="dialog-close-btn" style="
-                            background: none;
-                            border: none;
-                            font-size: 24px;
-                            color: #64748b;
-                            cursor: pointer;
-                            padding: 8px;
-                            width: 40px;
-                            height: 40px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            border-radius: 8px;
-                            transition: all 0.2s ease;
-                        ">&times;</button>
-                    </div>
-                    <div class="dialog-body" style="
-                        flex: 1;
-                        padding: 32px;
-                        overflow-y: auto;
-                        background: #fafbfc;
-                    ">
-                        ${this.getJobFormHTML(job)}
-                    </div>
-                    <div class="dialog-actions" style="
-                        display: flex;
                         justify-content: center;
-                        gap: 16px;
-                        padding: 24px 32px;
-                        border-top: 1px solid #e5e7eb;
-                        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                        z-index: 2000;
                     ">
-                        <button class="cancel-btn" style="
-                            padding: 12px 32px;
-                            border-radius: 8px;
-                            font-size: 15px;
-                            font-weight: 600;
-                            cursor: pointer;
-                            border: 2px solid #e5e7eb;
+                        <div class="dialog-content" style="
                             background: white;
-                            color: #64748b;
-                            transition: all 0.2s ease;
-                            letter-spacing: 0.025em;
-                            min-width: 120px;
-                        ">取消</button>
-                        <button class="confirm-btn" style="
-                            padding: 12px 32px;
-                            border-radius: 8px;
-                            font-size: 15px;
-                            font-weight: 600;
-                            cursor: pointer;
-                            border: 2px solid #3b82f6;
-                            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-                            color: white;
-                            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
-                            transition: all 0.2s ease;
-                            letter-spacing: 0.025em;
-                            min-width: 120px;
-                        ">保存</button>
+                            border-radius: 12px;
+                            max-width: 1000px;
+                            width: 95%;
+                            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                            max-height: 90vh;
+                            overflow: hidden;
+                            position: relative;
+                            display: flex;
+                            flex-direction: column;
+                        ">
+                            <div class="dialog-header" style="
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                                padding: 24px 32px;
+                                border-bottom: 1px solid #e5e7eb;
+                                background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                            ">
+                                <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #1e293b;">编辑作业</h3>
+                                <button class="dialog-close-btn" style="
+                                    background: none;
+                                    border: none;
+                                    font-size: 24px;
+                                    color: #64748b;
+                                    cursor: pointer;
+                                    padding: 8px;
+                                    width: 40px;
+                                    height: 40px;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    border-radius: 8px;
+                                    transition: all 0.2s ease;
+                                ">&times;</button>
+                            </div>
+                            <div class="dialog-body" style="
+                                flex: 1;
+                                padding: 32px;
+                                overflow-y: auto;
+                                background: #fafbfc;
+                            ">
+                                ${this.getJobFormHTML(frontendJob)}
+                            </div>
+                            <div class="dialog-actions" style="
+                                display: flex;
+                                justify-content: center;
+                                gap: 16px;
+                                padding: 24px 32px;
+                                border-top: 1px solid #e5e7eb;
+                                background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                            ">
+                                <button type="button" class="cancel-btn" style="
+                                    padding: 12px 32px;
+                                    border-radius: 8px;
+                                    font-size: 15px;
+                                    font-weight: 600;
+                                    cursor: pointer;
+                                    border: 2px solid #e5e7eb;
+                                    background: white;
+                                    color: #64748b;
+                                    transition: all 0.2s ease;
+                                    letter-spacing: 0.025em;
+                                    min-width: 120px;
+                                ">取消</button>
+                                <button type="button" class="confirm-btn" style="
+                                    padding: 12px 32px;
+                                    border-radius: 8px;
+                                    font-size: 15px;
+                                    font-weight: 600;
+                                    cursor: pointer;
+                                    border: 2px solid #3b82f6;
+                                    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                                    color: white;
+                                    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+                                    transition: all 0.2s ease;
+                                    letter-spacing: 0.025em;
+                                    min-width: 120px;
+                                ">保存</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        `;
+                `;
 
-        const dialog = document.createElement('div');
-        dialog.innerHTML = dialogHtml;
-        document.body.appendChild(dialog);
+                const dialog = document.createElement('div');
+                dialog.innerHTML = dialogHtml;
+                document.body.appendChild(dialog);
 
-        const cancelBtn = dialog.querySelector('.cancel-btn');
-        const confirmBtn = dialog.querySelector('.confirm-btn');
-        const closeBtn = dialog.querySelector('.dialog-close-btn');
-        const form = dialog.querySelector('#jobForm');
-        const addTaskBtn = dialog.querySelector('#addTask');
-        const tasksList = dialog.querySelector('#tasksList');
+                const dialogMask = dialog.querySelector('.dialog-mask');
+                const dialogContent = dialog.querySelector('.dialog-content');
+                const cancelBtn = dialog.querySelector('.cancel-btn');
+                const confirmBtn = dialog.querySelector('.confirm-btn');
+                const closeBtn = dialog.querySelector('.dialog-close-btn');
+                const form = dialog.querySelector('#jobForm');
+                const addTaskBtn = dialog.querySelector('#addTask');
+                const tasksList = dialog.querySelector('#tasksList');
 
-        // Schedule编辑器事件绑定
-        const scheduleEditor = form.querySelector('#scheduleEditor');
-        const scheduleInput = form.querySelector('#schedule');
-        if (scheduleEditor && scheduleInput) {
-            // 设置初始值
-            if (scheduleInput.value) {
-                scheduleEditor.setValue(scheduleInput.value);
-            }
-            // 监听schedule变化
-            scheduleEditor.addEventListener('schedule-change', (e) => {
-                scheduleInput.value = e.detail.schedule;
-            });
-        }
-
-        if (addTaskBtn && tasksList) {
-            addTaskBtn.addEventListener('click', () => {
-                const taskRow = document.createElement('div');
-                taskRow.className = 'task-card';
-                taskRow.innerHTML = this.getTaskRowHTML({}, tasksList.children.length);
-                tasksList.appendChild(taskRow);
-                this.bindTaskRowEvents(taskRow);
-                this.updateTaskButtons();
-            });
-        }
-
-        if (tasksList) {
-            Array.from(tasksList.children).forEach(row => {
-                this.bindTaskRowEvents(row);
-            });
-        }
-
-        const closeDialog = () => {
-            document.body.removeChild(dialog);
-        };
-
-        if (closeBtn) {
-            closeBtn.addEventListener('click', closeDialog);
-        }
-
-        cancelBtn.addEventListener('click', closeDialog);
-
-        confirmBtn.addEventListener('click', () => {
-            const jobName = form.querySelector('#jobName')?.value.trim();
-            const exportFile = form.querySelector('#exportFile')?.value;
-            const schedule = form.querySelector('#schedule')?.value.trim();
-            const taskList = this.collectTasks();
-
-            if (!jobName || !exportFile || !schedule) {
-                this.showToast('请填写完整作业配置', 'error');
-                return;
-            }
-
-            if (taskList.length === 0) {
-                this.showToast('请至少添加一个任务', 'error');
-                return;
-            }
-
-            for (const task of taskList) {
-                if (!task.taskType || !task.timeout) {
-                    this.showToast('请填写完整任务信息', 'error');
-                    return;
+                // 阻止dialog-content点击事件冒泡到dialog-mask
+                if (dialogContent) {
+                    dialogContent.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                    });
                 }
-                if (task.taskType === 'python' && !task.dataFlowType) {
-                    this.showToast('请填写数据流动方式', 'error');
-                    return;
-                }
-                if (task.taskType === 'python' && !task.pyTaskName) {
-                    this.showToast('请选择Transform函数', 'error');
-                    return;
-                }
-                if (task.taskType === 'iginx' && !task.dataset) {
-                    this.showToast('请选择数据集', 'error');
-                    return;
-                }
-            }
 
-            closeDialog();
-            this.updateJob(id);
-        });
+                // 阻止表单默认提交行为
+                if (form) {
+                    form.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                    });
+                }
+
+                // Schedule编辑器事件绑定
+                const scheduleEditor = form.querySelector('#scheduleEditor');
+                const scheduleInput = form.querySelector('#schedule');
+                if (scheduleEditor && scheduleInput) {
+                    // 设置初始值
+                    if (scheduleInput.value) {
+                        scheduleEditor.setValue(scheduleInput.value);
+                    }
+                    // 监听schedule变化
+                    scheduleEditor.addEventListener('schedule-change', (e) => {
+                        scheduleInput.value = e.detail.schedule;
+                    });
+                }
+
+                if (addTaskBtn && tasksList) {
+                    addTaskBtn.addEventListener('click', () => {
+                        const taskRow = document.createElement('div');
+                        taskRow.className = 'task-card';
+                        taskRow.innerHTML = this.getTaskRowHTML({}, tasksList.children.length);
+                        tasksList.appendChild(taskRow);
+                        this.bindTaskRowEvents(taskRow);
+                        this.updateTaskButtons();
+                    });
+                }
+
+                if (tasksList) {
+                    Array.from(tasksList.children).forEach(row => {
+                        this.bindTaskRowEvents(row);
+                    });
+                }
+
+                const closeDialog = () => {
+                    document.body.removeChild(dialog);
+                };
+
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', closeDialog);
+                }
+
+                cancelBtn.addEventListener('click', closeDialog);
+
+                confirmBtn.addEventListener('click', async () => {
+                    const jobName = form.querySelector('#jobName')?.value.trim();
+                    const exportFile = form.querySelector('#exportFile')?.value;
+                    const schedule = form.querySelector('#schedule')?.value.trim();
+                    const taskList = this.collectTasks(tasksList);
+
+                    if (!jobName || !exportFile) {
+                        this.showToast('请填写完整作业配置', 'error');
+                        return;
+                    }
+
+                    if (taskList.length === 0) {
+                        this.showToast('请至少添加一个任务', 'error');
+                        return;
+                    }
+
+                    for (const task of taskList) {
+                        if (task.taskType === null || task.taskType === undefined || !task.timeout) {
+                            this.showToast('请填写完整任务信息', 'error');
+                            return;
+                        }
+                        if (task.taskType === 1 && !task.dataFlowType) {
+                            this.showToast('请填写数据流动方式', 'error');
+                            return;
+                        }
+                        if (task.taskType === 1 && !task.pyTaskName) {
+                            this.showToast('请选择Transform函数', 'error');
+                            return;
+                        }
+                        if (task.taskType === 0 && !task.dataset) {
+                            this.showToast('请选择数据集', 'error');
+                            return;
+                        }
+                    }
+
+                    const jobData = {
+                        name: jobName,
+                        exportFiletName: exportFile,
+                        schedule,
+                        taskList
+                    };
+
+                    console.log('Job data to update:', jobData);
+
+                    try {
+                        const result = await window.AppConfig.post('job', 'save', jobData);
+                        if (result.success) {
+                            this.showToast('作业更新成功');
+                            closeDialog();
+                            this.loadJobsFromAPI();
+                        } else {
+                            this.showToast(result.message || '作业更新失败', 'error');
+                        }
+                    } catch (error) {
+                        console.error('更新作业失败:', error);
+                        this.showToast('作业更新失败', 'error');
+                    }
+                });
+            } else {
+                this.showToast('获取作业详情失败', 'error');
+            }
+        } catch (error) {
+            console.error('获取作业详情失败:', error);
+            this.showToast('网络错误，无法获取作业详情', 'error');
+        }
     }
 
     showDeleteConfirm(id) {
@@ -640,7 +764,7 @@ class TransformJob extends HTMLElement {
                         <span style="color: #f5222d;">此操作不可恢复！</span>
                     </p>
                     <div class="dialog-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
-                        <button class="cancel-btn" style="
+                        <button type="button" class="cancel-btn" style="
                             padding: 8px 16px;
                             border: 1px solid #c9cdd4;
                             border-radius: 4px;
@@ -649,7 +773,7 @@ class TransformJob extends HTMLElement {
                             cursor: pointer;
                             font-size: 14px;
                         ">取消</button>
-                        <button class="confirm-btn" style="
+                        <button type="button" class="confirm-btn" style="
                             padding: 8px 16px;
                             border: 1px solid #f5222d;
                             border-radius: 4px;
@@ -667,8 +791,17 @@ class TransformJob extends HTMLElement {
         dialog.innerHTML = dialogHtml;
         document.body.appendChild(dialog);
 
+        const dialogMask = dialog.querySelector('.dialog-mask');
+        const dialogContent = dialog.querySelector('.dialog-content');
         const cancelBtn = dialog.querySelector('.cancel-btn');
         const confirmBtn = dialog.querySelector('.confirm-btn');
+
+        // 阻止dialog-content点击事件冒泡到dialog-mask
+        if (dialogContent) {
+            dialogContent.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
 
         const closeDialog = () => {
             document.body.removeChild(dialog);
@@ -699,7 +832,7 @@ class TransformJob extends HTMLElement {
                     <div class="params-block" style="margin-bottom: 32px; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
                         <div class="params-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <span style="font-size: 16px; font-weight: 600; color: #1e293b;">任务列表</span>
-                            <button class="add-btn" id="addTask" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; width: 32px; height: 32px; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);">+</button>
+                            <button type="button" class="add-btn" id="addTask" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; width: 32px; height: 32px; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);">+</button>
                         </div>
                         <div class="tasks-list" id="tasksList" style="display: flex; flex-direction: column; gap: 16px;">
                             ${job?.taskList?.map((task, index) => this.getTaskRowHTML(task, index, job.taskList.length)).join('') || ''}
@@ -717,7 +850,7 @@ class TransformJob extends HTMLElement {
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="schedule">调度策略 <span class="required">*</span></label>
+                            <label for="schedule">调度策略</label>
                             <input type="text" id="schedule" name="schedule" placeholder="请输入调度策略" value="${job?.schedule || ''}" style="margin-bottom: 12px;">
                             <schedule-editor id="scheduleEditor"></schedule-editor>
                         </div>
@@ -1131,51 +1264,74 @@ class TransformJob extends HTMLElement {
         const form = this.querySelector('#jobForm');
         if (!form) return;
 
+        const jobName = form.querySelector('#jobName')?.value.trim();
         const exportFile = form.querySelector('#exportFile')?.value;
         const schedule = form.querySelector('#schedule')?.value.trim();
         const taskList = this.collectTasks();
 
         const jobData = {
-            exportFile,
+            name: jobName,
+            exportFiletName: exportFile,
             schedule,
             taskList
         };
 
         console.log('Job data to save:', jobData);
 
-        this.showToast('作业创建成功');
-        this.hideModal();
-        this.loadJobsFromAPI();
+        try {
+            const result = await window.AppConfig.post('job', 'save', jobData);
+            if (result.success) {
+                this.showToast('作业创建成功');
+                this.hideModal();
+                this.loadJobsFromAPI();
+            } else {
+                this.showToast(result.message || '作业创建失败', 'error');
+            }
+        } catch (error) {
+            console.error('保存作业失败:', error);
+            this.showToast('作业创建失败', 'error');
+        }
     }
 
     async updateJob(id) {
         const form = this.querySelector('#jobForm');
         if (!form) return;
 
+        const jobName = form.querySelector('#jobName')?.value.trim();
         const exportFile = form.querySelector('#exportFile')?.value;
         const schedule = form.querySelector('#schedule')?.value.trim();
         const taskList = this.collectTasks();
 
         const jobData = {
-            createTime: id,
-            exportFile,
+            name: jobName,
+            exportFiletName: exportFile,
             schedule,
             taskList
         };
 
         console.log('Job data to update:', jobData);
 
-        this.showToast('作业更新成功');
-        this.hideModal();
-        this.loadJobsFromAPI();
+        try {
+            const result = await window.AppConfig.post('job', 'save', jobData);
+            if (result.success) {
+                this.showToast('作业更新成功');
+                this.hideModal();
+                this.loadJobsFromAPI();
+            } else {
+                this.showToast(result.message || '作业更新失败', 'error');
+            }
+        } catch (error) {
+            console.error('更新作业失败:', error);
+            this.showToast('作业更新失败', 'error');
+        }
     }
 
-    collectTasks() {
-        const tasksList = this.querySelector('#tasksList');
-        if (!tasksList) return [];
+    collectTasks(tasksList = null) {
+        const list = tasksList || this.querySelector('#tasksList');
+        if (!list) return [];
 
         const tasks = [];
-        Array.from(tasksList.children).forEach(row => {
+        Array.from(list.children).forEach(row => {
             const taskType = row.querySelector('.task-type')?.value;
             const dataFlowType = row.querySelector('.data-flow-type')?.value;
             const timeout = row.querySelector('.timeout')?.value;
@@ -1185,13 +1341,13 @@ class TransformJob extends HTMLElement {
 
             if (taskType && timeout) {
                 const task = {
-                    taskType,
+                    taskType: taskType === 'python' ? 1 : 0,
                     timeout: parseInt(timeout)
                 };
 
                 if (taskType === 'python') {
                     if (dataFlowType) {
-                        task.dataFlowType = dataFlowType;
+                        task.dataFlowType = dataFlowType === 'stream' ? 1 : 0;
                     }
                     if (pyTaskName) {
                         task.pyTaskName = pyTaskName;
@@ -1199,11 +1355,8 @@ class TransformJob extends HTMLElement {
                 } else if (taskType === 'iginx' && datasetSelect) {
                     const dataset = datasetSelect?.value;
                     const version = versionSelect?.value;
-                    if (dataset) {
-                        task.dataset = dataset;
-                    }
-                    if (version) {
-                        task.version = version;
+                    if (dataset && version) {
+                        task.dataset = `datasets.${dataset}.${version}`;
                     }
                 }
 
