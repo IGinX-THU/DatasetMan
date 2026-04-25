@@ -726,7 +726,7 @@ class TransformJob extends HTMLElement {
         return `
             <form id="jobForm" class="job-form">
                 <div class="form-section">
-                    <div class="section-title">作业名称</div>
+                    <div class="section-title">作业信息</div>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="jobName">作业名称 <span class="required">*</span></label>
