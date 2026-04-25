@@ -339,20 +339,6 @@ class TransformJob extends HTMLElement {
         const form = dialog.querySelector('#jobForm');
         const addTaskBtn = dialog.querySelector('#addTask');
         const tasksList = dialog.querySelector('#tasksList');
-        const exportTypeSelect = dialog.querySelector('#exportType');
-
-        const toggleExportFileField = () => {
-            const exportFileGroup = dialog.querySelector('#exportFileGroup');
-            if (!exportFileGroup) return;
-
-            const exportType = exportTypeSelect.value;
-            exportFileGroup.style.display = exportType === 'file' ? 'block' : 'none';
-        };
-
-        if (exportTypeSelect) {
-            exportTypeSelect.addEventListener('change', toggleExportFileField);
-            toggleExportFileField();
-        }
 
         // Schedule编辑器事件绑定
         const scheduleEditor = form.querySelector('#scheduleEditor');
@@ -397,18 +383,12 @@ class TransformJob extends HTMLElement {
 
         confirmBtn.addEventListener('click', () => {
             const jobName = form.querySelector('#jobName')?.value.trim();
-            const exportType = form.querySelector('#exportType')?.value;
             const exportFile = form.querySelector('#exportFile')?.value;
             const schedule = form.querySelector('#schedule')?.value.trim();
             const taskList = this.collectTasks();
 
-            if (!jobName || !exportType || !schedule) {
+            if (!jobName || !exportFile || !schedule) {
                 this.showToast('请填写完整作业配置', 'error');
-                return;
-            }
-
-            if (exportType === 'file' && !exportFile) {
-                this.showToast('请填写导出文件路径', 'error');
                 return;
             }
 
@@ -430,8 +410,8 @@ class TransformJob extends HTMLElement {
                     this.showToast('请选择Transform函数', 'error');
                     return;
                 }
-                if (task.taskType === 'iginx' && !task.datasetList) {
-                    this.showToast('请添加数据集', 'error');
+                if (task.taskType === 'iginx' && !task.dataset) {
+                    this.showToast('请选择数据集', 'error');
                     return;
                 }
             }
@@ -552,20 +532,6 @@ class TransformJob extends HTMLElement {
         const form = dialog.querySelector('#jobForm');
         const addTaskBtn = dialog.querySelector('#addTask');
         const tasksList = dialog.querySelector('#tasksList');
-        const exportTypeSelect = dialog.querySelector('#exportType');
-
-        const toggleExportFileField = () => {
-            const exportFileGroup = dialog.querySelector('#exportFileGroup');
-            if (!exportFileGroup) return;
-
-            const exportType = exportTypeSelect.value;
-            exportFileGroup.style.display = exportType === 'file' ? 'block' : 'none';
-        };
-
-        if (exportTypeSelect) {
-            exportTypeSelect.addEventListener('change', toggleExportFileField);
-            toggleExportFileField();
-        }
 
         // Schedule编辑器事件绑定
         const scheduleEditor = form.querySelector('#scheduleEditor');
@@ -610,18 +576,12 @@ class TransformJob extends HTMLElement {
 
         confirmBtn.addEventListener('click', () => {
             const jobName = form.querySelector('#jobName')?.value.trim();
-            const exportType = form.querySelector('#exportType')?.value;
             const exportFile = form.querySelector('#exportFile')?.value;
             const schedule = form.querySelector('#schedule')?.value.trim();
             const taskList = this.collectTasks();
 
-            if (!jobName || !exportType || !schedule) {
+            if (!jobName || !exportFile || !schedule) {
                 this.showToast('请填写完整作业配置', 'error');
-                return;
-            }
-
-            if (exportType === 'file' && !exportFile) {
-                this.showToast('请填写导出文件路径', 'error');
                 return;
             }
 
@@ -643,8 +603,8 @@ class TransformJob extends HTMLElement {
                     this.showToast('请选择Transform函数', 'error');
                     return;
                 }
-                if (task.taskType === 'iginx' && !task.datasetList) {
-                    this.showToast('请添加数据集', 'error');
+                if (task.taskType === 'iginx' && !task.dataset) {
+                    this.showToast('请选择数据集', 'error');
                     return;
                 }
             }
@@ -751,17 +711,8 @@ class TransformJob extends HTMLElement {
                     <div class="section-title">作业配置</div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="exportType">导出类型 <span class="required">*</span></label>
-                            <select id="exportType" name="exportType" required>
-                                <option value="">请选择</option>
-                                <option value="none" ${job?.exportType === 'none' ? 'selected' : ''}>none</option>
-                                <option value="IGinX" ${job?.exportType === 'IGinX' ? 'selected' : ''}>IGinX</option>
-                                <option value="file" ${job?.exportType === 'file' ? 'selected' : ''}>file</option>
-                            </select>
-                        </div>
-                        <div class="form-group" id="exportFileGroup" style="display: ${job?.exportType === 'file' ? 'block' : 'none'};">
-                            <label for="exportFile">导出文件路径</label>
-                            <input type="text" id="exportFile" name="exportFile" placeholder="/Users/cauchy-ny/Downloads/export_file_sum_sql.txt" value="${job?.exportFile || ''}">
+                            <label for="exportFile">导出文件名 <span class="required">*</span></label>
+                            <input type="text" id="exportFile" name="exportFile" placeholder="请输入导出文件名" value="${job?.exportFile || ''}">
                         </div>
                     </div>
                     <div class="form-row">
@@ -780,30 +731,23 @@ class TransformJob extends HTMLElement {
         const taskType = task?.taskType || '';
         const dataFlowType = task?.dataFlowType || '';
         const timeout = task?.timeout || '';
-        const datasetList = task?.datasetList || [];
+        const dataset = task?.dataset || '';
+        const version = task?.version || '';
         const pyTaskName = task?.pyTaskName || '';
-
-        const datasetListHTML = datasetList.map((ds, dsIndex) => `
-            <div class="dataset-row" data-index="${dsIndex}" style="display: flex !important; gap: 8px; align-items: center; margin-bottom: 8px; width: 100%;">
-                <select class="dataset-select" style="flex: 2; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
-                    <option value="">请选择数据集</option>
-                    <option value="${ds.dataset}" selected>${ds.dataset}</option>
-                </select>
-                <select class="version-select" style="flex: 1; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
-                    <option value="">请选择版本</option>
-                    <option value="${ds.version}" selected>${ds.version}</option>
-                </select>
-                <button type="button" class="remove-dataset-btn" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; white-space: nowrap; flex-shrink: 0;">×</button>
-            </div>
-        `).join('');
 
         let configHTML = '';
         if (taskType === 'iginx') {
             configHTML = `
-                <div class="dataset-list" id="datasetList-${index}" style="max-height: 200px; overflow-y: auto; padding: 12px; background: #f8fafc; border-radius: 8px;">
-                    ${datasetListHTML}
+                <div style="display: flex; gap: 8px;">
+                    <select class="dataset-select" style="flex: 2; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                        <option value="">请选择数据集</option>
+                        <option value="${dataset}" ${dataset ? 'selected' : ''}>${dataset}</option>
+                    </select>
+                    <select class="version-select" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                        <option value="">请选择版本</option>
+                        <option value="${version}" ${version ? 'selected' : ''}>${version}</option>
+                    </select>
                 </div>
-                <button type="button" class="add-dataset-btn" style="margin-top: 8px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">+ 添加数据集</button>
             `;
         } else if (taskType === 'python') {
             configHTML = `
@@ -849,7 +793,7 @@ class TransformJob extends HTMLElement {
                 </div>
                 <div class="task-config" style="padding-top: 16px; border-top: 1px solid #e5e7eb;">
                     <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #475569;">
-                        ${taskType === 'iginx' ? '数据集列表 <span style="color: #ef4444;">*</span>' : taskType === 'python' ? 'Transform函数 <span style="color: #ef4444;">*</span>' : '配置'}
+                        ${taskType === 'iginx' ? '数据集 <span style="color: #ef4444;">*</span>' : taskType === 'python' ? 'Transform函数 <span style="color: #ef4444;">*</span>' : '配置'}
                     </label>
                     <div class="config-content iginx-config" style="display: ${taskType === 'iginx' ? 'block' : 'none'};">
                         ${configHTML}
@@ -911,8 +855,8 @@ class TransformJob extends HTMLElement {
         const moveDownBtn = row.querySelector('.move-task-down-btn');
         const taskTypeSelect = row.querySelector('.task-type');
         const pyTaskNameSelect = row.querySelector('.py-task-name');
-        const addDatasetBtn = row.querySelector('.add-dataset-btn');
-        const datasetList = row.querySelector('.dataset-list');
+        const datasetSelect = row.querySelector('.dataset-select');
+        const versionSelect = row.querySelector('.version-select');
 
         if (removeBtn) {
             removeBtn.addEventListener('click', () => {
@@ -959,15 +903,21 @@ class TransformJob extends HTMLElement {
                     // 动态更新内容
                     if (taskType === 'iginx') {
                         iginxConfig.innerHTML = `
-                            <div class="dataset-list" style="max-height: 200px; overflow-y: auto; padding: 12px; background: #f8fafc; border-radius: 8px;">
+                            <div style="display: flex; gap: 8px;">
+                                <select class="dataset-select" style="flex: 2; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                                    <option value="">请选择数据集</option>
+                                </select>
+                                <select class="version-select" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                                    <option value="">请选择版本</option>
+                                </select>
                             </div>
-                            <button type="button" class="add-dataset-btn" style="margin-top: 8px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">+ 添加数据集</button>
                         `;
-                        const newDatasetList = iginxConfig.querySelector('.dataset-list');
-                        const newAddBtn = iginxConfig.querySelector('.add-dataset-btn');
-                        if (newAddBtn && newDatasetList) {
-                            newAddBtn.addEventListener('click', () => {
-                                this.addDatasetRow(newDatasetList);
+                        const newDatasetSelect = iginxConfig.querySelector('.dataset-select');
+                        const newVersionSelect = iginxConfig.querySelector('.version-select');
+                        if (newDatasetSelect) {
+                            this.loadDatasets(newDatasetSelect);
+                            newDatasetSelect.addEventListener('change', () => {
+                                this.loadDatasetVersions(newDatasetSelect.value, newVersionSelect);
                             });
                         }
                     } else if (taskType === 'python') {
@@ -985,7 +935,7 @@ class TransformJob extends HTMLElement {
 
                 if (configLabel) {
                     if (taskType === 'iginx') {
-                        configLabel.innerHTML = '数据集列表 <span style="color: #ef4444;">*</span>';
+                        configLabel.innerHTML = '数据集 <span style="color: #ef4444;">*</span>';
                     } else if (taskType === 'python') {
                         configLabel.innerHTML = 'Transform函数 <span style="color: #ef4444;">*</span>';
                     } else {
@@ -995,15 +945,10 @@ class TransformJob extends HTMLElement {
             });
         }
 
-        if (addDatasetBtn && datasetList) {
-            addDatasetBtn.addEventListener('click', () => {
-                this.addDatasetRow(datasetList);
-            });
-        }
-
-        if (datasetList) {
-            Array.from(datasetList.querySelectorAll('.dataset-row')).forEach(datasetRow => {
-                this.bindDatasetRowEvents(datasetRow, datasetList);
+        if (datasetSelect && versionSelect) {
+            this.loadDatasets(datasetSelect);
+            datasetSelect.addEventListener('change', () => {
+                this.loadDatasetVersions(datasetSelect.value, versionSelect);
             });
         }
 
@@ -1023,46 +968,6 @@ class TransformJob extends HTMLElement {
             if (moveUpBtn) moveUpBtn.disabled = index === 0;
             if (moveDownBtn) moveDownBtn.disabled = index === rows.length - 1;
         });
-    }
-
-    bindDatasetRowEvents(datasetRow, datasetList) {
-        const removeBtn = datasetRow.querySelector('.remove-dataset-btn');
-        const datasetSelect = datasetRow.querySelector('.dataset-select');
-
-        if (removeBtn) {
-            removeBtn.addEventListener('click', () => {
-                datasetRow.remove();
-            });
-        }
-
-        if (datasetSelect) {
-            datasetSelect.addEventListener('change', () => {
-                const versionSelect = datasetRow.querySelector('.version-select');
-                this.loadDatasetVersions(datasetSelect.value, versionSelect);
-            });
-        }
-    }
-
-    addDatasetRow(datasetList) {
-        const newRow = document.createElement('div');
-        newRow.className = 'dataset-row';
-        newRow.innerHTML = `
-            <select class="dataset-select" style="flex: 2; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
-                <option value="">请选择数据集</option>
-            </select>
-            <select class="version-select" style="flex: 1; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
-                <option value="">请选择版本</option>
-            </select>
-            <button type="button" class="remove-dataset-btn" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; white-space: nowrap; flex-shrink: 0;">×</button>
-        `;
-        newRow.style.display = 'flex';
-        newRow.style.gap = '8px';
-        newRow.style.alignItems = 'center';
-        newRow.style.marginBottom = '8px';
-        newRow.style.width = '100%';
-        datasetList.appendChild(newRow);
-        this.bindDatasetRowEvents(newRow, datasetList);
-        this.loadDatasets(newRow.querySelector('.dataset-select'));
     }
 
     async loadDatasets(selectElement) {
@@ -1226,20 +1131,15 @@ class TransformJob extends HTMLElement {
         const form = this.querySelector('#jobForm');
         if (!form) return;
 
-        const exportType = form.querySelector('#exportType')?.value;
         const exportFile = form.querySelector('#exportFile')?.value;
         const schedule = form.querySelector('#schedule')?.value.trim();
         const taskList = this.collectTasks();
 
         const jobData = {
-            exportType,
+            exportFile,
             schedule,
             taskList
         };
-
-        if (exportType === 'file' && exportFile) {
-            jobData.exportFile = exportFile;
-        }
 
         console.log('Job data to save:', jobData);
 
@@ -1252,21 +1152,16 @@ class TransformJob extends HTMLElement {
         const form = this.querySelector('#jobForm');
         if (!form) return;
 
-        const exportType = form.querySelector('#exportType')?.value;
         const exportFile = form.querySelector('#exportFile')?.value;
         const schedule = form.querySelector('#schedule')?.value.trim();
         const taskList = this.collectTasks();
 
         const jobData = {
             createTime: id,
-            exportType,
+            exportFile,
             schedule,
             taskList
         };
-
-        if (exportType === 'file' && exportFile) {
-            jobData.exportFile = exportFile;
-        }
 
         console.log('Job data to update:', jobData);
 
@@ -1285,7 +1180,8 @@ class TransformJob extends HTMLElement {
             const dataFlowType = row.querySelector('.data-flow-type')?.value;
             const timeout = row.querySelector('.timeout')?.value;
             const pyTaskName = row.querySelector('.py-task-name')?.value;
-            const datasetListDiv = row.querySelector('.dataset-list');
+            const datasetSelect = row.querySelector('.dataset-select');
+            const versionSelect = row.querySelector('.version-select');
 
             if (taskType && timeout) {
                 const task = {
@@ -1300,17 +1196,14 @@ class TransformJob extends HTMLElement {
                     if (pyTaskName) {
                         task.pyTaskName = pyTaskName;
                     }
-                } else if (taskType === 'iginx' && datasetListDiv) {
-                    const datasetList = [];
-                    Array.from(datasetListDiv.querySelectorAll('.dataset-row')).forEach(datasetRow => {
-                        const dataset = datasetRow.querySelector('.dataset-select')?.value;
-                        const version = datasetRow.querySelector('.version-select')?.value;
-                        if (dataset && version) {
-                            datasetList.push({ dataset, version });
-                        }
-                    });
-                    if (datasetList.length > 0) {
-                        task.datasetList = datasetList;
+                } else if (taskType === 'iginx' && datasetSelect) {
+                    const dataset = datasetSelect?.value;
+                    const version = versionSelect?.value;
+                    if (dataset) {
+                        task.dataset = dataset;
+                    }
+                    if (version) {
+                        task.version = version;
                     }
                 }
 

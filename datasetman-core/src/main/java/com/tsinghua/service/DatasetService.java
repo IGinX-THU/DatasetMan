@@ -53,7 +53,7 @@ public class DatasetService {
         }
     }
 
-    public void saveDataset(DatasetRequest request) {
+    public DatasetEntity saveDataset(DatasetRequest request) {
         long timestamp = System.currentTimeMillis();
         String version = CommonUtil.generateVersion(timestamp);
         String storagePath = String.format("%s.%s.%s", STORAGE_PREFIX, request.getDatasetName(), version);
@@ -87,7 +87,7 @@ public class DatasetService {
         datasetEntity.setClientIp(clientIp);
 
         writeClient.writeMeasurement(datasetEntity);
-
+        return datasetEntity;
     }
 
     public DatasetEntity queryMeta(String path) {

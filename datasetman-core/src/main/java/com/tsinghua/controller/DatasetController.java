@@ -38,9 +38,8 @@ public class DatasetController {
     @PostMapping("/save")
     @RequirePermission(Permission.MODEL_UPDATE)
     @OperationLog(value = "保存数据集", type = OperationLog.OperationType.UPDATE)
-    public Result<Void> saveDataset(@Validated @RequestBody DatasetRequest request) {
-        datasetService.saveDataset(request);
-        return Result.success("保存成功");
+    public Result<DatasetEntity> saveDataset(@Validated @RequestBody DatasetRequest request) {
+        return Result.success(datasetService.saveDataset(request));
     }
 
     @ApiOperation("数据集详情")
