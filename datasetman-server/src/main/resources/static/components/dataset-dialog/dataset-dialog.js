@@ -4,6 +4,7 @@ class DatasetDialog extends HTMLElement {
         this.mode = 'create'; // 'create' or 'edit'
         this.datasetData = null;
         this.isSubmitting = false; // 防止重复提交标志
+        this.sqlList = []; // SQL列表
         this.attachShadow({ mode: 'open' });
     }
 
@@ -163,9 +164,10 @@ class DatasetDialog extends HTMLElement {
                     font-size: 13px;
                     background: #fafbff;
                     resize: vertical;
-                    min-height: 250px;
+                    min-height: 120px;
                     font-family: 'Consolas', 'Monaco', monospace;
                     box-sizing: border-box;
+                    width: 100%;
                 }
                 
                 .modal-textarea:focus {
@@ -240,6 +242,93 @@ class DatasetDialog extends HTMLElement {
                 .result-loading {
                     color: #4c89ff;
                 }
+                
+                /* SQL列表样式 */
+                .sql-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+                
+                .sql-item {
+                    display: flex;
+                    gap: 8px;
+                    align-items: flex-start;
+                }
+                
+                .sql-item-number {
+                    min-width: 24px;
+                    height: 36px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #e2e6ef;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: 500;
+                    color: #5f6b7a;
+                }
+                
+                .sql-item-content {
+                    flex: 1;
+                    min-width: 0;
+                    width: 100%;
+                }
+                
+                .sql-item-actions {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    min-width: 32px;
+                }
+                
+                .sql-action-btn {
+                    padding: 4px 8px;
+                    border: 1px solid #e2e6ef;
+                    background: white;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 11px;
+                    transition: all 0.2s;
+                    min-width: 32px;
+                }
+                
+                .sql-action-btn:hover {
+                    border-color: #4c89ff;
+                    color: #4c89ff;
+                }
+                
+                .sql-action-btn.delete:hover {
+                    border-color: #ff4d4f;
+                    color: #ff4d4f;
+                }
+                
+                .sql-action-btn.test:hover {
+                    border-color: #52c41a;
+                    color: #52c41a;
+                }
+                
+                .sql-action-btn:disabled {
+                    opacity: 0.4;
+                    cursor: not-allowed;
+                }
+                
+                .btn-add-sql {
+                    padding: 6px 12px;
+                    border: 1px dashed #e2e6ef;
+                    background: white;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    color: #5f6b7a;
+                    transition: all 0.2s;
+                    margin-top: 8px;
+                }
+                
+                .btn-add-sql:hover {
+                    border-color: #4c89ff;
+                    color: #4c89ff;
+                }
             </style>
             
             <div class="modal" id="datasetModal">
@@ -270,10 +359,10 @@ class DatasetDialog extends HTMLElement {
                         <div class="modal-form-row">
                             <label class="modal-label">SQL <span style="color: red;">*</span> :</label>
                             <div class="modal-input-wrapper">
-                                <textarea class="modal-textarea" id="datasetSql" placeholder="请输入SQL查询语句" rows="3"></textarea>
-                                <div class="test-row">
-                                    <button type="button" class="btn-test" id="testBtn">测试</button>
+                                <div class="sql-list" id="sqlList">
+                                    <!-- SQL列表将动态生成 -->
                                 </div>
+                                <button type="button" class="btn-add-sql" id="addSqlBtn">+ 添加SQL</button>
                             </div>
                         </div>
                         
@@ -338,8 +427,8 @@ class DatasetDialog extends HTMLElement {
             this.handleSubmit();
         });
 
-        // 测试按钮
-        this.shadowRoot.querySelector('#testBtn').addEventListener('click', () => this.handleTest());
+        // 添加SQL按钮
+        this.shadowRoot.querySelector('#addSqlBtn').addEventListener('click', () => this.addSql());
     }
 
     // 显示弹窗 - 创建模式
@@ -398,14 +487,46 @@ class DatasetDialog extends HTMLElement {
         this.shadowRoot.querySelector('#datasetForm').reset();
         this.shadowRoot.querySelector('#datasetName').readOnly = false;
         this.clearResult();
+        this.sqlList = ['']; // 初始化为包含一个空SQL的列表
+        this.renderSqlList();
     }
 
     fillForm(data) {
         this.shadowRoot.querySelector('#datasetName').value = data.name || data.datasetName || '';
         this.shadowRoot.querySelector('#datasetName').readOnly = true;
-        this.shadowRoot.querySelector('#datasetSql').value = data.sql || data.datasetSql || '';
         this.shadowRoot.querySelector('#datasetRemark').value = data.remark || '';
         this.clearResult();
+        
+        // 处理SQL列表
+        if (data.sql || data.datasetSql) {
+            const sqlValue = data.sql || data.datasetSql;
+            if (Array.isArray(sqlValue)) {
+                this.sqlList = sqlValue;
+            } else if (typeof sqlValue === 'string') {
+                try {
+                    // 尝试解析JSON字符串
+                    const parsed = JSON.parse(sqlValue);
+                    if (Array.isArray(parsed)) {
+                        this.sqlList = parsed;
+                    } else {
+                        // 如果解析出来不是数组，按分号分割
+                        this.sqlList = sqlValue.split(';').map(s => s.trim()).filter(s => s);
+                        if (this.sqlList.length === 0) {
+                            this.sqlList = [sqlValue];
+                        }
+                    }
+                } catch (e) {
+                    // JSON解析失败，按分号分割
+                    this.sqlList = sqlValue.split(';').map(s => s.trim()).filter(s => s);
+                    if (this.sqlList.length === 0) {
+                        this.sqlList = [sqlValue];
+                    }
+                }
+            }
+        } else {
+            this.sqlList = [''];
+        }
+        this.renderSqlList();
     }
 
     clearResult() {
@@ -423,38 +544,47 @@ class DatasetDialog extends HTMLElement {
 
     validateForm() {
         const name = this.shadowRoot.querySelector('#datasetName').value.trim();
-        const sql = this.shadowRoot.querySelector('#datasetSql').value.trim();
+        
+        // 更新sqlList
+        this.updateSqlListFromDOM();
         
         if (!name) {
             this.showResult('请输入数据集名称', 'error');
             return false;
         }
         
-        if (!sql) {
-            this.showResult('请输入SQL查询语句', 'error');
+        if (!this.sqlList || this.sqlList.length === 0 || this.sqlList.every(sql => !sql.trim())) {
+            this.showResult('请输入至少一条SQL查询语句', 'error');
             return false;
         }
         
         return true;
     }
 
-    async handleTest() {
-        if (!this.validateForm()) {
+    async handleTest(index) {
+        // 更新sqlList
+        this.updateSqlListFromDOM();
+        
+        const sqlToTest = this.sqlList[index];
+        
+        if (!sqlToTest || !sqlToTest.trim()) {
+            this.showResult('请输入要测试的SQL查询语句', 'error');
             return;
         }
         
-        const testBtn = this.shadowRoot.querySelector('#testBtn');
+        const testBtn = this.shadowRoot.querySelector(`[data-action="test"][data-index="${index}"]`);
         testBtn.disabled = true;
         testBtn.textContent = '测试中...';
         this.showResult('正在执行SQL测试...', 'loading');
         
         try {
-            const name = this.shadowRoot.querySelector('#datasetName').value.trim();
-            const sql = this.shadowRoot.querySelector('#datasetSql').value.trim();
+            // 后端是@PostMapping但使用@RequestParam，所以需要POST请求但参数在URL中
+            const url = window.AppConfig.getApiUrl('dataset', 'testsql');
+            const queryString = new URLSearchParams({ sql: sqlToTest.trim() }).toString();
+            const fullUrl = url + (url.includes('?') ? '&' : '?') + queryString;
             
-            const result = await window.AppConfig.post('dataset', 'testsql', {
-                datasetName: name,
-                datasetSql: sql
+            const result = await window.AppConfig.request(fullUrl, {
+                method: 'POST'
             });
             
             if (result.success) {
@@ -479,9 +609,15 @@ class DatasetDialog extends HTMLElement {
         submitBtn.textContent = '保存中...';
         this.showResult('正在保存数据集...', 'loading');
 
+        // 确保sqlList是最新的
+        this.updateSqlListFromDOM();
+        
+        // 过滤掉空SQL
+        const validSqlList = this.sqlList.filter(sql => sql && sql.trim());
+        
         const formData = {
             datasetName: this.shadowRoot.querySelector('#datasetName').value.trim(),
-            datasetSql: this.shadowRoot.querySelector('#datasetSql').value.trim(),
+            datasetSql: validSqlList,
             parent: this.datasetData?.createTime || 0,
             remark: this.shadowRoot.querySelector('#datasetRemark')?.value.trim() || ''
         };
@@ -532,6 +668,117 @@ class DatasetDialog extends HTMLElement {
             composed: true,
             detail: { message, type }
         }));
+    }
+    
+    // 渲染SQL列表
+    renderSqlList() {
+        const sqlListContainer = this.shadowRoot.querySelector('#sqlList');
+        sqlListContainer.innerHTML = '';
+        
+        this.sqlList.forEach((sql, index) => {
+            const sqlItem = document.createElement('div');
+            sqlItem.className = 'sql-item';
+            sqlItem.innerHTML = `
+                <div class="sql-item-number">${index + 1}</div>
+                <div class="sql-item-content">
+                    <textarea class="modal-textarea sql-textarea" data-index="${index}" placeholder="请输入SQL查询语句" rows="1">${sql}</textarea>
+                </div>
+                <div class="sql-item-actions">
+                    <button type="button" class="sql-action-btn" data-action="up" data-index="${index}" title="上移" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button type="button" class="sql-action-btn" data-action="down" data-index="${index}" title="下移" ${index === this.sqlList.length - 1 ? 'disabled' : ''}>↓</button>
+                    <button type="button" class="sql-action-btn delete" data-action="delete" data-index="${index}" title="删除" ${this.sqlList.length === 1 ? 'disabled' : ''}>×</button>
+                    <button type="button" class="sql-action-btn test" data-action="test" data-index="${index}" title="测试">测试</button>
+                </div>
+            `;
+            sqlListContainer.appendChild(sqlItem);
+        });
+        
+        // 绑定事件
+        this.bindSqlListEvents();
+    }
+    
+    // 绑定SQL列表事件
+    bindSqlListEvents() {
+        const sqlListContainer = this.shadowRoot.querySelector('#sqlList');
+        
+        // 上移按钮
+        sqlListContainer.querySelectorAll('[data-action="up"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.moveSqlUp(index);
+            });
+        });
+        
+        // 下移按钮
+        sqlListContainer.querySelectorAll('[data-action="down"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.moveSqlDown(index);
+            });
+        });
+        
+        // 删除按钮
+        sqlListContainer.querySelectorAll('[data-action="delete"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.deleteSql(index);
+            });
+        });
+        
+        // 测试按钮
+        sqlListContainer.querySelectorAll('[data-action="test"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.handleTest(index);
+            });
+        });
+    }
+    
+    // 添加SQL
+    addSql() {
+        this.updateSqlListFromDOM();
+        this.sqlList.push('');
+        this.renderSqlList();
+    }
+    
+    // 删除SQL
+    deleteSql(index) {
+        this.updateSqlListFromDOM();
+        this.sqlList.splice(index, 1);
+        this.renderSqlList();
+    }
+    
+    // 上移SQL
+    moveSqlUp(index) {
+        if (index <= 0) return;
+        this.updateSqlListFromDOM();
+        [this.sqlList[index - 1], this.sqlList[index]] = [this.sqlList[index], this.sqlList[index - 1]];
+        this.renderSqlList();
+    }
+    
+    // 下移SQL
+    moveSqlDown(index) {
+        if (index >= this.sqlList.length - 1) return;
+        this.updateSqlListFromDOM();
+        [this.sqlList[index], this.sqlList[index + 1]] = [this.sqlList[index + 1], this.sqlList[index]];
+        this.renderSqlList();
+    }
+    
+    // 从DOM更新sqlList
+    updateSqlListFromDOM() {
+        const sqlTextareas = this.shadowRoot.querySelectorAll('.sql-textarea');
+        this.sqlList = Array.from(sqlTextareas).map(textarea => textarea.value);
+    }
+    
+    // 获取当前聚焦的SQL输入框索引
+    getFocusedSqlIndex() {
+        const sqlTextareas = this.shadowRoot.querySelectorAll('.sql-textarea');
+        for (let i = 0; i < sqlTextareas.length; i++) {
+            if (document.activeElement === sqlTextareas[i]) {
+                return i;
+            }
+        }
+        return -1;
     }
 }
 

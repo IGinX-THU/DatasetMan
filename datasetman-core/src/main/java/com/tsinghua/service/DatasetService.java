@@ -9,6 +9,7 @@ import cn.edu.tsinghua.iginx.session_v2.IginXClient;
 import cn.edu.tsinghua.iginx.session_v2.QueryClient;
 import cn.edu.tsinghua.iginx.session_v2.WriteClient;
 import cn.edu.tsinghua.iginx.session_v2.write.Point;
+import com.alibaba.fastjson2.JSONObject;
 import com.tsinghua.auth.aspect.OperationLogAspect;
 import com.tsinghua.dto.DatasetRequest;
 import com.tsinghua.entity.DatasetEntity;
@@ -60,7 +61,7 @@ public class DatasetService {
         Point point = Point.builder()
                 .measurement(storagePath)    // 存储路径
                 .key(timestamp)         // 块序号作为时间戳
-                .binaryValue(request.getDatasetSql().getBytes(StandardCharsets.UTF_8))          // 直接存储二进制块
+                .binaryValue(JSONObject.toJSONString(request.getDatasetSql()).getBytes(StandardCharsets.UTF_8))          // 直接存储二进制块
                 .build();
 
         WriteClient writeClient = iginxClient.getWriteClient();
@@ -76,7 +77,7 @@ public class DatasetService {
         DatasetEntity datasetEntity = new DatasetEntity();
         datasetEntity.setId(timestamp);
         datasetEntity.setDatasetName(request.getDatasetName());
-        datasetEntity.setDatasetSql(request.getDatasetSql());
+        datasetEntity.setDatasetSql(JSONObject.toJSONString(request.getDatasetSql()));
         datasetEntity.setParent(request.getParent());
         datasetEntity.setRemark(request.getRemark());
         datasetEntity.setVersion(version);

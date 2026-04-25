@@ -30,8 +30,8 @@ public class DatasetController {
     @PostMapping("/testsql")
     @RequirePermission(Permission.MODEL_UPDATE)
     @OperationLog(value = "测试SQL", type = OperationLog.OperationType.UPDATE)
-    public Result<Object> testSQL(@Validated @RequestBody DatasetRequest request) {
-        return Result.success(datasetService.testSQL(request.getDatasetSql()));
+    public Result<Object> testSQL(@RequestParam String sql) {
+        return Result.success(datasetService.testSQL(sql));
     }
 
     @ApiOperation("保存数据集")
