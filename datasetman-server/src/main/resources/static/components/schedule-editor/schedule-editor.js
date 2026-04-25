@@ -99,16 +99,6 @@ class ScheduleEditor extends HTMLElement {
                     font-family: monospace;
                     color: #409eff;
                 }
-                .cron-expression-row {
-                    margin-bottom: 20px;
-                }
-                .cron-expression-input-row {
-                    display: flex;
-                    gap: 8px;
-                }
-                .cron-expression-input-row input {
-                    flex: 1;
-                }
                 .cron-fields-grid {
                     display: grid;
                     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -277,13 +267,6 @@ class ScheduleEditor extends HTMLElement {
                 </div>
                 
                 <div class="schedule-tab-content" id="cron">
-                    <div class="cron-expression-row">
-                        <label class="schedule-label">Cron表达式</label>
-                        <div class="cron-expression-input-row">
-                            <input type="text" id="cron-expression-input" placeholder="通过下方控件构建 Cron 表达式，或直接在此编辑" class="schedule-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-                            <button type="button" id="cron-copy-btn" class="schedule-btn schedule-btn--primary">复制</button>
-                        </div>
-                    </div>
                     <div class="cron-fields-grid">
                         <article class="cron-field-card">
                             <label class="schedule-label">秒</label>
@@ -387,9 +370,6 @@ class ScheduleEditor extends HTMLElement {
         const today = new Date().toISOString().split('T')[0];
         this.shadowRoot.getElementById('at-date').value = today;
 
-        // 初始化Cron表达式
-        this.shadowRoot.getElementById('cron-expression-input').value = '* * * * * ?';
-
         // Tab切换
         this.shadowRoot.querySelectorAll('.schedule-tab').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -410,25 +390,11 @@ class ScheduleEditor extends HTMLElement {
             input.addEventListener('input', () => this.updateCronFromFields());
         });
 
-        // Cron expression input changes
-        this.shadowRoot.getElementById('cron-expression-input').addEventListener('input', () => {
-            this.updateFieldsFromCron();
-            this.updateCronPreview();
-        });
-
-        // Copy button
-        this.shadowRoot.getElementById('cron-copy-btn').addEventListener('click', () => {
-            const input = this.shadowRoot.getElementById('cron-expression-input');
-            input.select();
-            document.execCommand('copy');
-        });
-
         // Preset buttons
         this.shadowRoot.querySelectorAll('.cron-preset-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const cron = btn.getAttribute('data-cron');
-                this.shadowRoot.getElementById('cron-expression-input').value = cron;
-                this.updateFieldsFromCron();
+                this.parseCronExpression(cron);
                 this.updateCronPreview();
             });
         });
@@ -473,111 +439,14 @@ class ScheduleEditor extends HTMLElement {
         });
 
         const cronExpression = cronParts.join(' ');
-        this.shadowRoot.getElementById('cron-expression-input').value = cronExpression;
+        this.scheduleValue = cronExpression;
         this.updateCronPreview();
-    }
-
-    updateFieldsFromCron() {
-        const cronInput = this.shadowRoot.getElementById('cron-expression-input');
-        const cron = cronInput.value.trim();
-        const parts = cron.split(' ');
         
-        const fields = ['second', 'minute', 'hour', 'day', 'month', 'week'];
-        
-        fields.forEach((field, index) => {
-            const part = parts[index] || (field === 'week' ? '?' : '*');
-            const select = this.shadowRoot.querySelector('.cron-field-select[data-field="' + field + '"]');
-            const input = this.shadowRoot.querySelector('.cron-field-input[data-field="' + field + '"]');
-            
-            if (!select) return;
-            
-            if (part === '*') {
-                select.value = '*';
-                if (input) input.value = '';
-            } else if (part === '?') {
-                select.value = '?';
-                if (input) input.value = '';
-            } else if (part.includes(',')) {
-                select.value = 'specific';
-                if (input) input.value = part;
-            } else if (part.includes('-') && !part.includes('/')) {
-                select.value = 'range';
-                if (input) input.value = part;
-            } else if (part.includes('/')) {
-                select.value = 'step';
-                if (input) input.value = part;
-            } else {
-                select.value = 'specific';
-                if (input) input.value = part;
-            }
-        });
-    }
-
-    updateCronPreview() {
-        const cron = this.shadowRoot.getElementById('cron-expression-input').value.trim();
-        const parts = cron.split(' ');
-        
-        // Generate natural language description
-        const desc = this.generateCronDescription(parts);
-        this.shadowRoot.getElementById('cron-desc-text').textContent = desc;
-        
-        // Generate next run times
-        const nextRuns = this.generateNextRunTimes(cron);
-        const nextList = this.shadowRoot.getElementById('cron-next-list');
-        nextList.innerHTML = nextRuns.map(run => '<div class="cron-next-item">' + run + '</div>').join('');
-    }
-
-    generateCronDescription(parts) {
-        if (parts.length < 6) return '无效的Cron表达式';
-        
-        const [second, minute, hour, day, month, week] = parts;
-        let desc = '';
-        
-        if (second === '*') desc += '每秒';
-        else if (second.includes('/')) desc += '每' + second.split('/')[1] + '秒';
-        else desc += '第' + second + '秒';
-        
-        if (minute === '*') desc += '每分';
-        else if (minute.includes('/')) desc += '每' + minute.split('/')[1] + '分';
-        else desc += '第' + minute + '分';
-        
-        if (hour === '*') desc += '每小时';
-        else if (hour.includes('/')) desc += '每' + hour.split('/')[1] + '小时';
-        else desc += hour + '点';
-        
-        if (day === '*') desc += '每天';
-        else if (day === '?') desc += '';
-        else if (day.includes('/')) desc += '每' + day.split('/')[1] + '天';
-        else desc += '每月' + day + '号';
-        
-        if (month === '*') desc += '每月';
-        else desc += month + '月';
-        
-        if (week === '*') desc += '每周';
-        else if (week === '?') desc += '';
-        else desc += '周' + week;
-        
-        return desc || '每秒执行';
-    }
-
-    generateNextRunTimes(cron) {
-        const nextRuns = [];
-        const now = new Date();
-        
-        // Simple implementation - just show next 5 minutes as examples
-        // In a real implementation, you would use a cron parser library
-        for (let i = 0; i < 5; i++) {
-            const nextTime = new Date(now.getTime() + i * 60000);
-            const year = nextTime.getFullYear();
-            const month = String(nextTime.getMonth() + 1).padStart(2, '0');
-            const day = String(nextTime.getDate()).padStart(2, '0');
-            const hours = String(nextTime.getHours()).padStart(2, '0');
-            const minutes = String(nextTime.getMinutes()).padStart(2, '0');
-            const seconds = String(nextTime.getSeconds()).padStart(2, '0');
-            nextRuns.push(year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds);
-        }
-        
-        return nextRuns;
+        this.dispatchEvent(new CustomEvent('schedule-change', {
+            detail: { schedule: cronExpression },
+            bubbles: true,
+            composed: true
+        }));
     }
 
     updateSchedule() {
@@ -713,8 +582,103 @@ class ScheduleEditor extends HTMLElement {
     }
 
     parseCronExpression(cron) {
-        this.shadowRoot.getElementById('cron-expression-input').value = cron;
-        this.updateFieldsFromCron();
+        const parts = cron.split(' ');
+        if (parts.length < 6) return;
+
+        const fields = ['second', 'minute', 'hour', 'day', 'month', 'week'];
+        
+        fields.forEach((field, index) => {
+            const part = parts[index] || (field === 'week' ? '?' : '*');
+            const select = this.shadowRoot.querySelector('.cron-field-select[data-field="' + field + '"]');
+            const input = this.shadowRoot.querySelector('.cron-field-input[data-field="' + field + '"]');
+            
+            if (!select) return;
+            
+            if (part === '*') {
+                select.value = '*';
+                if (input) input.value = '';
+            } else if (part === '?') {
+                select.value = '?';
+                if (input) input.value = '';
+            } else if (part.includes(',')) {
+                select.value = 'specific';
+                if (input) input.value = part;
+            } else if (part.includes('-') && !part.includes('/')) {
+                select.value = 'range';
+                if (input) input.value = part;
+            } else if (part.includes('/')) {
+                select.value = 'step';
+                if (input) input.value = part;
+            } else {
+                select.value = 'specific';
+                if (input) input.value = part;
+            }
+        });
+        
+        this.updateCronFromFields();
+    }
+
+    updateCronPreview() {
+        const cron = this.scheduleValue || '* * * * * ?';
+        const parts = cron.split(' ');
+        
+        const desc = this.generateCronDescription(parts);
+        this.shadowRoot.getElementById('cron-desc-text').textContent = desc;
+        
+        const nextRuns = this.generateNextRunTimes(cron);
+        const nextList = this.shadowRoot.getElementById('cron-next-list');
+        nextList.innerHTML = nextRuns.map(run => '<div class="cron-next-item">' + run + '</div>').join('');
+    }
+
+    generateCronDescription(parts) {
+        if (parts.length < 6) return '无效的Cron表达式';
+        
+        const [second, minute, hour, day, month, week] = parts;
+        let desc = '';
+        
+        if (second === '*') desc += '每秒';
+        else if (second.includes('/')) desc += '每' + second.split('/')[1] + '秒';
+        else desc += '第' + second + '秒';
+        
+        if (minute === '*') desc += '每分';
+        else if (minute.includes('/')) desc += '每' + minute.split('/')[1] + '分';
+        else desc += '第' + minute + '分';
+        
+        if (hour === '*') desc += '每小时';
+        else if (hour.includes('/')) desc += '每' + hour.split('/')[1] + '小时';
+        else desc += hour + '点';
+        
+        if (day === '*') desc += '每天';
+        else if (day === '?') desc += '';
+        else if (day.includes('/')) desc += '每' + day.split('/')[1] + '天';
+        else desc += '每月' + day + '号';
+        
+        if (month === '*') desc += '每月';
+        else desc += month + '月';
+        
+        if (week === '*') desc += '每周';
+        else if (week === '?') desc += '';
+        else desc += '周' + week;
+        
+        return desc || '每秒执行';
+    }
+
+    generateNextRunTimes(cron) {
+        const nextRuns = [];
+        const now = new Date();
+        
+        for (let i = 0; i < 5; i++) {
+            const nextTime = new Date(now.getTime() + i * 60000);
+            const year = nextTime.getFullYear();
+            const month = String(nextTime.getMonth() + 1).padStart(2, '0');
+            const day = String(nextTime.getDate()).padStart(2, '0');
+            const hours = String(nextTime.getHours()).padStart(2, '0');
+            const minutes = String(nextTime.getMinutes()).padStart(2, '0');
+            const seconds = String(nextTime.getSeconds()).padStart(2, '0');
+            nextRuns.push(year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds);
+        }
+        
+        return nextRuns;
     }
 }
 

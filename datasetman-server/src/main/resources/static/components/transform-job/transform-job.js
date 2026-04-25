@@ -743,8 +743,8 @@ class TransformJob extends HTMLElement {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="schedule">调度策略 <span class="required">*</span></label>
+                            <input type="text" id="schedule" name="schedule" placeholder="请输入调度策略" value="${job?.schedule || ''}" style="margin-bottom: 12px;">
                             <schedule-editor id="scheduleEditor"></schedule-editor>
-                            <input type="hidden" id="schedule" name="schedule" value="${job?.schedule || ''}">
                         </div>
                     </div>
                 </div>
