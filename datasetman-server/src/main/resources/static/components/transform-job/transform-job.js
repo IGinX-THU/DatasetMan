@@ -354,6 +354,20 @@ class TransformJob extends HTMLElement {
             toggleExportFileField();
         }
 
+        // Schedule编辑器事件绑定
+        const scheduleEditor = form.querySelector('#scheduleEditor');
+        const scheduleInput = form.querySelector('#schedule');
+        if (scheduleEditor && scheduleInput) {
+            // 设置初始值
+            if (scheduleInput.value) {
+                scheduleEditor.setValue(scheduleInput.value);
+            }
+            // 监听schedule变化
+            scheduleEditor.addEventListener('schedule-change', (e) => {
+                scheduleInput.value = e.detail.schedule;
+            });
+        }
+
         if (addTaskBtn && tasksList) {
             addTaskBtn.addEventListener('click', () => {
                 const taskRow = document.createElement('div');
@@ -552,6 +566,20 @@ class TransformJob extends HTMLElement {
             toggleExportFileField();
         }
 
+        // Schedule编辑器事件绑定
+        const scheduleEditor = form.querySelector('#scheduleEditor');
+        const scheduleInput = form.querySelector('#schedule');
+        if (scheduleEditor && scheduleInput) {
+            // 设置初始值
+            if (scheduleInput.value) {
+                scheduleEditor.setValue(scheduleInput.value);
+            }
+            // 监听schedule变化
+            scheduleEditor.addEventListener('schedule-change', (e) => {
+                scheduleInput.value = e.detail.schedule;
+            });
+        }
+
         if (addTaskBtn && tasksList) {
             addTaskBtn.addEventListener('click', () => {
                 const taskRow = document.createElement('div');
@@ -715,7 +743,8 @@ class TransformJob extends HTMLElement {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="schedule">调度策略 <span class="required">*</span></label>
-                            <input type="text" id="schedule" name="schedule" required placeholder="after 10 second" value="${job?.schedule || ''}">
+                            <schedule-editor id="scheduleEditor"></schedule-editor>
+                            <input type="hidden" id="schedule" name="schedule" value="${job?.schedule || ''}">
                         </div>
                     </div>
                 </div>
