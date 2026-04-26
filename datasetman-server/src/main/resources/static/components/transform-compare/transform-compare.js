@@ -351,6 +351,14 @@ class TransformCompare extends HTMLElement {
             </div>
         `;
 
+        // 移除任何已存在的dialog
+        const existingDialogs = document.querySelectorAll('.dialog-mask');
+        existingDialogs.forEach(d => {
+            if (d.parentNode) {
+                d.parentNode.removeChild(d);
+            }
+        });
+
         const dialog = document.createElement('div');
         dialog.innerHTML = dialogHtml;
         document.body.appendChild(dialog);
@@ -601,6 +609,14 @@ class TransformCompare extends HTMLElement {
                     </div>
                 `;
 
+                // 移除任何已存在的dialog
+                const existingDialogs = document.querySelectorAll('.dialog-mask');
+                existingDialogs.forEach(d => {
+                    if (d.parentNode) {
+                        d.parentNode.removeChild(d);
+                    }
+                });
+
                 const dialog = document.createElement('div');
                 dialog.innerHTML = dialogHtml;
                 document.body.appendChild(dialog);
@@ -786,6 +802,14 @@ class TransformCompare extends HTMLElement {
             </div>
         `;
 
+        // 移除任何已存在的dialog
+        const existingDialogs = document.querySelectorAll('.dialog-mask');
+        existingDialogs.forEach(d => {
+            if (d.parentNode) {
+                d.parentNode.removeChild(d);
+            }
+        });
+
         const dialog = document.createElement('div');
         dialog.innerHTML = dialogHtml;
         document.body.appendChild(dialog);
@@ -805,6 +829,11 @@ class TransformCompare extends HTMLElement {
         const closeDialog = () => {
             document.body.removeChild(dialog);
         };
+
+        // 点击dialog-mask关闭对话框
+        if (dialogMask) {
+            dialogMask.addEventListener('click', closeDialog);
+        }
 
         cancelBtn.addEventListener('click', closeDialog);
 
