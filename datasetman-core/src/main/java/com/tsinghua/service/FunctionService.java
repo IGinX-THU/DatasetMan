@@ -56,10 +56,28 @@ public class FunctionService {
         iginxSession.executeSql(registerSQL);
     }
 
-    public void delete(String name) throws SessionException {
+    public void delete(String name) throws Exception {
         String registerSQL = String.format(DROP_SQL_FORMATTER, name);
         log.info("删除Transform SQL: {}", registerSQL);
         iginxSession.executeSql(registerSQL);
+        //清理文件
+        List<RegisterTaskInfoDto> registerTaskInfoDtos = query("all");
+        RegisterTaskInfoDto registerTaskInfoDto = registerTaskInfoDtos.stream().filter(info -> info.getName().equals(name)).findFirst().orElse(null);
+        if (registerTaskInfoDto != null) {
+            if (registerTaskInfoDto.getType().equals("TRANSFORM")) {
+                Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "transform");
+                Path filePath = pathDir.resolve(registerTaskInfoDto.getFileName());
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                }
+            } else {
+                Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "udf");
+                Path filePath = pathDir.resolve(registerTaskInfoDto.getFileName());
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                }
+            }
+        }
     }
 
     public List<RegisterTaskInfoDto> query(String type) throws SessionException {
@@ -103,7 +121,7 @@ public class FunctionService {
         }
         Path targetPath = pathDir.resolve(fileName);
         Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
-        log.info("保存Transform文件: {}", targetPath);
+        log.info("保存UDF文件: {}", targetPath);
 
         String filePath = targetPath.toAbsolutePath().toString();
         // 注册UDTF
