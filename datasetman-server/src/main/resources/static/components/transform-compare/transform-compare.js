@@ -122,6 +122,30 @@ class TransformCompare extends HTMLElement {
         }
     }
 
+    async commitJobFromAPI(createTime) {
+        try {
+            const url = window.AppConfig.getApiUrl('transformJob', 'commit').replace('{createTime}', createTime);
+            const headers = window.AppConfig.getAuthHeaders();
+
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: headers
+            });
+
+            const result = await response.json();
+
+            if (result.code === 200 || result.success) {
+                this.showToast('任务已提交');
+                this.loadJobsFromAPI();
+            } else {
+                this.showToast(result.message || '提交失败', 'error');
+            }
+        } catch (error) {
+            console.error('提交任务失败:', error);
+            this.showToast('网络错误，提交失败', 'error');
+        }
+    }
+
     getJobNameByCreateTime(createTime) {
         const job = this.data.find(j => j.createTime == createTime);
         return job ? job.name : '';
@@ -234,6 +258,7 @@ class TransformCompare extends HTMLElement {
                 <td>${job.createtime}</td>
                 <td>
                     <div class="action-buttons">
+                        <button class="action-btn run" data-id="${job.createTime}">运行</button>
                         <button class="action-btn edit" data-id="${job.createTime}">编辑</button>
                         <button class="action-btn delete" data-id="${job.createTime}">删除</button>
                     </div>
@@ -247,6 +272,8 @@ class TransformCompare extends HTMLElement {
 
             if (e.target.classList.contains('edit')) {
                 this.showEditModal(id);
+            } else if (e.target.classList.contains('run')) {
+                this.showRunConfirm(id);
             } else if (e.target.classList.contains('delete')) {
                 this.showDeleteConfirm(id);
             }
@@ -450,7 +477,7 @@ class TransformCompare extends HTMLElement {
                     this.showToast('请填写完整任务信息', 'error');
                     return;
                 }
-                if (task.taskType === 1 && !task.dataFlowType) {
+                if (!task.dataFlowType) {
                     this.showToast('请填写数据流动方式', 'error');
                     return;
                 }
@@ -839,6 +866,85 @@ class TransformCompare extends HTMLElement {
 
         confirmBtn.addEventListener('click', async () => {
             await this.deleteJobFromAPI(id);
+            closeDialog();
+        });
+    }
+
+    showRunConfirm(id) {
+        const jobName = this.getJobNameByCreateTime(id);
+        const dialogHtml = `
+            <div class="dialog-mask" style="
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            ">
+                <div class="dialog-content" style="
+                    background: white;
+                    border-radius: 8px;
+                    padding: 24px;
+                    max-width: 400px;
+                    width: 90%;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                ">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2329;">确认运行</h3>
+                    <p style="margin: 0 0 24px 0; color: #646a73; line-height: 1.5;">
+                        确定要运行作业 "${jobName}" 吗？
+                    </p>
+                    <div class="dialog-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button type="button" class="cancel-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #c9cdd4;
+                            border-radius: 4px;
+                            background: white;
+                            color: #1f2329;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">取消</button>
+                        <button type="button" class="confirm-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #3b82f6;
+                            border-radius: 4px;
+                            background: #3b82f6;
+                            color: white;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">确认运行</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const dialog = document.createElement('div');
+        dialog.innerHTML = dialogHtml;
+        document.body.appendChild(dialog);
+
+        const dialogMask = dialog.querySelector('.dialog-mask');
+        const dialogContent = dialog.querySelector('.dialog-content');
+        const cancelBtn = dialog.querySelector('.cancel-btn');
+        const confirmBtn = dialog.querySelector('.confirm-btn');
+
+        if (dialogContent) {
+            dialogContent.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        const closeDialog = () => {
+            document.body.removeChild(dialog);
+        };
+
+        if (dialogMask) {
+            dialogMask.addEventListener('click', closeDialog);
+        }
+
+        cancelBtn.addEventListener('click', closeDialog);
+
+        confirmBtn.addEventListener('click', async () => {
+            await this.commitJobFromAPI(id);
             closeDialog();
         });
     }
@@ -1407,10 +1513,11 @@ class TransformCompare extends HTMLElement {
                     timeout: parseInt(timeout)
                 };
 
+                if (dataFlowType) {
+                    task.dataFlowType = dataFlowType === 'stream' ? 1 : 0;
+                }
+
                 if (taskType === 'python') {
-                    if (dataFlowType) {
-                        task.dataFlowType = dataFlowType === 'stream' ? 1 : 0;
-                    }
                     if (pyTaskName) {
                         task.pyTaskName = pyTaskName;
                     }

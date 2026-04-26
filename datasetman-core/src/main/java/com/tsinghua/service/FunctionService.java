@@ -66,13 +66,13 @@ public class FunctionService {
         if (registerTaskInfoDto != null) {
             if (registerTaskInfoDto.getType().equals("TRANSFORM")) {
                 Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "transform");
-                Path filePath = pathDir.resolve(registerTaskInfoDto.getFileName());
+                Path filePath = pathDir.resolve(registerTaskInfoDto.getFileName()).toAbsolutePath();
                 if (Files.exists(filePath)) {
                     Files.delete(filePath);
                 }
             } else {
                 Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "udf");
-                Path filePath = pathDir.resolve(registerTaskInfoDto.getFileName());
+                Path filePath = pathDir.resolve(registerTaskInfoDto.getFileName()).toAbsolutePath();
                 if (Files.exists(filePath)) {
                     Files.delete(filePath);
                 }

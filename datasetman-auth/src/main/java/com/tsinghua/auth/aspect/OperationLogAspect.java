@@ -132,7 +132,7 @@ public class OperationLogAspect {
             log.info("操作日志: {}", logEntity.toString());
             
             // 检查是否为响应已提交异常，避免重复记录堆栈
-            if (!e.getMessage().contains("getWriter() has already been called") && 
+            if (e.getMessage()!=null && !e.getMessage().contains("getWriter() has already been called") &&
                 !e.getMessage().contains("getOutputStream() has already been called")) {
                 log.error("操作异常详情", e);
             }

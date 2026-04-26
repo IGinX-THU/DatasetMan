@@ -1,10 +1,8 @@
 package com.tsinghua.controller;
 
-import com.tsinghua.auth.annotation.OperationLog;
 import com.tsinghua.auth.annotation.RequirePermission;
 import com.tsinghua.auth.enums.Permission;
 import com.tsinghua.dto.TransformJobQueryRequest;
-import com.tsinghua.dto.TransformJobRequest;
 import com.tsinghua.entity.TransformJobEntity;
 import com.tsinghua.model.Result;
 import com.tsinghua.service.TransformJobService;
@@ -49,4 +47,13 @@ public class TransformJobController {
         }
         return Result.success(result);
     }
+
+    @ApiOperation("提交任务")
+    @PutMapping("/commit/{createTime}")
+    @RequirePermission(Permission.RUN_TASK_READ)
+    public Result<?> commitJob(@PathVariable("createTime") Long createTime) throws Exception {
+        TransformJobEntity result = transformJobService.commitJob(createTime);
+        return Result.success("任务已提交", result);
+    }
+
 }

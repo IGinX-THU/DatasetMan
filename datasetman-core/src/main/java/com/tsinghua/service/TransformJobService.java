@@ -3,18 +3,40 @@ package com.tsinghua.service;
 import cn.edu.tsinghua.iginx.session.Session;
 import cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult;
 import cn.edu.tsinghua.iginx.session_v2.IginXClient;
+import cn.edu.tsinghua.iginx.session_v2.TransformClient;
 import cn.edu.tsinghua.iginx.session_v2.WriteClient;
+import cn.edu.tsinghua.iginx.session_v2.domain.Task;
+import cn.edu.tsinghua.iginx.session_v2.domain.Transform;
 import cn.edu.tsinghua.iginx.session_v2.write.Point;
+import cn.edu.tsinghua.iginx.thrift.DataFlowType;
+import cn.edu.tsinghua.iginx.thrift.ExportType;
+import cn.edu.tsinghua.iginx.thrift.TaskInfo;
+import cn.edu.tsinghua.iginx.thrift.TaskType;
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.TypeReference;
 import com.tsinghua.auth.aspect.OperationLogAspect;
+import com.tsinghua.dto.TaskInfoBo;
+import com.tsinghua.dto.TaskInfoDto;
 import com.tsinghua.dto.TransformJobQueryRequest;
 import com.tsinghua.dto.TransformJobRequest;
+import com.tsinghua.dto.request.FilesystemStorageRequest;
+import com.tsinghua.entity.DatasetEntity;
+import com.tsinghua.entity.ParsingRulesEntity;
+import com.tsinghua.entity.TransformCompareEntity;
 import com.tsinghua.entity.TransformJobEntity;
+import com.tsinghua.model.Result;
 import com.tsinghua.util.ConvertUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,12 +45,53 @@ import java.util.stream.Collectors;
 public class TransformJobService {
 
     private static final String DATA_PREFIX = "relational_system.transform_job";
+    private static final String FUNCTION_DIR_PREFIX = "function";
 
     @Autowired
     private Session iginxSession;
 
     @Autowired
     private IginXClient iginxClient;
+
+    @Autowired
+    private DatasetService datasetService;
+
+    @Autowired
+    private TransformCompareService transformCompareService;
+
+    @Autowired
+    private DataSourceService dataSourceService;
+
+    @Value("${iginx.ip}")
+    private String ip;
+
+    @Value("${iginx.port}")
+    private int port;
+
+    @PostConstruct
+    private void init() {
+        try {
+            // 创建函数目录
+            Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "job");
+            if (!Files.exists(pathDir)) {
+                Files.createDirectories(pathDir);
+                log.info("创建任务输出目录: {}", pathDir);
+            }
+            FilesystemStorageRequest request = new FilesystemStorageRequest();
+            request.setIp(ip);
+            request.setIginxPort(port);
+            request.setStorageEngineType(3);
+            request.setHasData(true);
+            request.setIsReadOnly(true);
+            request.setSchemaPrefix("file_system");
+            request.setPort(6666);
+            request.setDummyDir(Paths.get(FUNCTION_DIR_PREFIX).toAbsolutePath().toString());
+            dataSourceService.registerDataSource(request);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+        }
+
+    }
 
     public TransformJobEntity saveTransform(TransformJobRequest runTaskRequest) {
 
@@ -162,4 +225,82 @@ public class TransformJobService {
             throw new RuntimeException("删除Transform作业失败: " + e.getMessage(), e);
         }
     }
+
+    public TransformJobEntity commitJob(Long createTime) throws Exception {
+
+        TransformCompareEntity transformCompare = transformCompareService.queryJob(createTime);
+        if (transformCompare == null) {
+            throw new RuntimeException("未找到指定的作业");
+        }
+
+        List<TaskInfoDto> taskList = JSONArray.parseArray(transformCompare.getTaskList(), TaskInfoDto.class);
+        List<TaskInfoBo> taskInfoBoList = new ArrayList<>();
+
+        // 构造任务
+        List<TaskInfo> taskInfoList = new ArrayList<>();
+
+        for (TaskInfoDto taskInfoDto : taskList) {
+            TaskType taskType = TaskType.findByValue(taskInfoDto.getTaskType());
+            DataFlowType dataFlowType = DataFlowType.findByValue(taskInfoDto.getDataFlowType());
+            TaskInfoBo taskInfoBo = new TaskInfoBo();
+            taskInfoBo.setTaskType(taskType.name());
+            taskInfoBo.setDataFlowType(dataFlowType.name());
+
+            TaskInfo taskInfo = new TaskInfo(taskType, dataFlowType);
+
+            if (taskType == TaskType.IGINX) {
+                DatasetEntity datasetEntity = datasetService.queryMeta(taskInfoDto.getDataset());
+                taskInfoBo.setDataset(datasetEntity);
+
+                List<String> sqlList = JSONArray.parseArray(datasetEntity.getDatasetSql(), String.class);
+                taskInfo.setSqlList(sqlList);
+            } else {
+                taskInfoBo.setPyTaskName(taskInfoDto.getPyTaskName());
+                taskInfo.setPyTaskName(taskInfoDto.getPyTaskName());
+            }
+
+            taskInfoBoList.add(taskInfoBo);
+            taskInfoList.add(taskInfo);
+
+        }
+
+        Path filePath = Paths.get(FUNCTION_DIR_PREFIX, "job").resolve(transformCompare.getExportFiletName()).toAbsolutePath();
+
+        // 提交任务
+        long jobId =
+                iginxSession.commitTransformJob(
+                        taskInfoList,
+                        ExportType.FILE,
+                        filePath.toString());
+
+
+        long timestamp = System.currentTimeMillis();
+
+        // 获取操作人
+        String operator = OperationLogAspect.getCurrentUser();
+
+        // 获取IP地址
+        String clientIp = OperationLogAspect.getClientIp();
+
+        TransformJobEntity transformJobEntity = new TransformJobEntity();
+        transformJobEntity.setId(timestamp);
+        transformJobEntity.setName(transformCompare.getName());
+        transformJobEntity.setTaskList(JSONObject.toJSONString(taskInfoBoList));
+        transformJobEntity.setExportFiletName(transformCompare.getExportFiletName());
+        transformJobEntity.setSchedule(transformCompare.getSchedule());
+        transformJobEntity.setCreateTime(timestamp);
+        transformJobEntity.setOperator(operator);
+        transformJobEntity.setClientIp(clientIp);
+        transformJobEntity.setJobState(0);
+        transformJobEntity.setJobId(jobId);
+
+        WriteClient writeClient = iginxClient.getWriteClient();
+        writeClient.writeMeasurement(transformJobEntity);
+
+        log.info("Transform作业已提交。名称: {}, 时间戳: {}", transformJobEntity.getName(), timestamp);
+
+
+        return transformJobEntity;
+    }
+
 }
