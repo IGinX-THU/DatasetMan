@@ -6,6 +6,7 @@ import java.util.List;
 
 @Data
 public class TransformJobRequest {
+    private Long createTime;
     private String name;
     private List<TaskInfoDto> taskList;
     private String exportFiletName;

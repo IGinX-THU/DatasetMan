@@ -142,6 +142,20 @@ window.AppConfig = {
             count: '/api/job/count',
             detail: '/api/job/detail',
             delete: '/api/job/delete'
+        },
+        // Transform任务管理相关
+        transformJob: {
+            query: '/api/transform-job/query',
+            count: '/api/transform-job/count',
+            detail: '/api/transform-job/detail'
+        },
+        // Transform作业编排相关
+        transformCompare: {
+            save: '/api/transform-compare/save',
+            query: '/api/transform-compare/query',
+            count: '/api/transform-compare/count',
+            detail: '/api/transform-compare/detail',
+            delete: '/api/transform-compare/delete'
         }
     },
     

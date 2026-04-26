@@ -61,9 +61,13 @@ const BUTTON_ID_MAP = {
         text: '删除',
         action: 'handleDeleteDataset'
     },
-    'btn-job': {
-        text: '作业',
-        action: 'showTransformJobs'
+    'btn-job-orchestrate': {
+        text: '编排',
+        action: 'showTransformOrchestrate'
+    },
+    'btn-job-manage': {
+        text: '任务',
+        action: 'showTransformJobManagement'
     },
     'btn-func-transform': {
         text: 'Transform',
@@ -147,7 +151,11 @@ const MENU_ID_MAP = {
     },
     'menu-job-orchestration': {
         text: '编排Transform作业',
-        action: 'showTransformJobs'
+        action: 'showTransformOrchestrate'
+    },
+    'menu-job-management': {
+        text: 'Transform任务管理',
+        action: 'showTransformJobManagement'
     }
 };
 

@@ -15,21 +15,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Api(tags = "Transform 作业")
+@Api(tags = "Transform任务管理")
 @RestController
-@RequestMapping("/api/job")
+@RequestMapping("/api/transform-job")
 public class TransformJobController {
 
     @Autowired
     private TransformJobService transformJobService;
-
-    @ApiOperation("编排Transform作业")
-    @PostMapping("/save")
-    @RequirePermission(Permission.RUN_TASK_CREATE)
-    @OperationLog(value = "保存Transform作业", type = OperationLog.OperationType.CREATE)
-    public Result<TransformJobEntity> saveTransform(@RequestBody TransformJobRequest runTaskRequest) throws Exception {
-        return Result.success(transformJobService.saveTransform(runTaskRequest));
-    }
 
     @ApiOperation("分页查询Transform作业")
     @PostMapping("/query")
@@ -56,14 +48,5 @@ public class TransformJobController {
             return Result.error("未找到指定的作业");
         }
         return Result.success(result);
-    }
-
-    @ApiOperation("删除Transform作业")
-    @DeleteMapping("/delete")
-    @RequirePermission(Permission.RUN_TASK_DELETE)
-    @OperationLog(value = "删除Transform作业", type = OperationLog.OperationType.DELETE)
-    public Result<Void> deleteJob(@RequestParam("createTime") Long createTime) throws Exception {
-        transformJobService.deleteJob(createTime);
-        return Result.success("操作成功");
     }
 }

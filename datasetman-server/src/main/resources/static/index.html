@@ -109,6 +109,7 @@
                 <span class="dropdown-trigger">作业</span>
                 <ul class="dropdown-menu">
                     <li id="menu-job-orchestration">编排Transform作业</li>
+                    <li id="menu-job-management">Transform任务管理</li>
                 </ul>
             </span>
         <span class="tab dropdown" id="functionDropdown">
@@ -193,9 +194,13 @@
 
         <div class="sub-tab-section">
             <div class="func-btn-group">
-                <button class="func-btn" id="btn-job">
+                <button class="func-btn" id="btn-job-orchestrate">
                     <svg class="btn-icon"><use href="#icon-run"></use></svg>
-                    <span>作业</span>
+                    <span>编排</span>
+                </button>
+                <button class="func-btn" id="btn-job-manage">
+                    <svg class="btn-icon"><use href="#icon-unload"></use></svg>
+                    <span>任务</span>
                 </button>
             </div>
             <span class="sub-tab">作业调度引擎</span>
@@ -242,6 +247,8 @@
             <udf-management id="udfManagement"></udf-management>
             <!-- Transform作业编排组件 -->
             <transform-job id="transformJob"></transform-job>
+            <!-- Transform作业编排组件 -->
+            <transform-compare id="transformCompare"></transform-compare>
             <!-- 数据可视化组件 -->
             <data-visualization id="dataVisualization"></data-visualization>
             <!-- 数据库表格组件 -->
@@ -305,6 +312,7 @@
 <script src="./components/transform-management/transform-management.js"></script>
 <script src="./components/udf-management/udf-management.js"></script>
 <script src="./components/transform-job/transform-job.js"></script>
+<script src="./components/transform-compare/transform-compare.js"></script>
 <script src="./components/schedule-editor/schedule-editor.js"></script>
 <script src="./components/file-system-browser/file-system-browser.js"></script>
 <script src="./components/key-value-viewer/key-value-viewer.js"></script>

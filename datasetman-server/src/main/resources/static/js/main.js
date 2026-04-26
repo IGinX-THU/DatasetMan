@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'userManagement',
             'datasetHistory',
             'transformJob',
+            'transformCompare',
             'transformManagement',
             'udfManagement',
             'fileSystemBrowser',
@@ -423,8 +424,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('关联规则配置菜单被点击');
                         showComponent('associationRules');
                         break;
-                    case 'showTransformJobs':
+                    case 'showTransformOrchestrate':
                         console.log('编排Transform作业菜单被点击');
+                        showComponent('transformCompare');
+                        break;
+                    case 'showTransformJobManagement':
+                        console.log('Transform任务管理菜单被点击');
                         showComponent('transformJob');
                         break;
                     case 'showVisualAnalysis':
@@ -830,7 +835,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'showAssociationRules':
                         showComponent('associationRules');
                         break;
-                    case 'showTransformJobs':
+                    case 'showTransformOrchestrate':
+                        showComponent('transformCompare');
+                        break;
+                    case 'showTransformJobManagement':
                         showComponent('transformJob');
                         break;
                     case 'showTransformManagement':
