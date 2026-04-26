@@ -259,6 +259,9 @@ public class TransformJobService {
                 taskInfo.setPyTaskName(taskInfoDto.getPyTaskName());
             }
 
+            taskInfoBo.setTimeout(taskInfoDto.getTimeout());
+            taskInfo.setTimeout(taskInfoDto.getTimeout());
+
             taskInfoBoList.add(taskInfoBo);
             taskInfoList.add(taskInfo);
 
