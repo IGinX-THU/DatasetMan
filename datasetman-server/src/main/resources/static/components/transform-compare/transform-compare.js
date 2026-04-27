@@ -136,7 +136,7 @@ class TransformCompare extends HTMLElement {
 
             if (result.code === 200 || result.success) {
                 this.showToast('任务已提交');
-                this.loadJobsFromAPI();
+                await this.loadJobsFromAPI();
             } else {
                 this.showToast(result.message || '提交失败', 'error');
             }
@@ -447,7 +447,13 @@ class TransformCompare extends HTMLElement {
         }
 
         const closeDialog = () => {
-            document.body.removeChild(dialog);
+            try {
+                if (dialog && dialog.parentNode) {
+                    dialog.parentNode.removeChild(dialog);
+                }
+            } catch (e) {
+                console.error('关闭弹窗失败:', e);
+            }
         };
 
         if (closeBtn) {
@@ -854,7 +860,13 @@ class TransformCompare extends HTMLElement {
         }
 
         const closeDialog = () => {
-            document.body.removeChild(dialog);
+            try {
+                if (dialog && dialog.parentNode) {
+                    dialog.parentNode.removeChild(dialog);
+                }
+            } catch (e) {
+                console.error('关闭弹窗失败:', e);
+            }
         };
 
         // 点击dialog-mask关闭对话框
@@ -865,13 +877,27 @@ class TransformCompare extends HTMLElement {
         cancelBtn.addEventListener('click', closeDialog);
 
         confirmBtn.addEventListener('click', async () => {
-            await this.deleteJobFromAPI(id);
-            closeDialog();
+            try {
+                await this.deleteJobFromAPI(id);
+            } catch (error) {
+                console.error('删除作业失败:', error);
+            } finally {
+                closeDialog();
+            }
         });
     }
 
     showRunConfirm(id) {
         const jobName = this.getJobNameByCreateTime(id);
+
+        // 移除任何已存在的dialog
+        const existingDialogs = document.querySelectorAll('.dialog-mask');
+        existingDialogs.forEach(d => {
+            if (d.parentNode) {
+                d.parentNode.removeChild(d);
+            }
+        });
+
         const dialogHtml = `
             <div class="dialog-mask" style="
                 position: fixed;
@@ -934,7 +960,13 @@ class TransformCompare extends HTMLElement {
         }
 
         const closeDialog = () => {
-            document.body.removeChild(dialog);
+            try {
+                if (dialog && dialog.parentNode) {
+                    dialog.parentNode.removeChild(dialog);
+                }
+            } catch (e) {
+                console.error('关闭弹窗失败:', e);
+            }
         };
 
         if (dialogMask) {
@@ -944,8 +976,13 @@ class TransformCompare extends HTMLElement {
         cancelBtn.addEventListener('click', closeDialog);
 
         confirmBtn.addEventListener('click', async () => {
-            await this.commitJobFromAPI(id);
-            closeDialog();
+            try {
+                await this.commitJobFromAPI(id);
+            } catch (error) {
+                console.error('运行作业失败:', error);
+            } finally {
+                closeDialog();
+            }
         });
     }
 
