@@ -70,22 +70,8 @@ public class TransformJobStatusScheduler {
      */
     private List<TransformJobEntity> queryActiveJobs() {
         try {
-            // 查询所有任务
-            String sql = "SELECT * FROM " + DATA_PREFIX + " ;";
-
-            SessionExecuteSqlResult res = iginxSession.executeSql(sql);
-            List<Map<String, Object>> records = ConvertUtil.getRecords(res);
-
-            // 转换为TransformJobEntity列表
-            List<TransformJobEntity> allJobs = new ArrayList<>();
-            for (Map<String, Object> record : records) {
-                TransformJobEntity entity = new TransformJobEntity();
-                record.forEach((k, v) -> {
-                    String fieldName = k.replace(DATA_PREFIX + ".", "");
-                    ConvertUtil.setEntityField(entity, DATA_PREFIX, fieldName, v);
-                });
-                allJobs.add(entity);
-            }
+            // 查询所有任务 转换为TransformJobEntity列表
+            List<TransformJobEntity> allJobs = transformJobService.queryAllJobs(null, null);
 
             // 使用stream过滤未到最终状态的任务
             List<TransformJobEntity> result = allJobs.stream()

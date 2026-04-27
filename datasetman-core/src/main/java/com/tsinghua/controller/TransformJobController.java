@@ -72,4 +72,13 @@ public class TransformJobController {
         return Result.success(result);
     }
 
+    @ApiOperation("血缘图谱")
+    @GetMapping( "/bloodline")
+    @RequirePermission(Permission.MODEL_READ)
+    public Result<List<TransformJobEntity>> chartBloodline (
+            @RequestParam("datasetPath") String datasetPath) throws Exception {
+        List<TransformJobEntity> result = transformJobService.queryAllJobs(datasetPath, null);
+        return Result.success(result);
+    }
+
 }

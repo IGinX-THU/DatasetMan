@@ -338,4 +338,44 @@ public class TransformJobService {
         transformJob.setJobState(jobState.getValue());
         return saveTransform(transformJob);
     }
+
+    public List<TransformJobEntity> queryAllJobs(String datasetPath, Integer jobState) {
+        try {
+            // 构建基础SQL
+            StringBuilder sql = new StringBuilder("SELECT * FROM relational_system.transform_job WHERE 1=1");
+
+            // 添加筛选条件
+            if (datasetPath != null && !datasetPath.trim().isEmpty()) {
+                sql.append(" AND taskList LIKE '^.*").append(datasetPath.trim()).append(".*'");
+            }
+
+            if (jobState != null) {
+                sql.append(" AND JobState = ").append(jobState);
+            }
+
+            sql.append(";");
+
+            log.info("执行SQL: {}", sql);
+
+            SessionExecuteSqlResult res = iginxSession.executeSql(sql.toString());
+            List<Map<String, Object>> records = ConvertUtil.getRecords(res);
+
+            // 转换为TransformJobEntity列表
+            List<TransformJobEntity> result = records.stream().map(record -> {
+                TransformJobEntity entity = new TransformJobEntity();
+                record.forEach((k, v) -> {
+                    String fieldName = k.replace(DATA_PREFIX + ".", "");
+                    ConvertUtil.setEntityField(entity, DATA_PREFIX, fieldName, v);
+                });
+                return entity;
+            }).collect(Collectors.toList());
+
+            log.info("查询结果: records={}", result.size());
+            return result;
+        } catch (Exception e) {
+            log.error("查询失败", e);
+            return new ArrayList<>();
+        }
+    }
+
 }

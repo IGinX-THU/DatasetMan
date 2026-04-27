@@ -417,7 +417,8 @@ class TransformJob extends HTMLElement {
             if (previousNodeId !== null && currentNodeId !== null) {
                 links.push({
                     source: previousNodeId,
-                    target: currentNodeId
+                    target: currentNodeId,
+                    jobData: this._currentJob
                 });
             }
 
