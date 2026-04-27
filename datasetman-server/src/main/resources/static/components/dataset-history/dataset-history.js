@@ -1235,7 +1235,7 @@ class DatasetHistory extends HTMLElement {
                     if (node.type === 'dataset' && node.datasetData) {
                         const nodePath = node.datasetData.storagePath || node.datasetData.datasetName;
                         if (nodePath === currentDatasetPath) {
-                            node.x = 400;
+                            node.x = 150;
                             node.y = 400;
                             node.fixed = true;
                         }
