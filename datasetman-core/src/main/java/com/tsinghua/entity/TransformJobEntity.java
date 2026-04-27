@@ -39,8 +39,8 @@ public class TransformJobEntity {
      * JOB_CLOSING(9) 作业取消中（正在释放资源）
      * JOB_CLOSED(10) 作业取消
      */
-    @Field(name = "JobState")
-    private int JobState;
+    @Field(name = "jobState")
+    private int jobState;
 
     @Field(name = "createTime")
     private Long createTime;
