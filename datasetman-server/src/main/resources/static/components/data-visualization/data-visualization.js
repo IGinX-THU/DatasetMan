@@ -90,8 +90,8 @@ class DataVisualization extends HTMLElement {
                     <div class="operations-header">
                         <h4 class="operations-title">操作</h4>
                         <div class="operations-actions">
-                            <button class="action-btn" id="dataCleanBtn">数据清理</button>
-                            <button class="action-btn" id="importBtn">导入数据</button>
+                            <button class="action-btn" id="dataCleanBtn" style="display: none;">数据清理</button>
+                            <button class="action-btn" id="importBtn" style="display: none;">导入数据</button>
                             <button class="action-btn" id="exportBtn">导出数据</button>
                         </div>
                     </div>
