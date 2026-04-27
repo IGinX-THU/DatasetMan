@@ -28,7 +28,7 @@ public class DatasetController {
 
     @ApiOperation("测试SQL")
     @PostMapping("/testsql")
-    @RequirePermission(Permission.MODEL_UPDATE)
+    @RequirePermission(Permission.DATASET_UPDATE)
     @OperationLog(value = "测试SQL", type = OperationLog.OperationType.UPDATE)
     public Result<Object> testSQL(@RequestParam String sql) {
         return Result.success(datasetService.testSQL(sql));
@@ -36,7 +36,7 @@ public class DatasetController {
 
     @ApiOperation("保存数据集")
     @PostMapping("/save")
-    @RequirePermission(Permission.MODEL_UPDATE)
+    @RequirePermission(Permission.DATASET_UPDATE)
     @OperationLog(value = "保存数据集", type = OperationLog.OperationType.UPDATE)
     public Result<DatasetEntity> saveDataset(@Validated @RequestBody DatasetRequest request) {
         return Result.success(datasetService.saveDataset(request));
@@ -44,7 +44,7 @@ public class DatasetController {
 
     @ApiOperation("数据集详情")
     @GetMapping( "/metas")
-    @RequirePermission(Permission.MODEL_READ)
+    @RequirePermission(Permission.DATASET_READ)
     public Result<DatasetEntity> queryMeta(
             @RequestParam("path") String path) throws Exception {
         DatasetEntity result = datasetService.queryMeta(path);
@@ -53,7 +53,7 @@ public class DatasetController {
 
     @ApiOperation("删除数据集")
     @DeleteMapping( "/delete")
-    @RequirePermission(Permission.MODEL_READ)
+    @RequirePermission(Permission.DATASET_DELETE)
     public Result<Void> deleteDataset(
             @RequestParam("path") String path) throws Exception {
         datasetService.deleteDataset(path);
@@ -62,7 +62,7 @@ public class DatasetController {
 
     @ApiOperation("版本历史")
     @GetMapping("/history")
-    @RequirePermission(Permission.MODEL_READ)
+    @RequirePermission(Permission.DATASET_READ)
     public Result<List<com.tsinghua.dto.DatasetVersionTreeDTO>> getVersionHistory(
             @RequestParam("datasetName") String datasetName) throws Exception {
         List<com.tsinghua.dto.DatasetVersionTreeDTO> result = datasetService.getVersionHistory(datasetName);

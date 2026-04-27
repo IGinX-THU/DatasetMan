@@ -26,7 +26,7 @@ public class FunctionController {
 
     @ApiOperation("注册Transform")
     @PostMapping(value = "/register/transform", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @RequirePermission(Permission.MODEL_CREATE)
+    @RequirePermission(Permission.FUNCTION_CREATE)
     @OperationLog(value = "注册Transform", type = OperationLog.OperationType.CREATE, recordParams = false)
     public Result<?> registerTransform(
             @RequestPart("file") MultipartFile file,
@@ -43,7 +43,7 @@ public class FunctionController {
 
     @ApiOperation("移除函数")
     @DeleteMapping( "/delete/{name}")
-    @RequirePermission(Permission.MODEL_DELETE)
+    @RequirePermission(Permission.FUNCTION_DELETE)
     @OperationLog(value = "移除函数", type = OperationLog.OperationType.DELETE)
     public Result<Void> handleDelete(
             @PathVariable("name") String name) throws Exception {
@@ -54,7 +54,7 @@ public class FunctionController {
 
     @ApiOperation("函数列表")
     @GetMapping("/query/{type}")
-    @RequirePermission(Permission.DATASOURCE_READ)
+    @RequirePermission(Permission.FUNCTION_READ)
     @OperationLog(value = "查询函数列表", type = OperationLog.OperationType.QUERY, recordResult = false)
     public Result<List<RegisterTaskInfoDto>> list(@PathVariable("type") String type) throws Exception {
         return Result.success(functionService.query(type));
@@ -62,7 +62,7 @@ public class FunctionController {
 
     @ApiOperation("注册UDF")
     @PostMapping(value = "/register/udf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @RequirePermission(Permission.MODEL_CREATE)
+    @RequirePermission(Permission.FUNCTION_CREATE)
     @OperationLog(value = "注册UDF", type = OperationLog.OperationType.CREATE, recordParams = false)
     public Result<?> registerUDF(
             @RequestPart("file") MultipartFile file,

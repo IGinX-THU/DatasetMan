@@ -197,70 +197,15 @@ public class RolePermissionService implements ApplicationContextAware {
         Set<Permission> adminPermissions = EnumSet.allOf(Permission.class);
         RoleEntity adminRole = new RoleEntity(UserRole.ADMIN, adminPermissions, 2000000000000L);
         roleDao.saveRole(adminRole);
-        
-        // 数据工程师角色 - 数据源和数据的完整权限
-        Set<Permission> dataEngineerPermissions = EnumSet.of(
-            // 数据源管理权限
-            Permission.DATASOURCE_CREATE,
-            Permission.DATASOURCE_READ,
-            Permission.DATASOURCE_UPDATE,
-            Permission.DATASOURCE_DELETE,
-            
-            // 数据表管理权限
-            Permission.DATA_CREATE,
-            Permission.DATA_READ,
-            Permission.DATA_UPDATE,
-            Permission.DATA_DELETE
-        );
-        RoleEntity dataEngineerRole = new RoleEntity(UserRole.DATA_ENGINEER, dataEngineerPermissions, 2000000000001L);
+
+        // 数据工程师角色 - 拥有除用户管理外的所有权限
+        Set<Permission> allPermissions = EnumSet.allOf(Permission.class);
+        allPermissions.remove(Permission.USER_CREATE);
+        allPermissions.remove(Permission.USER_READ);
+        allPermissions.remove(Permission.USER_UPDATE);
+        allPermissions.remove(Permission.USER_DELETE);
+        RoleEntity dataEngineerRole = new RoleEntity(UserRole.DATA_ENGINEER, allPermissions, 2000000000001L);
         roleDao.saveRole(dataEngineerRole);
-        
-        // 模型工程师角色 - 模型管理权限和数据查看权限
-        Set<Permission> modelEngineerPermissions = EnumSet.of(
-            // 模型文件管理权限
-            Permission.MODEL_CREATE,
-            Permission.MODEL_READ,
-            Permission.MODEL_UPDATE,
-            Permission.MODEL_DELETE,
-
-            // 数据源查看权限
-            Permission.DATASOURCE_READ,
-            
-            // 解析规则管理权限
-            Permission.PARSING_RULES_CREATE,
-            Permission.PARSING_RULES_READ,
-            Permission.PARSING_RULES_UPDATE,
-            Permission.PARSING_RULES_DELETE
-        );
-        RoleEntity modelEngineerRole = new RoleEntity(UserRole.MODEL_ENGINEER, modelEngineerPermissions, 2000000000002L);
-        roleDao.saveRole(modelEngineerRole);
-        
-        // 仿真工程师角色 - 关联规则、运行任务管理权限和相关查看权限
-        Set<Permission> simulationEngineerPermissions = EnumSet.of(
-            // 关联规则管理权限
-            Permission.ASSOCIATION_RULES_CREATE,
-            Permission.ASSOCIATION_RULES_READ,
-            Permission.ASSOCIATION_RULES_UPDATE,
-            Permission.ASSOCIATION_RULES_DELETE,
-            
-            // 运行任务管理权限
-            Permission.RUN_TASK_CREATE,
-            Permission.RUN_TASK_READ,
-            Permission.RUN_TASK_UPDATE,
-            Permission.RUN_TASK_DELETE,
-            
-            // 数据与模型的查看权限
-            Permission.DATA_READ,
-            Permission.MODEL_READ,
-            
-            // 数据源查看权限
-            Permission.DATASOURCE_READ,
-
-            // 解析规则查看权限
-            Permission.PARSING_RULES_READ
-        );
-        RoleEntity simulationEngineerRole = new RoleEntity(UserRole.SIMULATION_ENGINEER, simulationEngineerPermissions, 2000000000003L);
-        roleDao.saveRole(simulationEngineerRole);
     }
     
     /**
@@ -269,20 +214,15 @@ public class RolePermissionService implements ApplicationContextAware {
     private void initializeDefaultUsers() {
         // 创建默认用户 - 使用加密密码
         log.info("使用加密密码初始化默认用户");
-        
+
         // 获取角色的timestamp作为roleId
         Long adminRoleId = 2000000000000L;
         Long dataEngineerRoleId = 2000000000001L;
-        Long modelEngineerRoleId = 2000000000002L;
-        Long simulationEngineerRoleId = 2000000000003L;
-        
+
         userDao.saveUser(new UserEntity("admin", getPasswordEncoder().encode("admin123"), UserRole.ADMIN, adminRoleId, 1000000000000L));
         userDao.saveUser(new UserEntity("data", getPasswordEncoder().encode("data123"), UserRole.DATA_ENGINEER, dataEngineerRoleId, 1000000000001L));
-        userDao.saveUser(new UserEntity("model", getPasswordEncoder().encode("model123"), UserRole.MODEL_ENGINEER, modelEngineerRoleId, 1000000000002L));
-        userDao.saveUser(new UserEntity("sim", getPasswordEncoder().encode("sim123"), UserRole.SIMULATION_ENGINEER, simulationEngineerRoleId, 1000000000003L));
-        userDao.saveUser(new UserEntity("user", getPasswordEncoder().encode("user123"), UserRole.SIMULATION_ENGINEER, simulationEngineerRoleId, 1000000000004L));
-        
-        log.info("默认用户初始化完成: admin/admin123, data/data123, model/model123, sim/sim123, user/user123");
+
+        log.info("默认用户初始化完成: admin/admin123, data/data123");
     }
     
     /**

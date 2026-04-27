@@ -25,7 +25,7 @@ public class TransformCompareController {
 
     @ApiOperation("编排Transform作业")
     @PostMapping("/save")
-    @RequirePermission(Permission.RUN_TASK_CREATE)
+    @RequirePermission(Permission.TRANSFORM_COMPARE_CREATE)
     @OperationLog(value = "保存Transform作业", type = OperationLog.OperationType.CREATE)
     public Result<TransformCompareEntity> saveTransform(@RequestBody TransformJobRequest request) throws Exception {
         return Result.success(transformCompareService.saveTransform(request));
@@ -33,7 +33,7 @@ public class TransformCompareController {
 
     @ApiOperation("分页查询Transform作业")
     @PostMapping("/query")
-    @RequirePermission(Permission.RUN_TASK_READ)
+    @RequirePermission(Permission.TRANSFORM_COMPARE_READ)
     public Result<List<TransformCompareEntity>> queryJobs(@RequestBody TransformJobQueryRequest request) {
         List<TransformCompareEntity> result = transformCompareService.queryJobs(request);
         return Result.success(result);
@@ -41,7 +41,7 @@ public class TransformCompareController {
 
     @ApiOperation("查询Transform作业总数")
     @PostMapping("/count")
-    @RequirePermission(Permission.RUN_TASK_READ)
+    @RequirePermission(Permission.TRANSFORM_COMPARE_READ)
     public Result<Object> countJobs(@RequestBody TransformJobQueryRequest request) {
         Object count = transformCompareService.countJobs(request);
         return Result.success(count);
@@ -49,7 +49,7 @@ public class TransformCompareController {
 
     @ApiOperation("查询Transform作业详情")
     @GetMapping("/detail")
-    @RequirePermission(Permission.RUN_TASK_READ)
+    @RequirePermission(Permission.TRANSFORM_COMPARE_READ)
     public Result<?> queryJob(@RequestParam("createTime") Long createTime) {
         TransformCompareEntity result = transformCompareService.queryJob(createTime);
         if (result == null) {
@@ -60,7 +60,7 @@ public class TransformCompareController {
 
     @ApiOperation("删除Transform作业")
     @DeleteMapping("/delete")
-    @RequirePermission(Permission.RUN_TASK_DELETE)
+    @RequirePermission(Permission.TRANSFORM_COMPARE_DELETE)
     @OperationLog(value = "删除Transform作业", type = OperationLog.OperationType.DELETE)
     public Result<Void> deleteJob(@RequestParam("createTime") Long createTime) throws Exception {
         transformCompareService.deleteJob(createTime);
