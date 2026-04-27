@@ -339,7 +339,7 @@ public class TransformJobService {
         return saveTransform(transformJob);
     }
 
-    public List<TransformJobEntity> queryAllJobs(String datasetPath, Integer jobState) {
+    public List<TransformJobEntity> queryAllJobs(String datasetPath, Integer jobState, Boolean sideLineage) {
         try {
             // 构建基础SQL
             StringBuilder sql = new StringBuilder("SELECT * FROM relational_system.transform_job WHERE 1=1");
@@ -352,7 +352,7 @@ public class TransformJobService {
             if (jobState != null) {
                 sql.append(" AND JobState = ").append(jobState);
             }
-
+            sql.append(" ORDER BY createTime DESC");
             sql.append(";");
 
             log.info("执行SQL: {}", sql);
@@ -370,7 +370,19 @@ public class TransformJobService {
                 return entity;
             }).collect(Collectors.toList());
 
-            log.info("查询结果: records={}", result.size());
+            // 如果旁系血缘关闭，按作业名称分组，每组只保留创建时间最新的那条
+            if (sideLineage != null && !sideLineage) {
+                Map<String, TransformJobEntity> jobMap = new LinkedHashMap<>();
+                for (TransformJobEntity job : result) {
+                    String jobName = job.getName() != null ? job.getName() : "";
+                    if (!jobMap.containsKey(jobName)) {
+                        jobMap.put(jobName, job);
+                    }
+                }
+                result = new ArrayList<>(jobMap.values());
+            }
+
+            log.info("查询结果: records={}, sideLineage={}", result.size(), sideLineage);
             return result;
         } catch (Exception e) {
             log.error("查询失败", e);

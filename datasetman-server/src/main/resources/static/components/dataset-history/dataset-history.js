@@ -3,6 +3,7 @@ class DatasetHistory extends HTMLElement {
         super();
         this.datasetInfo = null;
         this.historyData = [];
+        this._sideLineageEnabled = true;
         this.attachShadow({ mode: 'open' });
     }
 
@@ -507,7 +508,8 @@ class DatasetHistory extends HTMLElement {
         if (sideLineageSwitch) {
             sideLineageSwitch.addEventListener('click', () => {
                 sideLineageSwitch.classList.toggle('on');
-                // TODO: 实现旁系血缘切换逻辑
+                this._sideLineageEnabled = sideLineageSwitch.classList.contains('on');
+                this.renderLineageGraph();
             });
         }
 
@@ -1097,8 +1099,8 @@ class DatasetHistory extends HTMLElement {
         }
 
         try {
-            // 调用 /api/transform-job/bloodline 接口
-            const url = `/api/transform-job/bloodline?datasetPath=${encodeURIComponent(datasetPath)}`;
+            // 调用接口获取数据，传递旁系血缘参数
+            const url = `/api/transform-job/bloodline?datasetPath=${encodeURIComponent(datasetPath)}&sideLineage=${this._sideLineageEnabled}`;
             const result = await window.AppConfig.request(url);
 
             if (result.code !== 200 || !result.data) {

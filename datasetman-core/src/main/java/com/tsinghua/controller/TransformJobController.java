@@ -76,8 +76,9 @@ public class TransformJobController {
     @GetMapping( "/bloodline")
     @RequirePermission(Permission.MODEL_READ)
     public Result<List<TransformJobEntity>> chartBloodline (
-            @RequestParam("datasetPath") String datasetPath) throws Exception {
-        List<TransformJobEntity> result = transformJobService.queryAllJobs(datasetPath, null);
+            @RequestParam("datasetPath") String datasetPath,
+            @RequestParam(value = "sideLineage", defaultValue = "true") Boolean sideLineage) throws Exception {
+        List<TransformJobEntity> result = transformJobService.queryAllJobs(datasetPath, null, sideLineage);
         return Result.success(result);
     }
 

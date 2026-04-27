@@ -71,7 +71,7 @@ public class TransformJobStatusScheduler {
     private List<TransformJobEntity> queryActiveJobs() {
         try {
             // 查询所有任务 转换为TransformJobEntity列表
-            List<TransformJobEntity> allJobs = transformJobService.queryAllJobs(null, null);
+            List<TransformJobEntity> allJobs = transformJobService.queryAllJobs(null, null, null);
 
             // 使用stream过滤未到最终状态的任务
             List<TransformJobEntity> result = allJobs.stream()
