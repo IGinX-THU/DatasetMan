@@ -397,7 +397,7 @@ class TransformJob extends HTMLElement {
             else if (taskType === 'python') {
                 const taskNodeId = nodeId++;
                 currentNodeId = taskNodeId;
-                const label = `Transform函数: ${task.pyTaskName}\n任务类型: PYTHON\n数据流类型: ${task.dataFlowType}`;
+                const label = `函数: ${task.pyTaskName}\n任务类型: PYTHON\n数据流类型: ${task.dataFlowType}`;
                 const lines = label.split('\n');
                 const maxLineLength = Math.max(...lines.map(line => line.length));
                 const width = maxLineLength * 9 + 40;
@@ -476,7 +476,7 @@ class TransformJob extends HTMLElement {
                                 const taskType = task.taskType === 1 || task.taskType === 'PYTHON' ? 'PYTHON' : 'IGINX';
                                 const flowType = task.dataFlowType === 'STREAM' ? 'STREAM' : 'BATCH';
                                 const name = task.pyTaskName || '任务';
-                                return `Transform函数: ${name}\n任务类型: ${taskType}\n数据流类型: ${flowType}`;
+                                return `函数: ${name}\n任务类型: ${taskType}\n数据流类型: ${flowType}`;
                             }
                             return params.name;
                         },
