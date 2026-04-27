@@ -53,3 +53,18 @@
         <common-pagination id="pagination"></common-pagination>
     </div>
 </div>
+
+<!-- 变化过程弹窗 -->
+<div class="modal-mask" id="processModal" hidden>
+    <div class="modal-container process-modal">
+        <div class="modal-header">
+            <h3 class="modal-title">数据变化过程</h3>
+            <button class="modal-close" id="closeProcessModal">×</button>
+        </div>
+        <div class="modal-body">
+            <div id="processGraph" style="width: 100%; height: 500px;">
+                <div class="graph-placeholder">数据变化图谱加载中...</div>
+            </div>
+        </div>
+    </div>
+</div>

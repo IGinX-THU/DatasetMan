@@ -147,7 +147,7 @@ window.AppConfig = {
         transformJob: {
             query: '/api/transform-job/query',
             count: '/api/transform-job/count',
-            detail: '/api/transform-job/detail',
+            detail: '/api/transform-job/detail/{jobId}',
             commit: '/api/transform-job/commit/{createTime}',
             status: '/api/transform-job/status/{jobId}',
             cancel: '/api/transform-job/cancel/{jobId}'

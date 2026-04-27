@@ -133,12 +133,22 @@ class TransformJob extends HTMLElement {
             });
         }
 
-        // Event delegation for refresh and cancel buttons
+        // Process modal close button
+        const closeProcessModal = this.querySelector('#closeProcessModal');
+        const processModal = this.querySelector('#processModal');
+        if (closeProcessModal && processModal) {
+            closeProcessModal.addEventListener('click', () => {
+                processModal.hidden = true;
+            });
+        }
+
+        // Event delegation for refresh, cancel and process buttons
         const tbody = this.querySelector('#tableBody');
         if (tbody) {
             tbody.addEventListener('click', async (e) => {
                 const refreshBtn = e.target.closest('.action-btn.refresh');
                 const cancelBtn = e.target.closest('.action-btn.cancel');
+                const processBtn = e.target.closest('.action-btn.process');
 
                 if (refreshBtn) {
                     const jobId = refreshBtn.dataset.jobId;
@@ -151,6 +161,13 @@ class TransformJob extends HTMLElement {
                     const jobId = cancelBtn.dataset.jobId;
                     if (jobId) {
                         await this.cancelJob(jobId);
+                    }
+                }
+
+                if (processBtn) {
+                    const jobId = processBtn.dataset.jobId;
+                    if (jobId) {
+                        await this.showProcessGraph(jobId);
                     }
                 }
             });
@@ -234,6 +251,7 @@ class TransformJob extends HTMLElement {
                 <td>${job.createtime}</td>
                 <td>
                     <div class="action-buttons">
+                        <button class="action-btn process" data-job-id="${job.jobId}" data-create-time="${job.createTime}">变化过程</button>
                         <button class="action-btn refresh" data-job-id="${job.jobId}" data-create-time="${job.createTime}">刷新状态</button>
                         ${cancelBtn}
                     </div>
@@ -284,6 +302,530 @@ class TransformJob extends HTMLElement {
             console.error('取消任务失败:', error);
             this.showToast('网络错误，无法取消任务', 'error');
         }
+    }
+
+    async showProcessGraph(jobId) {
+        try {
+            // Get job details from API
+            const url = window.AppConfig.api.baseURL + `/api/transform-job/detail/${jobId}`;
+            const result = await window.AppConfig.request(url, { method: 'GET' });
+            
+            if (result.success && result.data) {
+                const job = result.data;
+                this._currentJob = job; // Store job data for edge popup
+                const processModal = this.querySelector('#processModal');
+                const processGraph = this.querySelector('#processGraph');
+                
+                if (processModal && processGraph) {
+                    processModal.hidden = false;
+                    this.renderProcessGraph(job, processGraph);
+                }
+            } else {
+                this.showToast('获取作业详情失败', 'error');
+            }
+        } catch (error) {
+            console.error('获取作业详情失败:', error);
+            this.showToast('网络错误，无法获取作业详情', 'error');
+        }
+    }
+
+    renderProcessGraph(job, container) {
+        // Parse taskList
+        const taskList = job.taskList ? JSON.parse(job.taskList) : [];
+        
+        if (taskList.length === 0) {
+            container.innerHTML = '<div class="graph-placeholder">暂无任务数据</div>';
+            return;
+        }
+
+        // Clear previous chart
+        const existingChart = echarts.getInstanceByDom(container);
+        if (existingChart) {
+            existingChart.dispose();
+        }
+        container.innerHTML = '';
+
+        // Build nodes and links for the graph
+        const nodes = [];
+        const links = [];
+        let nodeId = 0;
+
+        // Add output file node with job data
+        const outputNodeId = nodeId++;
+        const label = `结果集: ${job.exportFiletName || '导出文件'}`;
+        const lines = label.split('\n');
+        const maxLineLength = Math.max(...lines.map(line => line.length));
+        const width = maxLineLength * 9 + 40;
+        const height = lines.length * 18 + 30;
+        nodes.push({
+            id: outputNodeId,
+            name: job.exportFiletName || '导出文件',
+            type: 'output',
+            datasetType: '结果集',
+            itemStyle: { color: '#F44336', borderColor: '#F44336' },
+            symbolSize: [width, height],
+            jobData: job
+        });
+
+        // Process each task and build nodes in order
+        let previousNodeId = null;
+        taskList.forEach((task, index) => {
+            const taskType = task.taskType === 1 || task.taskType === 'PYTHON' ? 'python' : 'iginx';
+            let currentNodeId = null;
+            
+            // If it's an iginx task with dataset, use dataset node directly
+            if (taskType === 'iginx' && task.dataset) {
+                const datasetNodeId = nodeId++;
+                currentNodeId = datasetNodeId;
+                const label = `数据集: ${task.dataset.datasetName}\n版本: ${task.dataset.version}\n任务类型: IGINX\n数据流类型: ${task.dataFlowType}`;
+                const lines = label.split('\n');
+                const maxLineLength = Math.max(...lines.map(line => line.length));
+                const width = maxLineLength * 9 + 40;
+                const height = lines.length * 18 + 30;
+                nodes.push({
+                    id: datasetNodeId,
+                    name: task.dataset.datasetName || task.dataset,
+                    type: 'dataset',
+                    datasetType: '数据集',
+                    itemStyle: { color: '#E3F2FD', borderColor: '#2196F3' },
+                    symbolSize: [width, height],
+                    datasetData: task.dataset,
+                    taskData: task
+                });
+            }
+            // If it's a python task, use task node
+            else if (taskType === 'python') {
+                const taskNodeId = nodeId++;
+                currentNodeId = taskNodeId;
+                const label = `Transform函数: ${task.pyTaskName}\n任务类型: PYTHON\n数据流类型: ${task.dataFlowType}`;
+                const lines = label.split('\n');
+                const maxLineLength = Math.max(...lines.map(line => line.length));
+                const width = maxLineLength * 9 + 40;
+                const height = lines.length * 18 + 30;
+                nodes.push({
+                    id: taskNodeId,
+                    name: task.pyTaskName || `Python任务${index + 1}`,
+                    type: 'task',
+                    datasetType: 'Python函数',
+                    itemStyle: { color: '#FFF3E0', borderColor: '#FF9800' },
+                    symbolSize: [width, height],
+                    taskData: task
+                });
+            }
+
+            // Connect to previous node if exists
+            if (previousNodeId !== null && currentNodeId !== null) {
+                links.push({
+                    source: previousNodeId,
+                    target: currentNodeId
+                });
+            }
+
+            // Update previous node
+            previousNodeId = currentNodeId;
+        });
+
+        // Connect last node to output
+        if (previousNodeId !== null) {
+            links.push({
+                source: previousNodeId,
+                target: outputNodeId
+            });
+        }
+
+        // Initialize ECharts with force layout (like lineage graph)
+        setTimeout(() => {
+            const chart = echarts.init(container);
+
+            const option = {
+                tooltip: { trigger: 'none', enterable: true },
+                series: [{
+                    type: 'graph',
+                    layout: 'force',
+                    force: { repulsion: 600, edgeLength: 350, gravity: 0.05, layoutAnimation: true },
+                    roam: true,
+                    draggable: true,
+                    symbolSize: function(params) {
+                        try {
+                            return params && params.data && params.data.symbolSize ? params.data.symbolSize : [200, 70];
+                        } catch (e) {
+                            return [200, 70];
+                        }
+                    },
+                    symbol: 'rect',
+                    itemStyle: { 
+                        color: '#E3F2FD', 
+                        borderColor: '#2196F3', 
+                        borderWidth: 1, 
+                        borderRadius: 6 
+                    },
+                    label: {
+                        show: true,
+                        formatter: function(params) {
+                            if (params.data.type === 'dataset') {
+                                const dataset = params.data.datasetData;
+                                const task = params.data.taskData;
+                                const taskType = task.taskType === 1 || task.taskType === 'PYTHON' ? 'PYTHON' : 'IGINX';
+                                const flowType = task.dataFlowType === 'STREAM' ? 'STREAM' : 'BATCH';
+                                return `数据集: ${dataset.datasetName}\n版本: ${dataset.version}\n任务类型: ${taskType}\n数据流类型: ${flowType}`;
+                            } else if (params.data.type === 'output') {
+                                const job = params.data.jobData;
+                                return `结果集: ${job.exportFiletName || '导出文件'}`;
+                            } else if (params.data.type === 'task') {
+                                const task = params.data.taskData;
+                                const taskType = task.taskType === 1 || task.taskType === 'PYTHON' ? 'PYTHON' : 'IGINX';
+                                const flowType = task.dataFlowType === 'STREAM' ? 'STREAM' : 'BATCH';
+                                const name = task.pyTaskName || '任务';
+                                return `Transform函数: ${name}\n任务类型: ${taskType}\n数据流类型: ${flowType}`;
+                            }
+                            return params.name;
+                        },
+                        fontSize: 12, 
+                        color: '#333', 
+                        lineHeight: 18, 
+                        position: 'inside',
+                        verticalAlign: 'middle',
+                        align: 'center'
+                    },
+                    edgeSymbol: ['none', 'arrow'],
+                    edgeSymbolSize: [0, 15],
+                    lineStyle: { 
+                        color: '#2196F3', 
+                        width: 1.8, 
+                        curveness: 0.1, 
+                        opacity: 0.8 
+                    },
+                    data: nodes,
+                    links: links
+                }]
+            };
+
+            chart.setOption(option);
+
+            // Click event: show popup
+            chart.on('click', (params) => {
+                if (params.dataType === 'edge' || (params.data && params.data.type === 'output')) {
+                    this.showJobPopup(params, container);
+                } else {
+                    this.showProcessPopup(params, container);
+                }
+            });
+
+            // Resize handler
+            const resizeObserver = new ResizeObserver(() => {
+                chart.resize();
+            });
+            resizeObserver.observe(container);
+
+            // Store for cleanup
+            container._chart = chart;
+            container._resizeObserver = resizeObserver;
+        }, 100);
+    }
+
+    showJobPopup(params, container) {
+        // Remove old popup
+        var oldPopup = document.querySelector('.data-popup');
+        if (oldPopup) oldPopup.remove();
+
+        // Get job data from the output node
+        const job = this._currentJob;
+        if (!job) return;
+
+        // Calculate popup position
+        var chartRect = container.getBoundingClientRect();
+        var popupX = chartRect.left + params.event.offsetX + 15;
+        var popupY = chartRect.top + params.event.offsetY + 15;
+
+        var popup = document.createElement('div');
+        popup.className = 'data-popup';
+        popup.style.cssText = `
+            width: 500px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            background: #fff;
+            position: absolute;
+            z-index: 9999;
+            font-size: 12px;
+            left: ${popupX}px;
+            top: ${popupY}px;
+        `;
+
+        const statusMap = {
+            0: '未知',
+            1: '完成',
+            2: '创建',
+            3: '等待运行',
+            4: '运行中',
+            5: '部分失败中',
+            6: '部分失败',
+            7: '失败中',
+            8: '失败',
+            9: '取消中',
+            10: '取消'
+        };
+        
+        popup.innerHTML = `
+            <div class="popup-header" style="
+                padding: 10px 15px;
+                background: #fafafa;
+                border-bottom: 1px solid #e0e0e0;
+                font-weight: bold;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 14px;
+            ">
+                <span>📋 ${job.name || '作业信息'}</span>
+                <span class="popup-close" style="cursor:pointer;font-size:18px;">&times;</span>
+            </div>
+            <div class="popup-body" style="padding:15px;">
+                <div class="popup-field" style="margin-bottom:12px;">
+                    <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">作业ID：</label>
+                    <span class="field-value">${job.jobId || '-'}</span>
+                </div>
+                <div class="popup-field" style="margin-bottom:12px;">
+                    <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">作业状态：</label>
+                    <span class="field-value">${statusMap[job.jobState] || '未知'}</span>
+                </div>
+                <div class="popup-field" style="margin-bottom:12px;">
+                    <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">调度策略：</label>
+                    <span class="field-value">${job.schedule || '-'}</span>
+                </div>
+                <div class="popup-field" style="margin-bottom:12px;">
+                    <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">创建时间：</label>
+                    <span class="field-value">${job.createTime ? new Date(job.createTime).toLocaleString('zh-CN') : '-'}</span>
+                </div>
+                <div class="popup-field" style="margin-bottom:12px;">
+                    <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">操作人：</label>
+                    <span class="field-value">${job.operator || '-'}</span>
+                </div>
+                <div class="popup-field" style="margin-bottom:12px;">
+                    <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">操作IP：</label>
+                    <span class="field-value">${job.clientIp || '-'}</span>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(popup);
+
+        // Close button handler
+        const closeBtn = popup.querySelector('.popup-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                popup.remove();
+            });
+        }
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (popup.parentNode) {
+                popup.remove();
+            }
+        }, 5000);
+    }
+
+    showProcessPopup(params, container) {
+        // Remove old popup
+        var oldPopup = document.querySelector('.data-popup');
+        if (oldPopup) oldPopup.remove();
+        if (!params.data) return;
+
+        // Calculate popup position
+        var chartRect = container.getBoundingClientRect();
+        var popupX = chartRect.left + params.event.offsetX + 15;
+        var popupY = chartRect.top + params.event.offsetY + 15;
+
+        var popup = document.createElement('div');
+        popup.className = 'data-popup';
+        popup.style.cssText = `
+            width: 500px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            background: #fff;
+            position: absolute;
+            z-index: 9999;
+            font-size: 12px;
+            left: ${popupX}px;
+            top: ${popupY}px;
+        `;
+
+        // Dataset node popup (use datasetData from node)
+        if (params.data.type === 'dataset') {
+            const dataset = params.data.datasetData;
+            const task = params.data.taskData;
+            
+            popup.innerHTML = `
+                <div class="popup-header" style="
+                    padding: 10px 15px;
+                    background: #fafafa;
+                    border-bottom: 1px solid #e0e0e0;
+                    font-weight: bold;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 14px;
+                ">
+                    <span>📊 ${dataset.datasetName}</span>
+                    <span class="popup-close" style="cursor:pointer;font-size:18px;">&times;</span>
+                </div>
+                <div class="popup-body" style="padding:15px;">
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">版本号：</label>
+                        <span class="field-value">${dataset.version || '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">存储路径：</label>
+                        <span class="field-value">${dataset.storagePath || '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">创建时间：</label>
+                        <span class="field-value">${dataset.createTime ? new Date(dataset.createTime).toLocaleString('zh-CN') : '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">操作人：</label>
+                        <span class="field-value">${dataset.operator || '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">操作IP：</label>
+                        <span class="field-value">${dataset.clientIp || '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">SQL定义：</label>
+                        <span class="field-value"><pre style="background:#f8f9fa;padding:8px;border-radius:4px;margin:0;overflow-x:auto;">${dataset.datasetSql || '-'}</pre></span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">备注信息：</label>
+                        <span class="field-value multi-line" style="white-space:pre-wrap;">${dataset.remark || '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">数据流类型：</label>
+                        <span class="field-value">${task.dataFlowType || '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">超时时间：</label>
+                        <span class="field-value">${task.timeout ? task.timeout + 'ms' : '-'}</span>
+                    </div>
+                </div>
+            `;
+        }
+        // Output node popup (TransformJobEntity fields except taskList)
+        else if (params.data.type === 'output') {
+            const job = params.data.jobData;
+            const statusMap = {
+                0: '未知',
+                1: '完成',
+                2: '创建',
+                3: '等待运行',
+                4: '运行中',
+                5: '部分失败中',
+                6: '部分失败',
+                7: '失败中',
+                8: '失败',
+                9: '取消中',
+                10: '取消'
+            };
+            
+            popup.innerHTML = `
+                <div class="popup-header" style="
+                    padding: 10px 15px;
+                    background: #fafafa;
+                    border-bottom: 1px solid #e0e0e0;
+                    font-weight: bold;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 14px;
+                ">
+                    <span>📁 ${job.exportFiletName || '导出文件'}</span>
+                    <span class="popup-close" style="cursor:pointer;font-size:18px;">&times;</span>
+                </div>
+                <div class="popup-body" style="padding:15px;">
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">作业ID：</label>
+                        <span class="field-value">${job.jobId || '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">作业名称：</label>
+                        <span class="field-value">${job.name || '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">作业状态：</label>
+                        <span class="field-value">${statusMap[job.jobState] || '未知'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">调度策略：</label>
+                        <span class="field-value">${job.schedule || '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">创建时间：</label>
+                        <span class="field-value">${job.createTime ? new Date(job.createTime).toLocaleString('zh-CN') : '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">操作人：</label>
+                        <span class="field-value">${job.operator || '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">操作IP：</label>
+                        <span class="field-value">${job.clientIp || '-'}</span>
+                    </div>
+                </div>
+            `;
+        }
+        // Task node popup (Python tasks only)
+        else if (params.data.type === 'task') {
+            const task = params.data.taskData;
+            const taskType = task.taskType === 1 || task.taskType === 'PYTHON' ? 'PYTHON' : 'IGINX';
+            
+            popup.innerHTML = `
+                <div class="popup-header" style="
+                    padding: 10px 15px;
+                    background: #fafafa;
+                    border-bottom: 1px solid #e0e0e0;
+                    font-weight: bold;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 14px;
+                ">
+                    <span>⚙️ ${task.pyTaskName || 'Python函数'}</span>
+                    <span class="popup-close" style="cursor:pointer;font-size:18px;">&times;</span>
+                </div>
+                <div class="popup-body" style="padding:15px;">
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">任务类型：</label>
+                        <span class="field-value">${taskType}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">数据流类型：</label>
+                        <span class="field-value">${task.dataFlowType || '-'}</span>
+                    </div>
+                    <div class="popup-field" style="margin-bottom:12px;">
+                        <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">超时时间：</label>
+                        <span class="field-value">${task.timeout ? task.timeout + 'ms' : '-'}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        document.body.appendChild(popup);
+
+        // Close button handler
+        const closeBtn = popup.querySelector('.popup-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                popup.remove();
+            });
+        }
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (popup.parentNode) {
+                popup.remove();
+            }
+        }, 5000);
     }
 
     show() {

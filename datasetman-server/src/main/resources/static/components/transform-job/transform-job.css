@@ -356,6 +356,16 @@
     color: white;
 }
 
+.action-btn.process {
+    color: #8b5cf6;
+    border-color: #8b5cf6;
+}
+
+.action-btn.process:hover {
+    background: #8b5cf6;
+    color: white;
+}
+
 .modal-mask {
     position: fixed;
     top: 0;
@@ -418,6 +428,31 @@
     padding: 20px;
     max-height: 60vh;
     overflow-y: auto;
+}
+
+.modal-container {
+    background: #fff;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 1000px;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.process-modal {
+    max-width: 1200px;
+}
+
+.graph-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #999;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px dashed #ddd;
 }
 
 .modal-footer {
