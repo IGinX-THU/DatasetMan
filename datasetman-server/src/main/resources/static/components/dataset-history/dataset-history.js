@@ -4,6 +4,7 @@ class DatasetHistory extends HTMLElement {
         this.datasetInfo = null;
         this.historyData = [];
         this._sideLineageEnabled = true;
+        this._isFocusMode = false;
         this.attachShadow({ mode: 'open' });
     }
 
@@ -517,11 +518,8 @@ class DatasetHistory extends HTMLElement {
         const focusProductBtn = this.shadowRoot.querySelector('#focusProduct');
         if (focusProductBtn) {
             focusProductBtn.addEventListener('click', () => {
-                if (this._lineageChart) {
-                    this._lineageChart.dispatchAction({
-                        type: 'restore'
-                    });
-                }
+                this._isFocusMode = !this._isFocusMode;
+                this.renderLineageGraph();
             });
         }
 
@@ -1230,6 +1228,21 @@ class DatasetHistory extends HTMLElement {
 
             graphContainer.innerHTML = '';
 
+            // 聚焦模式：设置数据集节点为固定起点（左侧）
+            if (this._isFocusMode) {
+                const currentDatasetPath = this.datasetInfo?.storagePath;
+                nodes.forEach(node => {
+                    if (node.type === 'dataset' && node.datasetData) {
+                        const nodePath = node.datasetData.storagePath || node.datasetData.datasetName;
+                        if (nodePath === currentDatasetPath) {
+                            node.x = 200;
+                            node.y = 400;
+                            node.fixed = true;
+                        }
+                    }
+                });
+            }
+
             // 延迟初始化以确保容器有正确尺寸
             setTimeout(() => {
                 const chart = echarts.init(graphContainer);
@@ -1239,7 +1252,18 @@ class DatasetHistory extends HTMLElement {
                     series: [{
                         type: 'graph',
                         layout: 'force',
-                        force: { repulsion: 600, edgeLength: 350, gravity: 0.05, layoutAnimation: true },
+                        force: this._isFocusMode ? {
+                            repulsion: 800,
+                            edgeLength: 300,
+                            gravity: 0.1,
+                            layoutAnimation: true,
+                            friction: 0.6
+                        } : {
+                            repulsion: 600,
+                            edgeLength: 350,
+                            gravity: 0.05,
+                            layoutAnimation: true
+                        },
                         roam: true,
                         draggable: true,
                         symbolSize: function(params) {
