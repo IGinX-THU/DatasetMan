@@ -132,6 +132,29 @@ class TransformJob extends HTMLElement {
                 this.loadJobsFromAPI();
             });
         }
+
+        // Event delegation for refresh and cancel buttons
+        const tbody = this.querySelector('#tableBody');
+        if (tbody) {
+            tbody.addEventListener('click', async (e) => {
+                const refreshBtn = e.target.closest('.action-btn.refresh');
+                const cancelBtn = e.target.closest('.action-btn.cancel');
+
+                if (refreshBtn) {
+                    const jobId = refreshBtn.dataset.jobId;
+                    if (jobId) {
+                        await this.refreshJobStatus(jobId);
+                    }
+                }
+
+                if (cancelBtn) {
+                    const jobId = cancelBtn.dataset.jobId;
+                    if (jobId) {
+                        await this.cancelJob(jobId);
+                    }
+                }
+            });
+        }
     }
 
     updatePagination() {
@@ -172,7 +195,7 @@ class TransformJob extends HTMLElement {
         if (this.data.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">
+                    <td colspan="7" style="text-align: center; padding: 40px; color: #6b7280;">
                         暂无作业数据
                     </td>
                 </tr>
@@ -186,13 +209,22 @@ class TransformJob extends HTMLElement {
             2: '创建',
             3: '等待运行',
             4: '运行中',
-            5: '失败中',
-            6: '失败',
-            7: '取消中',
-            8: '取消'
+            5: '部分失败中',
+            6: '部分失败',
+            7: '失败中',
+            8: '失败',
+            9: '取消中',
+            10: '取消'
         };
 
-        tbody.innerHTML = this.data.map(job => `
+        tbody.innerHTML = this.data.map(job => {
+            // 只有正在运行或等待运行的任务才能取消
+            const canCancel = [2, 3, 4, 5].includes(job.jobState);
+            const cancelBtn = canCancel
+                ? `<button class="action-btn cancel" data-job-id="${job.jobId}" data-create-time="${job.createTime}">取消</button>`
+                : '';
+
+            return `
             <tr data-id="${job.createTime}">
                 <td>${job.jobId || '-'}</td>
                 <td>${statusMap[job.jobState] || '未知'}</td>
@@ -200,8 +232,15 @@ class TransformJob extends HTMLElement {
                 <td>${job.exportFile || '-'}</td>
                 <td>${job.schedule || '-'}</td>
                 <td>${job.createtime}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="action-btn refresh" data-job-id="${job.jobId}" data-create-time="${job.createTime}">刷新状态</button>
+                        ${cancelBtn}
+                    </div>
+                </td>
             </tr>
-        `).join('');
+            `;
+        }).join('');
     }
 
 
@@ -210,6 +249,40 @@ class TransformJob extends HTMLElement {
             window.CommonUtils.showToast(message, type);
         } else {
             console.log(`${type}: ${message}`);
+        }
+    }
+
+    async refreshJobStatus(jobId) {
+        try {
+            const url = window.AppConfig.api.baseURL + `/api/transform-job/status/${jobId}`;
+            const result = await window.AppConfig.request(url, { method: 'GET' });
+            if (result.success) {
+                this.showToast('状态刷新成功', 'success');
+                // Reload the data to show updated status
+                await this.loadJobsFromAPI();
+            } else {
+                this.showToast(result.message || '状态刷新失败', 'error');
+            }
+        } catch (error) {
+            console.error('刷新状态失败:', error);
+            this.showToast('网络错误，无法刷新状态', 'error');
+        }
+    }
+
+    async cancelJob(jobId) {
+        try {
+            const url = window.AppConfig.api.baseURL + `/api/transform-job/cancel/${jobId}`;
+            const result = await window.AppConfig.request(url, { method: 'PUT' });
+            if (result.success) {
+                this.showToast('任务已取消', 'success');
+                // Reload the data to show updated status
+                await this.loadJobsFromAPI();
+            } else {
+                this.showToast(result.message || '取消任务失败', 'error');
+            }
+        } catch (error) {
+            console.error('取消任务失败:', error);
+            this.showToast('网络错误，无法取消任务', 'error');
         }
     }
 

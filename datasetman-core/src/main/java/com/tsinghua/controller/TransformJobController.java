@@ -38,10 +38,10 @@ public class TransformJobController {
     }
 
     @ApiOperation("查询Transform作业详情")
-    @GetMapping("/detail")
+    @GetMapping("/detail/{jobId}")
     @RequirePermission(Permission.RUN_TASK_READ)
-    public Result<?> queryJob(@RequestParam("createTime") Long createTime) {
-        TransformJobEntity result = transformJobService.queryJob(createTime);
+    public Result<?> queryJob(@PathVariable("jobId") String jobId) {
+        TransformJobEntity result = transformJobService.queryJob(jobId);
         if (result == null) {
             return Result.error("未找到指定的作业");
         }
@@ -54,6 +54,22 @@ public class TransformJobController {
     public Result<?> commitJob(@PathVariable("createTime") Long createTime) throws Exception {
         TransformJobEntity result = transformJobService.commitJob(createTime);
         return Result.success("任务已提交", result);
+    }
+
+    @ApiOperation("刷新任务状态")
+    @GetMapping("/status/{jobId}")
+    @RequirePermission(Permission.RUN_TASK_READ)
+    public Result<?> statusJob(@PathVariable("jobId") String jobId) throws Exception {
+        TransformJobEntity result = transformJobService.statusJob(jobId);
+        return Result.success(result);
+    }
+
+    @ApiOperation("取消任务")
+    @PutMapping("/cancel/{jobId}")
+    @RequirePermission(Permission.RUN_TASK_READ)
+    public Result<?> cancelJob(@PathVariable("jobId") String jobId) throws Exception {
+        TransformJobEntity result = transformJobService.cancelJob(jobId);
+        return Result.success(result);
     }
 
 }

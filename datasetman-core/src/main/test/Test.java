@@ -16,7 +16,10 @@ public class Test {
     public static void main(String[] args) throws Exception {
         Session session = new Session("127.0.0.1", 6888, "root", "root");
         session.openSession();
-        query(session);
+        String sql = "select * from %s where jobId = %s;";
+        String sqlFormat= String.format(sql, "relational_system.transform_job", "7454343183099510784");
+        SessionExecuteSqlResult res = session.executeSql(sqlFormat);
+        res.print(false, "");
         session.closeSession();
     }
 

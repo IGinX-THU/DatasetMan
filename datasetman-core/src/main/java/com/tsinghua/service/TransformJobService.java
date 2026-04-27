@@ -8,10 +8,7 @@ import cn.edu.tsinghua.iginx.session_v2.WriteClient;
 import cn.edu.tsinghua.iginx.session_v2.domain.Task;
 import cn.edu.tsinghua.iginx.session_v2.domain.Transform;
 import cn.edu.tsinghua.iginx.session_v2.write.Point;
-import cn.edu.tsinghua.iginx.thrift.DataFlowType;
-import cn.edu.tsinghua.iginx.thrift.ExportType;
-import cn.edu.tsinghua.iginx.thrift.TaskInfo;
-import cn.edu.tsinghua.iginx.thrift.TaskType;
+import cn.edu.tsinghua.iginx.thrift.*;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.TypeReference;
@@ -93,9 +90,16 @@ public class TransformJobService {
 
     }
 
-    public TransformJobEntity saveTransform(TransformJobRequest runTaskRequest) {
+    public TransformJobEntity saveTransform(TransformJobEntity transformJobEntity) {
 
-        long timestamp = System.currentTimeMillis();
+        long timestamp;
+        if (transformJobEntity.getId() != null){
+            timestamp = transformJobEntity.getId();
+        } else if (transformJobEntity.getCreateTime() != null){
+            timestamp = transformJobEntity.getCreateTime();
+        } else {
+            timestamp = System.currentTimeMillis();
+        }
 
         // 获取操作人
         String operator = OperationLogAspect.getCurrentUser();
@@ -103,16 +107,10 @@ public class TransformJobService {
         // 获取IP地址
         String clientIp = OperationLogAspect.getClientIp();
 
-        TransformJobEntity transformJobEntity = new TransformJobEntity();
         transformJobEntity.setId(timestamp);
-        transformJobEntity.setName(runTaskRequest.getName());
-        transformJobEntity.setTaskList(JSONObject.toJSONString(runTaskRequest.getTaskList()));
-        transformJobEntity.setExportFiletName(runTaskRequest.getExportFiletName());
-        transformJobEntity.setSchedule(runTaskRequest.getSchedule());
         transformJobEntity.setCreateTime(timestamp);
         transformJobEntity.setOperator(operator);
         transformJobEntity.setClientIp(clientIp);
-        transformJobEntity.setJobState(0);
 
         WriteClient writeClient = iginxClient.getWriteClient();
         writeClient.writeMeasurement(transformJobEntity);
@@ -192,10 +190,12 @@ public class TransformJobService {
         }
     }
 
-    public TransformJobEntity queryJob(Long createTime) {
+    public TransformJobEntity queryJob(String jobId) {
         try {
-            String sql = "select * from %s where createTime = %s;";
-            SessionExecuteSqlResult res = iginxSession.executeSql(String.format(sql, DATA_PREFIX, createTime));
+            String sql = "select * from %s where jobId = '%s';";
+            String sqlFormat= String.format(sql, DATA_PREFIX, jobId);
+            log.info("执行SQL: {}", sqlFormat);
+            SessionExecuteSqlResult res = iginxSession.executeSql(sqlFormat);
             List<Map<String, Object>> records = ConvertUtil.getRecords(res);
 
             if (records.isEmpty()) {
@@ -270,11 +270,12 @@ public class TransformJobService {
         Path filePath = Paths.get(FUNCTION_DIR_PREFIX, "job").resolve(transformCompare.getExportFiletName()).toAbsolutePath();
 
         // 提交任务
-        long jobId =
+        long jobIdLong =
                 iginxSession.commitTransformJob(
                         taskInfoList,
                         ExportType.FILE,
                         filePath.toString());
+        String jobId = String.valueOf(jobIdLong);
 
 
         long timestamp = System.currentTimeMillis();
@@ -306,4 +307,35 @@ public class TransformJobService {
         return transformJobEntity;
     }
 
+    public TransformJobEntity statusJob(String jobId) {
+        TransformJobEntity transformJob = queryJob(jobId);
+        if (transformJob == null) {
+            throw new RuntimeException("任务不存在");
+        }
+        TransformClient transformClient = iginxClient.getTransformClient();
+        // 查看任务情况
+        JobState jobState = transformClient.queryTransformJobStatus(Long.parseLong(jobId));
+        log.info("job state is " + jobState.toString());
+        transformJob.setJobState(jobState.getValue());
+        transformJob.setId(transformJob.getCreateTime());
+
+        WriteClient writeClient = iginxClient.getWriteClient();
+        writeClient.writeMeasurement(transformJob);
+        return transformJob;
+        }
+
+
+    public TransformJobEntity cancelJob(String jobId) {
+        TransformJobEntity transformJob = queryJob(jobId);
+        if (transformJob == null) {
+            throw new RuntimeException("任务不存在");
+        }
+        TransformClient transformClient = iginxClient.getTransformClient();
+        transformClient.cancelTransformJob(Long.parseLong(jobId));
+        // 查看任务情况
+        JobState jobState = transformClient.queryTransformJobStatus(Long.parseLong(jobId));
+        log.info("job state is " + jobState.toString());
+        transformJob.setJobState(jobState.getValue());
+        return saveTransform(transformJob);
+    }
 }

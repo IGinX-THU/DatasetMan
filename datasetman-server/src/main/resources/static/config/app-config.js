@@ -148,7 +148,9 @@ window.AppConfig = {
             query: '/api/transform-job/query',
             count: '/api/transform-job/count',
             detail: '/api/transform-job/detail',
-            commit: '/api/transform-job/commit/{createTime}'
+            commit: '/api/transform-job/commit/{createTime}',
+            status: '/api/transform-job/status/{jobId}',
+            cancel: '/api/transform-job/cancel/{jobId}'
         },
         // Transform作业编排相关
         transformCompare: {

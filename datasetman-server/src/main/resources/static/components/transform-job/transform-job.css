@@ -336,6 +336,26 @@
     color: white;
 }
 
+.action-btn.refresh {
+    color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.action-btn.refresh:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+.action-btn.cancel {
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+.action-btn.cancel:hover {
+    background: #ef4444;
+    color: white;
+}
+
 .modal-mask {
     position: fixed;
     top: 0;

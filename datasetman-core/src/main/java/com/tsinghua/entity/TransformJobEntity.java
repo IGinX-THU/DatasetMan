@@ -24,7 +24,7 @@ public class TransformJobEntity {
     private String schedule;
 
     @Field(name = "jobId")
-    private Long jobId;
+    private String jobId;
 
     /**
      * JOB_UNKNOWN(0) 作业状态未知
@@ -32,10 +32,12 @@ public class TransformJobEntity {
      * JOB_CREATED(2) 作业创建
      * JOB_IDLE(3) 作业等待运行（有调度时）
      * JOB_RUNNING(4) 作业运行中
-     * JOB_FAILING(5) 作业失败中（正在释放资源）
-     * JOB_FAILED(6) 作业失败
-     * JOB_CLOSING(7) 作业取消中（正在释放资源）
-     * JOB_CLOSED(8) 作业取消
+     * JOB_PARTIALLY_FAILING(5) 作业部分失败中
+     * JOB_PARTIALLY_FAILED(6) 作业部分失败
+     * JOB_FAILING(7) 作业失败中（正在释放资源）
+     * JOB_FAILED(8) 作业失败
+     * JOB_CLOSING(9) 作业取消中（正在释放资源）
+     * JOB_CLOSED(10) 作业取消
      */
     @Field(name = "JobState")
     private int JobState;
