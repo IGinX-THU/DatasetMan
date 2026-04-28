@@ -987,6 +987,7 @@ class TransformCompare extends HTMLElement {
     }
 
     getJobFormHTML(job = null) {
+        const isEdit = job !== null;
         return `
             <form id="jobForm" class="job-form">
                 <div class="form-section">
@@ -994,7 +995,7 @@ class TransformCompare extends HTMLElement {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="jobName">作业名称 <span class="required">*</span></label>
-                            <input type="text" id="jobName" name="jobName" placeholder="请输入作业名称" value="${job?.name || ''}" required>
+                            <input type="text" id="jobName" name="jobName" placeholder="请输入作业名称" value="${job?.name || ''}" ${isEdit ? 'readonly' : ''} required>
                         </div>
                     </div>
                 </div>
