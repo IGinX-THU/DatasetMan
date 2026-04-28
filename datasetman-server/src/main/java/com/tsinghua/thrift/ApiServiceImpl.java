@@ -17,7 +17,7 @@ import java.nio.ByteBuffer;
  */
 @Slf4j
 @Component
-public class ApiServiceImpl implements ApiService.Iface {
+public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface {
 
     @Autowired
     private DataSourceService dataSourceService;

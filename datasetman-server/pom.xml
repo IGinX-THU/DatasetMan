@@ -28,6 +28,12 @@
             <artifactId>datasetman-core</artifactId>
         </dependency>
 
+        <!-- Java Client -->
+        <dependency>
+            <groupId>com.tsinghua</groupId>
+            <artifactId>datasetman-client</artifactId>
+        </dependency>
+
         <!-- Spring Boot Starter Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -56,20 +62,6 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
-
-    <profiles>
-        <!-- 开发环境：可选包含SDK依赖 -->
-        <profile>
-            <id>dev-with-sdk</id>
-            <dependencies>
-                <dependency>
-                    <groupId>com.tsinghua</groupId>
-                    <artifactId>datasetman-sdk-java</artifactId>
-                    <version>${project.version}</version>
-                </dependency>
-            </dependencies>
-        </profile>
-    </profiles>
 
     <build>
         <plugins>

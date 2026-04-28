@@ -16,6 +16,8 @@
         <module>datasetman-core</module>
         <module>datasetman-server</module>
         <module>datasetman-auth</module>
+        <module>thrift</module>
+        <module>client</module>
     </modules>
 
     <properties>
@@ -64,7 +66,7 @@
             
             <dependency>
                 <groupId>com.tsinghua</groupId>
-                <artifactId>datasetman-sdk-java</artifactId>
+                <artifactId>datasetman-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
             
@@ -263,9 +265,9 @@
                                 <configuration>
                                     <projectsDirectory>${basedir}</projectsDirectory>
                                     <pomIncludes>
-                                        <pomInclude>datasetman-sdk-java/pom.xml</pomInclude>
-                                        <pomInclude>datasetman-sdk-go/pom.xml</pomInclude>
-                                        <pomInclude>datasetman-sdk-python/pom.xml</pomInclude>
+                                        <pomInclude>client/pom.xml</pomInclude>
+                                        <pomInclude>client-go/pom.xml</pomInclude>
+                                        <pomInclude>client-py/pom.xml</pomInclude>
                                     </pomIncludes>
                                     <goals>
                                         <goal>install</goal>
@@ -337,7 +339,7 @@
                                 <configuration>
                                     <projectsDirectory>${basedir}</projectsDirectory>
                                     <pomIncludes>
-                                        <pomInclude>datasetman-sdk-java/pom.xml</pomInclude>
+                                        <pomInclude>client/pom.xml</pomInclude>
                                     </pomIncludes>
                                     <goals>
                                         <goal>install</goal>
