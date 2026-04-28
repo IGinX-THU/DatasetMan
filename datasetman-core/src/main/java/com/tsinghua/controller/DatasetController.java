@@ -5,7 +5,6 @@ import com.tsinghua.auth.annotation.RequirePermission;
 import com.tsinghua.auth.enums.Permission;
 import com.tsinghua.dto.DatasetRequest;
 import com.tsinghua.entity.DatasetEntity;
-import com.tsinghua.entity.ModelMetaEntity;
 import com.tsinghua.model.Result;
 import com.tsinghua.service.DatasetService;
 import io.swagger.annotations.Api;

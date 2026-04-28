@@ -1,19 +1,17 @@
 package com.tsinghua.service;
 
-import cn.edu.tsinghua.iginx.exception.SessionException;
 import cn.edu.tsinghua.iginx.session.QueryDataSet;
 import cn.edu.tsinghua.iginx.session.Session;
 import cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult;
 import cn.edu.tsinghua.iginx.session_v2.DeleteClient;
 import cn.edu.tsinghua.iginx.session_v2.IginXClient;
-import cn.edu.tsinghua.iginx.session_v2.QueryClient;
 import cn.edu.tsinghua.iginx.session_v2.WriteClient;
 import cn.edu.tsinghua.iginx.session_v2.write.Point;
 import com.alibaba.fastjson2.JSONObject;
 import com.tsinghua.auth.aspect.OperationLogAspect;
 import com.tsinghua.dto.DatasetRequest;
 import com.tsinghua.entity.DatasetEntity;
-import com.tsinghua.entity.ParsingRulesEntity;
+import com.tsinghua.enums.SchemaPrefix;
 import com.tsinghua.util.CommonUtil;
 import com.tsinghua.util.ConvertUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import org.springframework.util.CollectionUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -33,7 +30,7 @@ import java.util.Map;
 @Service
 public class DatasetService {
 
-    private static final String STORAGE_PREFIX = "datasets";
+    private static final String STORAGE_PREFIX = SchemaPrefix.DATASET_PREFIX;
     private static final String META_PREFIX = "relational_system.dataset_meta";
 
     @Autowired

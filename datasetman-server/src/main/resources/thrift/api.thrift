@@ -9,85 +9,6 @@ struct Result {
     3: optional string data,
 }
 
-// ========== 关联规则相关 - 完全匹配您的AssociationRulesEntity ==========
-struct AssociationRule {
-    1: string name,
-    2: string description,
-    3: string tableName,
-    4: string modelName,
-    5: string modelVersion,
-    6: bool status,
-    7: i64 createTime,
-    8: i64 updateTime,
-    9: string inputsBind,
-    10: string outputsBind,
-}
-
-// 关联规则查询请求 - 完全匹配您的AssociationRulesQueryRequest DTO
-struct AssociationRulesQueryRequest {
-    1: i32 pageNum = 1,
-    2: i32 pageSize = 10,
-    3: optional string name,
-    4: optional string status,
-}
-
-// ========== 解析规则相关 - 完全匹配您的ParsingRulesEntity ==========
-struct ParsingRule {
-    1: string name,
-    2: string regexPattern,
-    3: optional string example,
-    4: i64 createTime,
-    5: i64 updateTime,
-}
-
-// 解析规则查询请求 - 完全匹配您的ParsingRulesQueryRequest DTO
-struct ParsingRulesQueryRequest {
-    1: i32 pageNum = 1,
-    2: i32 pageSize = 6,
-    3: optional string name,
-}
-
-// ========== 运行任务相关 - 完全匹配您的RunTaskEntity ==========
-struct RunTask {
-    1: string name,
-    2: i64 startTime,
-    3: i64 endTime,
-    4: i64 ruleId,
-    5: string ruleName,
-    6: string modelName,
-    7: string modelVersion,
-    8: string inputMeasurements,
-    9: string outputMeasurements,
-    10: string outputTable,
-    11: string status,
-    12: i64 timestamp,
-    13: optional i64 processId,
-    14: optional string processLog,
-}
-
-// 运行任务请求 - 完全匹配您的RunTaskRequest DTO
-struct RunTaskRequest {
-    1: string name,
-    2: i64 startTime,
-    3: i64 endTime,
-    4: string ruleName,
-    5: i64 ruleId,
-    6: optional string modelName,
-    7: optional string modelVersion,
-    8: optional string outputTable,
-}
-
-// 运行任务查询请求 - 完全匹配您的RunTaskQueryRequest DTO
-struct RunTaskQueryRequest {
-    1: i32 pageNum = 1,
-    2: i32 pageSize = 10,
-    3: optional string name,
-    4: optional string status,
-    5: optional i64 ruleId,
-    6: optional i64 startTime,
-    7: optional i64 endTime,
-}
-
 // ========== 数据源相关 - 完全匹配您的StorageEngineInfoDto ==========
 struct StorageEngineInfo {
     1: i64 id,
@@ -134,93 +55,102 @@ struct TableDto {
     2: optional list<map<string, string>> records,
 }
 
-// ========== 模型文件相关 - 完全匹配您的ModelMetaEntity ==========
-struct ModelMeta {
+// ========== 数据集相关 ==========
+struct DatasetRequest {
+    1: string datasetName,
+    2: list<string> datasetSql,
+    3: optional i64 parent,
+    4: optional string remark,
+}
+
+struct DatasetEntity {
+    1: i64 id,
+    2: string datasetName,
+    3: string datasetSql,
+    4: string version,
+    5: string storagePath,
+    6: i64 createTime,
+    7: i64 parent,
+    8: string operator,
+    9: string clientIp,
+    10: string remark,
+    11: bool deleted,
+}
+
+struct DatasetVersionTreeDTO {
+    1: string id,
+    2: string name,
+    3: string time,
+    4: i64 timestamp,
+    5: i64 parent,
+    6: string color,
+    7: string user,
+    8: string ip,
+    9: string sql,
+    10: string remark,
+    11: bool deleted,
+    12: optional list<DatasetVersionTreeDTO> children,
+}
+
+// ========== 函数相关 ==========
+struct RegisterTaskInfoDto {
     1: string name,
-    2: string version,
+    2: string className,
     3: string fileName,
-    4: optional i64 fileSize,
-    5: optional i32 chunkCount,
-    6: optional string storagePath,
-    7: optional string fileMd5,
-    8: optional string author,
-    9: optional string scene,
-    10: optional string inputs,
-    11: optional string outputs,
-    12: optional i64 timestamp,
+    4: string ipPortPair,
+    5: string type,
 }
 
-// ========== 模型文件提取请求 - 完全匹配您的ExtractModelFileRequest ==========
-struct ExtractModelFileRequest {
-    1: string name,
-    2: string version,
+// ========== Transform作业相关 ==========
+struct TaskInfoDto {
+    1: i32 taskType,
+    2: i32 dataFlowType,
+    3: i64 timeout,
+    4: optional string dataset,
+    5: optional string pyTaskName,
 }
 
-// ========== API服务接口 - 完全匹配所有Controller的方法 ==========
+struct TransformJobRequest {
+    1: optional i64 createTime,
+    2: string name,
+    3: list<TaskInfoDto> taskList,
+    4: string exportFiletName,
+    5: optional string schedule,
+}
+
+struct TransformJobQueryRequest {
+    1: optional i32 pageNum,
+    2: optional i32 pageSize,
+    3: optional string name,
+    4: optional i32 jobState,
+}
+
+struct TransformCompareEntity {
+    1: i64 id,
+    2: string name,
+    3: string taskList,
+    4: string exportFiletName,
+    5: optional string schedule,
+    6: i64 createTime,
+    7: string operator,
+    8: string clientIp,
+}
+
+struct TransformJobEntity {
+    1: i64 id,
+    2: string name,
+    3: string taskList,
+    4: string exportFiletName,
+    5: optional string schedule,
+    6: optional string jobId,
+    7: i32 jobState,
+    8: i64 createTime,
+    9: string operator,
+    10: string clientIp,
+}
+
+// ========== API服务接口 - 匹配所有Controller的方法 ==========
 service ApiService {
-    // ========== 关联规则接口 - 匹配AssociationRulesController ==========
-    // POST /api/association/rules/save -> saveRules(AssociationRulesEntity)
-    Result saveAssociationRule(1: AssociationRule rule),
-    
-    // POST /api/association/rules/query -> queryRules(AssociationRulesQueryRequest)
-    Result queryAssociationRules(1: AssociationRulesQueryRequest request),
-    
-    // POST /api/association/rules/count -> countRules(AssociationRulesQueryRequest)
-    Result countAssociationRules(1: AssociationRulesQueryRequest request),
-    
-    // GET /api/association/rules/detail?createTime=xxx -> queryRule(Long createTime)
-    Result getAssociationRule(1: i64 createTime),
-    
-    // DELETE /api/association/rules/delete?createTime=xxx -> deleteRule(Long createTime)
-    Result deleteAssociationRule(1: i64 createTime),
-
-    // ========== 解析规则接口 - 匹配ParsingRulesController ==========
-    // POST /api/parsing/rules/save -> saveRules(ParsingRulesEntity)
-    Result saveParsingRule(1: ParsingRule rule),
-    
-    // POST /api/parsing/rules/query -> queryRules(ParsingRulesQueryRequest)
-    Result queryParsingRules(1: ParsingRulesQueryRequest request),
-    
-    // POST /api/parsing/rules/count -> countRules(ParsingRulesQueryRequest)
-    Result countParsingRules(1: ParsingRulesQueryRequest request),
-    
-    // GET /api/parsing/rules/detail?createTime=xxx -> queryRule(Long createTime)
-    Result getParsingRule(1: i64 createTime),
-    
-    // DELETE /api/parsing/rules/delete?createTime=xxx -> deleteRule(Long createTime)
-    Result deleteParsingRule(1: i64 createTime),
-
-    // ========== 运行任务接口 - 匹配RunTaskController ==========
-    // POST /api/task/run -> runTask(RunTaskRequest)
-    Result runTask(1: RunTaskRequest runTaskRequest),
-    
-    // POST /api/task/validate-uniqueness -> validateTaskUniqueness(RunTaskRequest)
-    Result validateTaskUniqueness(1: RunTaskRequest request),
-    
-    // GET /api/task/stop?timestamp=xxx -> stopTask(Long timestamp)
-    Result stopTask(1: i64 timestamp),
-    
-    // GET /api/task/log?timestamp=xxx -> getTaskLog(Long timestamp)
-    Result getTaskLog(1: i64 timestamp),
-    
-    // POST /api/task/query -> queryTasks(RunTaskQueryRequest)
-    Result queryTasks(1: RunTaskQueryRequest request),
-    
-    // POST /api/task/count -> countTasks(RunTaskQueryRequest)
-    Result countTasks(1: RunTaskQueryRequest request),
-    
-    // GET /api/task/detail?timestamp=xxx -> queryTask(Long timestamp)
-    Result getTask(1: i64 timestamp),
-    
-    // DELETE /api/task/delete?timestamp=xxx -> deleteTask(Long timestamp)
-    Result deleteTask(1: i64 timestamp),
-    
-    // POST /api/task/upload-report -> uploadReport(MultipartFile)
-    Result uploadReport(1: binary file),
-    
-    // POST /api/task/package-download?timestamp=xxx -> packageAndDownload(Long timestamp)
-    Result packageDownload(1: i64 timestamp),
-
     // ========== 数据源接口 - 匹配DataSourceController ==========
     // POST /api/datasource/register -> register(String jsonBody)
     Result registerDataSource(1: string jsonBody),
@@ -238,11 +168,8 @@ service ApiService {
     // POST /api/data/query -> queryData(DataQueryRequest)
     Result queryData(1: DataQueryRequest request),
     
-    // POST /api/data/import -> importData(DataImportRequest, MultipartFile)
-    Result importData(1: string config, 2: binary file),
-    
-    // POST /api/data/export -> exportData(DataQueryRequest)
-    Result exportData(1: DataQueryRequest request),
+    // POST /api/data/fs/query -> queryFileData(DataQueryRequest)
+    Result queryFileData(1: DataQueryRequest request),
     
     // POST /api/data/delete -> deleteData(DataQueryRequest)
     Result deleteData(1: DataQueryRequest request),
@@ -252,29 +179,65 @@ service ApiService {
     
     // POST /api/data/relational/count -> countData(RelationalQueryRequest)
     Result countRelationalData(1: RelationalQueryRequest request),
-    
-    // POST /api/data/relational/export -> exportRelationalDataToExcel(RelationalQueryRequest)
-    Result exportRelationalData(1: RelationalQueryRequest request),
 
-    // ========== 模型文件接口 - 匹配ModelFileController ==========
-    // POST /api/model/upload -> handleFileUpload(MultipartFile)
-    Result uploadModel(1: binary file),
+    // ========== 数据集接口 - 匹配DatasetController ==========
+    // POST /api/dataset/testsql -> testSQL(String sql)
+    Result testSQL(1: string sql),
     
-    // POST /api/model/download -> handleFileDownload(String name, String version)
-    Result downloadModel(1: string name, 2: string version),
+    // POST /api/dataset/save -> saveDataset(DatasetRequest)
+    Result saveDataset(1: DatasetRequest request),
     
-    // GET /api/model/metas?name=xxx&version=xxx -> queryMeta(String name, String version)
-    Result getModelMeta(1: string name, 2: string version),
+    // GET /api/dataset/metas -> queryMeta(String path)
+    Result queryMeta(1: string path),
     
-    // POST /api/model/metas -> saveMeta(ModelMetaEntity)
-    Result saveModelMeta(1: ModelMeta modelMeta),
+    // DELETE /api/dataset/delete -> deleteDataset(String path)
+    Result deleteDataset(1: string path),
     
-    // GET /api/model/history?name=xxx -> queryMetaList(String name)
-    Result getModelHistory(1: string name),
+    // GET /api/dataset/history -> getVersionHistory(String datasetName)
+    Result getVersionHistory(1: string datasetName),
+
+    // ========== 函数接口 - 匹配FunctionController ==========
+    // DELETE /api/function/delete/{name} -> handleDelete(String name)
+    Result deleteFunction(1: string name),
     
-    // DELETE /api/model/delete?name=xxx&version=xxx -> deleteModel(String name, String version)
-    Result deleteModel(1: string name, 2: string version),
+    // GET /api/function/query/{type} -> list(String type)
+    Result listFunctions(1: string type),
+
+    // ========== Transform作业编排接口 - 匹配TransformCompareController ==========
+    // POST /api/transform-compare/save -> saveTransform(TransformJobRequest)
+    Result saveTransformCompare(1: TransformJobRequest request),
     
-    // POST /api/model/extractModelFile -> extractModelFileForParsing(ExtractModelFileRequest)
-    Result extractModelFile(1: ExtractModelFileRequest request),
+    // POST /api/transform-compare/query -> queryJobs(TransformJobQueryRequest)
+    Result queryTransformCompares(1: TransformJobQueryRequest request),
+    
+    // POST /api/transform-compare/count -> countJobs(TransformJobQueryRequest)
+    Result countTransformCompares(1: TransformJobQueryRequest request),
+    
+    // GET /api/transform-compare/detail -> queryJob(Long createTime)
+    Result getTransformCompare(1: i64 createTime),
+    
+    // DELETE /api/transform-compare/delete -> deleteJob(Long createTime)
+    Result deleteTransformCompare(1: i64 createTime),
+
+    // ========== Transform任务管理接口 - 匹配TransformJobController ==========
+    // POST /api/transform-job/query -> queryJobs(TransformJobQueryRequest)
+    Result queryTransformJobs(1: TransformJobQueryRequest request),
+    
+    // POST /api/transform-job/count -> countJobs(TransformJobQueryRequest)
+    Result countTransformJobs(1: TransformJobQueryRequest request),
+    
+    // GET /api/transform-job/detail/{jobId} -> queryJob(String jobId)
+    Result getTransformJob(1: string jobId),
+    
+    // PUT /api/transform-job/commit/{createTime} -> commitJob(Long createTime)
+    Result commitTransformJob(1: i64 createTime),
+    
+    // GET /api/transform-job/status/{jobId} -> statusJob(String jobId)
+    Result getTransformJobStatus(1: string jobId),
+    
+    // PUT /api/transform-job/cancel/{jobId} -> cancelJob(String jobId)
+    Result cancelTransformJob(1: string jobId),
+    
+    // GET /api/transform-job/bloodline -> chartBloodline(String datasetPath, Boolean sideLineage)
+    Result getTransformJobBloodline(1: string datasetPath, 2: bool sideLineage),
 }
