@@ -10,7 +10,10 @@ import com.tsinghua.service.FunctionService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -76,6 +79,25 @@ public class FunctionController {
 
         functionService.registerUDF(file, udfName, className, udfType);
         return Result.success("注册成功");
+    }
+
+    @ApiOperation("下载函数文件")
+    @GetMapping("/download/{type}/{fileName}")
+    @RequirePermission(Permission.FUNCTION_READ)
+    @OperationLog(value = "下载函数文件", type = OperationLog.OperationType.QUERY, recordParams = false)
+    public ResponseEntity<Resource> downloadFunction(
+            @PathVariable("type") String type,
+            @PathVariable("fileName") String fileName) throws Exception {
+
+        Resource resource = functionService.downloadFunction(fileName, type);
+
+        String contentType = "application/octet-stream";
+        String headerValue = "attachment; filename=\"" + resource.getFilename() + "\"";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, headerValue)
+                .body(resource);
     }
 
 }

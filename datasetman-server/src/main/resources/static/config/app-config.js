@@ -127,13 +127,15 @@ window.AppConfig = {
         transform: {
             register: '/api/function/register/transform',
             delete: '/api/function/delete/{name}',
-            query: '/api/function/query/{type}'
+            query: '/api/function/query/{type}',
+            download: '/api/function/download/transform/{fileName}'
         },
         // UDF相关
         udf: {
             register: '/api/function/register/udf',
             delete: '/api/function/delete/{name}',
-            query: '/api/function/query/{type}'
+            query: '/api/function/query/{type}',
+            download: '/api/function/download/udf/{fileName}'
         },
         // Transform作业相关
         job: {

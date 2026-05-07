@@ -463,6 +463,7 @@ class UdfManagement extends HTMLElement {
                 <td>${udf.ipPortPair}</td>
                 <td>${udf.type}</td>
                 <td>
+                    <button class="action-btn download" data-id="${udf.id}" data-filename="${udf.fileName}">下载</button>
                     <button class="action-btn delete" data-id="${udf.id}">删除</button>
                 </td>
             </tr>
@@ -472,6 +473,9 @@ class UdfManagement extends HTMLElement {
             if (e.target.classList.contains('delete')) {
                 const id = parseInt(e.target.getAttribute('data-id'));
                 this.deleteUdf(id);
+            } else if (e.target.classList.contains('download')) {
+                const fileName = e.target.getAttribute('data-filename');
+                this.downloadUdf(fileName);
             }
         });
     }
@@ -578,6 +582,37 @@ class UdfManagement extends HTMLElement {
             window.CommonUtils.showToast(message, type);
         } else {
             console.log(`${type}: ${message}`);
+        }
+    }
+
+    async downloadUdf(fileName) {
+        try {
+            const url = window.AppConfig.getApiUrl('udf', 'download').replace('{fileName}', encodeURIComponent(fileName));
+            const headers = window.AppConfig.getAuthHeaders();
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: headers
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+
+            this.showMessage('文件下载成功', 'success');
+        } catch (error) {
+            console.error('下载UDF文件失败:', error);
+            this.showMessage('下载失败，请重试', 'error');
         }
     }
 

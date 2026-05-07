@@ -18,6 +18,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 
 @Slf4j
 @Service
@@ -134,5 +136,24 @@ public class FunctionService {
                         filePath);
         log.info("注册UDF SQL: {}", registerSQL);
         iginxSession.executeSql(registerSQL);
+    }
+
+    public Resource downloadFunction(String fileName, String type) throws Exception {
+        Path pathDir;
+        if ("transform".equalsIgnoreCase(type)) {
+            pathDir = Paths.get(FUNCTION_DIR_PREFIX, "transform");
+        } else if ("udf".equalsIgnoreCase(type)) {
+            pathDir = Paths.get(FUNCTION_DIR_PREFIX, "udf");
+        } else {
+            throw new Exception("不支持的函数类型: " + type);
+        }
+
+        Path filePath = pathDir.resolve(fileName).toAbsolutePath();
+        if (!Files.exists(filePath)) {
+            throw new Exception("文件不存在: " + filePath);
+        }
+
+        log.info("下载函数文件: {}", filePath);
+        return new FileSystemResource(filePath);
     }
 }

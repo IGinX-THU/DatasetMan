@@ -448,6 +448,7 @@ class TransformManagement extends HTMLElement {
                 <td>${transform.ipPortPair}</td>
                 <td>${transform.type}</td>
                 <td>
+                    <button class="action-btn download" data-id="${transform.id}" data-filename="${transform.fileName}">下载</button>
                     <button class="action-btn delete" data-id="${transform.id}">删除</button>
                 </td>
             </tr>
@@ -457,6 +458,9 @@ class TransformManagement extends HTMLElement {
             if (e.target.classList.contains('delete')) {
                 const id = parseInt(e.target.getAttribute('data-id'));
                 this.deleteTransform(id);
+            } else if (e.target.classList.contains('download')) {
+                const fileName = e.target.getAttribute('data-filename');
+                this.downloadTransform(fileName);
             }
         });
     }
@@ -563,6 +567,37 @@ class TransformManagement extends HTMLElement {
             window.CommonUtils.showToast(message, type);
         } else {
             console.log(`${type}: ${message}`);
+        }
+    }
+
+    async downloadTransform(fileName) {
+        try {
+            const url = window.AppConfig.getApiUrl('transform', 'download').replace('{fileName}', encodeURIComponent(fileName));
+            const headers = window.AppConfig.getAuthHeaders();
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: headers
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+
+            this.showMessage('文件下载成功', 'success');
+        } catch (error) {
+            console.error('下载Transform文件失败:', error);
+            this.showMessage('下载失败，请重试', 'error');
         }
     }
 
