@@ -392,6 +392,9 @@ class FileSystemBrowser extends HTMLElement {
                     </div>
                 `;
             } else if (isText) {
+                const textUrl = URL.createObjectURL(blob);
+                this.currentImageUrl = textUrl;
+                this.currentFileName = fileName;
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const textContent = e.target.result;
