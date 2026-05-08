@@ -483,7 +483,7 @@ class TransformCompare extends HTMLElement {
                     this.showToast('请填写完整任务信息', 'error');
                     return;
                 }
-                if (!task.dataFlowType) {
+                if (task.dataFlowType === null || task.dataFlowType === undefined) {
                     this.showToast('请填写数据流动方式', 'error');
                     return;
                 }
@@ -739,7 +739,7 @@ class TransformCompare extends HTMLElement {
                             this.showToast('请填写完整任务信息', 'error');
                             return;
                         }
-                        if (task.taskType === 1 && !task.dataFlowType) {
+                        if (task.dataFlowType === null || task.dataFlowType === undefined) {
                             this.showToast('请填写数据流动方式', 'error');
                             return;
                         }
@@ -1551,8 +1551,11 @@ class TransformCompare extends HTMLElement {
                     timeout: parseInt(timeout)
                 };
 
+                // 始终设置dataFlowType，即使为空，以便验证能正确检测
                 if (dataFlowType) {
                     task.dataFlowType = dataFlowType === 'stream' ? 1 : 0;
+                } else {
+                    task.dataFlowType = null;
                 }
 
                 if (taskType === 'python') {

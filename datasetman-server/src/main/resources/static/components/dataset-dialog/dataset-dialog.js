@@ -634,9 +634,17 @@ class DatasetDialog extends HTMLElement {
 
         // 确保sqlList是最新的
         this.updateSqlListFromDOM();
-        
-        // 过滤掉空SQL
-        const validSqlList = this.sqlList.filter(sql => sql && sql.trim());
+
+        // 过滤掉空SQL并清理SQL（去除多余换行符和空格）
+        const validSqlList = this.sqlList
+            .filter(sql => sql && sql.trim())
+            .map(sql => {
+                // 去除首尾空格
+                let cleanedSql = sql.trim();
+                // 将多个连续空格替换为单个空格
+                cleanedSql = cleanedSql.replace(/\s+/g, ' ');
+                return cleanedSql;
+            });
         
         const formData = {
             datasetName: this.shadowRoot.querySelector('#datasetName').value.trim(),
