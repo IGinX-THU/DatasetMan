@@ -3,8 +3,9 @@ class DatasetDialog extends HTMLElement {
         super();
         this.mode = 'create'; // 'create' or 'edit'
         this.datasetData = null;
-        this.isSubmitting = false; // 防止重复提交标志
+        this._isSubmitting = false; // 防止重复提交标志
         this.sqlList = []; // SQL列表
+        this.debounceTimer = null; // 防抖定时器
         this.attachShadow({ mode: 'open' });
     }
 
@@ -405,16 +406,15 @@ class DatasetDialog extends HTMLElement {
 
         // 保存按钮 - 使用防抖函数
         const submitBtn = this.shadowRoot.querySelector('#submitBtn');
-        let debounceTimer = null;
 
         submitBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
 
-            if (debounceTimer) return; // 防抖中，直接返回
+            if (this.debounceTimer) return; // 防抖中，直接返回
 
-            debounceTimer = setTimeout(() => {
-                debounceTimer = null;
+            this.debounceTimer = setTimeout(() => {
+                this.debounceTimer = null;
             }, 500); // 500ms防抖
 
             if (this._isSubmitting) return;
@@ -439,12 +439,28 @@ class DatasetDialog extends HTMLElement {
         this.shadowRoot.querySelector('#dialogTitle').textContent = '新增数据集';
         this.shadowRoot.querySelector('#submitBtn').textContent = '保存';
         this.classList.add('show');
+        // 确保按钮可点击
+        this._isSubmitting = false;
+        this.debounceTimer = null; // 清除防抖定时器
+        const submitBtn = this.shadowRoot.querySelector('#submitBtn');
+        submitBtn.disabled = false;
+        submitBtn.style.pointerEvents = '';
+        submitBtn.style.opacity = '';
     }
 
     // 显示弹窗 - 编辑模式
     async showEdit(datasetData) {
         this.mode = 'edit';
         this.datasetData = datasetData;
+
+        // 重置提交状态和按钮
+        this._isSubmitting = false;
+        this.debounceTimer = null; // 清除防抖定时器
+        const submitBtn = this.shadowRoot.querySelector('#submitBtn');
+        submitBtn.disabled = false;
+        submitBtn.style.pointerEvents = '';
+        submitBtn.style.opacity = '';
+        submitBtn.textContent = '保存';
 
         // 如果只有 storagePath，先获取完整数据
         if (datasetData.storagePath && !datasetData.datasetName) {
@@ -489,6 +505,13 @@ class DatasetDialog extends HTMLElement {
         this.clearResult();
         this.sqlList = ['']; // 初始化为包含一个空SQL的列表
         this.renderSqlList();
+        // 重置提交状态和按钮
+        this._isSubmitting = false;
+        const submitBtn = this.shadowRoot.querySelector('#submitBtn');
+        submitBtn.disabled = false;
+        submitBtn.style.pointerEvents = '';
+        submitBtn.style.opacity = '';
+        submitBtn.textContent = '保存';
     }
 
     fillForm(data) {
