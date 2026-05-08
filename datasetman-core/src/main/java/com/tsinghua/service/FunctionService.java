@@ -29,15 +29,17 @@ public class FunctionService {
     private static final String CREATE_TRANSFORM_FORMATTER = "CREATE FUNCTION TRANSFORM \"%s\" FROM \"%s\" IN \"%s\";";
     private static final String DROP_SQL_FORMATTER = "DROP FUNCTION \"%s\";";
     private static final String CREATE_UDF_FORMATTER = "CREATE FUNCTION %s \"%s\" FROM \"%s\" IN \"%s\";";
-
+    private static final String SYS_DIR_PREFIX = "sys_data";
     private static final String FUNCTION_DIR_PREFIX = "function";
+    private static final String TRANSFORM = "transform";
+    private static final String UDF = "udf";
 
     @Autowired
     private Session iginxSession;
 
     public void registerTransform(MultipartFile file, String name, String className) throws Exception {
         // 创建函数目录
-        Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "transform");
+        Path pathDir = Paths.get(SYS_DIR_PREFIX, FUNCTION_DIR_PREFIX, TRANSFORM);
         if (!Files.exists(pathDir)) {
             Files.createDirectories(pathDir);
             log.info("创建函数目录: {}", pathDir);
@@ -66,14 +68,14 @@ public class FunctionService {
         List<RegisterTaskInfoDto> registerTaskInfoDtos = query("all");
         RegisterTaskInfoDto registerTaskInfoDto = registerTaskInfoDtos.stream().filter(info -> info.getName().equals(name)).findFirst().orElse(null);
         if (registerTaskInfoDto != null) {
-            if (registerTaskInfoDto.getType().equals("TRANSFORM")) {
-                Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "transform");
+            if (TRANSFORM.equalsIgnoreCase(registerTaskInfoDto.getType())) {
+                Path pathDir = Paths.get(SYS_DIR_PREFIX,FUNCTION_DIR_PREFIX, TRANSFORM);
                 Path filePath = pathDir.resolve(registerTaskInfoDto.getFileName()).toAbsolutePath();
                 if (Files.exists(filePath)) {
                     Files.delete(filePath);
                 }
             } else {
-                Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "udf");
+                Path pathDir = Paths.get(SYS_DIR_PREFIX,FUNCTION_DIR_PREFIX, UDF);
                 Path filePath = pathDir.resolve(registerTaskInfoDto.getFileName()).toAbsolutePath();
                 if (Files.exists(filePath)) {
                     Files.delete(filePath);
@@ -99,10 +101,10 @@ public class FunctionService {
                             joiner.toString(),
                             info.getType().toString()));
         }
-        if ("transform".equalsIgnoreCase(type)){
-            return registerTaskInfoDtos.stream().filter(info -> info.getType().equals("TRANSFORM")).collect(Collectors.toList());
-        } else if ("udf".equalsIgnoreCase(type)){
-            return registerTaskInfoDtos.stream().filter(info -> !info.getType().equals("TRANSFORM")).collect(Collectors.toList());
+        if (TRANSFORM.equalsIgnoreCase(type)){
+            return registerTaskInfoDtos.stream().filter(info -> TRANSFORM.equalsIgnoreCase(info.getType())).collect(Collectors.toList());
+        } else if (UDF.equalsIgnoreCase(type)){
+            return registerTaskInfoDtos.stream().filter(info -> !TRANSFORM.equalsIgnoreCase(info.getType())).collect(Collectors.toList());
         } else {
             return registerTaskInfoDtos;
         }
@@ -110,7 +112,7 @@ public class FunctionService {
 
     public void registerUDF(MultipartFile file, String udfName, String className, String udfType) throws Exception {
         // 创建函数目录
-        Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "udf");
+        Path pathDir = Paths.get(SYS_DIR_PREFIX,FUNCTION_DIR_PREFIX, UDF);
         if (!Files.exists(pathDir)) {
             Files.createDirectories(pathDir);
             log.info("创建函数目录: {}", pathDir);
@@ -140,10 +142,10 @@ public class FunctionService {
 
     public Resource downloadFunction(String fileName, String type) throws Exception {
         Path pathDir;
-        if ("transform".equalsIgnoreCase(type)) {
-            pathDir = Paths.get(FUNCTION_DIR_PREFIX, "transform");
-        } else if ("udf".equalsIgnoreCase(type)) {
-            pathDir = Paths.get(FUNCTION_DIR_PREFIX, "udf");
+        if (TRANSFORM.equalsIgnoreCase(type)) {
+            pathDir = Paths.get(SYS_DIR_PREFIX,FUNCTION_DIR_PREFIX, TRANSFORM);
+        } else if (UDF.equalsIgnoreCase(type)) {
+            pathDir = Paths.get(SYS_DIR_PREFIX,FUNCTION_DIR_PREFIX, UDF);
         } else {
             throw new Exception("不支持的函数类型: " + type);
         }

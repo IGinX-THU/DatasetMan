@@ -35,7 +35,8 @@ import java.util.stream.Collectors;
 public class TransformJobService {
 
     private static final String DATA_PREFIX = "relational_system.transform_job";
-    private static final String FUNCTION_DIR_PREFIX = "function";
+    private static final String SYS_DIR_PREFIX = "sys_data";
+    private static final String JOB_OUTPUT = "job";
 
     @Autowired
     private Session iginxSession;
@@ -62,7 +63,7 @@ public class TransformJobService {
     private void init() {
         try {
             // 创建函数目录
-            Path pathDir = Paths.get(FUNCTION_DIR_PREFIX, "job");
+            Path pathDir = Paths.get(SYS_DIR_PREFIX, JOB_OUTPUT);
             if (!Files.exists(pathDir)) {
                 Files.createDirectories(pathDir);
                 log.info("创建任务输出目录: {}", pathDir);
@@ -75,7 +76,7 @@ public class TransformJobService {
             request.setIsReadOnly(true);
             request.setSchemaPrefix(SchemaPrefix.FILE_SYSTEM);
             request.setPort(6666);
-            request.setDummyDir(Paths.get(FUNCTION_DIR_PREFIX).toAbsolutePath().toString());
+            request.setDummyDir(Paths.get(SYS_DIR_PREFIX).toAbsolutePath().toString());
             dataSourceService.registerDataSource(request);
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -260,7 +261,7 @@ public class TransformJobService {
 
         }
 
-        Path filePath = Paths.get(FUNCTION_DIR_PREFIX, "job").resolve(transformCompare.getExportFiletName()).toAbsolutePath();
+        Path filePath = Paths.get(SYS_DIR_PREFIX, JOB_OUTPUT).resolve(transformCompare.getExportFiletName()).toAbsolutePath();
 
         // 提交任务
         long jobIdLong =
