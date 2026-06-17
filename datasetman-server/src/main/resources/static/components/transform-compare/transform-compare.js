@@ -1063,14 +1063,14 @@ class TransformCompare extends HTMLElement {
                             <select id="exportType" name="exportType" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
                                 <option value="0" ${job?.exportType === 0 ? 'selected' : ''}>none</option>
                                 <option value="2" ${job?.exportType === 2 ? 'selected' : ''}>IGinX</option>
-                                <option value="1" ${job?.exportType === 1 ? 'selected' : ''}>file</option>
+                                <option value="1" ${job?.exportType === 1 || job?.exportType === undefined || job?.exportType === null ? 'selected' : ''}>file</option>
                             </select>
                         </div>
                     </div>
-                    <div class="form-row" id="exportFileRow" style="display: ${job?.exportType === 1 ? 'block' : 'none'};">
+                    <div class="form-row" id="exportFileRow" style="display: ${job?.exportType === 1 || job?.exportType === undefined || job?.exportType === null ? 'block' : 'none'};">
                         <div class="form-group">
-                            <label for="exportFile">导出文件路径 <span class="required">*</span></label>
-                            <input type="text" id="exportFile" name="exportFile" placeholder="请输入导出文件路径" value="${job?.exportFile || ''}">
+                            <label for="exportFile">输出文件名 <span class="required">*</span></label>
+                            <input type="text" id="exportFile" name="exportFile" placeholder="请输入输出文件名" value="${job?.exportFile || ''}">
                         </div>
                     </div>
                     <div class="form-row">

@@ -61,9 +61,6 @@ public class FunctionService {
     }
 
     public void delete(String name) throws Exception {
-        String registerSQL = String.format(DROP_SQL_FORMATTER, name);
-        log.info("删除Transform SQL: {}", registerSQL);
-        iginxSession.executeSql(registerSQL);
         //清理文件
         List<RegisterTaskInfoDto> registerTaskInfoDtos = query("all");
         RegisterTaskInfoDto registerTaskInfoDto = registerTaskInfoDtos.stream().filter(info -> info.getName().equals(name)).findFirst().orElse(null);
@@ -82,6 +79,9 @@ public class FunctionService {
                 }
             }
         }
+        String registerSQL = String.format(DROP_SQL_FORMATTER, name);
+        log.info("删除Transform SQL: {}", registerSQL);
+        iginxSession.executeSql(registerSQL);
     }
 
     public List<RegisterTaskInfoDto> query(String type) throws SessionException {

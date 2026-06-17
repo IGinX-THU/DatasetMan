@@ -125,7 +125,7 @@ public class TransformJobService {
             }
             
             if (request.getJobState() != null) {
-                sql.append(" AND JobState = ").append(request.getJobState());
+                sql.append(" AND jobState = ").append(request.getJobState());
             }
             
             // 添加排序和分页
@@ -168,7 +168,7 @@ public class TransformJobService {
             }
             
             if (request.getJobState() != null) {
-                sql.append(" AND JobState = ").append(request.getJobState());
+                sql.append(" AND jobState = ").append(request.getJobState());
             }
             
             sql.append(";");
@@ -282,7 +282,9 @@ public class TransformJobService {
                 iginxSession.commitTransformJob(
                         taskInfoList,
                         ExportType.findByValue(exportType.getValue()),
-                        filePath);
+                        filePath,
+                        transformCompare.getSchedule(),
+                        true);
         String jobId = String.valueOf(jobIdLong);
 
 
