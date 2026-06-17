@@ -1202,18 +1202,52 @@ class DatasetHistory extends HTMLElement {
                 // 添加结果集节点
                 if (previousNodeId !== null) {
                     const outputNodeId = nodeId++;
-                    const label = `结果集: ${job.exportFiletName || '导出文件'}`;
-                    const lines = label.split('\n');
+                    
+                    // 根据exportType确定结果集类型
+                    let resultLabel = '';
+                    let resultName = '';
+                    let resultColor = '#F44336';
+                    
+                    if (job.exportType === 2) {
+                        // IGinX导出
+                        resultLabel = `结果集: IGinX`;
+                        resultName = 'IGinX';
+                        resultColor = '#F44336';
+                    } else if (job.exportType === 1) {
+                        // 文件导出
+                        resultLabel = `结果集: ${job.exportFiletName || '导出文件'}`;
+                        resultName = job.exportFiletName || '导出文件';
+                        resultColor = '#4CAF50';
+                    } else if (job.exportType === 0 || job.exportType === null || job.exportType === undefined) {
+                        // 无导出或exportType为null/undefined
+                        // 如果有exportFiletName，说明是旧数据，显示文件名
+                        if (job.exportFiletName) {
+                            resultLabel = `结果集: ${job.exportFiletName}`;
+                            resultName = job.exportFiletName;
+                            resultColor = '#4CAF50';
+                        } else {
+                            resultLabel = `结果集: 日志`;
+                            resultName = '日志';
+                            resultColor = '#9E9E9E';
+                        }
+                    } else {
+                        // 其他情况
+                        resultLabel = `结果集: 日志`;
+                        resultName = '日志';
+                        resultColor = '#9E9E9E';
+                    }
+                    
+                    const lines = resultLabel.split('\n');
                     const maxLineLength = Math.max(...lines.map(line => line.length));
                     const width = maxLineLength * 9 + 40;
                     const height = lines.length * 18 + 30;
 
                     nodes.push({
                         id: outputNodeId,
-                        name: job.exportFiletName || '导出文件',
+                        name: resultName,
                         type: 'output',
                         datasetType: '结果集',
-                        itemStyle: { color: '#F44336', borderColor: '#F44336' },
+                        itemStyle: { color: resultColor, borderColor: resultColor },
                         symbolSize: [width, height],
                         jobData: job
                     });
@@ -1291,7 +1325,20 @@ class DatasetHistory extends HTMLElement {
                                     return `数据集: ${dataset.datasetName}\n版本: ${dataset.version}\n任务类型: ${taskType}\n数据流类型: ${flowType}`;
                                 } else if (params.data.type === 'output') {
                                     const job = params.data.jobData;
-                                    return `结果集: ${job.exportFiletName || '导出文件'}`;
+                                    // 根据exportType显示不同的结果集名称
+                                    if (job.exportType === 2) {
+                                        return `结果集: IGinX`;
+                                    } else if (job.exportType === 1) {
+                                        return `结果集: ${job.exportFiletName || '导出文件'}`;
+                                    } else if (job.exportType === 0 || job.exportType === null || job.exportType === undefined) {
+                                        if (job.exportFiletName) {
+                                            return `结果集: ${job.exportFiletName}`;
+                                        } else {
+                                            return `结果集: 日志`;
+                                        }
+                                    } else {
+                                        return `结果集: 日志`;
+                                    }
                                 } else if (params.data.type === 'task') {
                                     const task = params.data.taskData;
                                     const taskType = task.taskType === 1 || task.taskType === 'PYTHON' ? 'PYTHON' : 'IGINX';

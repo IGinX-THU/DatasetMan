@@ -20,6 +20,9 @@ public class TransformJobEntity {
     @Field(name = "exportFiletName")
     private String exportFiletName;
 
+    @Field(name = "exportType")
+    private Integer exportType;
+
     @Field(name = "schedule")
     private String schedule;
 

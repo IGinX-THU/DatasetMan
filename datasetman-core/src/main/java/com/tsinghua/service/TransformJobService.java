@@ -299,6 +299,7 @@ public class TransformJobService {
         transformJobEntity.setName(transformCompare.getName());
         transformJobEntity.setTaskList(JSONObject.toJSONString(taskInfoBoList));
         transformJobEntity.setExportFiletName(transformCompare.getExportFile());
+        transformJobEntity.setExportType(transformCompare.getExportType());
         transformJobEntity.setSchedule(transformCompare.getSchedule());
         transformJobEntity.setCreateTime(timestamp);
         transformJobEntity.setOperator(operator);
@@ -358,7 +359,7 @@ public class TransformJobService {
             }
 
             if (jobState != null) {
-                sql.append(" AND JobState = ").append(jobState);
+                sql.append(" AND jobState = ").append(jobState);
             }
             sql.append(" ORDER BY createTime DESC");
             sql.append(";");
