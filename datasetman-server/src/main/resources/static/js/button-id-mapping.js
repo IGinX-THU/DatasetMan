@@ -133,6 +133,10 @@ const MENU_ID_MAP = {
         text: '暗黑模式',
         action: 'setDarkMode'
     },
+    'menu-user-manual': {
+        text: '用户手册',
+        action: 'showUserManual'
+    },
     'menu-about': {
         text: '关于',
         action: 'showAbout'

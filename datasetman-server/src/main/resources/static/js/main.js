@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'dataSourceList',
             'importData',
             'userManagement',
+            'permissionManagement',
             'datasetHistory',
             'transformJob',
             'transformCompare',
@@ -221,125 +222,101 @@ document.addEventListener('DOMContentLoaded', function() {
     const jobDropdown = document.getElementById('jobDropdown');
     const functionDropdown = document.getElementById('functionDropdown');
     const toolDropdown = document.getElementById('toolDropdown');
-    const windowDropdown = document.getElementById('windowDropdown');
+    const settingsDropdown = document.getElementById('settingsDropdown');
     const helpDropdown = document.getElementById('helpDropdown');
     const userDropdown = document.getElementById('userDropdown');
 
+    const allDropdowns = [dataSourceDropdown, datasetDropdown, jobDropdown, functionDropdown, toolDropdown, helpDropdown, userDropdown, settingsDropdown];
+
+    function closeAllDropdowns(except = null) {
+        allDropdowns.forEach(dropdown => {
+            if (dropdown && dropdown !== except) {
+                dropdown.classList.remove('active');
+            }
+        });
+    }
+
     dataSourceDropdown.addEventListener('click', function(e) {
         e.stopPropagation();
-        datasetDropdown.classList.remove('active');
-        jobDropdown.classList.remove('active');
-        functionDropdown.classList.remove('active');
-        toolDropdown.classList.remove('active');
-        windowDropdown.classList.remove('active');
-        helpDropdown.classList.remove('active');
-        userDropdown.classList.remove('active');
+        closeAllDropdowns(this);
         this.classList.toggle('active');
     });
 
     datasetDropdown.addEventListener('click', function(e) {
         e.stopPropagation();
-        dataSourceDropdown.classList.remove('active');
-        jobDropdown.classList.remove('active');
-        functionDropdown.classList.remove('active');
-        toolDropdown.classList.remove('active');
-        windowDropdown.classList.remove('active');
-        helpDropdown.classList.remove('active');
-        userDropdown.classList.remove('active');
+        closeAllDropdowns(this);
         this.classList.toggle('active');
     });
 
     jobDropdown.addEventListener('click', function(e) {
         e.stopPropagation();
-        dataSourceDropdown.classList.remove('active');
-        datasetDropdown.classList.remove('active');
-        functionDropdown.classList.remove('active');
-        toolDropdown.classList.remove('active');
-        windowDropdown.classList.remove('active');
-        helpDropdown.classList.remove('active');
-        userDropdown.classList.remove('active');
+        closeAllDropdowns(this);
         this.classList.toggle('active');
     });
 
     functionDropdown.addEventListener('click', function(e) {
         e.stopPropagation();
-        dataSourceDropdown.classList.remove('active');
-        datasetDropdown.classList.remove('active');
-        jobDropdown.classList.remove('active');
-        toolDropdown.classList.remove('active');
-        windowDropdown.classList.remove('active');
-        helpDropdown.classList.remove('active');
-        userDropdown.classList.remove('active');
+        closeAllDropdowns(this);
         this.classList.toggle('active');
     });
 
     toolDropdown.addEventListener('click', function(e) {
         e.stopPropagation();
-        dataSourceDropdown.classList.remove('active');
-        datasetDropdown.classList.remove('active');
-        jobDropdown.classList.remove('active');
-        functionDropdown.classList.remove('active');
-        windowDropdown.classList.remove('active');
-        helpDropdown.classList.remove('active');
-        userDropdown.classList.remove('active');
-        this.classList.toggle('active');
-    });
-
-    windowDropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-        dataSourceDropdown.classList.remove('active');
-        datasetDropdown.classList.remove('active');
-        jobDropdown.classList.remove('active');
-        functionDropdown.classList.remove('active');
-        toolDropdown.classList.remove('active');
-        helpDropdown.classList.remove('active');
-        userDropdown.classList.remove('active');
+        closeAllDropdowns(this);
         this.classList.toggle('active');
     });
 
     helpDropdown.addEventListener('click', function(e) {
         e.stopPropagation();
-        dataSourceDropdown.classList.remove('active');
-        datasetDropdown.classList.remove('active');
-        jobDropdown.classList.remove('active');
-        functionDropdown.classList.remove('active');
-        toolDropdown.classList.remove('active');
-        windowDropdown.classList.remove('active');
-        userDropdown.classList.remove('active');
+        closeAllDropdowns(this);
         this.classList.toggle('active');
     });
 
     userDropdown.addEventListener('click', function(e) {
         e.stopPropagation();
-        dataSourceDropdown.classList.remove('active');
-        datasetDropdown.classList.remove('active');
-        jobDropdown.classList.remove('active');
-        functionDropdown.classList.remove('active');
-        toolDropdown.classList.remove('active');
-        windowDropdown.classList.remove('active');
-        helpDropdown.classList.remove('active');
+        closeAllDropdowns(this);
         this.classList.toggle('active');
     });
 
+    settingsDropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+        closeAllDropdowns(this);
+        this.classList.toggle('active');
+    });
+
+    // 绑定字体大小子菜单点击事件
+    document.querySelectorAll('.dropdown-menu .submenu li[data-scale]').forEach(li => {
+        li.addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.stopImmediatePropagation(); // Prevent other event handlers from firing
+            const scale = this.dataset.scale;
+            applyFontScale(scale);
+            closeAllDropdowns();
+        });
+    });
+
     document.addEventListener('click', function() {
-        dataSourceDropdown.classList.remove('active');
-        datasetDropdown.classList.remove('active');
-        jobDropdown.classList.remove('active');
-        functionDropdown.classList.remove('active');
-        toolDropdown.classList.remove('active');
-        windowDropdown.classList.remove('active');
-        helpDropdown.classList.remove('active');
-        userDropdown.classList.remove('active');
+        closeAllDropdowns();
     });
 
     const menuItems = document.querySelectorAll('.dropdown-menu li');
     menuItems.forEach(item => {
         item.addEventListener('click', function(e) {
             e.stopPropagation();
-            
+
+            // Skip font size submenu items - they are handled separately
+            if (this.hasAttribute('data-scale')) {
+                return;
+            }
+
+            // Skip submenu parents (has-submenu class) - they don't have actions
+            if (this.classList.contains('has-submenu')) {
+                return;
+            }
+
             const menuId = this.id;
             console.log(`菜单项被点击: ${menuId}`);
-            
+
             // 根据菜单ID获取对应的动作
             const action = getMenuAction(menuId);
             
@@ -454,6 +431,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         htmlDark.classList.remove('light-mode');
                         htmlDark.classList.add('dark-mode');
                         break;
+                    case 'showUserManual':
+                        console.log('用户手册菜单被点击');
+                        if (typeof window.showUserManual === 'function') {
+                            window.showUserManual();
+                        }
+                        break;
                     case 'showAbout':
                         console.log('关于菜单被点击');
                         showAbout();
@@ -466,6 +449,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (menuId === 'userManagementMenuItem') {
                     console.log('用户管理菜单被点击');
                     showComponent('userManagement');
+                } else if (menuId === 'permissionManagementMenuItem') {
+                    console.log('权限管理菜单被点击');
+                    showComponent('permissionManagement');
                 } else if (menuId === 'changePasswordMenuItem') {
                     console.log('修改密码菜单被点击');
                     const changePasswordComponent = document.querySelector('change-password');
@@ -478,6 +464,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (menuId === 'menu-udf-management') {
                     console.log('UDF管理菜单被点击');
                     showComponent('udfManagement');
+                } else if (this.dataset && this.dataset.scale) {
+                    document.documentElement.classList.remove('font-scale-1', 'font-scale-1-15', 'font-scale-1-3', 'font-scale-1-5');
+                    const scaleClassMap = {
+                        '1': 'font-scale-1',
+                        '1.15': 'font-scale-1-15',
+                        '1.3': 'font-scale-1-3',
+                        '1.5': 'font-scale-1-5'
+                    };
+                    document.documentElement.classList.add(scaleClassMap[this.dataset.scale] || 'font-scale-1');
+                    document.querySelectorAll('.dropdown-menu .submenu li[data-scale]').forEach(li => li.classList.remove('active'));
+                    this.classList.add('active');
+                    localStorage.setItem('fontScale_' + (window.AppConfig.getUsername() || 'default'), this.dataset.scale);
                 } else {
                     console.warn(`未找到菜单ID ${menuId} 的对应动作`);
                 }
@@ -730,7 +728,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 6. 功能按钮点击事件 - 使用ID绑定而非文本绑定
-    const addBtns = document.querySelectorAll('.func-btn');
+    const addBtns = document.querySelectorAll('.func-btn, .ribbon-btn');
     console.log('找到的功能按钮数量:', addBtns.length);
     
     addBtns.forEach((btn, index) => {
@@ -1415,6 +1413,11 @@ function showVisualAnalysis() {
         // 获取或创建数据可视化组件
         let dataViz = document.getElementById('dataVisualization');
         let isFirstLoad = false;
+
+        // 检查当前显示的组件是否是 data-visualization
+        const currentActiveComponent = document.querySelector('.workspace-content > [show]:not([hidden])');
+        const isCurrentDataViz = currentActiveComponent && currentActiveComponent.id === 'dataVisualization';
+        console.log('当前活动组件:', currentActiveComponent?.id, '是否为data-visualization:', isCurrentDataViz);
         
         if (!dataViz) {
             // 先清空工作区
@@ -1434,6 +1437,24 @@ function showVisualAnalysis() {
             }
         } else {
             console.log('使用现有的数据可视化组件');
+            // 只有从其他组件切换过来时才清空工作区
+            if (!isCurrentDataViz) {
+                clearWorkspace();
+                console.log('从其他组件切换，清空工作区');
+            } else {
+                console.log('在data-visualization组件内切换，不清空工作区');
+            }
+            // 隐藏databaseTable组件
+            const databaseTable = document.getElementById('databaseTable');
+            if (databaseTable) {
+                if (typeof databaseTable.hide === 'function') {
+                    databaseTable.hide();
+                } else {
+                    databaseTable.removeAttribute('show');
+                    databaseTable.setAttribute('hidden', '');
+                }
+                console.log('✅ 已隐藏databaseTable组件');
+            }
             // 检查是否是清空工作区后的第一次操作（没有选中的测点）
             if (window.selectedDataPoints.size === 0) {
                 console.log('🎯 检测到清空工作区后的第一次操作，设置为首次加载');
@@ -1448,8 +1469,10 @@ function showVisualAnalysis() {
         console.log('是否为测点:', isDataPoint);
         
         if (isDataPoint) {
+            // 直接替换为当前点击的测点，不累积
+            window.selectedDataPoints.clear();
             window.selectedDataPoints.add(dataSource);
-            console.log('添加测点到已选列表:', dataSource);
+            console.log('设置当前测点:', dataSource);
         } else {
             console.log('跳过非测点节点:', dataSource);
         }

@@ -87,7 +87,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
             
             String errorMessage = String.format(
                 "权限不足！当前角色：%s（%s），缺少权限：%s。请联系管理员分配相应权限。",
-                userRole, com.tsinghua.auth.enums.UserRole.getDescription(userRole), missingPermissions.toString()
+                userRole, UserRole.getDescription(userRole), missingPermissions.toString()
             );
             
             log.warn("用户角色 {} 无权限访问接口: {} - 缺少权限: {}", 

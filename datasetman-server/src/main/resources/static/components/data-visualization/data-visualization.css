@@ -137,6 +137,45 @@
     margin: 0;
 }
 
+.chart-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.chart-control-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.chart-control-label {
+    font-size: 12px;
+    color: #646a73;
+    white-space: nowrap;
+}
+
+.chart-control-select {
+    padding: 4px 8px;
+    border: 1px solid #e0e6ed;
+    border-radius: 4px;
+    background: #fff;
+    color: #1f2329;
+    font-size: 12px;
+    cursor: pointer;
+    min-width: 100px;
+}
+
+.chart-control-select:hover {
+    border-color: #cfd3d9;
+}
+
+.chart-control-select:focus {
+    outline: none;
+    border-color: #2969ff;
+}
+
 .operations-actions {
     display: flex;
     gap: 8px;
@@ -448,6 +487,28 @@
 .remove-point:hover {
     background: #3370ff;
     color: white;
+}
+
+.add-point-btn {
+    background: #3370ff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.add-point-btn:hover {
+    background: #1e5fcc;
+    transform: scale(1.1);
 }
 
 .table-wrapper {

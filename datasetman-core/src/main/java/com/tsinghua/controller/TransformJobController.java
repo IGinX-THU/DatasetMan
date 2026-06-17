@@ -23,7 +23,7 @@ public class TransformJobController {
 
     @ApiOperation("分页查询Transform作业")
     @PostMapping("/query")
-    @RequirePermission(Permission.TRANSFORM_JOB_READ)
+    @RequirePermission(Permission.READ)
     public Result<List<TransformJobEntity>> queryJobs(@RequestBody TransformJobQueryRequest request) {
         List<TransformJobEntity> result = transformJobService.queryJobs(request);
         return Result.success(result);
@@ -31,7 +31,7 @@ public class TransformJobController {
 
     @ApiOperation("查询Transform作业总数")
     @PostMapping("/count")
-    @RequirePermission(Permission.TRANSFORM_JOB_READ)
+    @RequirePermission(Permission.READ)
     public Result<Object> countJobs(@RequestBody TransformJobQueryRequest request) {
         Object count = transformJobService.countJobs(request);
         return Result.success(count);
@@ -39,7 +39,7 @@ public class TransformJobController {
 
     @ApiOperation("查询Transform作业详情")
     @GetMapping("/detail/{jobId}")
-    @RequirePermission(Permission.TRANSFORM_JOB_READ)
+    @RequirePermission(Permission.READ)
     public Result<?> queryJob(@PathVariable("jobId") String jobId) {
         TransformJobEntity result = transformJobService.queryJob(jobId);
         if (result == null) {
@@ -50,7 +50,7 @@ public class TransformJobController {
 
     @ApiOperation("提交任务")
     @PutMapping("/commit/{createTime}")
-    @RequirePermission(Permission.TRANSFORM_JOB_UPDATE)
+    @RequirePermission(Permission.UPDATE)
     public Result<?> commitJob(@PathVariable("createTime") Long createTime) throws Exception {
         TransformJobEntity result = transformJobService.commitJob(createTime);
         return Result.success("任务已提交", result);
@@ -58,7 +58,7 @@ public class TransformJobController {
 
     @ApiOperation("刷新任务状态")
     @GetMapping("/status/{jobId}")
-    @RequirePermission(Permission.TRANSFORM_JOB_READ)
+    @RequirePermission(Permission.READ)
     public Result<?> statusJob(@PathVariable("jobId") String jobId) throws Exception {
         TransformJobEntity result = transformJobService.statusJob(jobId);
         return Result.success(result);
@@ -66,7 +66,7 @@ public class TransformJobController {
 
     @ApiOperation("取消任务")
     @PutMapping("/cancel/{jobId}")
-    @RequirePermission(Permission.TRANSFORM_JOB_UPDATE)
+    @RequirePermission(Permission.UPDATE)
     public Result<?> cancelJob(@PathVariable("jobId") String jobId) throws Exception {
         TransformJobEntity result = transformJobService.cancelJob(jobId);
         return Result.success(result);
@@ -74,7 +74,7 @@ public class TransformJobController {
 
     @ApiOperation("血缘图谱")
     @GetMapping( "/bloodline")
-    @RequirePermission(Permission.TRANSFORM_JOB_READ)
+    @RequirePermission(Permission.READ)
     public Result<List<TransformJobEntity>> chartBloodline (
             @RequestParam("datasetPath") String datasetPath,
             @RequestParam(value = "sideLineage", defaultValue = "true") Boolean sideLineage) throws Exception {

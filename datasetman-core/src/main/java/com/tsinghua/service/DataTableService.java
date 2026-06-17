@@ -1,6 +1,7 @@
 package com.tsinghua.service;
 
 import cn.edu.tsinghua.iginx.session.Session;
+import cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult;
 import cn.edu.tsinghua.iginx.session_v2.DeleteClient;
 import cn.edu.tsinghua.iginx.session_v2.IginXClient;
 import cn.edu.tsinghua.iginx.session_v2.QueryClient;
@@ -8,8 +9,9 @@ import cn.edu.tsinghua.iginx.session_v2.query.*;
 import cn.edu.tsinghua.iginx.thrift.*;
 import cn.edu.tsinghua.iginx.utils.Pair;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tsinghua.auth.service.DataPermissionService;
+import com.tsinghua.auth.util.AuthUtil;
 import com.tsinghua.dto.*;
-import com.tsinghua.model.Result;
 import com.tsinghua.util.ConvertUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +48,9 @@ public class DataTableService {
 
     @Autowired
     private IginXClient iginxClient;
+
+    @Autowired
+    private DataPermissionService dataPermissionService;
 
     public TableDto queryData(DataQueryRequest request) {
         List<String> columns = new ArrayList<>();
@@ -112,7 +117,7 @@ public class DataTableService {
             // 1. 保存上传文件到临时位置
             tempFilePath = Files.createTempFile("iginx_upload_", ".csv");
             file.transferTo(tempFilePath.toFile());
-            return importCsvFile(tempFilePath, importConfig.getTargetPath(), uploadedFileName);
+            return importCsvFile(tempFilePath, importConfig.getTargetPath(), uploadedFileName, AuthUtil.getCurrentUsername());
         }  finally {
             // 清理临时文件
             if (tempFilePath != null) {
@@ -130,7 +135,7 @@ public class DataTableService {
      * @param uploadedFileName 上传后的文件名
      * @return 导入结果
      */
-    public Long importCsvFile(Path csvFilePath, String targetPath, String uploadedFileName) throws Exception {
+    public Long importCsvFile(Path csvFilePath, String targetPath, String uploadedFileName, String owner) throws Exception {
 
         // 1. 解析命令并获取服务端准备的状态/路径（如果需要）
         // 根据源码，此处可能会返回一个服务端期望的路径，但uploadFileChunk似乎更直接。
@@ -165,6 +170,7 @@ public class DataTableService {
 
         // 4. 所有块上传完成后，执行导入SQL
         Pair<List<String>, Long> result = iginxSession.executeLoadCSV(sql, uploadedFileName);
+        dataPermissionService.saveTablePrefix(targetPath, false, owner);
         return result.v;
     }
 
@@ -278,6 +284,30 @@ public class DataTableService {
         DeleteClient deleteClient = iginxClient.getDeleteClient();
         // 删除多个时间序列在 [startTime, endTime) 这段时间上的数据
         deleteClient.deleteMeasurementsData(request.getPaths(), request.getStartTime(), request.getEndTime());
+    }
+
+    public TimeRangeResponse getTimeRange(TimeRangeRequest request) throws Exception {
+        TimeRangeResponse response = new TimeRangeResponse();
+        String tableName = request.getTableName();
+        List<String> fieldList = request.getInputsBind() == null ? Collections.emptyList() : request.getInputsBind().stream()
+                .map(InputBindDto::getSourceField)
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.toList());
+        String field = fieldList.isEmpty() ? "*" : String.join(",", fieldList);
+        log.info("查询数据表时间范围,数据表: {},字段: {},", tableName, field);
+
+        String minSql = "SELECT %s FROM %s limit 1;";
+        SessionExecuteSqlResult minResult = iginxSession.executeSql(String.format(minSql, field, tableName));
+        Long minKey = minResult.getKeys()[0];
+
+        String maxSql = "SELECT %s FROM %s order by key desc limit 1;";
+        SessionExecuteSqlResult maxResult = iginxSession.executeSql(String.format(maxSql, field, tableName));
+        Long maxKey = maxResult.getKeys()[0];
+
+        response.setMinKey(minKey);
+        response.setMaxKey(maxKey);
+        log.info("时间范围查询结果: minKey={}, maxKey={}", minKey, maxKey);
+        return response;
     }
 
     /**

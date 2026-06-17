@@ -128,6 +128,13 @@ public class DataTableController {
         return com.tsinghua.model.Result.success("删除成功");
     }
 
+    @ApiOperation("获取数据表的时间范围")
+    @PostMapping("/time-range")
+    @RequirePermission(Permission.DATA_READ)
+    public com.tsinghua.model.Result<TimeRangeResponse> getTimeRange(@RequestBody TimeRangeRequest request) throws Exception {
+        return com.tsinghua.model.Result.success(dataTableService.getTimeRange(request));
+    }
+
     /**
      * 关系数据查询
      */

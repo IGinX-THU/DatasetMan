@@ -53,9 +53,9 @@ class MenuPermission {
         // 根据角色定义可访问的菜单区域
         const menuPermissions = {
             // ADMIN - 所有菜单区域
-            'ADMIN': ['data', 'model', 'schedule', 'analysis', 'user', 'tool', 'window', 'help'],
+            'ADMIN': ['data', 'model', 'schedule', 'analysis', 'user', 'tool', 'settings', 'help'],
             // DATA_ENGINEER - 所有菜单区域（除用户管理）
-            'DATA_ENGINEER': ['data', 'model', 'schedule', 'analysis', 'tool', 'window', 'help']
+            'DATA_ENGINEER': ['data', 'model', 'schedule', 'analysis', 'tool', 'settings', 'help']
         };
 
         return menuPermissions[this.userRole]?.includes(menuArea) || false;
@@ -81,7 +81,7 @@ class MenuPermission {
             'analysisDropdown': 'analysis',
             'userDropdown': 'user',
             'toolDropdown': 'tool',
-            'windowDropdown': 'window',
+            'settingsDropdown': 'settings',
             'helpDropdown': 'help'
         };
 

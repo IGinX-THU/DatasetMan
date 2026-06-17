@@ -197,14 +197,14 @@ public class RolePermissionService implements ApplicationContextAware {
         Set<Permission> adminPermissions = EnumSet.allOf(Permission.class);
         RoleEntity adminRole = new RoleEntity(UserRole.ADMIN, adminPermissions, 2000000000000L);
         roleDao.saveRole(adminRole);
-
-        // 数据工程师角色 - 拥有除用户管理外的所有权限
-        Set<Permission> allPermissions = EnumSet.allOf(Permission.class);
-        allPermissions.remove(Permission.USER_CREATE);
-        allPermissions.remove(Permission.USER_READ);
-        allPermissions.remove(Permission.USER_UPDATE);
-        allPermissions.remove(Permission.USER_DELETE);
-        RoleEntity dataEngineerRole = new RoleEntity(UserRole.DATA_ENGINEER, allPermissions, 2000000000001L);
+        
+        // 数据工程师角色 - 除用户管理外的所有权限
+        Set<Permission> dataEngineerPermissions = EnumSet.allOf(Permission.class);
+        dataEngineerPermissions.remove(Permission.USER_CREATE);
+        dataEngineerPermissions.remove(Permission.USER_READ);
+        dataEngineerPermissions.remove(Permission.USER_UPDATE);
+        dataEngineerPermissions.remove(Permission.USER_DELETE);
+        RoleEntity dataEngineerRole = new RoleEntity(UserRole.DATA_ENGINEER, dataEngineerPermissions, 2000000000001L);
         roleDao.saveRole(dataEngineerRole);
     }
     
@@ -214,13 +214,14 @@ public class RolePermissionService implements ApplicationContextAware {
     private void initializeDefaultUsers() {
         // 创建默认用户 - 使用加密密码
         log.info("使用加密密码初始化默认用户");
-
+        
         // 获取角色的timestamp作为roleId
         Long adminRoleId = 2000000000000L;
         Long dataEngineerRoleId = 2000000000001L;
 
         userDao.saveUser(new UserEntity("admin", getPasswordEncoder().encode("admin123"), UserRole.ADMIN, adminRoleId, 1000000000000L));
         userDao.saveUser(new UserEntity("data", getPasswordEncoder().encode("data123"), UserRole.DATA_ENGINEER, dataEngineerRoleId, 1000000000001L));
+        userDao.saveUser(new UserEntity("user", getPasswordEncoder().encode("user123"), UserRole.DATA_ENGINEER, dataEngineerRoleId, 1000000000002L));
 
         log.info("默认用户初始化完成: admin/admin123, data/data123");
     }

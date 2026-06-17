@@ -47,6 +47,7 @@ window.AppConfig = {
             'relational/query': '/api/data/relational/query',
             'relational/count': '/api/data/relational/count',
             'relational/export': '/api/data/relational/export',
+            'time-range': '/api/data/time-range',
             import: '/api/data/import',
             export: '/api/data/export',
             delete: '/api/data/delete'
@@ -91,7 +92,14 @@ window.AppConfig = {
             update: '/api/user/update',
             save: '/api/user/save',
             delete: '/api/user/delete',
+            all: '/api/user/all',
             'change-password': '/api/user/change-password'
+        },
+        dataPermission: {
+            'owner-tables': '/api/data-permission/owner-tables',
+            query: '/api/data-permission/query',
+            count: '/api/data-permission/count',
+            update: '/api/data-permission/update'
         },
         // 模型相关
         model: {

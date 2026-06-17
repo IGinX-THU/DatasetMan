@@ -20,10 +20,10 @@ import java.util.Map;
 @Service
 public class ApiGenerationService {
 
-    private static final String THRIFT_FILE_PATH = "datasetman-server/src/main/resources/thrift/api.thrift";
-    private static final String JAVA_SDK_OUTPUT_DIR = "datasetman-sdk-java/src/main/java";
-    private static final String GO_SDK_OUTPUT_DIR = "datasetman-sdk-go/src";
-    private static final String PYTHON_SDK_OUTPUT_DIR = "datasetman-sdk-python/src";
+    private static final String THRIFT_FILE_PATH = "datamodelgov-server/src/main/resources/thrift/api.thrift";
+    private static final String JAVA_SDK_OUTPUT_DIR = "datamodelgov-sdk-java/src/main/java";
+    private static final String GO_SDK_OUTPUT_DIR = "datamodelgov-sdk-go/src";
+    private static final String PYTHON_SDK_OUTPUT_DIR = "datamodelgov-sdk-python/src";
 
     /**
      * 生成Java代码
@@ -864,7 +864,7 @@ public class ApiGenerationService {
             "info:\n" +
             "  title: Data Model Gov API\n" +
             "  version: 1.0.0\n" +
-            "  description: 数据集管理API\n" +
+            "  description: 数据与模型一体化管理API\n" +
             "servers:\n" +
             "  - url: http://localhost:8080/api/v1\n" +
             "    description: 本地开发服务器\n" +

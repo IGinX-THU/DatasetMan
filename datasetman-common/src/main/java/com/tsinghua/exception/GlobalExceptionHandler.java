@@ -72,42 +72,35 @@ public class GlobalExceptionHandler {
      * 处理运行时异常
      */
     @ExceptionHandler(RuntimeException.class)
-    public Result<Void> handleRuntimeException(RuntimeException e) {
-        // 检查是否为响应已提交异常，避免重复写入
-        if (e.getMessage() != null && 
-            (e.getMessage().contains("getWriter() has already been called") || 
-             e.getMessage().contains("getOutputStream() has already been called"))) {
-            log.warn("响应已提交异常，跳过错误响应写入: {}", e.getMessage());
-            throw e; // 重新抛出，让Spring处理
-        }
+    public Result<String> handleRuntimeException(RuntimeException e) {
         log.error("运行时异常", e);
-        return Result.error("系统运行异常: " + e.getMessage());
+        return Result.error("系统运行异常" , e.getMessage());
     }
 
     /**
      * 处理NoClassDefFoundError异常（特别是POI相关）
      */
     @ExceptionHandler(NoClassDefFoundError.class)
-    public Result<Void> handleNoClassDefFoundError(NoClassDefFoundError e) {
+    public Result<String> handleNoClassDefFoundError(NoClassDefFoundError e) {
         log.error("类加载异常", e);
-        return Result.error("系统依赖缺失，请联系管理员: " + e.getMessage());
+        return Result.error("系统依赖缺失，请联系管理员" , e.getMessage());
     }
 
     /**
      * 处理AbstractMethodError异常（XML解析器版本冲突）
      */
     @ExceptionHandler(AbstractMethodError.class)
-    public Result<Void> handleAbstractMethodError(AbstractMethodError e) {
+    public Result<String> handleAbstractMethodError(AbstractMethodError e) {
         log.error("XML解析器版本冲突", e);
-        return Result.error("XML解析器版本冲突，请检查系统依赖: " + e.getMessage());
+        return Result.error("XML解析器版本冲突，请检查系统依赖", e.getMessage());
     }
 
     /**
      * 处理所有异常
      */
     @ExceptionHandler(Exception.class)
-    public Result<Void> handleException(Exception e) {
+    public Result<String> handleException(Exception e) {
         log.error("系统异常", e);
-        return Result.error("系统异常，请联系管理员：" + e.getMessage());
+        return Result.error("系统异常，请联系管理员", e.getMessage());
     }
 }

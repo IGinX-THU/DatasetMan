@@ -35,16 +35,16 @@ public class OperationLogAspect {
     private ObjectMapper objectMapper;
 
     /**
-     * 定义切点：所有Controller方法（排除流式查询方法）
+     * 定义切点：所有Controller方法
      */
-    @Pointcut("execution(* com.tsinghua..controller..*(..)) && !execution(* com.tsinghua..controller..queryFileData(..))")
+    @Pointcut("execution(* com.tsinghua..controller..*(..))")
     public void controllerPointcut() {
     }
 
     /**
-     * 定义切点：带有OperationLog注解的方法（排除流式查询方法）
+     * 定义切点：带有OperationLog注解的方法
      */
-    @Pointcut("@annotation(com.tsinghua.auth.annotation.OperationLog) && !execution(* com.tsinghua..controller..queryFileData(..))")
+    @Pointcut("@annotation(com.tsinghua.auth.annotation.OperationLog)")
     public void operationLogPointcut() {
     }
 
@@ -130,12 +130,7 @@ public class OperationLogAspect {
             logEntity.setErrorMessage(e.getMessage());
             
             log.info("操作日志: {}", logEntity.toString());
-            
-            // 检查是否为响应已提交异常，避免重复记录堆栈
-            if (e.getMessage()!=null && !e.getMessage().contains("getWriter() has already been called") &&
-                !e.getMessage().contains("getOutputStream() has already been called")) {
-                log.error("操作异常详情", e);
-            }
+            log.error("操作异常详情", e);
             
             throw e;
         }

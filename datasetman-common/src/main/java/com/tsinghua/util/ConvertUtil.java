@@ -9,7 +9,6 @@ import org.springframework.beans.BeanUtils;
 
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.*;
 
 
@@ -198,6 +197,19 @@ public class ConvertUtil {
         return builder.build();
     }
 
+    /**
+     * 将记录映射为实体 - 通用方法
+     */
+    public static <T> T mapToEntity(T entity, Map<String, Object> record, String tablePrefix) {
+
+        // 使用ConvertUtil的通用方法设置字段值 - 参考ModelFileService.queryMeta
+        record.forEach((k, v) -> {
+            String fieldName = k.replace(tablePrefix + ".", "");
+            ConvertUtil.setEntityField(entity, tablePrefix, fieldName, v);
+        });
+
+        return entity;
+    }
     /**
      * 根据字段名设置实体属性 - 通用方法
      * 参考ModelFileService的setDtoField方法，提取为公共工具方法
@@ -389,13 +401,13 @@ public class ConvertUtil {
      * @param data 原始数据
      * @return 转换后的数据
      */
-    public static java.util.Map<String, Object> batchConvertValue(
-            java.util.List<java.util.Map<String, Object>> mappings, 
-            java.util.Map<String, Object> data) {
+    public static Map<String, Object> batchConvertValue(
+            List<Map<String, Object>> mappings,
+            Map<String, Object> data) {
         
-        java.util.Map<String, Object> result = new java.util.HashMap<>(data);
+        Map<String, Object> result = new HashMap<>(data);
         
-        for (java.util.Map<String, Object> mapping : mappings) {
+        for (Map<String, Object> mapping : mappings) {
             String sourceField = (String) mapping.get("sourceField");
             String targetField = (String) mapping.get("targetField");
             String operator = (String) mapping.get("operator");
@@ -446,7 +458,7 @@ public class ConvertUtil {
         }
         
         // 检查运算符
-        if (!java.util.Arrays.asList("none", "multiply", "divide", "add", "subtract").contains(operator.toLowerCase())) {
+        if (!Arrays.asList("none", "multiply", "divide", "add", "subtract").contains(operator.toLowerCase())) {
             return false;
         }
         

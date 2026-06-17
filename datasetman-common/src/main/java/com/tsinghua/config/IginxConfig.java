@@ -41,6 +41,9 @@ public class IginxConfig {
     @Value("${iginx.timeout}")
     private long timeout;
 
+    @Value("${iginx.max-retry:3}")
+    private int maxRetry;
+
     // IGinX操作的全局锁
     private final ReentrantLock iginxLock = new ReentrantLock();
     
@@ -62,7 +65,9 @@ public class IginxConfig {
     public Session iginxSession() {
         // 创建Session代理，自动管理生命周期
         Session originalSession = new Session(ip, port, username, password);
-        return new SessionProxy(originalSession);
+        SessionProxy proxy = new SessionProxy(originalSession);
+        proxy.setMaxRetry(maxRetry);
+        return proxy;
     }
 
     /**
@@ -70,11 +75,17 @@ public class IginxConfig {
      */
     public static class SessionProxy extends Session {
         private final Session delegate;
+        private int maxRetry;
 
         public SessionProxy(Session delegate) {
             super(delegate.getHost(), delegate.getPort(), delegate.getUsername(), delegate.getPassword());
             this.delegate = delegate;
+            this.maxRetry = 3; // 默认重试3次
             sessionHolder.set(this);
+        }
+
+        public void setMaxRetry(int maxRetry) {
+            this.maxRetry = maxRetry;
         }
 
         @Override
@@ -102,345 +113,52 @@ public class IginxConfig {
         }
 
         @Override
-        public cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult executeSql(String sql) throws SessionException {
-            ensureSessionOpen();
-            return delegate.executeSql(sql);
+        public cn.edu.tsinghua.iginx.session.QueryDataSet executeQuery(String sql) throws SessionException {
+            return executeWithRetry("executeQuery", () -> delegate.executeQuery(sql));
         }
 
         @Override
-        public cn.edu.tsinghua.iginx.session.QueryDataSet executeQuery(String statement) throws SessionException {
-            ensureSessionOpen();
-            return delegate.executeQuery(statement);
+        public cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult executeSql(String sql) throws SessionException {
+            return executeWithRetry("executeSql", () -> delegate.executeSql(sql));
         }
 
         @Override
         public java.util.List<cn.edu.tsinghua.iginx.session.Column> showColumns() throws SessionException {
-            ensureSessionOpen();
-            return delegate.showColumns();
+            return executeWithRetry("showColumns", () -> delegate.showColumns());
         }
 
         @Override
         public cn.edu.tsinghua.iginx.session.ClusterInfo getClusterInfo() throws SessionException {
-            ensureSessionOpen();
-            return delegate.getClusterInfo();
+            return executeWithRetry("getClusterInfo", () -> delegate.getClusterInfo());
         }
 
         @Override
         public void addStorageEngine(String ip, int port, cn.edu.tsinghua.iginx.thrift.StorageEngineType type, java.util.Map<String, String> extraParams) throws SessionException {
-            ensureSessionOpen();
-            delegate.addStorageEngine(ip, port, type, extraParams);
+            executeWithRetry("addStorageEngine", () -> {
+                delegate.addStorageEngine(ip, port, type, extraParams);
+                return null;
+            });
         }
 
         @Override
         public void removeStorageEngine(java.util.List<cn.edu.tsinghua.iginx.thrift.RemovedStorageEngineInfo> removedStorageEngineList) throws SessionException {
-            ensureSessionOpen();
-            delegate.removeStorageEngine(removedStorageEngineList);
+            executeWithRetry("removeStorageEngine", () -> {
+                delegate.removeStorageEngine(removedStorageEngineList);
+                return null;
+            });
         }
 
         @Override
         public cn.edu.tsinghua.iginx.utils.Pair<java.util.List<String>, Long> executeLoadCSV(String sql, String uploadedFileName) throws SessionException {
-            ensureSessionOpen();
-            return delegate.executeLoadCSV(sql, uploadedFileName);
+            return executeWithRetry("executeLoadCSV", () -> delegate.executeLoadCSV(sql, uploadedFileName));
         }
 
         @Override
         public void uploadFileChunk(cn.edu.tsinghua.iginx.thrift.FileChunk chunk) throws SessionException {
-            ensureSessionOpen();
-            delegate.uploadFileChunk(chunk);
-        }
-
-        @Override
-        public long commitTransformJob(java.util.List<cn.edu.tsinghua.iginx.thrift.TaskInfo> taskInfoList, cn.edu.tsinghua.iginx.thrift.ExportType exportType, String filePath) throws SessionException {
-            ensureSessionOpen();
-            return delegate.commitTransformJob(taskInfoList, exportType, filePath);
-        }
-
-        @Override
-        public long commitTransformJob(java.util.List<cn.edu.tsinghua.iginx.thrift.TaskInfo> taskInfoList, cn.edu.tsinghua.iginx.thrift.ExportType exportType, String fileName, String schedule) throws SessionException {
-            ensureSessionOpen();
-            return delegate.commitTransformJob(taskInfoList, exportType, fileName, schedule);
-        }
-
-        @Override
-        public long commitTransformJob(java.util.List<cn.edu.tsinghua.iginx.thrift.TaskInfo> taskInfoList, cn.edu.tsinghua.iginx.thrift.ExportType exportType, String fileName, String schedule, boolean stopOnFailure) throws SessionException {
-            ensureSessionOpen();
-            return delegate.commitTransformJob(taskInfoList, exportType, fileName, schedule, stopOnFailure);
-        }
-
-        @Override
-        public long commitTransformJob(String statement) throws SessionException {
-            ensureSessionOpen();
-            return delegate.commitTransformJob(statement);
-        }
-
-        @Override
-        public long commitTransformJobByYaml(String filepath) throws SessionException {
-            ensureSessionOpen();
-            return delegate.commitTransformJobByYaml(filepath);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.thrift.JobState queryTransformJobStatus(long jobId) throws SessionException {
-            ensureSessionOpen();
-            return delegate.queryTransformJobStatus(jobId);
-        }
-
-        @Override
-        public java.util.Map<cn.edu.tsinghua.iginx.thrift.JobState, java.util.List<Long>> showEligibleJob(cn.edu.tsinghua.iginx.thrift.JobState jobState) throws SessionException {
-            ensureSessionOpen();
-            return delegate.showEligibleJob(jobState);
-        }
-
-        @Override
-        public void cancelTransformJob(long jobId) throws SessionException {
-            ensureSessionOpen();
-            delegate.cancelTransformJob(jobId);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.QueryDataSet executeQuery(String statement, int fetchSize) throws SessionException {
-            ensureSessionOpen();
-            return delegate.executeQuery(statement, fetchSize);
-        }
-
-        @Override
-        public void addStorageEngines(java.util.List<cn.edu.tsinghua.iginx.thrift.StorageEngine> storageEngines) throws SessionException {
-            ensureSessionOpen();
-            delegate.addStorageEngines(storageEngines);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.CurveMatchResult curveMatch(java.util.List<String> paths, long startKey, long endKey, java.util.List<Double> curveQuery, long curveUnit) throws SessionException {
-            ensureSessionOpen();
-            return delegate.curveMatch(paths, startKey, endKey, curveQuery, curveUnit);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.thrift.LoadUDFResp executeRegisterTask(String statement) throws SessionException {
-            ensureSessionOpen();
-            return delegate.executeRegisterTask(statement);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.thrift.LoadUDFResp executeRegisterTask(String statement, boolean isRemote) throws SessionException {
-            ensureSessionOpen();
-            return delegate.executeRegisterTask(statement, isRemote);
-        }
-
-        @Override
-        public int getReplicaNum() throws SessionException {
-            ensureSessionOpen();
-            return delegate.getReplicaNum();
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionQueryDataSet queryLast(java.util.List<String> paths, long startKey, cn.edu.tsinghua.iginx.thrift.TimePrecision timePrecision) throws SessionException {
-            ensureSessionOpen();
-            return delegate.queryLast(paths, startKey, timePrecision);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionQueryDataSet queryLast(java.util.List<String> paths, long startKey) throws SessionException {
-            ensureSessionOpen();
-            return delegate.queryLast(paths, startKey);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionQueryDataSet queryLast(java.util.List<String> paths, long startKey, java.util.List<java.util.Map<String, java.util.List<String>>> tagsList) throws SessionException {
-            ensureSessionOpen();
-            return delegate.queryLast(paths, startKey, tagsList);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionQueryDataSet queryLast(java.util.List<String> paths, long startKey, java.util.List<java.util.Map<String, java.util.List<String>>> tagsList, cn.edu.tsinghua.iginx.thrift.TimePrecision timePrecision) throws SessionException {
-            ensureSessionOpen();
-            return delegate.queryLast(paths, startKey, tagsList, timePrecision);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionQueryDataSet queryData(java.util.List<String> paths, long startKey, long endKey) throws SessionException {
-            ensureSessionOpen();
-            return delegate.queryData(paths, startKey, endKey);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionQueryDataSet queryData(java.util.List<String> paths, long startKey, long endKey, java.util.List<java.util.Map<String, java.util.List<String>>> tagsList) throws SessionException {
-            ensureSessionOpen();
-            return delegate.queryData(paths, startKey, endKey, tagsList);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionQueryDataSet queryData(java.util.List<String> paths, long startKey, long endKey, java.util.List<java.util.Map<String, java.util.List<String>>> tagsList, cn.edu.tsinghua.iginx.thrift.TimePrecision timePrecision) throws SessionException {
-            ensureSessionOpen();
-            return delegate.queryData(paths, startKey, endKey, tagsList, timePrecision);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionAggregateQueryDataSet aggregateQuery(java.util.List<String> paths, long startKey, long endKey, cn.edu.tsinghua.iginx.thrift.AggregateType aggregateType) throws SessionException {
-            ensureSessionOpen();
-            return delegate.aggregateQuery(paths, startKey, endKey, aggregateType);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionAggregateQueryDataSet aggregateQuery(java.util.List<String> paths, long startKey, long endKey, cn.edu.tsinghua.iginx.thrift.AggregateType aggregateType, cn.edu.tsinghua.iginx.thrift.TimePrecision timePrecision) throws SessionException {
-            ensureSessionOpen();
-            return delegate.aggregateQuery(paths, startKey, endKey, aggregateType, timePrecision);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionAggregateQueryDataSet aggregateQuery(java.util.List<String> paths, long startKey, long endKey, cn.edu.tsinghua.iginx.thrift.AggregateType aggregateType, java.util.List<java.util.Map<String, java.util.List<String>>> tagsList) throws SessionException {
-            ensureSessionOpen();
-            return delegate.aggregateQuery(paths, startKey, endKey, aggregateType, tagsList);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionAggregateQueryDataSet aggregateQuery(java.util.List<String> paths, long startKey, long endKey, cn.edu.tsinghua.iginx.thrift.AggregateType aggregateType, java.util.List<java.util.Map<String, java.util.List<String>>> tagsList, cn.edu.tsinghua.iginx.thrift.TimePrecision timePrecision) throws SessionException {
-            ensureSessionOpen();
-            return delegate.aggregateQuery(paths, startKey, endKey, aggregateType, tagsList, timePrecision);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionQueryDataSet downsampleQuery(java.util.List<String> paths, long startKey, long endKey, cn.edu.tsinghua.iginx.thrift.AggregateType aggregateType, long precision, cn.edu.tsinghua.iginx.thrift.TimePrecision timePrecision) throws SessionException {
-            ensureSessionOpen();
-            return delegate.downsampleQuery(paths, startKey, endKey, aggregateType, precision, timePrecision);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionQueryDataSet downsampleQuery(java.util.List<String> paths, long startKey, long endKey, cn.edu.tsinghua.iginx.thrift.AggregateType aggregateType, long precision) throws SessionException {
-            ensureSessionOpen();
-            return delegate.downsampleQuery(paths, startKey, endKey, aggregateType, precision);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionQueryDataSet downsampleQuery(java.util.List<String> paths, long startKey, long endKey, cn.edu.tsinghua.iginx.thrift.AggregateType aggregateType, long precision, java.util.List<java.util.Map<String, java.util.List<String>>> tagsList) throws SessionException {
-            ensureSessionOpen();
-            return delegate.downsampleQuery(paths, startKey, endKey, aggregateType, precision, tagsList);
-        }
-
-        @Override
-        public cn.edu.tsinghua.iginx.session.SessionQueryDataSet downsampleQuery(java.util.List<String> paths, long startKey, long endKey, cn.edu.tsinghua.iginx.thrift.AggregateType aggregateType, long precision, java.util.List<java.util.Map<String, java.util.List<String>>> tagsList, cn.edu.tsinghua.iginx.thrift.TimePrecision timePrecision) throws SessionException {
-            ensureSessionOpen();
-            return delegate.downsampleQuery(paths, startKey, endKey, aggregateType, precision, tagsList, timePrecision);
-        }
-
-        @Override
-        public void addUser(String username, String password, java.util.Set<cn.edu.tsinghua.iginx.thrift.AuthType> auths) throws SessionException {
-            ensureSessionOpen();
-            delegate.addUser(username, password, auths);
-        }
-
-        @Override
-        public void updateUser(String username, String password, java.util.Set<cn.edu.tsinghua.iginx.thrift.AuthType> auths) throws SessionException {
-            ensureSessionOpen();
-            delegate.updateUser(username, password, auths);
-        }
-
-        @Override
-        public void deleteUser(String username) throws SessionException {
-            ensureSessionOpen();
-            delegate.deleteUser(username);
-        }
-
-        @Override
-        public void deleteColumn(String path) throws SessionException {
-            ensureSessionOpen();
-            delegate.deleteColumn(path);
-        }
-
-        @Override
-        public void deleteColumns(java.util.List<String> paths) throws SessionException {
-            ensureSessionOpen();
-            delegate.deleteColumns(paths);
-        }
-
-        @Override
-        public void deleteColumns(java.util.List<String> paths, java.util.List<java.util.Map<String, java.util.List<String>>> tags, cn.edu.tsinghua.iginx.thrift.TagFilterType type) throws SessionException {
-            ensureSessionOpen();
-            delegate.deleteColumns(paths, tags, type);
-        }
-
-        @Override
-        public void deleteDataInColumn(String path, long startKey, long endKey) throws SessionException {
-            ensureSessionOpen();
-            delegate.deleteDataInColumn(path, startKey, endKey);
-        }
-
-        @Override
-        public void deleteDataInColumns(java.util.List<String> paths, long startKey, long endKey) throws SessionException {
-            ensureSessionOpen();
-            delegate.deleteDataInColumns(paths, startKey, endKey);
-        }
-
-        @Override
-        public void deleteDataInColumns(java.util.List<String> paths, long startKey, long endKey, java.util.List<java.util.Map<String, java.util.List<String>>> tagsList, cn.edu.tsinghua.iginx.thrift.TagFilterType type) throws SessionException {
-            ensureSessionOpen();
-            delegate.deleteDataInColumns(paths, startKey, endKey, tagsList, type);
-        }
-
-        @Override
-        public void insertColumnRecords(java.util.List<String> paths, long[] keys, Object[] valuesList, java.util.List<cn.edu.tsinghua.iginx.thrift.DataType> dataTypeList) throws SessionException {
-            ensureSessionOpen();
-            delegate.insertColumnRecords(paths, keys, valuesList, dataTypeList);
-        }
-
-        @Override
-        public void insertColumnRecords(java.util.List<String> paths, long[] keys, Object[] valuesList, java.util.List<cn.edu.tsinghua.iginx.thrift.DataType> dataTypeList, java.util.List<java.util.Map<String, String>> tagsList) throws SessionException {
-            ensureSessionOpen();
-            delegate.insertColumnRecords(paths, keys, valuesList, dataTypeList, tagsList);
-        }
-
-        @Override
-        public void insertColumnRecords(java.util.List<String> paths, long[] keys, Object[] valuesList, java.util.List<cn.edu.tsinghua.iginx.thrift.DataType> dataTypeList, java.util.List<java.util.Map<String, String>> tagsList, cn.edu.tsinghua.iginx.thrift.TimePrecision precision) throws SessionException {
-            ensureSessionOpen();
-            delegate.insertColumnRecords(paths, keys, valuesList, dataTypeList, tagsList, precision);
-        }
-
-        @Override
-        public void insertNonAlignedColumnRecords(java.util.List<String> paths, long[] keys, Object[] valuesList, java.util.List<cn.edu.tsinghua.iginx.thrift.DataType> dataTypeList) throws SessionException {
-            ensureSessionOpen();
-            delegate.insertNonAlignedColumnRecords(paths, keys, valuesList, dataTypeList);
-        }
-
-        @Override
-        public void insertNonAlignedColumnRecords(java.util.List<String> paths, long[] keys, Object[] valuesList, java.util.List<cn.edu.tsinghua.iginx.thrift.DataType> dataTypeList, java.util.List<java.util.Map<String, String>> tagsList) throws SessionException {
-            ensureSessionOpen();
-            delegate.insertNonAlignedColumnRecords(paths, keys, valuesList, dataTypeList, tagsList);
-        }
-
-        @Override
-        public void insertNonAlignedColumnRecords(java.util.List<String> paths, long[] keys, Object[] valuesList, java.util.List<cn.edu.tsinghua.iginx.thrift.DataType> dataTypeList, java.util.List<java.util.Map<String, String>> tagsList, cn.edu.tsinghua.iginx.thrift.TimePrecision precision) throws SessionException {
-            ensureSessionOpen();
-            delegate.insertNonAlignedColumnRecords(paths, keys, valuesList, dataTypeList, tagsList, precision);
-        }
-
-        @Override
-        public void insertRowRecords(java.util.List<String> paths, long[] keys, Object[] valuesList, java.util.List<cn.edu.tsinghua.iginx.thrift.DataType> dataTypeList, java.util.List<java.util.Map<String, String>> tagsList) throws SessionException {
-            ensureSessionOpen();
-            delegate.insertRowRecords(paths, keys, valuesList, dataTypeList, tagsList);
-        }
-
-        @Override
-        public void insertRowRecords(java.util.List<String> paths, long[] keys, Object[] valuesList, java.util.List<cn.edu.tsinghua.iginx.thrift.DataType> dataTypeList, java.util.List<java.util.Map<String, String>> tagsList, cn.edu.tsinghua.iginx.thrift.TimePrecision precision) throws SessionException {
-            ensureSessionOpen();
-            delegate.insertRowRecords(paths, keys, valuesList, dataTypeList, tagsList, precision);
-        }
-
-        @Override
-        public void insertNonAlignedRowRecords(java.util.List<String> paths, long[] keys, Object[] valuesList, java.util.List<cn.edu.tsinghua.iginx.thrift.DataType> dataTypeList) throws SessionException {
-            ensureSessionOpen();
-            delegate.insertNonAlignedRowRecords(paths, keys, valuesList, dataTypeList);
-        }
-
-        @Override
-        public void insertNonAlignedRowRecords(java.util.List<String> paths, long[] keys, Object[] valuesList, java.util.List<cn.edu.tsinghua.iginx.thrift.DataType> dataTypeList, java.util.List<java.util.Map<String, String>> tagsList) throws SessionException {
-            ensureSessionOpen();
-            delegate.insertNonAlignedRowRecords(paths, keys, valuesList, dataTypeList, tagsList);
-        }
-
-        @Override
-        public void insertNonAlignedRowRecords(java.util.List<String> paths, long[] keys, Object[] valuesList, java.util.List<cn.edu.tsinghua.iginx.thrift.DataType> dataTypeList, java.util.List<java.util.Map<String, String>> tagsList, cn.edu.tsinghua.iginx.thrift.TimePrecision precision) throws SessionException {
-            ensureSessionOpen();
-            delegate.insertNonAlignedRowRecords(paths, keys, valuesList, dataTypeList, tagsList, precision);
+            executeWithRetry("uploadFileChunk", () -> {
+                delegate.uploadFileChunk(chunk);
+                return null;
+            });
         }
 
         /**
@@ -452,6 +170,85 @@ public class IginxConfig {
                 delegate.openSession();
                 sessionOpen.set(true);
             }
+        }
+
+        /**
+         * 带重试机制的操作执行
+         * 检测到连接异常时自动重连并重试
+         */
+        private <T> T executeWithRetry(String operation, SessionOperation<T> op) throws SessionException {
+            int retryCount = 0;
+            SessionException lastException = null;
+
+            while (retryCount <= maxRetry) {
+                try {
+                    ensureSessionOpen();
+                    return op.execute();
+                } catch (SessionException e) {
+                    lastException = e;
+                    
+                    // 检查是否是连接相关的异常
+                    if (isConnectionError(e)) {
+                        retryCount++;
+                        if (retryCount <= maxRetry) {
+                            log.warn("⚠️ 检测到连接异常: {} - 尝试重连 (第 {}/{})", 
+                                    e.getMessage(), retryCount, maxRetry);
+                            
+                            // 关闭旧连接
+                            try {
+                                delegate.closeSession();
+                            } catch (Exception closeEx) {
+                                log.warn("关闭旧连接时异常: {}", closeEx.getMessage());
+                            }
+                            sessionOpen.set(false);
+                            
+                            // 短暂等待后重试
+                            try {
+                                Thread.sleep(100 * retryCount);
+                            } catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                                throw new SessionException("重试被中断", ie);
+                            }
+                            
+                            continue;
+                        }
+                    }
+                    
+                    // 不是连接错误或重试次数用尽，直接抛出异常
+                    throw e;
+                }
+            }
+            
+            log.error("❌ 操作失败，已达最大重试次数: {}", maxRetry);
+            throw lastException;
+        }
+
+        /**
+         * 判断是否是连接相关的异常
+         */
+        private boolean isConnectionError(SessionException e) {
+            if (e == null) {
+                return false;
+            }
+            
+            String message = e.getMessage();
+            if (message == null) {
+                return false;
+            }
+            
+            // 检查常见的连接错误特征
+            return message.contains("Connection reset") ||
+                   message.contains("socket write error") ||
+                   message.contains("SocketException") ||
+                   message.contains("TTransportException") ||
+                   message.contains("Connection refused") ||
+                   message.contains("Broken pipe") ||
+                   message.contains("Connection timed out");
+        }
+
+        @FunctionalInterface
+        private interface SessionOperation<T> {
+            T execute() throws SessionException;
         }
 
         // 委托其他方法
