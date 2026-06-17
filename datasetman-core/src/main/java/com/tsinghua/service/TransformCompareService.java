@@ -46,7 +46,8 @@ public class TransformCompareService {
         transformCompareEntity.setId(timestamp);
         transformCompareEntity.setName(request.getName());
         transformCompareEntity.setTaskList(JSONObject.toJSONString(request.getTaskList()));
-        transformCompareEntity.setExportFiletName(request.getExportFiletName());
+        transformCompareEntity.setExportType(request.getExportType());
+        transformCompareEntity.setExportFile(request.getExportFile());
         transformCompareEntity.setSchedule(request.getSchedule());
         transformCompareEntity.setCreateTime(timestamp);
         transformCompareEntity.setOperator(operator);

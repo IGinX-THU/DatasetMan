@@ -114,8 +114,9 @@ struct TransformJobRequest {
     1: optional i64 createTime,
     2: string name,
     3: list<TaskInfoDto> taskList,
-    4: string exportFiletName,
-    5: optional string schedule,
+    4: optional i32 exportType,
+    5: optional string exportFile,
+    6: optional string schedule,
 }
 
 struct TransformJobQueryRequest {
@@ -129,11 +130,12 @@ struct TransformCompareEntity {
     1: i64 id,
     2: string name,
     3: string taskList,
-    4: string exportFiletName,
-    5: optional string schedule,
-    6: i64 createTime,
-    7: string operator,
-    8: string clientIp,
+    4: optional i32 exportType,
+    5: optional string exportFile,
+    6: optional string schedule,
+    7: i64 createTime,
+    8: string operator,
+    9: string clientIp,
 }
 
 struct TransformJobEntity {

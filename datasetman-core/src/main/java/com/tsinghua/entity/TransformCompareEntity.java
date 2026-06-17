@@ -17,8 +17,11 @@ public class TransformCompareEntity {
     @Field(name = "taskList")
     private String taskList;
 
-    @Field(name = "exportFiletName")
-    private String exportFiletName;
+    @Field(name = "exportType")
+    private Integer exportType;
+
+    @Field(name = "exportFile")
+    private String exportFile;
 
     @Field(name = "schedule")
     private String schedule;

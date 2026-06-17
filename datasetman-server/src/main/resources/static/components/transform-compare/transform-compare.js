@@ -427,6 +427,20 @@ class TransformCompare extends HTMLElement {
             });
         }
 
+        // 导出类型变化事件绑定
+        const exportTypeSelect = form.querySelector('#exportType');
+        const exportFileRow = form.querySelector('#exportFileRow');
+        if (exportTypeSelect && exportFileRow) {
+            exportTypeSelect.addEventListener('change', (e) => {
+                const exportType = parseInt(e.target.value);
+                exportFileRow.style.display = exportType === 1 ? 'block' : 'none';
+                const exportFileInput = form.querySelector('#exportFile');
+                if (exportFileInput) {
+                    exportFileInput.required = exportType === 1;
+                }
+            });
+        }
+
         if (addTaskBtn && tasksList) {
             addTaskBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -464,12 +478,18 @@ class TransformCompare extends HTMLElement {
 
         confirmBtn.addEventListener('click', async () => {
             const jobName = form.querySelector('#jobName')?.value.trim();
+            const exportType = parseInt(form.querySelector('#exportType')?.value);
             const exportFile = form.querySelector('#exportFile')?.value;
             const schedule = form.querySelector('#schedule')?.value.trim();
             const taskList = this.collectTasks(tasksList);
 
-            if (!jobName || !exportFile) {
+            if (!jobName || isNaN(exportType)) {
                 this.showToast('请填写完整作业配置', 'error');
+                return;
+            }
+
+            if (exportType === 1 && !exportFile) {
+                this.showToast('请填写导出文件路径', 'error');
                 return;
             }
 
@@ -499,7 +519,8 @@ class TransformCompare extends HTMLElement {
 
             const jobData = {
                 name: jobName,
-                exportFiletName: exportFile,
+                exportType: exportType,
+                exportFile: exportType === 1 ? exportFile : null,
                 schedule,
                 taskList
             };
@@ -542,7 +563,8 @@ class TransformCompare extends HTMLElement {
                 const frontendJob = {
                     id: job.id,
                     name: job.name,
-                    exportFile: job.exportFiletName,
+                    exportType: job.exportType != null ? job.exportType : 0,
+                    exportFile: job.exportFile,
                     schedule: job.schedule,
                     taskList: taskList
                 };
@@ -691,6 +713,20 @@ class TransformCompare extends HTMLElement {
                     });
                 }
 
+                // 导出类型变化事件绑定
+                const exportTypeSelect = form.querySelector('#exportType');
+                const exportFileRow = form.querySelector('#exportFileRow');
+                if (exportTypeSelect && exportFileRow) {
+                    exportTypeSelect.addEventListener('change', (e) => {
+                        const exportType = parseInt(e.target.value);
+                        exportFileRow.style.display = exportType === 1 ? 'block' : 'none';
+                        const exportFileInput = form.querySelector('#exportFile');
+                        if (exportFileInput) {
+                            exportFileInput.required = exportType === 1;
+                        }
+                    });
+                }
+
                 if (addTaskBtn && tasksList) {
                     addTaskBtn.addEventListener('click', () => {
                         const taskRow = document.createElement('div');
@@ -720,12 +756,18 @@ class TransformCompare extends HTMLElement {
 
                 confirmBtn.addEventListener('click', async () => {
                     const jobName = form.querySelector('#jobName')?.value.trim();
+                    const exportType = parseInt(form.querySelector('#exportType')?.value);
                     const exportFile = form.querySelector('#exportFile')?.value;
                     const schedule = form.querySelector('#schedule')?.value.trim();
                     const taskList = this.collectTasks(tasksList);
 
-                    if (!jobName || !exportFile) {
+                    if (!jobName || isNaN(exportType)) {
                         this.showToast('请填写完整作业配置', 'error');
+                        return;
+                    }
+
+                    if (exportType === 1 && !exportFile) {
+                        this.showToast('请填写导出文件路径', 'error');
                         return;
                     }
 
@@ -756,7 +798,8 @@ class TransformCompare extends HTMLElement {
                     const jobData = {
                         createTime: createTime,
                         name: jobName,
-                        exportFiletName: exportFile,
+                        exportType: exportType,
+                        exportFile: exportType === 1 ? exportFile : null,
                         schedule,
                         taskList
                     };
@@ -1016,8 +1059,18 @@ class TransformCompare extends HTMLElement {
                     <div class="section-title">作业配置</div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="exportFile">导出文件名 <span class="required">*</span></label>
-                            <input type="text" id="exportFile" name="exportFile" placeholder="请输入导出文件名" value="${job?.exportFile || ''}">
+                            <label for="exportType">输出目标 <span class="required">*</span></label>
+                            <select id="exportType" name="exportType" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                                <option value="0" ${job?.exportType === 0 ? 'selected' : ''}>none</option>
+                                <option value="2" ${job?.exportType === 2 ? 'selected' : ''}>IGinX</option>
+                                <option value="1" ${job?.exportType === 1 ? 'selected' : ''}>file</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row" id="exportFileRow" style="display: ${job?.exportType === 1 ? 'block' : 'none'};">
+                        <div class="form-group">
+                            <label for="exportFile">导出文件路径 <span class="required">*</span></label>
+                            <input type="text" id="exportFile" name="exportFile" placeholder="请输入导出文件路径" value="${job?.exportFile || ''}">
                         </div>
                     </div>
                     <div class="form-row">

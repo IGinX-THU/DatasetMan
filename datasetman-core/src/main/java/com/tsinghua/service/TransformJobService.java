@@ -261,14 +261,28 @@ public class TransformJobService {
 
         }
 
-        Path filePath = Paths.get(SYS_DIR_PREFIX, JOB_OUTPUT).resolve(transformCompare.getExportFiletName()).toAbsolutePath();
+        // 根据exportType确定导出方式
+        ExportType exportType = ExportType.findByValue(
+                transformCompare.getExportType() != null ? transformCompare.getExportType() : 0);
+
+        String filePath = null;
+        if (exportType == ExportType.FILE && transformCompare.getExportFile() != null) {
+            String exportFile = transformCompare.getExportFile();
+            Path basePath = Paths.get(SYS_DIR_PREFIX, JOB_OUTPUT).toAbsolutePath();
+            // 如果路径已以basePath开头，直接使用；否则拼接
+            if (exportFile.startsWith(basePath.toString())) {
+                filePath = exportFile;
+            } else {
+                filePath = basePath.resolve(exportFile).toAbsolutePath().toString();
+            }
+        }
 
         // 提交任务
         long jobIdLong =
                 iginxSession.commitTransformJob(
                         taskInfoList,
-                        ExportType.FILE,
-                        filePath.toString());
+                        ExportType.findByValue(exportType.getValue()),
+                        filePath);
         String jobId = String.valueOf(jobIdLong);
 
 
@@ -284,7 +298,7 @@ public class TransformJobService {
         transformJobEntity.setId(timestamp);
         transformJobEntity.setName(transformCompare.getName());
         transformJobEntity.setTaskList(JSONObject.toJSONString(taskInfoBoList));
-        transformJobEntity.setExportFiletName(transformCompare.getExportFiletName());
+        transformJobEntity.setExportFiletName(transformCompare.getExportFile());
         transformJobEntity.setSchedule(transformCompare.getSchedule());
         transformJobEntity.setCreateTime(timestamp);
         transformJobEntity.setOperator(operator);

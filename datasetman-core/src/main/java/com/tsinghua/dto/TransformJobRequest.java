@@ -9,6 +9,7 @@ public class TransformJobRequest {
     private Long createTime;
     private String name;
     private List<TaskInfoDto> taskList;
-    private String exportFiletName;
+    private Integer exportType;
+    private String exportFile;
     private String schedule;
 }
