@@ -96,14 +96,33 @@ class FileSystemBrowser extends HTMLElement {
             document.head.appendChild(pdfScript);
         }
 
-        // 加载mammoth
-        if (typeof mammoth === 'undefined') {
-            const mammothScript = document.createElement('script');
-            mammothScript.src = '/lib/mammoth/mammoth.browser.min.js';
-            mammothScript.onload = () => {
-                console.log('mammoth加载成功');
+        // 加载JSZip (docx-preview依赖)
+        if (typeof JSZip === 'undefined') {
+            const jszipScript = document.createElement('script');
+            jszipScript.src = '/lib/jszip/jszip.min.js';
+            jszipScript.onload = () => {
+                console.log('JSZip加载成功');
+                // JSZip加载完成后，再加载docx-preview
+                if (typeof docx === 'undefined') {
+                    const docxPreviewScript = document.createElement('script');
+                    docxPreviewScript.src = '/lib/docx-preview/docx-preview.min.js';
+                    docxPreviewScript.onload = () => {
+                        console.log('docx-preview加载成功');
+                    };
+                    document.head.appendChild(docxPreviewScript);
+                }
             };
-            document.head.appendChild(mammothScript);
+            document.head.appendChild(jszipScript);
+        } else {
+            // JSZip已加载，直接加载docx-preview
+            if (typeof docx === 'undefined') {
+                const docxPreviewScript = document.createElement('script');
+                docxPreviewScript.src = '/lib/docx-preview/docx-preview.min.js';
+                docxPreviewScript.onload = () => {
+                    console.log('docx-preview加载成功');
+                };
+                document.head.appendChild(docxPreviewScript);
+            }
         }
 
         // 加载SheetJS
@@ -955,66 +974,52 @@ class FileSystemBrowser extends HTMLElement {
                                 <div style="margin-bottom: 10px;">正在加载Word文档...</div>
                             </div>
                         </div>
-                        <div id="docxViewer" style="padding: 20px; font-family: 'Times New Roman', serif; line-height: 1.6;"></div>
+                        <div id="docxViewer" style="padding: 20px;"></div>
                     </div>
                 </div>
             </div>
         `;
 
-        // 使用mammoth渲染Word文档
-        if (typeof mammoth !== 'undefined') {
+        // 使用docx-preview渲染Word文档
+        if (typeof docx !== 'undefined') {
             // 设置当前文件信息以便下载
             const blob = new Blob([uint8Array], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             this.currentImageUrl = URL.createObjectURL(blob);
             this.currentFileName = fileName;
             
-            mammoth.convertToHtml({arrayBuffer: uint8Array})
-                .then((result) => {
-                    console.log('Word文档渲染完成');
-                    const docxLoader = fileGrid.querySelector('#docxLoader');
-                    if (docxLoader) {
-                        docxLoader.style.display = 'none';
-                    }
-                    const docxViewer = fileGrid.querySelector('#docxViewer');
-                    if (docxViewer) {
-                        // 添加样式以改善格式显示
-                        const styledHtml = `
-                            <style>
-                                #docxViewer h1 { font-size: 24px; font-weight: bold; margin: 20px 0 10px 0; color: #333; }
-                                #docxViewer h2 { font-size: 20px; font-weight: bold; margin: 18px 0 9px 0; color: #444; }
-                                #docxViewer h3 { font-size: 18px; font-weight: bold; margin: 16px 0 8px 0; color: #555; }
-                                #docxViewer p { margin: 10px 0; text-align: justify; }
-                                #docxViewer table { border-collapse: collapse; width: 100%; margin: 15px 0; }
-                                #docxViewer th, #docxViewer td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                                #docxViewer th { background-color: #f5f5f5; font-weight: bold; }
-                                #docxViewer ul, #docxViewer ol { margin: 10px 0; padding-left: 20px; }
-                                #docxViewer li { margin: 5px 0; }
-                                #docxViewer strong { font-weight: bold; }
-                                #docxViewer em { font-style: italic; }
-                                #docxViewer u { text-decoration: underline; }
-                            </style>
-                            ${result.value}
-                        `;
-                        docxViewer.innerHTML = styledHtml;
-                    }
-                })
-                .catch((error) => {
-                    console.error('Word文档渲染失败:', error);
-                    fileGrid.innerHTML = `
-                        <div class="file-preview">
-                            <div class="preview-header">
-                                <span class="file-name">${fileName}</span>
-                            </div>
-                            <div class="preview-content">
-                                <div class="document-preview-info">
-                                    <p>Word文档加载失败: ${error.message}</p>
-                                </div>
+            const docxViewer = fileGrid.querySelector('#docxViewer');
+            const docxLoader = fileGrid.querySelector('#docxLoader');
+            
+            docx.renderAsync(uint8Array, docxViewer, null, {
+                className: 'docx-preview',
+                inWrapper: true,
+                ignoreWidth: false,
+                ignoreHeight: false,
+                ignoreFonts: false,
+                breakPages: true,
+                useBase64URL: true
+            }).then(() => {
+                console.log('Word文档渲染完成');
+                if (docxLoader) {
+                    docxLoader.style.display = 'none';
+                }
+            }).catch((error) => {
+                console.error('Word文档渲染失败:', error);
+                fileGrid.innerHTML = `
+                    <div class="file-preview">
+                        <div class="preview-header">
+                            <span class="file-name">${fileName}</span>
+                        </div>
+                        <div class="preview-content">
+                            <div class="document-preview-info">
+                                <p>Word文档加载失败: ${error.message}</p>
                             </div>
                         </div>
-                    `;
-                });
+                    </div>
+                `;
+            });
         } else {
-            console.error('mammoth库未加载');
+            console.error('docx-preview库未加载');
             fileGrid.innerHTML = `
                 <div class="file-preview">
                     <div class="preview-header">
@@ -1022,7 +1027,7 @@ class FileSystemBrowser extends HTMLElement {
                     </div>
                     <div class="preview-content">
                         <div class="document-preview-info">
-                            <p>mammoth库未加载</p>
+                            <p>docx-preview库未加载</p>
                         </div>
                     </div>
                 </div>
