@@ -78,7 +78,8 @@ public class TransformJobController {
     public Result<List<TransformJobEntity>> chartBloodline (
             @RequestParam("datasetPath") String datasetPath,
             @RequestParam(value = "sideLineage", defaultValue = "true") Boolean sideLineage) throws Exception {
-        List<TransformJobEntity> result = transformJobService.queryAllJobs(datasetPath, null, sideLineage);
+        // 只查询状态为完成（JobState=1）的任务
+        List<TransformJobEntity> result = transformJobService.queryAllJobs(datasetPath, 1, sideLineage);
         return Result.success(result);
     }
 
