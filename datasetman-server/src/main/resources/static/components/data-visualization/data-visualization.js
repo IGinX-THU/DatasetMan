@@ -203,14 +203,17 @@ class DataVisualization extends HTMLElement {
         
         console.log('DOM元素:', { startTimeElement, endTimeElement });
         
-        // 从选中的测点中提取父级路径作为tableName
+        // 从选中的测点中提取父级路径作为tableName和sourceField
         let tableName = null;
+        let sourceField = null;
         if (this.selectedPoints && this.selectedPoints.size > 0) {
             const firstPoint = Array.from(this.selectedPoints)[0];
             const pathParts = firstPoint.split('.');
             // 去掉最后一级（测点名称），保留父级路径
             tableName = pathParts.slice(0, -1).join('.');
-            console.log('提取tableName:', tableName, 'from:', firstPoint);
+            // 最后一级作为sourceField
+            sourceField = pathParts[pathParts.length - 1];
+            console.log('提取tableName:', tableName, 'sourceField:', sourceField, 'from:', firstPoint);
         }
         
         if (!tableName) {
@@ -220,11 +223,11 @@ class DataVisualization extends HTMLElement {
         }
 
         try {
-            console.log('准备调用接口 data/time-range，tableName:', tableName);
+            console.log('准备调用接口 data/time-range，tableName:', tableName, 'sourceField:', sourceField);
             // 调用接口获取数据源的时间范围
             const result = await window.AppConfig.post('data', 'time-range', {
                 tableName: tableName,
-                inputsBind: []
+                inputsBind: sourceField ? [{sourceField: sourceField}] : []
             });
             
             console.log('时间范围查询结果:', result);
@@ -235,23 +238,27 @@ class DataVisualization extends HTMLElement {
                 console.log('timeRange对象:', timeRange);
                 console.log('minKey:', timeRange.minKey, 'maxKey:', timeRange.maxKey);
                 
-                if (timeRange.minKey != null && timeRange.maxKey != null) {
-                    const startDate = new Date(timeRange.minKey);
-                    const endDate = new Date(timeRange.maxKey);
-                    const startTime = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}T${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}:${String(startDate.getSeconds()).padStart(2, '0')}`;
-                    const endTime = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}T${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}:${String(endDate.getSeconds()).padStart(2, '0')}`;
-                    
-                    if (startTimeElement) {
-                        startTimeElement.value = startTime;
-                        console.log('设置开始时间:', startTime);
+                if (timeRange.minKey != null || timeRange.maxKey != null) {
+                    // 分别检查minKey和maxKey，哪个有效就设置哪个
+                    if (timeRange.minKey != null && this.isValidTimestamp(timeRange.minKey)) {
+                        const startDate = new Date(timeRange.minKey);
+                        const startTime = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}T${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}:${String(startDate.getSeconds()).padStart(2, '0')}`;
+                        if (startTimeElement) {
+                            startTimeElement.value = startTime;
+                            console.log('设置开始时间:', startTime);
+                        }
                     }
                     
-                    if (endTimeElement) {
-                        endTimeElement.value = endTime;
-                        console.log('设置结束时间:', endTime);
+                    if (timeRange.maxKey != null && this.isValidTimestamp(timeRange.maxKey)) {
+                        const endDate = new Date(timeRange.maxKey);
+                        const endTime = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}T${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}:${String(endDate.getSeconds()).padStart(2, '0')}`;
+                        if (endTimeElement) {
+                            endTimeElement.value = endTime;
+                            console.log('设置结束时间:', endTime);
+                        }
                     }
                     
-                    // 获取数据量并自动计算时间间隔
+                    // 无论是否有效时间戳，都计算时间间隔
                     await this.autoCalculatePrecision(tableName, timeRange.minKey, timeRange.maxKey);
                 } else {
                     console.warn('时间范围为空，使用默认值');
@@ -397,15 +404,19 @@ class DataVisualization extends HTMLElement {
         
         const numValue = Number(timestamp);
         
-        // 尝试转换为日期
-        const date = new Date(numValue);
-        if (isNaN(date.getTime())) {
+        // 检查是否是时间戳格式：
+        // 毫秒级时间戳：13位数字（如 1704067200000）
+        // 秒级时间戳：10位数字（如 1704067200）
+        const timestampStr = String(Math.floor(Math.abs(numValue)));
+        const isValidLength = timestampStr.length >= 10; // 至少10位
+        
+        if (!isValidLength) {
             return false;
         }
         
-        // 只要年份在合理范围内就认为是有效时间戳
-        const year = date.getFullYear();
-        return year >= 1970 && year <= 9999;
+        // 尝试转换为日期
+        const date = new Date(numValue);
+        return !isNaN(date.getTime());
     }
 
     
