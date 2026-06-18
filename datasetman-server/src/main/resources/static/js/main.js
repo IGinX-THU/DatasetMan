@@ -1473,6 +1473,8 @@ function showVisualAnalysis() {
             window.selectedDataPoints.clear();
             window.selectedDataPoints.add(dataSource);
             console.log('设置当前测点:', dataSource);
+            // 每次切换测点都重新设置筛选条件
+            isFirstLoad = true;
         } else {
             console.log('跳过非测点节点:', dataSource);
         }
@@ -1869,21 +1871,21 @@ function showVisualAnalysis() {
             if (hasChildren) {
                 // 有子节点：检查是否为relational开头的根节点，显示数据库图标
                 if (level === 0 && (node.name.startsWith('relational'))) {
-                    iconHtml = `<i class="icon relational-icon">🗄️</i>`;
+                    iconHtml = `<span class="tree-icon relational-icon">🗄️</span>`;
                 } else if (level === 0 && (node.name.startsWith('file_system'))) {
                     // file_system 为文件系统图标
-                    iconHtml = `<i class="icon file-system-icon">📁</i>`;
+                    iconHtml = `<span class="tree-icon file-system-icon">📁</span>`;
                 } else if (level === 0 && (node.name.startsWith('semi_structured'))) {
                     // semi_structured 为 mongodb 图标
-                    iconHtml = `<i class="icon mongo-icon">🍃</i>`;
+                    iconHtml = `<span class="tree-icon mongo-icon">🍃</span>`;
                 } else if (level === 0 && (node.name.startsWith('key_value'))) {
                     // key_value 为 redis 图标
-                    iconHtml = `<i class="icon redis-icon">⚡</i>`;
+                    iconHtml = `<span class="tree-icon redis-icon">⚡</span>`;
                 } else if (level === 0 && (node.name.startsWith('time_series'))) {
                     // time_series 为时序数据图标
-                    iconHtml = `<i class="icon timeseries-icon">📈</i>`;
+                    iconHtml = `<span class="tree-icon timeseries-icon">📈</span>`;
                 } else {
-                    iconHtml = `<i class="icon folder-icon"></i>`;
+                    iconHtml = `<span class="tree-icon folder-icon">📈</span>`;
                 }
             } else {
                 // 没有子节点的叶子节点：根据数据类型显示图标
@@ -1896,13 +1898,13 @@ function showVisualAnalysis() {
                     5: '📦'       // BINARY(5) - 包裹
                 };
                 const icon = dataTypeIcons[node.dataType] || '📈';
-                iconHtml = `<i class="folder-icon">${icon}</i>`;
+                iconHtml = `<span class="tree-icon">${icon}</span>`;
             }
             
             html += `
                 <div class="${nodeClass}" data-full-path="${node.fullPath}" data-is-leaf="${node.isLeaf}" data-type="${node.dataType || ''}">
                     ${iconHtml}
-                    <span>${node.name}</span>
+                    <span class="tree-node-text">${node.name}</span>
             `;
             
             if (hasChildren) {
@@ -2084,13 +2086,15 @@ function showVisualAnalysis() {
                         
                         // 只有父节点（有子节点的）才有图标，子节点（版本号）没有图标
                         if (hasChildren) {
-                            const icon = document.createElement('i');
-                            icon.className = 'icon cube-icon';
+                            const icon = document.createElement('span');
+                            icon.className = 'tree-icon';
+                            icon.textContent = '📦';
                             treeNode.appendChild(icon);
                         }
-                        
+
                         // 添加节点名称
                         const span = document.createElement('span');
+                        span.className = 'tree-node-text';
                         span.textContent = node.name;
                         treeNode.appendChild(span);
                         

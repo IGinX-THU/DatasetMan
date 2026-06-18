@@ -247,6 +247,12 @@ class DataVisualization extends HTMLElement {
                             startTimeElement.value = startTime;
                             console.log('设置开始时间:', startTime);
                         }
+                    } else {
+                        // 不是有效时间戳，清空输入框
+                        if (startTimeElement) {
+                            startTimeElement.value = '';
+                            console.log('清空开始时间');
+                        }
                     }
                     
                     if (timeRange.maxKey != null && this.isValidTimestamp(timeRange.maxKey)) {
@@ -255,6 +261,12 @@ class DataVisualization extends HTMLElement {
                         if (endTimeElement) {
                             endTimeElement.value = endTime;
                             console.log('设置结束时间:', endTime);
+                        }
+                    } else {
+                        // 不是有效时间戳，清空输入框
+                        if (endTimeElement) {
+                            endTimeElement.value = '';
+                            console.log('清空结束时间');
                         }
                     }
                     

@@ -684,6 +684,27 @@ html.font-scale-1-5 .ribbon-btn-icon {
     background-color: #e3f2fd;
 }
 
+/* 简洁的展开/折叠指示器 */
+.tree-node.expanded > .tree-node-text::before,
+.tree-node:not(.expanded) > .tree-node-text::before {
+    content: '▼';
+    display: inline-block;
+    width: 12px;
+    margin-right: 4px;
+    font-size: 10px;
+    color: #666;
+    transition: transform 0.2s ease;
+}
+
+.tree-node:not(.expanded) > .tree-node-text::before {
+    transform: rotate(-90deg);
+}
+
+.tree-node.expanded.active > .tree-node-text::before,
+.tree-node:not(.expanded).active > .tree-node-text::before {
+    color: #1976d2;
+}
+
 /* 侧边栏视图切换按钮 */
 .sidebar-view-toggle-btn {
     background: none;
@@ -845,11 +866,6 @@ html.font-scale-1-5 .ribbon-btn-icon {
 .tree-node.expanded.active > .tree-node-text::before,
 .tree-node:not(.expanded).active > .tree-node-text::before {
     color: #1976d2;
-}
-
-/* 子目录不显示图标 */
-.tree-children .icon {
-    display: none;
 }
 
 /* 工作区 */
