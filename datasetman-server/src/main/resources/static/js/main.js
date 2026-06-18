@@ -1899,7 +1899,7 @@ function showVisualAnalysis() {
                     2: '📈',      // LONG(2) - 曲线图
                     3: '📈',      // FLOAT(3) - 曲线图
                     4: '📈',      // DOUBLE(4) - 曲线图
-                    5: '📦'       // BINARY(5) - 包裹
+                    5: '💾'       // BINARY(5) - 包裹
                 };
                 const icon = dataTypeIcons[node.dataType] || '📈';
                 iconHtml = `<span class="tree-icon">${icon}</span>`;
@@ -2088,11 +2088,26 @@ function showVisualAnalysis() {
                         treeNode.setAttribute('data-full-path', node.fullPath);
                         treeNode.setAttribute('data-is-leaf', node.isLeaf.toString());
                         
-                        // 只有父节点（有子节点的）才有图标，子节点（版本号）没有图标
+                        // 父节点有图标
                         if (hasChildren) {
+                            if (level === 0) {
+                                // 根节点使用cube-icon
+                                const icon = document.createElement('i');
+                                icon.className = 'tree-icon folder-icon';
+                                icon.textContent = '🗃️';
+                                treeNode.appendChild(icon);
+                            } else {
+                                // 中间节点使用📂
+                                const icon = document.createElement('span');
+                                icon.className = 'tree-icon';
+                                icon.textContent = '📂';
+                                treeNode.appendChild(icon);
+                            }
+                        } else {
+                            // 叶子节点添加图标📦
                             const icon = document.createElement('span');
                             icon.className = 'tree-icon';
-                            icon.textContent = '📦';
+                            icon.textContent = '💾';
                             treeNode.appendChild(icon);
                         }
 
