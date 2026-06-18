@@ -197,8 +197,11 @@ class DataVisualization extends HTMLElement {
     }
 
     async setDefaultTimeRange() {
+        console.log('setDefaultTimeRange() 开始执行');
         const startTimeElement = this.shadowRoot.getElementById('startTime');
         const endTimeElement = this.shadowRoot.getElementById('endTime');
+        
+        console.log('DOM元素:', { startTimeElement, endTimeElement });
         
         // 从选中的测点中提取父级路径作为tableName
         let tableName = null;
@@ -207,6 +210,7 @@ class DataVisualization extends HTMLElement {
             const pathParts = firstPoint.split('.');
             // 去掉最后一级（测点名称），保留父级路径
             tableName = pathParts.slice(0, -1).join('.');
+            console.log('提取tableName:', tableName, 'from:', firstPoint);
         }
         
         if (!tableName) {
@@ -216,6 +220,7 @@ class DataVisualization extends HTMLElement {
         }
 
         try {
+            console.log('准备调用接口 data/time-range，tableName:', tableName);
             // 调用接口获取数据源的时间范围
             const result = await window.AppConfig.post('data', 'time-range', {
                 tableName: tableName,
@@ -223,11 +228,14 @@ class DataVisualization extends HTMLElement {
             });
             
             console.log('时间范围查询结果:', result);
+            console.log('result.data详情:', result.data);
             
             if (result.success && result.data) {
                 const timeRange = result.data;
+                console.log('timeRange对象:', timeRange);
+                console.log('minKey:', timeRange.minKey, 'maxKey:', timeRange.maxKey);
                 
-                if (timeRange.minKey && timeRange.maxKey) {
+                if (timeRange.minKey != null && timeRange.maxKey != null) {
                     const startDate = new Date(timeRange.minKey);
                     const endDate = new Date(timeRange.maxKey);
                     const startTime = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}T${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}:${String(startDate.getSeconds()).padStart(2, '0')}`;
@@ -437,34 +445,46 @@ class DataVisualization extends HTMLElement {
         this.allData = tableData.records.map(record => {
             const processedRecord = { ...record };
 
-            // 如果有key列，转换为时间戳，解析失败则跳过这条数据
+            // 如果有key列，尝试转换为时间戳
             if (record.key) {
                 try {
-                    processedRecord.timestamp = new Date(record.key).getTime();
-                    // 检查时间戳是否有效
-                    if (isNaN(processedRecord.timestamp)) {
-                        console.warn('时间解析失败，跳过数据:', record.key);
-                        return null;
+                    const parsedTimestamp = new Date(record.key).getTime();
+                    // 检查是否是有效时间戳
+                    if (this.isValidTimestamp(parsedTimestamp)) {
+                        processedRecord.timestamp = parsedTimestamp;
+                    } else {
+                        // 不是有效时间戳，保留原始值
+                        processedRecord.timestamp = record.key;
                     }
                 } catch (error) {
-                    console.warn('时间解析异常，跳过数据:', record.key, error);
-                    return null;
+                    // 解析异常，保留原始值
+                    processedRecord.timestamp = record.key;
                 }
             }
 
-            // 如果有window_start列，转换为时间戳
+            // 如果有window_start列，尝试转换为时间戳
             if (record.window_start !== undefined) {
                 try {
-                    processedRecord.window_start_timestamp = new Date(record.window_start).getTime();
+                    const parsedTimestamp = new Date(record.window_start).getTime();
+                    if (this.isValidTimestamp(parsedTimestamp)) {
+                        processedRecord.window_start_timestamp = parsedTimestamp;
+                    } else {
+                        processedRecord.window_start_timestamp = record.window_start;
+                    }
                 } catch (error) {
                     processedRecord.window_start_timestamp = record.window_start;
                 }
             }
 
-            // 如果有window_end列，转换为时间戳
+            // 如果有window_end列，尝试转换为时间戳
             if (record.window_end !== undefined) {
                 try {
-                    processedRecord.window_end_timestamp = new Date(record.window_end).getTime();
+                    const parsedTimestamp = new Date(record.window_end).getTime();
+                    if (this.isValidTimestamp(parsedTimestamp)) {
+                        processedRecord.window_end_timestamp = parsedTimestamp;
+                    } else {
+                        processedRecord.window_end_timestamp = record.window_end;
+                    }
                 } catch (error) {
                     processedRecord.window_end_timestamp = record.window_end;
                 }
