@@ -397,23 +397,15 @@ class DataVisualization extends HTMLElement {
         
         const numValue = Number(timestamp);
         
-        // 检查是否是时间戳格式：
-        // 毫秒级时间戳：13位数字（如 1704067200000）
-        // 秒级时间戳：10位数字（如 1704067200）
-        const timestampStr = String(Math.floor(Math.abs(numValue)));
-        const isValidLength = timestampStr.length === 13 || timestampStr.length === 10;
-        
-        if (!isValidLength) {
-            return false;
-        }
-        
+        // 尝试转换为日期
         const date = new Date(numValue);
         if (isNaN(date.getTime())) {
             return false;
         }
         
+        // 只要年份在合理范围内就认为是有效时间戳
         const year = date.getFullYear();
-        return year >= 1970 && year <= 2100;
+        return year >= 1970 && year <= 9999;
     }
 
     
@@ -447,46 +439,63 @@ class DataVisualization extends HTMLElement {
 
             // 如果有key列，尝试转换为时间戳
             if (record.key) {
-                try {
-                    const parsedTimestamp = new Date(record.key).getTime();
-                    // 检查是否是有效时间戳
-                    if (this.isValidTimestamp(parsedTimestamp)) {
-                        processedRecord.timestamp = parsedTimestamp;
-                    } else {
-                        // 不是有效时间戳，保留原始值
-                        processedRecord.timestamp = record.key;
+                let timestamp = record.key;
+                // 如果是字符串，尝试解析；如果是数字，直接使用
+                if (typeof record.key === 'string') {
+                    try {
+                        timestamp = new Date(record.key).getTime();
+                    } catch (error) {
+                        timestamp = record.key;
                     }
-                } catch (error) {
-                    // 解析异常，保留原始值
+                }
+                // 检查是否是有效时间戳
+                if (this.isValidTimestamp(timestamp)) {
+                    processedRecord.timestamp = timestamp;
+                    console.log('key转换成功:', record.key, '->', timestamp);
+                } else {
+                    // 不是有效时间戳，保留原始值
                     processedRecord.timestamp = record.key;
+                    console.log('key不是有效时间戳:', record.key);
                 }
             }
 
             // 如果有window_start列，尝试转换为时间戳
             if (record.window_start !== undefined) {
-                try {
-                    const parsedTimestamp = new Date(record.window_start).getTime();
-                    if (this.isValidTimestamp(parsedTimestamp)) {
-                        processedRecord.window_start_timestamp = parsedTimestamp;
-                    } else {
-                        processedRecord.window_start_timestamp = record.window_start;
+                let timestamp = record.window_start;
+                // 如果是字符串，尝试解析；如果是数字，直接使用
+                if (typeof record.window_start === 'string') {
+                    try {
+                        timestamp = new Date(record.window_start).getTime();
+                    } catch (error) {
+                        timestamp = record.window_start;
                     }
-                } catch (error) {
+                }
+                if (this.isValidTimestamp(timestamp)) {
+                    processedRecord.window_start_timestamp = timestamp;
+                    console.log('window_start转换成功:', record.window_start, '->', timestamp);
+                } else {
                     processedRecord.window_start_timestamp = record.window_start;
+                    console.log('window_start不是有效时间戳:', record.window_start);
                 }
             }
 
             // 如果有window_end列，尝试转换为时间戳
             if (record.window_end !== undefined) {
-                try {
-                    const parsedTimestamp = new Date(record.window_end).getTime();
-                    if (this.isValidTimestamp(parsedTimestamp)) {
-                        processedRecord.window_end_timestamp = parsedTimestamp;
-                    } else {
-                        processedRecord.window_end_timestamp = record.window_end;
+                let timestamp = record.window_end;
+                // 如果是字符串，尝试解析；如果是数字，直接使用
+                if (typeof record.window_end === 'string') {
+                    try {
+                        timestamp = new Date(record.window_end).getTime();
+                    } catch (error) {
+                        timestamp = record.window_end;
                     }
-                } catch (error) {
+                }
+                if (this.isValidTimestamp(timestamp)) {
+                    processedRecord.window_end_timestamp = timestamp;
+                    console.log('window_end转换成功:', record.window_end, '->', timestamp);
+                } else {
                     processedRecord.window_end_timestamp = record.window_end;
+                    console.log('window_end不是有效时间戳:', record.window_end);
                 }
             }
 
