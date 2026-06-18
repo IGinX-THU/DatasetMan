@@ -1871,21 +1871,25 @@ function showVisualAnalysis() {
             if (hasChildren) {
                 // 有子节点：检查是否为relational开头的根节点，显示数据库图标
                 if (level === 0 && (node.name.startsWith('relational'))) {
-                    iconHtml = `<span class="tree-icon relational-icon">🗄️</span>`;
+                    iconHtml = `<span class="tree-icon folder-icon">🗄️</span>`;
                 } else if (level === 0 && (node.name.startsWith('file_system'))) {
                     // file_system 为文件系统图标
-                    iconHtml = `<span class="tree-icon file-system-icon">📁</span>`;
+                    iconHtml = `<span class="tree-icon folder-icon">📁</span>`;
                 } else if (level === 0 && (node.name.startsWith('semi_structured'))) {
                     // semi_structured 为 mongodb 图标
-                    iconHtml = `<span class="tree-icon mongo-icon">🍃</span>`;
+                    iconHtml = `<span class="tree-icon folder-icon">🍃</span>`;
                 } else if (level === 0 && (node.name.startsWith('key_value'))) {
                     // key_value 为 redis 图标
-                    iconHtml = `<span class="tree-icon redis-icon">⚡</span>`;
+                    iconHtml = `<span class="tree-icon folder-icon">⚡</span>`;
                 } else if (level === 0 && (node.name.startsWith('time_series'))) {
                     // time_series 为时序数据图标
-                    iconHtml = `<span class="tree-icon timeseries-icon">📈</span>`;
-                } else {
                     iconHtml = `<span class="tree-icon folder-icon">📈</span>`;
+                } else if (level === 0) {
+                    // 根节点使用📁
+                    iconHtml = `<span class="tree-icon folder-icon"></span>`;
+                } else {
+                    // 中间节点使用📂
+                    iconHtml = `<span class="tree-icon ">📂</span>`;
                 }
             } else {
                 // 没有子节点的叶子节点：根据数据类型显示图标
