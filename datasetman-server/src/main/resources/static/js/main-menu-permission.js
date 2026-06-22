@@ -18,6 +18,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // 显示用户信息
     displayUserInfo();
+    
+    // 恢复用户设置（字体大小和主题模式）
+    if (window.restoreUserSettings) {
+        window.restoreUserSettings();
+    }
 });
 
 // 初始化菜单权限系统

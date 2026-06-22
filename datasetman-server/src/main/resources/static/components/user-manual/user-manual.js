@@ -159,7 +159,7 @@ class UserManual extends HTMLElement {
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = '数据与模型一体化管理软件-用户手册.docx';
+                link.download = '用户手册.docx';
                 document.body.appendChild(link);
                 link.click();
                 link.remove();

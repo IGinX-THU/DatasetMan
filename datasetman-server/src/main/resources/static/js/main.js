@@ -170,6 +170,67 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // 2. 字体大小设置
+    function applyFontScale(scale) {
+        if (scale === undefined || scale === null) {
+            return;
+        }
+
+        document.documentElement.classList.remove('font-scale-1', 'font-scale-1-15', 'font-scale-1-3', 'font-scale-1-5');
+
+        const scaleClassMap = {
+            '1': 'font-scale-1',
+            '1.15': 'font-scale-1-15',
+            '1.3': 'font-scale-1-3',
+            '1.5': 'font-scale-1-5'
+        };
+
+        const className = scaleClassMap[scale] || 'font-scale-1';
+        document.documentElement.classList.add(className);
+
+        const username = window.MenuPermission?.currentUser?.username || window.AppConfig?.getUsername() || 'default';
+        localStorage.setItem('fontScale_' + username, scale);
+
+        document.querySelectorAll('.dropdown-menu .submenu li[data-scale]').forEach(li => {
+            li.classList.remove('active');
+            if (parseFloat(li.dataset.scale) === parseFloat(scale)) {
+                li.classList.add('active');
+            }
+        });
+    }
+
+    // 页面加载时恢复保存的字体大小和主题模式
+    function restoreUserSettings() {
+        const username = window.MenuPermission?.currentUser?.username || window.AppConfig?.getUsername() || 'default';
+
+        const savedFontScale = localStorage.getItem('fontScale_' + username);
+        if (savedFontScale) {
+            applyFontScale(savedFontScale);
+        } else {
+            applyFontScale(1);
+        }
+
+        const savedThemeMode = localStorage.getItem('themeMode_' + username);
+        const htmlEl = document.documentElement;
+        if (savedThemeMode === 'dark') {
+            htmlEl.classList.add('dark-mode');
+            document.querySelectorAll('#menu-light-mode, #menu-dark-mode').forEach(li => {
+                li.classList.remove('active');
+            });
+            const darkEl = document.getElementById('menu-dark-mode');
+            if (darkEl) darkEl.classList.add('active');
+        } else if (savedThemeMode === 'light') {
+            htmlEl.classList.add('light-mode');
+            document.querySelectorAll('#menu-light-mode, #menu-dark-mode').forEach(li => {
+                li.classList.remove('active');
+            });
+            const lightEl = document.getElementById('menu-light-mode');
+            if (lightEl) lightEl.classList.add('active');
+        }
+    }
+
+    window.restoreUserSettings = restoreUserSettings;
+
     // 2.5. 右侧数据集库树形节点点击事件
     const rightSidebarTree = document.querySelector('.right-sidebar .tree');
     if (rightSidebarTree) {
@@ -421,20 +482,36 @@ document.addEventListener('DOMContentLoaded', function() {
                         return;
                     case 'setLightMode':
                         console.log('明亮模式菜单被点击');
-                        const html = document.documentElement;
-                        html.classList.remove('dark-mode');
-                        html.classList.add('light-mode');
+                        const htmlLight = document.documentElement;
+                        htmlLight.classList.remove('dark-mode');
+                        htmlLight.classList.add('light-mode');
+                        const usernameLight = window.MenuPermission?.currentUser?.username || window.AppConfig?.getUsername() || 'default';
+                        localStorage.setItem('themeMode_' + usernameLight, 'light');
+                        document.querySelectorAll('#menu-light-mode, #menu-dark-mode').forEach(li => {
+                            li.classList.remove('active');
+                        });
+                        const lightMenuItem = document.getElementById('menu-light-mode');
+                        if (lightMenuItem) lightMenuItem.classList.add('active');
                         break;
                     case 'setDarkMode':
                         console.log('暗黑模式菜单被点击');
                         const htmlDark = document.documentElement;
                         htmlDark.classList.remove('light-mode');
                         htmlDark.classList.add('dark-mode');
+                        const usernameDark = window.MenuPermission?.currentUser?.username || window.AppConfig?.getUsername() || 'default';
+                        localStorage.setItem('themeMode_' + usernameDark, 'dark');
+                        document.querySelectorAll('#menu-light-mode, #menu-dark-mode').forEach(li => {
+                            li.classList.remove('active');
+                        });
+                        const darkMenuItem = document.getElementById('menu-dark-mode');
+                        if (darkMenuItem) darkMenuItem.classList.add('active');
                         break;
                     case 'showUserManual':
                         console.log('用户手册菜单被点击');
-                        if (typeof window.showUserManual === 'function') {
-                            window.showUserManual();
+                        if (typeof window.showComponent === 'function') {
+                            window.showComponent('userManual');
+                        } else {
+                            console.error('window.showComponent函数未找到');
                         }
                         break;
                     case 'showAbout':
@@ -465,17 +542,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('UDF管理菜单被点击');
                     showComponent('udfManagement');
                 } else if (this.dataset && this.dataset.scale) {
-                    document.documentElement.classList.remove('font-scale-1', 'font-scale-1-15', 'font-scale-1-3', 'font-scale-1-5');
-                    const scaleClassMap = {
-                        '1': 'font-scale-1',
-                        '1.15': 'font-scale-1-15',
-                        '1.3': 'font-scale-1-3',
-                        '1.5': 'font-scale-1-5'
-                    };
-                    document.documentElement.classList.add(scaleClassMap[this.dataset.scale] || 'font-scale-1');
-                    document.querySelectorAll('.dropdown-menu .submenu li[data-scale]').forEach(li => li.classList.remove('active'));
-                    this.classList.add('active');
-                    localStorage.setItem('fontScale_' + (window.AppConfig.getUsername() || 'default'), this.dataset.scale);
+                    applyFontScale(this.dataset.scale);
                 } else {
                     console.warn(`未找到菜单ID ${menuId} 的对应动作`);
                 }
