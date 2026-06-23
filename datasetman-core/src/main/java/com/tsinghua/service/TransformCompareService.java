@@ -1,5 +1,6 @@
 package com.tsinghua.service;
 
+import cn.edu.tsinghua.iginx.exception.SessionException;
 import cn.edu.tsinghua.iginx.session.Session;
 import cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult;
 import cn.edu.tsinghua.iginx.session_v2.IginXClient;
@@ -32,7 +33,27 @@ public class TransformCompareService {
     @Autowired
     private IginXClient iginxClient;
 
-    public TransformCompareEntity saveTransform(TransformJobRequest request) {
+    public TransformCompareEntity saveTransform(TransformJobRequest request) throws Exception {
+
+        // 检查作业名称是否重复（仅在新增时检查）
+        if (request.getCreateTime() == null) {
+            String checkSql = String.format("SELECT COUNT(1) FROM %s WHERE name = '%s';", DATA_PREFIX, request.getName());
+            log.info("检查作业名称重复SQL: {}", checkSql);
+            
+            try {
+                SessionExecuteSqlResult checkRes = iginxSession.executeSql(checkSql);
+                Object count = checkRes.getValues().get(0).get(0);
+                if (count != null && !count.equals(0L)) {
+                    throw new RuntimeException("作业名称已存在，请使用其他名称");
+                }
+            } catch (Exception e) {
+                if (e.getMessage().contains("作业名称已存在")) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+                log.error("检查作业名称失败", e);
+                throw e;
+            }
+        }
 
         long timestamp = Objects.nonNull(request.getCreateTime()) ? request.getCreateTime() : System.currentTimeMillis();
 
