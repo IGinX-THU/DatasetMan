@@ -252,6 +252,16 @@
     color: white;
 }
 
+.action-btn.manage {
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+.action-btn.manage:hover {
+    background: #f59e0b;
+    color: white;
+}
+
 .action-btn.copy {
     color: #10b981;
     border-color: #10b981;

@@ -4,6 +4,8 @@ class TransformJob extends HTMLElement {
         this.data = [];
         this.pageSize = 10;
         this.currentPage = 1;
+        this.htmlLoaded = false;
+        this.pendingJobName = null;
     }
 
     connectedCallback() {
@@ -19,6 +21,7 @@ class TransformJob extends HTMLElement {
             .then(response => response.text())
             .then(html => {
                 this.innerHTML += html;
+                this.htmlLoaded = true;
                 this.bindEvents();
                 this.initPagination();
                 
@@ -197,7 +200,34 @@ class TransformJob extends HTMLElement {
         this.style.display = 'block';
         // 重置分页到第一页
         this.currentPage = 1;
+        
+        // 等待HTML加载完成
+        if (!this.htmlLoaded) {
+            console.log('等待HTML加载...');
+            await new Promise(resolve => {
+                const checkInterval = setInterval(() => {
+                    if (this.htmlLoaded) {
+                        clearInterval(checkInterval);
+                        console.log('HTML加载完成');
+                        resolve();
+                    }
+                }, 50);
+            });
+        }
+        
+        // 如果传入了作业名称参数，填充到筛选框
+        if (args.length > 0 && args[0]) {
+            const filterInput = this.querySelector('#jobNameFilter');
+            if (filterInput) {
+                filterInput.value = args[0];
+                console.log('设置筛选条件:', args[0], '当前值:', filterInput.value);
+            } else {
+                console.error('未找到jobNameFilter元素');
+            }
+        }
+        
         // 每次显示时刷新数据
+        console.log('开始加载数据...');
         await this.loadJobsFromAPI();
     }
 
@@ -827,11 +857,6 @@ class TransformJob extends HTMLElement {
                 popup.remove();
             }
         }, 5000);
-    }
-
-    show() {
-        this.style.display = 'block';
-        this.loadJobsFromAPI();
     }
 
     hide() {

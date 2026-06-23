@@ -9,6 +9,7 @@ class TransformCompare extends HTMLElement {
     }
 
     connectedCallback() {
+        console.log('TransformCompare connectedCallback 被调用');
         this.style.display = 'none'; // 默认隐藏
         
         this.innerHTML = `
@@ -21,6 +22,7 @@ class TransformCompare extends HTMLElement {
             .then(response => response.text())
             .then(html => {
                 this.innerHTML += html;
+                console.log('TransformCompare HTML 加载完成');
                 this.bindEvents();
                 this.initPagination();
                 
@@ -151,12 +153,35 @@ class TransformCompare extends HTMLElement {
         return job ? job.name : '';
     }
 
+    navigateToTransformJob(jobName) {
+        console.log('navigateToTransformJob 被调用，作业名称:', jobName);
+        // 隐藏当前组件
+        this.hide();
+        
+        // 显示transform-job组件并传递作业名称参数
+        if (typeof window.showComponent === 'function') {
+            console.log('调用 window.showComponent');
+            window.showComponent('transformJob', jobName);
+        } else {
+            console.error('window.showComponent函数未找到');
+        }
+    }
+
     bindEvents() {
+        console.log('TransformCompare bindEvents 被调用');
         const addJobBtn = this.querySelector('#addJobBtn');
         const modalClose = this.querySelector('#modalClose');
         const modalMask = this.querySelector('#modalMask');
         const applyFilters = this.querySelector('#applyFilters');
         const resetFilters = this.querySelector('#resetFilters');
+
+        console.log('查找元素:', {
+            addJobBtn: !!addJobBtn,
+            modalClose: !!modalClose,
+            modalMask: !!modalMask,
+            applyFilters: !!applyFilters,
+            resetFilters: !!resetFilters
+        });
 
         if (addJobBtn) {
             addJobBtn.addEventListener('click', () => this.showAddModal());
@@ -224,6 +249,7 @@ class TransformCompare extends HTMLElement {
     }
 
     renderTable() {
+        console.log('renderTable 被调用，数据条数:', this.data.length);
         const tbody = this.querySelector('#tableBody');
         if (!tbody) return;
 
@@ -258,7 +284,8 @@ class TransformCompare extends HTMLElement {
                 <td>${job.createtime}</td>
                 <td>
                     <div class="action-buttons">
-                        <button class="action-btn run" data-id="${job.createTime}">运行</button>
+                        <button class="action-btn run" data-id="${job.createTime}">提交</button>
+                        <button class="action-btn manage" data-name="${job.name}">管理</button>
                         <button class="action-btn edit" data-id="${job.createTime}">编辑</button>
                         <button class="action-btn delete" data-id="${job.createTime}">删除</button>
                     </div>
@@ -267,15 +294,20 @@ class TransformCompare extends HTMLElement {
         `).join('');
 
         tbody.addEventListener('click', (e) => {
+            console.log('表格点击事件触发，目标:', e.target, '类名:', e.target.className);
             const id = e.target.getAttribute('data-id');
-            if (!id) return;
-
+            const name = e.target.getAttribute('data-name');
+            console.log('data-id:', id, 'data-name:', name);
+            
             if (e.target.classList.contains('edit')) {
                 this.showEditModal(id);
             } else if (e.target.classList.contains('run')) {
                 this.showRunConfirm(id);
             } else if (e.target.classList.contains('delete')) {
                 this.showDeleteConfirm(id);
+            } else if (e.target.classList.contains('manage')) {
+                console.log('检测到管理按钮点击');
+                this.navigateToTransformJob(name);
             }
         });
     }
@@ -1031,6 +1063,23 @@ class TransformCompare extends HTMLElement {
 
     getJobFormHTML(job = null) {
         const isEdit = job !== null;
+        const isAdmin = window.MenuPermission?.getCurrentRole() === 'ADMIN';
+        
+        // 根据用户角色生成导出类型选项
+        let exportTypeOptions = '';
+        if (isAdmin) {
+            exportTypeOptions = `
+                <option value="0" ${job?.exportType === 0 ? 'selected' : ''}>none</option>
+                <option value="2" ${job?.exportType === 2 ? 'selected' : ''}>IGinX</option>
+                <option value="1" ${job?.exportType === 1 || job?.exportType === undefined || job?.exportType === null ? 'selected' : ''}>file</option>
+            `;
+        } else {
+            exportTypeOptions = `
+                <option value="0" ${job?.exportType === 0 ? 'selected' : ''}>none</option>
+                <option value="1" ${job?.exportType === 1 || job?.exportType === undefined || job?.exportType === null ? 'selected' : ''}>file</option>
+            `;
+        }
+        
         return `
             <form id="jobForm" class="job-form">
                 <div class="form-section">
@@ -1061,9 +1110,7 @@ class TransformCompare extends HTMLElement {
                         <div class="form-group">
                             <label for="exportType">输出目标 <span class="required">*</span></label>
                             <select id="exportType" name="exportType" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
-                                <option value="0" ${job?.exportType === 0 ? 'selected' : ''}>none</option>
-                                <option value="2" ${job?.exportType === 2 ? 'selected' : ''}>IGinX</option>
-                                <option value="1" ${job?.exportType === 1 || job?.exportType === undefined || job?.exportType === null ? 'selected' : ''}>file</option>
+                                ${exportTypeOptions}
                             </select>
                         </div>
                     </div>
