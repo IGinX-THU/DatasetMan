@@ -158,6 +158,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.showGlobalLoading('正在加载数据资源...');
     loadDataSourceTree();
     
+    // 移除页面初始化Loading遮罩层
+    const pageLoadingOverlay = document.getElementById('pageLoadingOverlay');
+    if (pageLoadingOverlay) {
+        pageLoadingOverlay.remove();
+    }
+    
     // 1. 明暗模式切换
     const themeToggle = document.getElementById('themeToggle');
     const html = document.documentElement;
