@@ -154,6 +154,8 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     // 0. 动态加载数据源树
+    // 显示全局loading
+    window.showGlobalLoading('正在加载数据资源...');
     loadDataSourceTree();
     
     // 1. 明暗模式切换
@@ -1866,9 +1868,6 @@ function showVisualAnalysis() {
     // 动态加载数据源树
     async function loadDataSourceTree() {
         try {
-            // 显示全局loading
-            window.showGlobalLoading('正在加载数据资源...');
-            
             // 同时显示右侧loading
             const rightSidebarTree = document.querySelector('.right-sidebar .tree');
             if (rightSidebarTree) {

@@ -9,6 +9,16 @@
     <link rel="stylesheet" href="./css/icons.css">
     <link rel="stylesheet" href="./css/main.css">
     <link rel="stylesheet" href="./css/desktop-shell.css">
+    <script>
+        // 页面加载前立即检查登录状态，避免先显示index.html再跳转
+        (function() {
+            const tokenKey = 'jwtToken';
+            const token = localStorage.getItem(tokenKey);
+            if (!token) {
+                window.location.href = '/login.html';
+            }
+        })();
+    </script>
 </head>
 <body>
 <!-- Desktop Application Shell (Enhancement Layer) -->
@@ -329,32 +339,7 @@
         <div class="sidebar-content-wrapper">
             <div class="sidebar-panel right-sidebar-panel active" data-panel="dataset">
                 <div class="sidebar-title">数据集库</div>
-                <div class="tree" id="datasetTree">
-                    <div class="tree-node">
-                        <span class="tree-icon">📦</span>
-                        <span class="tree-node-text">dataset_01</span>
-                    </div>
-                    <div class="tree-node">
-                        <span class="tree-icon">📦</span>
-                        <span class="tree-node-text">dataset_02</span>
-                    </div>
-                    <div class="tree-node expanded">
-                        <span class="tree-icon">📦</span>
-                        <span class="tree-node-text">transform_results</span>
-                        <div class="tree-children">
-                            <div class="tree-node">
-                                <span class="tree-node-text">job_20250101</span>
-                            </div>
-                            <div class="tree-node">
-                                <span class="tree-node-text">job_20250102</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="tree-node">
-                        <span class="tree-icon">📦</span>
-                        <span class="tree-node-text">user_dataset</span>
-                    </div>
-                </div>
+                <div class="tree" id="datasetTree"></div>
             </div>
         </div>
     </div>
