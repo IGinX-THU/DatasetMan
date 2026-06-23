@@ -363,7 +363,11 @@ class DatasetDialog extends HTMLElement {
                                 <div class="sql-list" id="sqlList">
                                     <!-- SQL列表将动态生成 -->
                                 </div>
-                                <button type="button" class="btn-add-sql" id="addSqlBtn">+ 添加SQL</button>
+                                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                    <button type="button" class="btn-add-sql" id="addSqlBtn">+ 添加SQL</button>
+                                    <button type="button" class="btn-add-sql" id="uploadSqlBtn">📁 上传SQL脚本</button>
+                                    <input type="file" id="sqlFileInput" accept=".sql,.txt" style="display: none;">
+                                </div>
                             </div>
                         </div>
                         
@@ -429,6 +433,14 @@ class DatasetDialog extends HTMLElement {
 
         // 添加SQL按钮
         this.shadowRoot.querySelector('#addSqlBtn').addEventListener('click', () => this.addSql());
+
+        // 上传SQL脚本按钮
+        this.shadowRoot.querySelector('#uploadSqlBtn').addEventListener('click', () => {
+            this.shadowRoot.querySelector('#sqlFileInput').click();
+        });
+
+        // 文件选择变化事件
+        this.shadowRoot.querySelector('#sqlFileInput').addEventListener('change', (e) => this.handleSqlFileUpload(e));
     }
 
     // 显示弹窗 - 创建模式
@@ -503,7 +515,7 @@ class DatasetDialog extends HTMLElement {
         this.shadowRoot.querySelector('#datasetForm').reset();
         this.shadowRoot.querySelector('#datasetName').readOnly = false;
         this.clearResult();
-        this.sqlList = ['']; // 初始化为包含一个空SQL的列表
+        this.sqlList = []; // 初始化为空列表
         this.renderSqlList();
         // 重置提交状态和按钮
         this._isSubmitting = false;
@@ -547,7 +559,7 @@ class DatasetDialog extends HTMLElement {
                 }
             }
         } else {
-            this.sqlList = [''];
+            this.sqlList = [];
         }
         this.renderSqlList();
     }
@@ -810,6 +822,53 @@ class DatasetDialog extends HTMLElement {
             }
         }
         return -1;
+    }
+
+    // 处理SQL文件上传
+    handleSqlFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const content = e.target.result;
+            this.parseAndFillSql(content);
+            // 清空文件输入，允许重复上传同一文件
+            event.target.value = '';
+        };
+        reader.onerror = () => {
+            this.showResult('文件读取失败', 'error');
+        };
+        reader.readAsText(file);
+    }
+
+    // 解析SQL内容并填充到sqlList
+    parseAndFillSql(content) {
+        // 按分号分割SQL语句，过滤空语句，保留分号
+        const sqlStatements = content
+            .split(';')
+            .map(sql => sql.trim())
+            .filter(sql => sql.length > 0)
+            .map(sql => sql + ';');
+
+        if (sqlStatements.length === 0) {
+            this.showResult('未找到有效的SQL语句', 'error');
+            return;
+        }
+
+        // 更新sqlList
+        this.updateSqlListFromDOM();
+        
+        // 如果当前sqlList为空或只有一个空SQL，直接替换
+        if (this.sqlList.length === 0 || (this.sqlList.length === 1 && !this.sqlList[0].trim())) {
+            this.sqlList = sqlStatements;
+        } else {
+            // 否则追加到现有列表
+            this.sqlList = [...this.sqlList, ...sqlStatements];
+        }
+
+        this.renderSqlList();
+        this.showResult(`成功加载 ${sqlStatements.length} 条SQL语句`, 'success');
     }
 }
 
