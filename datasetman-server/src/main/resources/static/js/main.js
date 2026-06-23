@@ -1700,9 +1700,19 @@ function showVisualAnalysis() {
     function showComponent(componentId, ...args) {
         console.log(`显示组件: ${componentId}`, args);
 
-        // 弹窗组件不需要清空工作区
+        // 弹窗组件不需要清空工作区，但需要隐藏其他弹窗
         const modalComponents = ['registerEmbedded', 'importData', 'modelUpload', 'modelDownload', 'modelEdit'];
-        if (!modalComponents.includes(componentId)) {
+        if (modalComponents.includes(componentId)) {
+            // 隐藏其他弹窗组件
+            modalComponents.forEach(modalId => {
+                if (modalId !== componentId) {
+                    const modal = document.getElementById(modalId);
+                    if (modal && typeof modal.hide === 'function') {
+                        modal.hide();
+                    }
+                }
+            });
+        } else {
             // 先清空工作区
             clearWorkspace();
         }
@@ -1884,10 +1894,18 @@ function showVisualAnalysis() {
             } else {
                 console.error('加载数据源树失败:', result.message);
                 document.getElementById('dataSourceTree').innerHTML = '<div class="error-placeholder">加载数据源失败</div>';
+                const datasetTree = document.getElementById('datasetTree');
+                if (datasetTree) {
+                    datasetTree.innerHTML = '<div class="error-placeholder">加载数据集失败</div>';
+                }
             }
         } catch (error) {
             console.error('加载数据源树异常:', error);
             document.getElementById('dataSourceTree').innerHTML = '<div class="error-placeholder">网络错误，无法加载数据源</div>';
+            const datasetTree = document.getElementById('datasetTree');
+            if (datasetTree) {
+                datasetTree.innerHTML = '<div class="error-placeholder">网络错误，无法加载数据集</div>';
+            }
         } finally {
             // 隐藏全局loading
             window.hideGlobalLoading();
