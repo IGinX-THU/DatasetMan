@@ -1,8 +1,8 @@
 # JWT配置
 jwt:
   secret: mySecretKeyForDatasetMan2026MySecretKeyForDatasetMan2026MySecretKeyForDatasetMan2026
-  expiration: 86400000  # 24小时 (毫秒)
-  refresh-expiration: 604800000  # 7天 (毫秒)
+  expiration: 28800000  # 8小时 (毫秒)
+  refresh-expiration: 43200000  # 12小时 (毫秒)
 
 # 服务器配置
 server:
@@ -43,6 +43,9 @@ spring:
   mvc:
     pathmatch:
       matching-strategy: ANT_PATH_MATCHER
+  web:
+    resources:
+      static-locations: file:./static/,classpath:/static/
 
 #启用Swagger文档
 springfox:
