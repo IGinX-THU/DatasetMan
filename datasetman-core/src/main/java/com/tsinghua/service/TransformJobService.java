@@ -9,6 +9,7 @@ import cn.edu.tsinghua.iginx.thrift.*;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tsinghua.auth.aspect.OperationLogAspect;
+import com.tsinghua.auth.util.AuthUtil;
 import com.tsinghua.dto.TaskInfoBo;
 import com.tsinghua.dto.TaskInfoDto;
 import com.tsinghua.dto.TransformJobQueryRequest;
@@ -105,6 +106,7 @@ public class TransformJobService {
         transformJobEntity.setCreateTime(timestamp);
         transformJobEntity.setOperator(operator);
         transformJobEntity.setClientIp(clientIp);
+        transformJobEntity.setOwner(AuthUtil.getCurrentUsername());
 
         WriteClient writeClient = iginxClient.getWriteClient();
         writeClient.writeMeasurement(transformJobEntity);
@@ -118,7 +120,13 @@ public class TransformJobService {
         try {
             // 构建基础SQL
             StringBuilder sql = new StringBuilder("SELECT * FROM relational_system.transform_job WHERE 1=1");
-            
+
+            // 添加owner过滤
+            if (!AuthUtil.isAdmin()) {
+                String currentUser = AuthUtil.getCurrentUsername();
+                sql.append(" AND owner = '").append(currentUser).append("'");
+            }
+
             // 添加筛选条件
             if (request.getName() != null && !request.getName().trim().isEmpty()) {
                 sql.append(" AND name LIKE '^.*").append(request.getName().trim()).append(".*'");
@@ -161,7 +169,13 @@ public class TransformJobService {
         try {
             // 构建COUNT查询SQL
             StringBuilder sql = new StringBuilder("SELECT COUNT(1) FROM relational_system.transform_job WHERE 1=1");
-            
+
+            // 添加owner过滤
+            if (!AuthUtil.isAdmin()) {
+                String currentUser = AuthUtil.getCurrentUsername();
+                sql.append(" AND owner = '").append(currentUser).append("'");
+            }
+
             // 添加筛选条件
             if (request.getName() != null && !request.getName().trim().isEmpty()) {
                 sql.append(" AND name LIKE '%").append(request.getName().trim()).append("%'");
@@ -186,7 +200,12 @@ public class TransformJobService {
 
     public TransformJobEntity queryJob(String jobId) {
         try {
-            String sql = "select * from %s where jobId = '%s';";
+            String sql = "select * from %s where jobId = '%s'";
+            if (!AuthUtil.isAdmin()) {
+                String currentUser = AuthUtil.getCurrentUsername();
+                sql += " AND owner = '" + currentUser + "'";
+            }
+            sql += ";";
             String sqlFormat= String.format(sql, DATA_PREFIX, jobId);
             log.info("执行SQL: {}", sqlFormat);
             SessionExecuteSqlResult res = iginxSession.executeSql(sqlFormat);
@@ -211,12 +230,46 @@ public class TransformJobService {
 
     public void deleteJob(Long createTime) {
         try {
+            // 检查权限
+            TransformJobEntity entity = queryJobByCreateTime(createTime);
+            if (entity == null) {
+                throw new RuntimeException("作业不存在或无权删除");
+            }
+
             List<String> measurements = ConvertUtil.iginxFieldNamesConvert(TransformJobEntity.class, DATA_PREFIX);
             iginxClient.getDeleteClient().deleteMeasurementsData(measurements, createTime - 1, createTime + 1);
             log.info("已删除Transform作业: createTime: {}", createTime);
         } catch (Exception e) {
             log.error("删除Transform作业失败", e);
             throw new RuntimeException("删除Transform作业失败: " + e.getMessage(), e);
+        }
+    }
+
+    public TransformJobEntity queryJobByCreateTime(Long createTime) {
+        try {
+            String sql = "select * from %s where createTime = %s";
+            if (!AuthUtil.isAdmin()) {
+                String currentUser = AuthUtil.getCurrentUsername();
+                sql += " AND owner = '" + currentUser + "'";
+            }
+            sql += ";";
+            SessionExecuteSqlResult res = iginxSession.executeSql(String.format(sql, DATA_PREFIX, createTime));
+            List<Map<String, Object>> records = ConvertUtil.getRecords(res);
+
+            if (records.isEmpty()) {
+                return null;
+            }
+
+            TransformJobEntity entity = new TransformJobEntity();
+            Map<String, Object> rs = records.get(0);
+            rs.forEach((k, v) -> {
+                String fieldName = k.replace(DATA_PREFIX + ".", "");
+                ConvertUtil.setEntityField(entity, DATA_PREFIX, fieldName, v);
+            });
+            return entity;
+        } catch (Exception e) {
+            log.error("查询Transform作业失败", e);
+            return null;
         }
     }
 
@@ -306,6 +359,7 @@ public class TransformJobService {
         transformJobEntity.setCreateTime(timestamp);
         transformJobEntity.setOperator(operator);
         transformJobEntity.setClientIp(clientIp);
+        transformJobEntity.setOwner(AuthUtil.getCurrentUsername());
         transformJobEntity.setJobState(0);
         transformJobEntity.setJobId(jobId);
 
@@ -354,6 +408,12 @@ public class TransformJobService {
         try {
             // 构建基础SQL
             StringBuilder sql = new StringBuilder("SELECT * FROM relational_system.transform_job WHERE 1=1");
+
+            // 添加owner过滤
+            if (!AuthUtil.isAdmin()) {
+                String currentUser = AuthUtil.getCurrentUsername();
+                sql.append(" AND owner = '").append(currentUser).append("'");
+            }
 
             // 添加筛选条件
             if (datasetPath != null && !datasetPath.trim().isEmpty()) {

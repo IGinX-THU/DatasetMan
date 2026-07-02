@@ -7,6 +7,7 @@ import cn.edu.tsinghua.iginx.session_v2.IginXClient;
 import cn.edu.tsinghua.iginx.session_v2.WriteClient;
 import com.alibaba.fastjson2.JSONObject;
 import com.tsinghua.auth.aspect.OperationLogAspect;
+import com.tsinghua.auth.util.AuthUtil;
 import com.tsinghua.dto.TransformJobQueryRequest;
 import com.tsinghua.dto.TransformJobRequest;
 import com.tsinghua.entity.TransformCompareEntity;
@@ -73,6 +74,7 @@ public class TransformCompareService {
         transformCompareEntity.setCreateTime(timestamp);
         transformCompareEntity.setOperator(operator);
         transformCompareEntity.setClientIp(clientIp);
+        transformCompareEntity.setOwner(AuthUtil.getCurrentUsername());
 
         WriteClient writeClient = iginxClient.getWriteClient();
         writeClient.writeMeasurement(transformCompareEntity);
@@ -86,6 +88,12 @@ public class TransformCompareService {
         try {
             // 构建基础SQL
             StringBuilder sql = new StringBuilder("SELECT * FROM relational_system.transform_compare WHERE 1=1");
+
+            // 添加owner过滤
+            if (!AuthUtil.isAdmin()) {
+                String currentUser = AuthUtil.getCurrentUsername();
+                sql.append(" AND owner = '").append(currentUser).append("'");
+            }
 
             // 添加筛选条件
             if (request.getName() != null && !request.getName().trim().isEmpty()) {
@@ -126,6 +134,12 @@ public class TransformCompareService {
             // 构建COUNT查询SQL
             StringBuilder sql = new StringBuilder("SELECT COUNT(1) FROM relational_system.transform_compare WHERE 1=1");
 
+            // 添加owner过滤
+            if (!AuthUtil.isAdmin()) {
+                String currentUser = AuthUtil.getCurrentUsername();
+                sql.append(" AND owner = '").append(currentUser).append("'");
+            }
+
             // 添加筛选条件
             if (request.getName() != null && !request.getName().trim().isEmpty()) {
                 sql.append(" AND name LIKE '%").append(request.getName().trim()).append("%'");
@@ -146,7 +160,12 @@ public class TransformCompareService {
 
     public TransformCompareEntity queryJob(Long createTime) {
         try {
-            String sql = "select * from %s where createTime = %s;";
+            String sql = "select * from %s where createTime = %s";
+            if (!AuthUtil.isAdmin()) {
+                String currentUser = AuthUtil.getCurrentUsername();
+                sql += " AND owner = '" + currentUser + "'";
+            }
+            sql += ";";
             SessionExecuteSqlResult res = iginxSession.executeSql(String.format(sql, DATA_PREFIX, createTime));
             List<Map<String, Object>> records = ConvertUtil.getRecords(res);
 
@@ -169,6 +188,12 @@ public class TransformCompareService {
 
     public void deleteJob(Long createTime) {
         try {
+            // 检查权限
+            TransformCompareEntity entity = queryJob(createTime);
+            if (entity == null) {
+                throw new RuntimeException("作业不存在或无权删除");
+            }
+            
             List<String> measurements = ConvertUtil.iginxFieldNamesConvert(TransformCompareEntity.class, DATA_PREFIX);
             iginxClient.getDeleteClient().deleteMeasurementsData(measurements, createTime - 1, createTime + 1);
             log.info("已删除Transform作业: createTime: {}", createTime);

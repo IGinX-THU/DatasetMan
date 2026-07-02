@@ -60,5 +60,11 @@ public class TransformJobEntity {
     @Field(name = "clientIp")
     private String clientIp;
 
+    /**
+     * 创建人
+     */
+    @Field(name = "owner")
+    private String owner;
+
 
 }

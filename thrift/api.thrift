@@ -136,6 +136,7 @@ struct TransformCompareEntity {
     7: i64 createTime,
     8: string operator,
     9: string clientIp,
+    10: optional string owner,
 }
 
 struct TransformJobEntity {
@@ -149,6 +150,7 @@ struct TransformJobEntity {
     8: i64 createTime,
     9: string operator,
     10: string clientIp,
+    11: optional string owner,
 }
 
 // ========== API服务接口 - 匹配所有Controller的方法 ==========
