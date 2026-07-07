@@ -51,6 +51,7 @@ public class DatasetService {
     }
 
     public DatasetEntity saveDataset(DatasetRequest request) {
+        request.getDatasetSql().forEach(CommonUtil::validateSql);
         long timestamp = System.currentTimeMillis();
         String version = CommonUtil.generateVersion(timestamp);
         String storagePath = String.format("%s.%s.%s", STORAGE_PREFIX, request.getDatasetName(), version);

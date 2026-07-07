@@ -588,6 +588,13 @@ class DatasetDialog extends HTMLElement {
             return false;
         }
         
+        // 验证名称只允许字母、数字、下划线和中文
+        const nameRegex = /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/;
+        if (!nameRegex.test(name)) {
+            this.showResult('数据集名称只能包含字母、数字、下划线和中文', 'error');
+            return false;
+        }
+        
         if (!this.sqlList || this.sqlList.length === 0 || this.sqlList.every(sql => !sql.trim())) {
             this.showResult('请输入至少一条SQL查询语句', 'error');
             return false;
@@ -638,7 +645,15 @@ class DatasetDialog extends HTMLElement {
     }
 
     async handleSubmit() {
-        if (!this.validateForm()) return;
+        if (!this.validateForm()) {
+            // 验证失败时恢复按钮状态
+            this._isSubmitting = false;
+            const submitBtn = this.shadowRoot.querySelector('#submitBtn');
+            submitBtn.disabled = false;
+            submitBtn.style.pointerEvents = '';
+            submitBtn.style.opacity = '';
+            return;
+        }
 
         const submitBtn = this.shadowRoot.querySelector('#submitBtn');
         submitBtn.textContent = '保存中...';
