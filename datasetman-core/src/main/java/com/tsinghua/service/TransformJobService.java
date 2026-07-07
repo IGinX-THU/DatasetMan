@@ -76,6 +76,7 @@ public class TransformJobService {
             request.setHasData(true);
             request.setIsReadOnly(true);
             request.setSchemaPrefix(SchemaPrefix.FILE_SYSTEM);
+            request.setDescription(SchemaPrefix.FILE_SYSTEM);
             request.setPort(6666);
             request.setDummyDir(Paths.get(SYS_DIR_PREFIX).toAbsolutePath().toString());
             dataSourceService.registerDataSource(request);

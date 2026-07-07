@@ -18,4 +18,13 @@ public class ColumnDto {
      *     BINARY(5);
      */
     private int dataType;
+    /**
+     * time_series（时序数据）
+     * file_system（文件数据）
+     * relational（关系数据）
+     * semi_structured（半结构化数据）
+     * key_value（键值数据）
+     */
+    private String dataModality;
+
 }

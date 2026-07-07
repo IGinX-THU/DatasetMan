@@ -1926,6 +1926,7 @@ function showVisualAnalysis() {
         data.forEach(item => {
             const path = typeof item === 'string' ? item : item.path;
             const dataType = typeof item === 'string' ? null : item.dataType;
+            const dataModality = typeof item === 'string' ? null : item.dataModality;
             
             const parts = path.split('.');
             let current = tree;
@@ -1937,8 +1938,12 @@ function showVisualAnalysis() {
                         children: {},
                         fullPath: parts.slice(0, index + 1).join('.'),
                         isLeaf: index === parts.length - 1,
-                        dataType: index === parts.length - 1 ? dataType : null
+                        dataType: index === parts.length - 1 ? dataType : null,
+                        dataModality: null
                     };
+                }
+                if (dataModality) {
+                    current[part].dataModality = dataModality;
                 }
                 current = current[part].children;
             });
@@ -1959,20 +1964,16 @@ function showVisualAnalysis() {
             // 根据节点类型选择图标
             let iconHtml = '';
             if (hasChildren) {
-                // 有子节点：检查是否为relational开头的根节点，显示数据库图标
-                if (level === 0 && (node.name.startsWith('relational'))) {
+                // 有子节点：根据dataModality显示对应图标
+                if (level === 0 && node.dataModality === 'relational') {
                     iconHtml = `<span class="tree-icon folder-icon">🗄️</span>`;
-                } else if (level === 0 && (node.name.startsWith('file_system'))) {
-                    // file_system 为文件系统图标
+                } else if (level === 0 && node.dataModality === 'file_system') {
                     iconHtml = `<span class="tree-icon folder-icon">📁</span>`;
-                } else if (level === 0 && (node.name.startsWith('semi_structured'))) {
-                    // semi_structured 为 mongodb 图标
+                } else if (level === 0 && node.dataModality === 'semi_structured') {
                     iconHtml = `<span class="tree-icon folder-icon">🍃</span>`;
-                } else if (level === 0 && (node.name.startsWith('key_value'))) {
-                    // key_value 为 redis 图标
+                } else if (level === 0 && node.dataModality === 'key_value') {
                     iconHtml = `<span class="tree-icon folder-icon">⚡</span>`;
-                } else if (level === 0 && (node.name.startsWith('time_series'))) {
-                    // time_series 为时序数据图标
+                } else if (level === 0 && node.dataModality === 'time_series') {
                     iconHtml = `<span class="tree-icon folder-icon">📈</span>`;
                 } else if (level === 0) {
                     // 根节点使用📁
@@ -1996,7 +1997,7 @@ function showVisualAnalysis() {
             }
             
             html += `
-                <div class="${nodeClass}" data-full-path="${node.fullPath}" data-is-leaf="${node.isLeaf}" data-type="${node.dataType || ''}">
+                <div class="${nodeClass}" data-full-path="${node.fullPath}" data-is-leaf="${node.isLeaf}" data-type="${node.dataType || ''}" data-modality="${node.dataModality || ''}">
                     ${iconHtml}
                     <span class="tree-node-text">${node.name}</span>
             `;
@@ -2083,6 +2084,8 @@ function showVisualAnalysis() {
                     if (fullPath && isLeaf) {
                         selectedDataSource = fullPath;
 
+                        const dataModality = this.getAttribute('data-modality');
+
                         // 检查是否为key或value节点，如果是则查询hash结构
                         const parts = fullPath.split('.');
                         const lastPart = parts[parts.length - 1];
@@ -2091,21 +2094,21 @@ function showVisualAnalysis() {
                             const parentPath = parts.slice(0, -1).join('.');
                             const wildcardPath = parentPath + '*';
                             showKeyValueViewer(wildcardPath);
-                        } else if (fullPath.startsWith('relational')) {
+                        } else if (dataModality === 'relational') {
                             // 获取父节点路径作为tableName
                             const pathParts = fullPath.split('.');
                             const parentPath = pathParts.slice(0, -1).join('.');
                             showDatabaseTable(parentPath);
-                        } else if (fullPath.startsWith('time_series')) {
+                        } else if (dataModality === 'time_series') {
                             // time_series 使用 data-visualization 页面
                             showDataVisualization(fullPath);
-                        } else if (fullPath.startsWith('file_system')) {
+                        } else if (dataModality === 'file_system') {
                             // file_system 使用 file-system-browser 页面
                             showFileSystemBrowser(fullPath);
-                        } else if (fullPath.startsWith('key_value')) {
+                        } else if (dataModality === 'key_value') {
                             // key_value 使用 key-value-viewer 页面
                             showKeyValueViewer(fullPath);
-                        } else if (fullPath.startsWith('semi_structured')) {
+                        } else if (dataModality === 'semi_structured') {
                             // semi_structured 使用 semi-structured-viewer 页面
                             showSemiStructuredViewer(fullPath);
                         } else {

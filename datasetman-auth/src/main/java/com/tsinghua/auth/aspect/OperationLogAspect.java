@@ -17,6 +17,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -209,9 +210,11 @@ public class OperationLogAspect {
                     String paramName = paramNames[i];
                     Object paramValue = paramValues[i];
                     
-                    // 过滤敏感参数
+                    // 过滤敏感参数和Servlet对象
                     if (isSensitiveParameter(paramName, paramValue)) {
                         params.put(paramName, "***");
+                    } else if (paramValue instanceof HttpServletRequest || paramValue instanceof HttpServletResponse) {
+                        params.put(paramName, "[Servlet对象]");
                     } else {
                         params.put(paramName, paramValue);
                     }
@@ -224,6 +227,8 @@ public class OperationLogAspect {
                         Object arg = args[i];
                         if (isSensitiveParameter("arg" + i, arg)) {
                             params.put("arg" + i, "***");
+                        } else if (arg instanceof HttpServletRequest || arg instanceof HttpServletResponse) {
+                            params.put("arg" + i, "[Servlet对象]");
                         } else {
                             params.put("arg" + i, arg);
                         }

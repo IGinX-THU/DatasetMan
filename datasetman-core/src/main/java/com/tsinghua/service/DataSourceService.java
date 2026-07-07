@@ -20,9 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -73,27 +71,28 @@ public class DataSourceService {
      * 移除异构数据源
      */
     public boolean removeDataSource(StorageEngineInfoDto storageEngineInfoDto) throws Exception {
+
+        // 删除对应的数据档案元数据
+        String tablePrefix = StringUtils.hasText(storageEngineInfoDto.getDataPrefix()) ?
+                storageEngineInfoDto.getSchemaPrefix() + "." + storageEngineInfoDto.getDataPrefix() :
+                storageEngineInfoDto.getSchemaPrefix();
+        try {
+            DataArchiveEntity archive = dataArchiveService.findByName(tablePrefix);
+            if (archive != null && archive.getCreateTime() != null) {
+                dataArchiveService.deleteArchive(archive.getCreateTime());
+                log.info("已删除数据源档案元数据: {}", tablePrefix);
+            }
+        } catch (Exception e) {
+            log.error("删除数据源档案元数据失败", e);
+        }
+
         // iginxSession.openSession();
         RemovedStorageEngineInfo removedStorageEngineInfo = new RemovedStorageEngineInfo(storageEngineInfoDto.getIp(), storageEngineInfoDto.getPort(), storageEngineInfoDto.getSchemaPrefix(), storageEngineInfoDto.getDataPrefix());
         List<RemovedStorageEngineInfo> removedStorageEngineList = Collections.singletonList(removedStorageEngineInfo);
         iginxSession.removeStorageEngine(removedStorageEngineList);
         // iginxSession.closeSession();
 
-        // 删除对应的数据档案元数据
-        String tablePrefix = StringUtils.hasText(storageEngineInfoDto.getDataPrefix()) ?
-                storageEngineInfoDto.getSchemaPrefix() + "." + storageEngineInfoDto.getDataPrefix() :
-                storageEngineInfoDto.getSchemaPrefix();
         dataPermissionService.deleteByTablePrefix(tablePrefix);
-
-        try {
-            DataArchiveEntity archive = dataArchiveService.findByName(tablePrefix);
-            if (archive != null && archive.getId() != null) {
-                dataArchiveService.deleteArchive(archive.getId());
-                log.info("已删除数据源档案元数据: {}", tablePrefix);
-            }
-        } catch (Exception e) {
-            log.error("删除数据源档案元数据失败", e);
-        }
 
         return true;
     }
@@ -124,24 +123,44 @@ public class DataSourceService {
     }
 
     public List<ColumnDto> dataSourceTree() throws Exception {
-        // iginxSession.openSession();
-        List<Column> columnList = iginxSession.showColumns();
-        List<ColumnDto> tree = columnList.stream()
+        List<DataArchiveEntity> archives = dataArchiveService.findAll();
+        Map<String, String> archiveMap = new HashMap<>();
+        if (!CollectionUtils.isEmpty(archives)) {
+            archives.forEach(archive -> {
+                if (StringUtils.hasText(archive.getName()) && StringUtils.hasText(archive.getDesc())) {
+                    archiveMap.putIfAbsent(archive.getName(), archive.getDesc());
+                }
+            });
+        }
+
+        List<ColumnDto> tree = iginxSession.showColumns().stream()
                 .filter(column -> !column.getPath().contains("relational_system"))
-                .map(column -> new ColumnDto(column.getPath(), column.getDataType().getValue()))
+                .map(column -> {
+                    ColumnDto dto = new ColumnDto();
+                    dto.setPath(column.getPath());
+                    dto.setDataType(column.getDataType().getValue());
+                    if (!archiveMap.isEmpty()) {
+                        String modality = archiveMap.entrySet().stream()
+                                .filter(entry -> column.getPath().startsWith(entry.getKey()))
+                                .map(Map.Entry::getValue)
+                                .findFirst()
+                                .orElse(null);
+                        dto.setDataModality(modality);
+                    }
+                    return dto;
+                })
                 .collect(Collectors.toList());
-        // iginxSession.closeSession();
+
         if (!AuthUtil.isAdmin()) {
-            List<ColumnDto> filteredTree = new ArrayList<>();
             List<String> accessibleTables = dataPermissionService.getCurrentUserAccessibleTables();
             if (CollectionUtils.isEmpty(accessibleTables)) {
-                return filteredTree;
+                return Collections.emptyList();
             }
-            accessibleTables.forEach(accessibleTable -> filteredTree.addAll(
-                    tree.stream()
-                            .filter(columnDto -> columnDto.getPath().startsWith(accessibleTable))
-                            .collect(Collectors.toList())));
-            return filteredTree;
+            Set<String> accessibleSet = new HashSet<>(accessibleTables);
+            return tree.stream()
+                    .filter(columnDto -> accessibleSet.stream()
+                            .anyMatch(prefix -> columnDto.getPath().startsWith(prefix)))
+                    .collect(Collectors.toList());
         }
         return tree;
     }

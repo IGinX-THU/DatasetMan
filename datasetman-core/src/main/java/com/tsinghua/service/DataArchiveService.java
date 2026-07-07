@@ -95,7 +95,7 @@ public class DataArchiveService {
             if (name == null || name.trim().isEmpty()) {
                 return null;
             }
-            String sql = String.format("SELECT * FROM %s WHERE name = '%s';", DATA_ARCHIVE_PREFIX, name.trim());
+            String sql = String.format("SELECT * FROM %s WHERE name = '%s' LIMIT 1;", DATA_ARCHIVE_PREFIX, name.trim());
             log.info("执行SQL: {}", sql);
 
             SessionExecuteSqlResult res = iginxSession.executeSql(sql);
@@ -119,6 +119,10 @@ public class DataArchiveService {
             log.error("根据名称查询数据档案失败", e);
             return null;
         }
+    }
+
+    public List<DataArchiveEntity> findAll() {
+        return queryArchives(null, null, null, null, null, null);
     }
 
     /**

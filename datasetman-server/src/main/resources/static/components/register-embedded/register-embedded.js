@@ -115,10 +115,10 @@ class RegisterDataResourceEmbedded extends HTMLElement {
             authFields.style.display = 'none';
         }
 
-        // Clear schema prefix selection
-        const schemaPrefixSelect = this.shadowRoot.getElementById('schemaPrefix');
-        if (schemaPrefixSelect) {
-            schemaPrefixSelect.value = '';
+        // Clear data modality selection
+        const dataModalitySelect = this.shadowRoot.getElementById('dataModality');
+        if (dataModalitySelect) {
+            dataModalitySelect.value = '';
         }
 
         if (dataSourceType) {
@@ -127,32 +127,32 @@ class RegisterDataResourceEmbedded extends HTMLElement {
                 case '1': // IoTDB 1.2
                     this.showFieldGroup('iotdbFields');
                     authFields.style.display = 'block';
-                    this.setSchemaPrefix('time_series');
+                    this.setDataModality('time_series');
                     break;
                 case '2': // InfluxDB
                     this.showFieldGroup('influxdbFields');
                     authFields.style.display = 'block';
-                    this.setSchemaPrefix('time_series');
+                    this.setDataModality('time_series');
                     break;
                 case '3': // Filesystem
                     this.showFieldGroup('filesystemFields');
                     // authFields remains hidden
-                    this.setSchemaPrefix('file_system');
+                    this.setDataModality('file_system');
                     break;
                 case '4': // Relational
                     this.showFieldGroup('relationalFields');
                     authFields.style.display = 'block';
-                    this.setSchemaPrefix('relational');
+                    this.setDataModality('relational');
                     break;
                 case '5': // MongoDB
                     this.showFieldGroup('mongodbFields');
                     // authFields remains hidden
-                    this.setSchemaPrefix('semi_structured');
+                    this.setDataModality('semi_structured');
                     break;
                 case '6': // Redis
                     this.showFieldGroup('redisFields');
                     authFields.style.display = 'block';
-                    this.setSchemaPrefix('key_value');
+                    this.setDataModality('key_value');
                     break;
             }
         }
@@ -165,11 +165,11 @@ class RegisterDataResourceEmbedded extends HTMLElement {
         }
     }
 
-    setSchemaPrefix(value) {
-        const schemaPrefixSelect = this.shadowRoot.getElementById('schemaPrefix');
-        if (schemaPrefixSelect) {
-            schemaPrefixSelect.value = value;
-            console.log('自动选择模式前缀为:', value);
+    setDataModality(value) {
+        const dataModalitySelect = this.shadowRoot.getElementById('dataModality');
+        if (dataModalitySelect) {
+            dataModalitySelect.value = value;
+            console.log('自动选择数据模态为:', value);
         }
     }
 
@@ -184,6 +184,7 @@ class RegisterDataResourceEmbedded extends HTMLElement {
         const isReadOnly = true;
         const dataPrefix = this.shadowRoot.getElementById('dataPrefix')?.value;
         const schemaPrefix = this.shadowRoot.getElementById('schemaPrefix')?.value;
+        const dataModality = this.shadowRoot.getElementById('dataModality')?.value;
         
         // 只对需要认证的存储引擎类型获取用户名密码
         let username = null;
@@ -217,6 +218,9 @@ class RegisterDataResourceEmbedded extends HTMLElement {
         }
         if (schemaPrefix && schemaPrefix.trim()) {
             data.schemaPrefix = schemaPrefix.trim();
+        }
+        if (dataModality && dataModality.trim()) {
+            data.description = dataModality.trim();
         }
         
         // 只对需要用户名密码的存储引擎类型添加这些字段
@@ -369,8 +373,30 @@ class RegisterDataResourceEmbedded extends HTMLElement {
 
         // 模式前缀必填验证
         if (!data.schemaPrefix || data.schemaPrefix.trim() === '') {
-            this.showMessage('请选择模式前缀', 'error');
+            this.showMessage('请输入模式前缀', 'error');
             return false;
+        }
+
+        // 模式前缀不能包含"_system"
+        if (data.schemaPrefix && data.schemaPrefix.includes('_system')) {
+            this.showMessage('模式前缀不能包含"_system"', 'error');
+            return false;
+        }
+
+        // 模式前缀格式验证（与目标存储路径前缀规则一致）
+        if (data.schemaPrefix && data.schemaPrefix.trim() !== '') {
+            if (/^\d+$/.test(data.schemaPrefix)) {
+                this.showMessage('模式前缀不允许为纯数字', 'error');
+                return false;
+            }
+            if (/^_+$/.test(data.schemaPrefix)) {
+                this.showMessage('模式前缀不允许为纯下划线', 'error');
+                return false;
+            }
+            if (!/^([a-zA-Z][a-zA-Z0-9_]*|_[a-zA-Z0-9][a-zA-Z0-9_]*)(\.([a-zA-Z][a-zA-Z0-9_]*|_[a-zA-Z0-9][a-zA-Z0-9_]*))*$/.test(data.schemaPrefix)) {
+                this.showMessage('模式前缀格式不正确，支持字母、数字、下划线，不能纯数字，不能纯下划线，不能数字开头', 'error');
+                return false;
+            }
         }
 
         // 特定类型验证

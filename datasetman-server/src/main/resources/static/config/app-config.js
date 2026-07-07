@@ -357,17 +357,42 @@ window.AppConfig = {
         const url = this.getApiUrl(module, endpoint);
         const headers = this.getAuthHeaders();
         headers['Content-Type'] = 'application/json';
-        
+
         const response = await fetch(url, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(data)
         });
 
-        if (!response.ok) {
-            if (response.status === 401) {
-                this.handleAuthFailure();
+        if (response.status === 401) {
+            console.log('⚠️ postBinary收到401响应，尝试刷新token');
+            try {
+                const newToken = await this.refreshToken();
+                if (newToken) {
+                    headers[this.auth.tokenHeader] = `Bearer ${newToken}`;
+                    console.log('🔄 使用新token重新发送postBinary请求');
+                    const retryResponse = await fetch(url, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(data)
+                    });
+                    if (retryResponse.ok) {
+                        return await retryResponse.blob();
+                    }
+                    if (retryResponse.status === 401) {
+                        this.handleAuthFailure();
+                        throw new Error('认证失败，请重新登录');
+                    }
+                    throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+                }
+            } catch (refreshError) {
+                console.error('刷新token失败:', refreshError);
             }
+            this.handleAuthFailure();
+            throw new Error('认证失败，请重新登录');
+        }
+
+        if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
