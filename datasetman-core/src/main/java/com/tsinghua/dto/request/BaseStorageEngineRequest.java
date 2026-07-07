@@ -49,8 +49,12 @@ public abstract class BaseStorageEngineRequest {
     @ApiModelProperty(value = "数据前缀")
     private String dataPrefix;
 
+    @NotBlank(message = "请为数据源起个模式前缀")
     @ApiModelProperty(value = "模式前缀")
     private String schemaPrefix;
+
+    @ApiModelProperty(value = "描述信息")
+    private String description;
 
     /**
      * 构建额外参数字典
@@ -62,8 +66,8 @@ public abstract class BaseStorageEngineRequest {
      */
     protected Map<String, String> buildCommonParams() {
         Map<String, String> params = new HashMap<>();
-        params.put("has_data", String.valueOf(true));
-        params.put("is_read_only", String.valueOf(true));
+        params.put("has_data", String.valueOf(hasData));
+        params.put("is_read_only", String.valueOf(isReadOnly));
 
         if (dataPrefix != null && !dataPrefix.trim().isEmpty()) {
             params.put("data_prefix", dataPrefix);

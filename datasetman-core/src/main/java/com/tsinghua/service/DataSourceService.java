@@ -1,22 +1,24 @@
 package com.tsinghua.service;
 
-import cn.edu.tsinghua.iginx.exception.SessionException;
 import cn.edu.tsinghua.iginx.session.ClusterInfo;
 import cn.edu.tsinghua.iginx.session.Column;
 import cn.edu.tsinghua.iginx.session.Session;
 import cn.edu.tsinghua.iginx.thrift.RemovedStorageEngineInfo;
 import cn.edu.tsinghua.iginx.thrift.StorageEngineInfo;
 import cn.edu.tsinghua.iginx.thrift.StorageEngineType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tsinghua.auth.service.DataPermissionService;
 import com.tsinghua.auth.util.AuthUtil;
 import com.tsinghua.dto.ColumnDto;
 import com.tsinghua.dto.DataSourceRequest;
 import com.tsinghua.dto.StorageEngineInfoDto;
 import com.tsinghua.dto.request.BaseStorageEngineRequest;
+import com.tsinghua.entity.DataArchiveEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,11 +39,19 @@ public class DataSourceService {
     @Autowired
     private DataPermissionService dataPermissionService;
 
+    @Autowired
+    private DataArchiveService dataArchiveService;
+
     /**
      * 注册异构数据源
      */
     public boolean registerDataSource(BaseStorageEngineRequest request) throws Exception {
-        if (dataPermissionService.existTablePrefix(request.getSchemaPrefix())) {
+
+        String tablePrefix = StringUtils.hasText(request.getDataPrefix()) ?
+                request.getSchemaPrefix() + "." + request.getDataPrefix() :
+                request.getSchemaPrefix();
+
+        if (dataPermissionService.existTablePrefix(tablePrefix)) {
             throw new IllegalArgumentException("数据资源已存在");
         }
         // iginxSession.openSession();
@@ -50,8 +60,12 @@ public class DataSourceService {
                 StorageEngineType.findByValue(request.getStorageEngineType()),
                 request.buildExtraParams());
         // iginxSession.closeSession();
-        dataPermissionService.saveTablePrefix(request.getSchemaPrefix());
+        dataPermissionService.saveTablePrefix(tablePrefix);
         log.info("成功注册数据源: {}", request);
+
+        // 保存数据档案
+        saveDataSourceArchive(request, tablePrefix);
+
         return true;
     }
 
@@ -64,7 +78,23 @@ public class DataSourceService {
         List<RemovedStorageEngineInfo> removedStorageEngineList = Collections.singletonList(removedStorageEngineInfo);
         iginxSession.removeStorageEngine(removedStorageEngineList);
         // iginxSession.closeSession();
-        dataPermissionService.deleteByTablePrefix(storageEngineInfoDto.getSchemaPrefix());
+
+        // 删除对应的数据档案元数据
+        String tablePrefix = StringUtils.hasText(storageEngineInfoDto.getDataPrefix()) ?
+                storageEngineInfoDto.getSchemaPrefix() + "." + storageEngineInfoDto.getDataPrefix() :
+                storageEngineInfoDto.getSchemaPrefix();
+        dataPermissionService.deleteByTablePrefix(tablePrefix);
+
+        try {
+            DataArchiveEntity archive = dataArchiveService.findByName(tablePrefix);
+            if (archive != null && archive.getId() != null) {
+                dataArchiveService.deleteArchive(archive.getId());
+                log.info("已删除数据源档案元数据: {}", tablePrefix);
+            }
+        } catch (Exception e) {
+            log.error("删除数据源档案元数据失败", e);
+        }
+
         return true;
     }
 
@@ -81,8 +111,12 @@ public class DataSourceService {
                 return filteredList;
             }
             accessibleTables.forEach(accessibleTable -> filteredList.addAll(
-                    storageEngineInfoDtos.stream()
-                            .filter(storageEngineInfoDto -> accessibleTable.equalsIgnoreCase(storageEngineInfoDto.getSchemaPrefix()))
+                    storageEngineInfoDtos.stream().filter(storageEngineInfoDto -> {
+                                String tablePrefix = StringUtils.hasText(storageEngineInfoDto.getDataPrefix()) ?
+                                        storageEngineInfoDto.getSchemaPrefix() + "." + storageEngineInfoDto.getDataPrefix() :
+                                        storageEngineInfoDto.getSchemaPrefix();
+                                return accessibleTable.equalsIgnoreCase(tablePrefix);
+                    })
                             .collect(Collectors.toList())));
             return filteredList;
         }
@@ -110,6 +144,34 @@ public class DataSourceService {
             return filteredTree;
         }
         return tree;
+    }
+
+    /**
+     * 保存数据源档案
+     */
+    private void saveDataSourceArchive(BaseStorageEngineRequest request, String tablePrefix) {
+        try {
+            DataArchiveEntity archive = new DataArchiveEntity();
+            archive.setName(tablePrefix);
+            archive.setType("datasource");
+            archive.setDesc(request.getDescription());
+            
+            log.info("准备保存数据源档案: name={}, desc={}", archive.getName(), archive.getDesc());
+            
+            // 从上下文获取项目名称和用户名
+            archive.setOwner(AuthUtil.getCurrentUsername());
+
+            // 将请求对象转换为JSON字符串保存到config字段
+            ObjectMapper objectMapper = new ObjectMapper();
+            String configJson = objectMapper.writeValueAsString(request);
+            archive.setConfig(configJson);
+
+            dataArchiveService.saveArchive(archive);
+            log.info("数据源档案已保存: {}, desc={}", tablePrefix, archive.getDesc());
+        } catch (Exception e) {
+            log.error("保存数据源档案失败", e);
+            // 不抛出异常，避免影响主流程
+        }
     }
 
 }
