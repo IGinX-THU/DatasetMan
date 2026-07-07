@@ -611,6 +611,17 @@ html.font-scale-1-5 .ribbon-btn-icon {
 .sidebar-title > span {
 }
 
+/* 数据模态手动切换下拉选 */
+.modality-switch-select {
+    font-size: 12px;
+    height: 22px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    outline: none;
+}
+
 /* 关闭项目按钮 */
 .close-project-btn {
     background: #f5f5f5;

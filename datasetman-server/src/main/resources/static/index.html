@@ -296,7 +296,16 @@
     <div class="sidebar left-sidebar">
         <div class="sidebar-content-wrapper">
             <div class="sidebar-panel left-sidebar-panel active" data-panel="data">
-                <div class="sidebar-title">数据资源库</div>
+                <div class="sidebar-title">
+                    <span>数据资源库</span>
+                    <select id="modalitySwitch" class="modality-switch-select" title="手动切换显示组件">
+                        <option value="time_series">时序数据视图</option>
+                        <option value="file_system">文件数据视图</option>
+                        <option value="relational">关系数据视图</option>
+                        <option value="semi_structured">半结构化数据视图</option>
+                        <option value="key_value">键值数据视图</option>
+                    </select>
+                </div>
                 <div class="tree" id="dataSourceTree">
                     <!-- 数据源树将通过JavaScript动态加载 -->
                     <div class="loading-placeholder">正在加载数据源...</div>

@@ -38,6 +38,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 全局变量：跟踪当前选中的数据源
     let selectedDataSource = null;
+
+    // 数据模态切换下拉选
+    const modalitySwitch = document.getElementById('modalitySwitch');
+    if (modalitySwitch) {
+        modalitySwitch.addEventListener('change', function() {
+            const selectedModality = this.value;
+            console.log('手动切换视图为:', selectedModality);
+            // 临时用选中模态重新加载当前节点
+            if (selectedDataSource) {
+                displayNodeByModality(selectedDataSource, selectedModality);
+            }
+        });
+    }
     
     // 隐藏所有组件的函数
     function hideAllComponents() {
@@ -2057,6 +2070,43 @@ function showVisualAnalysis() {
         return icon;
     }
     
+    // 根据数据模态显示对应组件
+    function displayNodeByModality(fullPath, dataModality) {
+        if (window.showGlobalLoading) {
+            window.showGlobalLoading('正在加载视图...');
+        }
+
+        // 检查是否为key或value节点，如果是则查询hash结构
+        const parts = fullPath.split('.');
+        const lastPart = parts[parts.length - 1];
+        if (lastPart === 'key' || lastPart === 'value') {
+            const parentPath = parts.slice(0, -1).join('.');
+            const wildcardPath = parentPath + '*';
+            showKeyValueViewer(wildcardPath);
+        } else if (dataModality === 'relational') {
+            const pathParts = fullPath.split('.');
+            const parentPath = pathParts.slice(0, -1).join('.');
+            showDatabaseTable(parentPath);
+        } else if (dataModality === 'time_series') {
+            showDataVisualization(fullPath);
+        } else if (dataModality === 'file_system') {
+            showFileSystemBrowser(fullPath);
+        } else if (dataModality === 'key_value') {
+            showKeyValueViewer(fullPath);
+        } else if (dataModality === 'semi_structured') {
+            showSemiStructuredViewer(fullPath);
+        } else {
+            showDataVisualization(fullPath);
+        }
+
+        // 延迟隐藏loading，给组件渲染时间
+        setTimeout(() => {
+            if (window.hideGlobalLoading) {
+                window.hideGlobalLoading();
+            }
+        }, 300);
+    }
+
     // 重新绑定树节点事件
     function bindTreeEvents() {
         const leftSidebarTree = document.querySelector('.left-sidebar .tree');
@@ -2084,38 +2134,15 @@ function showVisualAnalysis() {
                     if (fullPath && isLeaf) {
                         selectedDataSource = fullPath;
 
-                        const dataModality = this.getAttribute('data-modality');
+                        const dataModality = this.getAttribute('data-modality') || 'time_series';
 
-                        // 检查是否为key或value节点，如果是则查询hash结构
-                        const parts = fullPath.split('.');
-                        const lastPart = parts[parts.length - 1];
-                        if (lastPart === 'key' || lastPart === 'value') {
-                            // 使用通配符模式查询hash结构
-                            const parentPath = parts.slice(0, -1).join('.');
-                            const wildcardPath = parentPath + '*';
-                            showKeyValueViewer(wildcardPath);
-                        } else if (dataModality === 'relational') {
-                            // 获取父节点路径作为tableName
-                            const pathParts = fullPath.split('.');
-                            const parentPath = pathParts.slice(0, -1).join('.');
-                            showDatabaseTable(parentPath);
-                        } else if (dataModality === 'time_series') {
-                            // time_series 使用 data-visualization 页面
-                            showDataVisualization(fullPath);
-                        } else if (dataModality === 'file_system') {
-                            // file_system 使用 file-system-browser 页面
-                            showFileSystemBrowser(fullPath);
-                        } else if (dataModality === 'key_value') {
-                            // key_value 使用 key-value-viewer 页面
-                            showKeyValueViewer(fullPath);
-                        } else if (dataModality === 'semi_structured') {
-                            // semi_structured 使用 semi-structured-viewer 页面
-                            showSemiStructuredViewer(fullPath);
-                        } else {
-                            // 其他类型也使用 data-visualization 页面
-                            showDataVisualization(fullPath);
+                        // 每次点击节点时，下拉选自动跟随节点模态（空则默认时序视图）
+                        if (modalitySwitch) {
+                            modalitySwitch.value = dataModality;
                         }
-                        
+
+                        displayNodeByModality(fullPath, dataModality);
+
                                                                         
                                                 
                         // 如果是最后一级节点且不是文件夹/数据库图标类数据源，则显示“选择数据源”按钮
