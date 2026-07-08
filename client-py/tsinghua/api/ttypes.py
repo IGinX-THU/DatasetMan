@@ -667,6 +667,236 @@ class TableDto(object):
         return not (self == other)
 
 
+class InputBindDto(object):
+    """
+    Attributes:
+     - sourceField
+     - targetField
+     - operator
+     - conversionValue
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, sourceField = None, targetField = None, operator = None, conversionValue = None,):
+        self.sourceField = sourceField
+        self.targetField = targetField
+        self.operator = operator
+        self.conversionValue = conversionValue
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.sourceField = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.targetField = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.operator = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.conversionValue = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('InputBindDto')
+        if self.sourceField is not None:
+            oprot.writeFieldBegin('sourceField', TType.STRING, 1)
+            oprot.writeString(self.sourceField.encode('utf-8') if sys.version_info[0] == 2 else self.sourceField)
+            oprot.writeFieldEnd()
+        if self.targetField is not None:
+            oprot.writeFieldBegin('targetField', TType.STRING, 2)
+            oprot.writeString(self.targetField.encode('utf-8') if sys.version_info[0] == 2 else self.targetField)
+            oprot.writeFieldEnd()
+        if self.operator is not None:
+            oprot.writeFieldBegin('operator', TType.STRING, 3)
+            oprot.writeString(self.operator.encode('utf-8') if sys.version_info[0] == 2 else self.operator)
+            oprot.writeFieldEnd()
+        if self.conversionValue is not None:
+            oprot.writeFieldBegin('conversionValue', TType.STRING, 4)
+            oprot.writeString(self.conversionValue.encode('utf-8') if sys.version_info[0] == 2 else self.conversionValue)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class TimeRangeRequest(object):
+    """
+    Attributes:
+     - tableName
+     - inputsBind
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, tableName = None, inputsBind = None,):
+        self.tableName = tableName
+        self.inputsBind = inputsBind
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.tableName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.LIST:
+                    self.inputsBind = []
+                    (_etype40, _size37) = iprot.readListBegin()
+                    for _i41 in range(_size37):
+                        _elem42 = InputBindDto()
+                        _elem42.read(iprot)
+                        self.inputsBind.append(_elem42)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('TimeRangeRequest')
+        if self.tableName is not None:
+            oprot.writeFieldBegin('tableName', TType.STRING, 1)
+            oprot.writeString(self.tableName.encode('utf-8') if sys.version_info[0] == 2 else self.tableName)
+            oprot.writeFieldEnd()
+        if self.inputsBind is not None:
+            oprot.writeFieldBegin('inputsBind', TType.LIST, 2)
+            oprot.writeListBegin(TType.STRUCT, len(self.inputsBind))
+            for iter43 in self.inputsBind:
+                iter43.write(oprot)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class DataImportRequest(object):
+    """
+    Attributes:
+     - targetPath
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, targetPath = None,):
+        self.targetPath = targetPath
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.targetPath = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('DataImportRequest')
+        if self.targetPath is not None:
+            oprot.writeFieldBegin('targetPath', TType.STRING, 1)
+            oprot.writeString(self.targetPath.encode('utf-8') if sys.version_info[0] == 2 else self.targetPath)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
 class DatasetRequest(object):
     """
     Attributes:
@@ -702,10 +932,10 @@ class DatasetRequest(object):
             elif fid == 2:
                 if ftype == TType.LIST:
                     self.datasetSql = []
-                    (_etype40, _size37) = iprot.readListBegin()
-                    for _i41 in range(_size37):
-                        _elem42 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        self.datasetSql.append(_elem42)
+                    (_etype47, _size44) = iprot.readListBegin()
+                    for _i48 in range(_size44):
+                        _elem49 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        self.datasetSql.append(_elem49)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -737,8 +967,8 @@ class DatasetRequest(object):
         if self.datasetSql is not None:
             oprot.writeFieldBegin('datasetSql', TType.LIST, 2)
             oprot.writeListBegin(TType.STRING, len(self.datasetSql))
-            for iter43 in self.datasetSql:
-                oprot.writeString(iter43.encode('utf-8') if sys.version_info[0] == 2 else iter43)
+            for iter50 in self.datasetSql:
+                oprot.writeString(iter50.encode('utf-8') if sys.version_info[0] == 2 else iter50)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.parent is not None:
@@ -1037,11 +1267,11 @@ class DatasetVersionTreeDTO(object):
             elif fid == 12:
                 if ftype == TType.LIST:
                     self.children = []
-                    (_etype47, _size44) = iprot.readListBegin()
-                    for _i48 in range(_size44):
-                        _elem49 = DatasetVersionTreeDTO()
-                        _elem49.read(iprot)
-                        self.children.append(_elem49)
+                    (_etype54, _size51) = iprot.readListBegin()
+                    for _i55 in range(_size51):
+                        _elem56 = DatasetVersionTreeDTO()
+                        _elem56.read(iprot)
+                        self.children.append(_elem56)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -1103,8 +1333,8 @@ class DatasetVersionTreeDTO(object):
         if self.children is not None:
             oprot.writeFieldBegin('children', TType.LIST, 12)
             oprot.writeListBegin(TType.STRUCT, len(self.children))
-            for iter50 in self.children:
-                iter50.write(oprot)
+            for iter57 in self.children:
+                iter57.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1337,18 +1567,20 @@ class TransformJobRequest(object):
      - createTime
      - name
      - taskList
-     - exportFiletName
+     - exportType
+     - exportFile
      - schedule
 
     """
     thrift_spec = None
 
 
-    def __init__(self, createTime = None, name = None, taskList = None, exportFiletName = None, schedule = None,):
+    def __init__(self, createTime = None, name = None, taskList = None, exportType = None, exportFile = None, schedule = None,):
         self.createTime = createTime
         self.name = name
         self.taskList = taskList
-        self.exportFiletName = exportFiletName
+        self.exportType = exportType
+        self.exportFile = exportFile
         self.schedule = schedule
 
     def read(self, iprot):
@@ -1373,20 +1605,25 @@ class TransformJobRequest(object):
             elif fid == 3:
                 if ftype == TType.LIST:
                     self.taskList = []
-                    (_etype54, _size51) = iprot.readListBegin()
-                    for _i55 in range(_size51):
-                        _elem56 = TaskInfoDto()
-                        _elem56.read(iprot)
-                        self.taskList.append(_elem56)
+                    (_etype61, _size58) = iprot.readListBegin()
+                    for _i62 in range(_size58):
+                        _elem63 = TaskInfoDto()
+                        _elem63.read(iprot)
+                        self.taskList.append(_elem63)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 4:
-                if ftype == TType.STRING:
-                    self.exportFiletName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                if ftype == TType.I32:
+                    self.exportType = iprot.readI32()
                 else:
                     iprot.skip(ftype)
             elif fid == 5:
+                if ftype == TType.STRING:
+                    self.exportFile = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 6:
                 if ftype == TType.STRING:
                     self.schedule = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
@@ -1413,16 +1650,20 @@ class TransformJobRequest(object):
         if self.taskList is not None:
             oprot.writeFieldBegin('taskList', TType.LIST, 3)
             oprot.writeListBegin(TType.STRUCT, len(self.taskList))
-            for iter57 in self.taskList:
-                iter57.write(oprot)
+            for iter64 in self.taskList:
+                iter64.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
-        if self.exportFiletName is not None:
-            oprot.writeFieldBegin('exportFiletName', TType.STRING, 4)
-            oprot.writeString(self.exportFiletName.encode('utf-8') if sys.version_info[0] == 2 else self.exportFiletName)
+        if self.exportType is not None:
+            oprot.writeFieldBegin('exportType', TType.I32, 4)
+            oprot.writeI32(self.exportType)
+            oprot.writeFieldEnd()
+        if self.exportFile is not None:
+            oprot.writeFieldBegin('exportFile', TType.STRING, 5)
+            oprot.writeString(self.exportFile.encode('utf-8') if sys.version_info[0] == 2 else self.exportFile)
             oprot.writeFieldEnd()
         if self.schedule is not None:
-            oprot.writeFieldBegin('schedule', TType.STRING, 5)
+            oprot.writeFieldBegin('schedule', TType.STRING, 6)
             oprot.writeString(self.schedule.encode('utf-8') if sys.version_info[0] == 2 else self.schedule)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1541,25 +1782,29 @@ class TransformCompareEntity(object):
      - id
      - name
      - taskList
-     - exportFiletName
+     - exportType
+     - exportFile
      - schedule
      - createTime
      - operator
      - clientIp
+     - owner
 
     """
     thrift_spec = None
 
 
-    def __init__(self, id = None, name = None, taskList = None, exportFiletName = None, schedule = None, createTime = None, operator = None, clientIp = None,):
+    def __init__(self, id = None, name = None, taskList = None, exportType = None, exportFile = None, schedule = None, createTime = None, operator = None, clientIp = None, owner = None,):
         self.id = id
         self.name = name
         self.taskList = taskList
-        self.exportFiletName = exportFiletName
+        self.exportType = exportType
+        self.exportFile = exportFile
         self.schedule = schedule
         self.createTime = createTime
         self.operator = operator
         self.clientIp = clientIp
+        self.owner = owner
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -1586,28 +1831,38 @@ class TransformCompareEntity(object):
                 else:
                     iprot.skip(ftype)
             elif fid == 4:
-                if ftype == TType.STRING:
-                    self.exportFiletName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                if ftype == TType.I32:
+                    self.exportType = iprot.readI32()
                 else:
                     iprot.skip(ftype)
             elif fid == 5:
                 if ftype == TType.STRING:
-                    self.schedule = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                    self.exportFile = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
             elif fid == 6:
+                if ftype == TType.STRING:
+                    self.schedule = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 7:
                 if ftype == TType.I64:
                     self.createTime = iprot.readI64()
                 else:
                     iprot.skip(ftype)
-            elif fid == 7:
+            elif fid == 8:
                 if ftype == TType.STRING:
                     self.operator = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 8:
+            elif fid == 9:
                 if ftype == TType.STRING:
                     self.clientIp = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 10:
+                if ftype == TType.STRING:
+                    self.owner = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
             else:
@@ -1633,25 +1888,33 @@ class TransformCompareEntity(object):
             oprot.writeFieldBegin('taskList', TType.STRING, 3)
             oprot.writeString(self.taskList.encode('utf-8') if sys.version_info[0] == 2 else self.taskList)
             oprot.writeFieldEnd()
-        if self.exportFiletName is not None:
-            oprot.writeFieldBegin('exportFiletName', TType.STRING, 4)
-            oprot.writeString(self.exportFiletName.encode('utf-8') if sys.version_info[0] == 2 else self.exportFiletName)
+        if self.exportType is not None:
+            oprot.writeFieldBegin('exportType', TType.I32, 4)
+            oprot.writeI32(self.exportType)
+            oprot.writeFieldEnd()
+        if self.exportFile is not None:
+            oprot.writeFieldBegin('exportFile', TType.STRING, 5)
+            oprot.writeString(self.exportFile.encode('utf-8') if sys.version_info[0] == 2 else self.exportFile)
             oprot.writeFieldEnd()
         if self.schedule is not None:
-            oprot.writeFieldBegin('schedule', TType.STRING, 5)
+            oprot.writeFieldBegin('schedule', TType.STRING, 6)
             oprot.writeString(self.schedule.encode('utf-8') if sys.version_info[0] == 2 else self.schedule)
             oprot.writeFieldEnd()
         if self.createTime is not None:
-            oprot.writeFieldBegin('createTime', TType.I64, 6)
+            oprot.writeFieldBegin('createTime', TType.I64, 7)
             oprot.writeI64(self.createTime)
             oprot.writeFieldEnd()
         if self.operator is not None:
-            oprot.writeFieldBegin('operator', TType.STRING, 7)
+            oprot.writeFieldBegin('operator', TType.STRING, 8)
             oprot.writeString(self.operator.encode('utf-8') if sys.version_info[0] == 2 else self.operator)
             oprot.writeFieldEnd()
         if self.clientIp is not None:
-            oprot.writeFieldBegin('clientIp', TType.STRING, 8)
+            oprot.writeFieldBegin('clientIp', TType.STRING, 9)
             oprot.writeString(self.clientIp.encode('utf-8') if sys.version_info[0] == 2 else self.clientIp)
+            oprot.writeFieldEnd()
+        if self.owner is not None:
+            oprot.writeFieldBegin('owner', TType.STRING, 10)
+            oprot.writeString(self.owner.encode('utf-8') if sys.version_info[0] == 2 else self.owner)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -1684,12 +1947,13 @@ class TransformJobEntity(object):
      - createTime
      - operator
      - clientIp
+     - owner
 
     """
     thrift_spec = None
 
 
-    def __init__(self, id = None, name = None, taskList = None, exportFiletName = None, schedule = None, jobId = None, jobState = None, createTime = None, operator = None, clientIp = None,):
+    def __init__(self, id = None, name = None, taskList = None, exportFiletName = None, schedule = None, jobId = None, jobState = None, createTime = None, operator = None, clientIp = None, owner = None,):
         self.id = id
         self.name = name
         self.taskList = taskList
@@ -1700,6 +1964,7 @@ class TransformJobEntity(object):
         self.createTime = createTime
         self.operator = operator
         self.clientIp = clientIp
+        self.owner = owner
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -1760,6 +2025,11 @@ class TransformJobEntity(object):
                     self.clientIp = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
+            elif fid == 11:
+                if ftype == TType.STRING:
+                    self.owner = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -1810,6 +2080,599 @@ class TransformJobEntity(object):
         if self.clientIp is not None:
             oprot.writeFieldBegin('clientIp', TType.STRING, 10)
             oprot.writeString(self.clientIp.encode('utf-8') if sys.version_info[0] == 2 else self.clientIp)
+            oprot.writeFieldEnd()
+        if self.owner is not None:
+            oprot.writeFieldBegin('owner', TType.STRING, 11)
+            oprot.writeString(self.owner.encode('utf-8') if sys.version_info[0] == 2 else self.owner)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class UserEntity(object):
+    """
+    Attributes:
+     - username
+     - password
+     - role
+     - roleId
+     - enabled
+     - timestamp
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, username = None, password = None, role = None, roleId = None, enabled = None, timestamp = None,):
+        self.username = username
+        self.password = password
+        self.role = role
+        self.roleId = roleId
+        self.enabled = enabled
+        self.timestamp = timestamp
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.username = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.password = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.role = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.I64:
+                    self.roleId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.BOOL:
+                    self.enabled = iprot.readBool()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.I64:
+                    self.timestamp = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('UserEntity')
+        if self.username is not None:
+            oprot.writeFieldBegin('username', TType.STRING, 1)
+            oprot.writeString(self.username.encode('utf-8') if sys.version_info[0] == 2 else self.username)
+            oprot.writeFieldEnd()
+        if self.password is not None:
+            oprot.writeFieldBegin('password', TType.STRING, 2)
+            oprot.writeString(self.password.encode('utf-8') if sys.version_info[0] == 2 else self.password)
+            oprot.writeFieldEnd()
+        if self.role is not None:
+            oprot.writeFieldBegin('role', TType.STRING, 3)
+            oprot.writeString(self.role.encode('utf-8') if sys.version_info[0] == 2 else self.role)
+            oprot.writeFieldEnd()
+        if self.roleId is not None:
+            oprot.writeFieldBegin('roleId', TType.I64, 4)
+            oprot.writeI64(self.roleId)
+            oprot.writeFieldEnd()
+        if self.enabled is not None:
+            oprot.writeFieldBegin('enabled', TType.BOOL, 5)
+            oprot.writeBool(self.enabled)
+            oprot.writeFieldEnd()
+        if self.timestamp is not None:
+            oprot.writeFieldBegin('timestamp', TType.I64, 6)
+            oprot.writeI64(self.timestamp)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class UserQueryRequest(object):
+    """
+    Attributes:
+     - page
+     - pageSize
+     - username
+     - role
+     - enabled
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, page = None, pageSize = None, username = None, role = None, enabled = None,):
+        self.page = page
+        self.pageSize = pageSize
+        self.username = username
+        self.role = role
+        self.enabled = enabled
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I32:
+                    self.page = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.I32:
+                    self.pageSize = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.username = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.role = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.STRING:
+                    self.enabled = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('UserQueryRequest')
+        if self.page is not None:
+            oprot.writeFieldBegin('page', TType.I32, 1)
+            oprot.writeI32(self.page)
+            oprot.writeFieldEnd()
+        if self.pageSize is not None:
+            oprot.writeFieldBegin('pageSize', TType.I32, 2)
+            oprot.writeI32(self.pageSize)
+            oprot.writeFieldEnd()
+        if self.username is not None:
+            oprot.writeFieldBegin('username', TType.STRING, 3)
+            oprot.writeString(self.username.encode('utf-8') if sys.version_info[0] == 2 else self.username)
+            oprot.writeFieldEnd()
+        if self.role is not None:
+            oprot.writeFieldBegin('role', TType.STRING, 4)
+            oprot.writeString(self.role.encode('utf-8') if sys.version_info[0] == 2 else self.role)
+            oprot.writeFieldEnd()
+        if self.enabled is not None:
+            oprot.writeFieldBegin('enabled', TType.STRING, 5)
+            oprot.writeString(self.enabled.encode('utf-8') if sys.version_info[0] == 2 else self.enabled)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class LoginRequest(object):
+    """
+    Attributes:
+     - username
+     - password
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, username = None, password = None,):
+        self.username = username
+        self.password = password
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.username = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.password = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('LoginRequest')
+        if self.username is not None:
+            oprot.writeFieldBegin('username', TType.STRING, 1)
+            oprot.writeString(self.username.encode('utf-8') if sys.version_info[0] == 2 else self.username)
+            oprot.writeFieldEnd()
+        if self.password is not None:
+            oprot.writeFieldBegin('password', TType.STRING, 2)
+            oprot.writeString(self.password.encode('utf-8') if sys.version_info[0] == 2 else self.password)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class RefreshTokenRequest(object):
+    """
+    Attributes:
+     - refreshToken
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, refreshToken = None,):
+        self.refreshToken = refreshToken
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.refreshToken = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('RefreshTokenRequest')
+        if self.refreshToken is not None:
+            oprot.writeFieldBegin('refreshToken', TType.STRING, 1)
+            oprot.writeString(self.refreshToken.encode('utf-8') if sys.version_info[0] == 2 else self.refreshToken)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class ChangePasswordRequest(object):
+    """
+    Attributes:
+     - username
+     - oldPassword
+     - newPassword
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, username = None, oldPassword = None, newPassword = None,):
+        self.username = username
+        self.oldPassword = oldPassword
+        self.newPassword = newPassword
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.username = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.oldPassword = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.newPassword = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('ChangePasswordRequest')
+        if self.username is not None:
+            oprot.writeFieldBegin('username', TType.STRING, 1)
+            oprot.writeString(self.username.encode('utf-8') if sys.version_info[0] == 2 else self.username)
+            oprot.writeFieldEnd()
+        if self.oldPassword is not None:
+            oprot.writeFieldBegin('oldPassword', TType.STRING, 2)
+            oprot.writeString(self.oldPassword.encode('utf-8') if sys.version_info[0] == 2 else self.oldPassword)
+            oprot.writeFieldEnd()
+        if self.newPassword is not None:
+            oprot.writeFieldBegin('newPassword', TType.STRING, 3)
+            oprot.writeString(self.newPassword.encode('utf-8') if sys.version_info[0] == 2 else self.newPassword)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class DataPermissionQueryRequest(object):
+    """
+    Attributes:
+     - page
+     - pageSize
+     - tablePrefix
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, page = None, pageSize = None, tablePrefix = None,):
+        self.page = page
+        self.pageSize = pageSize
+        self.tablePrefix = tablePrefix
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I32:
+                    self.page = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.I32:
+                    self.pageSize = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.tablePrefix = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('DataPermissionQueryRequest')
+        if self.page is not None:
+            oprot.writeFieldBegin('page', TType.I32, 1)
+            oprot.writeI32(self.page)
+            oprot.writeFieldEnd()
+        if self.pageSize is not None:
+            oprot.writeFieldBegin('pageSize', TType.I32, 2)
+            oprot.writeI32(self.pageSize)
+            oprot.writeFieldEnd()
+        if self.tablePrefix is not None:
+            oprot.writeFieldBegin('tablePrefix', TType.STRING, 3)
+            oprot.writeString(self.tablePrefix.encode('utf-8') if sys.version_info[0] == 2 else self.tablePrefix)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class DataPermissionUpdateRequest(object):
+    """
+    Attributes:
+     - id
+     - isPublic
+     - visibleUsers
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, id = None, isPublic = None, visibleUsers = None,):
+        self.id = id
+        self.isPublic = isPublic
+        self.visibleUsers = visibleUsers
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.BOOL:
+                    self.isPublic = iprot.readBool()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.visibleUsers = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('DataPermissionUpdateRequest')
+        if self.id is not None:
+            oprot.writeFieldBegin('id', TType.I64, 1)
+            oprot.writeI64(self.id)
+            oprot.writeFieldEnd()
+        if self.isPublic is not None:
+            oprot.writeFieldBegin('isPublic', TType.BOOL, 2)
+            oprot.writeBool(self.isPublic)
+            oprot.writeFieldEnd()
+        if self.visibleUsers is not None:
+            oprot.writeFieldBegin('visibleUsers', TType.STRING, 3)
+            oprot.writeString(self.visibleUsers.encode('utf-8') if sys.version_info[0] == 2 else self.visibleUsers)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -1880,6 +2743,25 @@ TableDto.thrift_spec = (
     (1, TType.LIST, 'header', (TType.STRING, 'UTF8', False), None, ),  # 1
     (2, TType.LIST, 'records', (TType.MAP, (TType.STRING, 'UTF8', TType.STRING, 'UTF8', False), False), None, ),  # 2
 )
+all_structs.append(InputBindDto)
+InputBindDto.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'sourceField', 'UTF8', None, ),  # 1
+    (2, TType.STRING, 'targetField', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'operator', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'conversionValue', 'UTF8', None, ),  # 4
+)
+all_structs.append(TimeRangeRequest)
+TimeRangeRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'tableName', 'UTF8', None, ),  # 1
+    (2, TType.LIST, 'inputsBind', (TType.STRUCT, [InputBindDto, None], False), None, ),  # 2
+)
+all_structs.append(DataImportRequest)
+DataImportRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'targetPath', 'UTF8', None, ),  # 1
+)
 all_structs.append(DatasetRequest)
 DatasetRequest.thrift_spec = (
     None,  # 0
@@ -1943,8 +2825,9 @@ TransformJobRequest.thrift_spec = (
     (1, TType.I64, 'createTime', None, None, ),  # 1
     (2, TType.STRING, 'name', 'UTF8', None, ),  # 2
     (3, TType.LIST, 'taskList', (TType.STRUCT, [TaskInfoDto, None], False), None, ),  # 3
-    (4, TType.STRING, 'exportFiletName', 'UTF8', None, ),  # 4
-    (5, TType.STRING, 'schedule', 'UTF8', None, ),  # 5
+    (4, TType.I32, 'exportType', None, None, ),  # 4
+    (5, TType.STRING, 'exportFile', 'UTF8', None, ),  # 5
+    (6, TType.STRING, 'schedule', 'UTF8', None, ),  # 6
 )
 all_structs.append(TransformJobQueryRequest)
 TransformJobQueryRequest.thrift_spec = (
@@ -1960,11 +2843,13 @@ TransformCompareEntity.thrift_spec = (
     (1, TType.I64, 'id', None, None, ),  # 1
     (2, TType.STRING, 'name', 'UTF8', None, ),  # 2
     (3, TType.STRING, 'taskList', 'UTF8', None, ),  # 3
-    (4, TType.STRING, 'exportFiletName', 'UTF8', None, ),  # 4
-    (5, TType.STRING, 'schedule', 'UTF8', None, ),  # 5
-    (6, TType.I64, 'createTime', None, None, ),  # 6
-    (7, TType.STRING, 'operator', 'UTF8', None, ),  # 7
-    (8, TType.STRING, 'clientIp', 'UTF8', None, ),  # 8
+    (4, TType.I32, 'exportType', None, None, ),  # 4
+    (5, TType.STRING, 'exportFile', 'UTF8', None, ),  # 5
+    (6, TType.STRING, 'schedule', 'UTF8', None, ),  # 6
+    (7, TType.I64, 'createTime', None, None, ),  # 7
+    (8, TType.STRING, 'operator', 'UTF8', None, ),  # 8
+    (9, TType.STRING, 'clientIp', 'UTF8', None, ),  # 9
+    (10, TType.STRING, 'owner', 'UTF8', None, ),  # 10
 )
 all_structs.append(TransformJobEntity)
 TransformJobEntity.thrift_spec = (
@@ -1979,6 +2864,58 @@ TransformJobEntity.thrift_spec = (
     (8, TType.I64, 'createTime', None, None, ),  # 8
     (9, TType.STRING, 'operator', 'UTF8', None, ),  # 9
     (10, TType.STRING, 'clientIp', 'UTF8', None, ),  # 10
+    (11, TType.STRING, 'owner', 'UTF8', None, ),  # 11
+)
+all_structs.append(UserEntity)
+UserEntity.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'username', 'UTF8', None, ),  # 1
+    (2, TType.STRING, 'password', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'role', 'UTF8', None, ),  # 3
+    (4, TType.I64, 'roleId', None, None, ),  # 4
+    (5, TType.BOOL, 'enabled', None, None, ),  # 5
+    (6, TType.I64, 'timestamp', None, None, ),  # 6
+)
+all_structs.append(UserQueryRequest)
+UserQueryRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.I32, 'page', None, None, ),  # 1
+    (2, TType.I32, 'pageSize', None, None, ),  # 2
+    (3, TType.STRING, 'username', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'role', 'UTF8', None, ),  # 4
+    (5, TType.STRING, 'enabled', 'UTF8', None, ),  # 5
+)
+all_structs.append(LoginRequest)
+LoginRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'username', 'UTF8', None, ),  # 1
+    (2, TType.STRING, 'password', 'UTF8', None, ),  # 2
+)
+all_structs.append(RefreshTokenRequest)
+RefreshTokenRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'refreshToken', 'UTF8', None, ),  # 1
+)
+all_structs.append(ChangePasswordRequest)
+ChangePasswordRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'username', 'UTF8', None, ),  # 1
+    (2, TType.STRING, 'oldPassword', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'newPassword', 'UTF8', None, ),  # 3
+)
+all_structs.append(DataPermissionQueryRequest)
+DataPermissionQueryRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.I32, 'page', None, None, ),  # 1
+    (2, TType.I32, 'pageSize', None, None, ),  # 2
+    (3, TType.STRING, 'tablePrefix', 'UTF8', None, ),  # 3
+)
+all_structs.append(DataPermissionUpdateRequest)
+DataPermissionUpdateRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'id', None, None, ),  # 1
+    (2, TType.BOOL, 'isPublic', None, None, ),  # 2
+    (3, TType.STRING, 'visibleUsers', 'UTF8', None, ),  # 3
 )
 fix_spec(all_structs)
 del all_structs

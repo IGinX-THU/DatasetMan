@@ -55,6 +55,25 @@ struct TableDto {
     2: optional list<map<string, string>> records,
 }
 
+// 输入绑定 - 匹配 InputBindDto
+struct InputBindDto {
+    1: string sourceField,
+    2: string targetField,
+    3: string operator,
+    4: string conversionValue,
+}
+
+// 时间范围查询请求 - 匹配 TimeRangeRequest
+struct TimeRangeRequest {
+    1: string tableName,
+    2: optional list<InputBindDto> inputsBind,
+}
+
+// 数据导入请求 - 匹配 DataImportRequest
+struct DataImportRequest {
+    1: string targetPath,
+}
+
 // ========== 数据集相关 ==========
 struct DatasetRequest {
     1: string datasetName,
@@ -153,6 +172,56 @@ struct TransformJobEntity {
     11: optional string owner,
 }
 
+// ========== 用户相关 - 匹配 UserEntity ==========
+struct UserEntity {
+    1: string username,
+    2: optional string password,
+    3: string role,
+    4: optional i64 roleId,
+    5: bool enabled,
+    6: optional i64 timestamp,
+}
+
+// 用户查询请求 - 匹配 UserQueryRequest
+struct UserQueryRequest {
+    1: optional i32 page,
+    2: optional i32 pageSize,
+    3: optional string username,
+    4: optional string role,
+    5: optional string enabled,
+}
+
+// 登录请求
+struct LoginRequest {
+    1: string username,
+    2: string password,
+}
+
+// 刷新Token请求
+struct RefreshTokenRequest {
+    1: string refreshToken,
+}
+
+// 修改密码请求
+struct ChangePasswordRequest {
+    1: string username,
+    2: string oldPassword,
+    3: string newPassword,
+}
+
+// ========== 数据权限相关 ==========
+struct DataPermissionQueryRequest {
+    1: optional i32 page,
+    2: optional i32 pageSize,
+    3: optional string tablePrefix,
+}
+
+struct DataPermissionUpdateRequest {
+    1: i64 id,
+    2: optional bool isPublic,
+    3: optional string visibleUsers,
+}
+
 // ========== API服务接口 - 匹配所有Controller的方法 ==========
 service ApiService {
     // ========== 数据源接口 - 匹配DataSourceController ==========
@@ -175,14 +244,26 @@ service ApiService {
     // POST /api/data/fs/query -> queryFileData(DataQueryRequest)
     Result queryFileData(1: DataQueryRequest request),
     
+    // POST /api/data/import -> importData(DataImportRequest, MultipartFile)
+    Result importData(1: DataImportRequest config, 2: binary file),
+    
+    // POST /api/data/export -> exportData(DataQueryRequest)
+    binary exportData(1: DataQueryRequest request),
+    
     // POST /api/data/delete -> deleteData(DataQueryRequest)
     Result deleteData(1: DataQueryRequest request),
+    
+    // POST /api/data/time-range -> getTimeRange(TimeRangeRequest)
+    Result getTimeRange(1: TimeRangeRequest request),
     
     // POST /api/data/relational/query -> queryData(RelationalQueryRequest)
     Result queryRelationalData(1: RelationalQueryRequest request),
     
     // POST /api/data/relational/count -> countData(RelationalQueryRequest)
     Result countRelationalData(1: RelationalQueryRequest request),
+    
+    // POST /api/data/relational/export -> exportRelationalDataToExcel(RelationalQueryRequest)
+    binary exportRelationalDataToExcel(1: RelationalQueryRequest request),
 
     // ========== 数据集接口 - 匹配DatasetController ==========
     // POST /api/dataset/testsql -> testSQL(String sql)
@@ -201,11 +282,20 @@ service ApiService {
     Result getVersionHistory(1: string datasetName),
 
     // ========== 函数接口 - 匹配FunctionController ==========
+    // POST /api/function/register/transform -> registerTransform(MultipartFile, name, className)
+    Result registerTransform(1: binary file, 2: string name, 3: string className),
+    
     // DELETE /api/function/delete/{name} -> handleDelete(String name)
     Result deleteFunction(1: string name),
     
     // GET /api/function/query/{type} -> list(String type)
     Result listFunctions(1: string type),
+    
+    // POST /api/function/register/udf -> registerUDF(MultipartFile, name, className, udfType)
+    Result registerUDF(1: binary file, 2: string name, 3: string className, 4: string udfType),
+    
+    // GET /api/function/download/{type}/{fileName} -> downloadFunction(type, fileName)
+    binary downloadFunction(1: string type, 2: string fileName),
 
     // ========== Transform作业编排接口 - 匹配TransformCompareController ==========
     // POST /api/transform-compare/save -> saveTransform(TransformJobRequest)
@@ -244,4 +334,90 @@ service ApiService {
     
     // GET /api/transform-job/bloodline -> chartBloodline(String datasetPath, Boolean sideLineage)
     Result getTransformJobBloodline(1: string datasetPath, 2: bool sideLineage),
+
+    // ========== 文档接口 - 匹配DocController ==========
+    // GET /api/doc/user-manual/file -> getUserManualFile()
+    binary getUserManualFile(),
+
+    // ========== API代码生成接口 - 匹配ApiGenerationController ==========
+    // POST /api/generation/java -> generateJavaCode()
+    Result generateJavaCode(),
+    
+    // POST /api/generation/go -> generateGoCode()
+    Result generateGoCode(),
+    
+    // POST /api/generation/python -> generatePythonCode()
+    Result generatePythonCode(),
+    
+    // POST /api/generation/restful -> generateRestfulApiCode()
+    Result generateRestfulApiCode(),
+    
+    // POST /api/generation/all -> generateAllCode()
+    Result generateAllCode(),
+    
+    // GET /api/generation/status -> getGenerationStatus()
+    Result getGenerationStatus(),
+    
+    // GET /api/generation/validate -> validateThriftFile()
+    Result validateThriftFile(),
+
+    // ========== 认证接口 - 匹配AuthController ==========
+    // POST /api/auth/login -> login(Map<String, String>)
+    Result login(1: LoginRequest request),
+    
+    // POST /api/auth/refresh -> refreshToken(Map<String, String>)
+    Result refreshToken(1: RefreshTokenRequest request),
+    
+    // GET /api/auth/verify -> verifyToken()
+    Result verifyToken(),
+    
+    // POST /api/auth/logout -> logout()
+    Result logout(),
+    
+    // GET /api/auth/user -> getCurrentUser()
+    Result getCurrentAuthUser(),
+
+    // ========== 用户管理接口 - 匹配UserController ==========
+    // POST /api/user/save -> saveUser(UserEntity)
+    Result saveUser(1: UserEntity user),
+    
+    // POST /api/user/query -> queryUsers(UserQueryRequest)
+    Result queryUsers(1: UserQueryRequest request),
+    
+    // POST /api/user/count -> countUsers(UserQueryRequest)
+    Result countUsers(1: UserQueryRequest request),
+    
+    // GET /api/user/all -> allUsers()
+    Result allUsers(),
+    
+    // GET /api/user/detail -> queryUser(String username)
+    Result queryUser(1: string username),
+    
+    // DELETE /api/user/delete -> deleteUser(String username)
+    Result deleteUser(1: string username),
+    
+    // POST /api/user/update -> updateUser(UserEntity)
+    Result updateUser(1: UserEntity user),
+    
+    // GET /api/user/roles -> getRoles()
+    Result getRoles(),
+    
+    // POST /api/user/change-password -> changePassword(Map<String, String>)
+    Result changePassword(1: ChangePasswordRequest request),
+    
+    // GET /api/user/current -> getCurrentUser()
+    Result getCurrentUser(),
+
+    // ========== 数据权限接口 - 匹配DataPermissionController ==========
+    // GET /api/data-permission/owner-tables -> listOwnerTables()
+    Result listOwnerTables(),
+    
+    // POST /api/data-permission/query -> query(DataPermissionQueryRequest)
+    Result queryDataPermissions(1: DataPermissionQueryRequest request),
+    
+    // POST /api/data-permission/count -> count(DataPermissionQueryRequest)
+    Result countDataPermissions(1: DataPermissionQueryRequest request),
+    
+    // POST /api/data-permission/update -> update(DataPermissionUpdateRequest)
+    Result updateDataPermission(1: DataPermissionUpdateRequest request),
 }

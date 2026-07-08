@@ -83,8 +83,8 @@
             <outputDirectory>doc</outputDirectory>
             <includes>
                 <include>*.docx</include>
-                <include>*.pdf</include>
-                <include>*.md</include>
+<!--                <include>*.pdf</include>-->
+<!--                <include>*.md</include>-->
             </includes>
         </fileSet>
 
