@@ -555,7 +555,8 @@ tr:hover {
     z-index: 1000;
 }
 
-.modal {
+.modal,
+.modal-dialog {
     background: white;
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
@@ -604,6 +605,7 @@ tr:hover {
     padding: 20px;
     max-height: 400px;
     overflow-y: auto;
+    background: white !important;
 }
 
 .modal-footer {

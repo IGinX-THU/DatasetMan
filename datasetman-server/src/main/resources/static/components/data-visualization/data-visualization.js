@@ -1073,12 +1073,12 @@ class DataVisualization extends HTMLElement {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-dialog">
+            <div class="modal-dialog" style="background: white;">
                 <div class="modal-header">
                     <h3 class="modal-title">选择测点</h3>
                     <button class="modal-close" id="closeModal">×</button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="background: white;">
                     <div class="point-selector">
                         <label class="query-label">选择测点 (${parentPath}):</label>
                         <div class="select-all-container" style="padding: 8px 0; border-bottom: 1px solid #e8e8e8; margin-bottom: 8px;">
