@@ -314,7 +314,7 @@ class FileSystemBrowser extends HTMLElement {
                                 <span class="file-name">${fileName}</span>
                             </div>
                             <div class="preview-content">
-                                <video id="videoPlayer" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" style="max-width: 100%; max-height: 600px;">
+                                <video id="videoPlayer" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto">
                                     <source src="${videoUrl}" type="${mimeTypes[0]}">
                                     您的浏览器不支持视频播放。
                                 </video>
@@ -328,8 +328,8 @@ class FileSystemBrowser extends HTMLElement {
                     
                     // 初始化video.js播放器
                     const player = videojs('videoPlayer', {
-                        fluid: true,
-                        responsive: true,
+                        fluid: false,
+                        responsive: false,
                         playbackRates: [0.5, 1, 1.5, 2],
                         html5: {
                             vhs: {
