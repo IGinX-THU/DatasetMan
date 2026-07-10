@@ -206,7 +206,7 @@ public class DataPermissionService {
         if (!AuthUtil.isAdmin()) {
             DataPermissionEntity dataPermissionEntity = DataPermissionEntity.builder()
                     .tablePrefix(tablePrefix)
-                    .isPublic(false)
+                    .isPublic("file_system.sys_data".equals(tablePrefix))
                     .build();
             saveDataPermission(dataPermissionEntity);
         }

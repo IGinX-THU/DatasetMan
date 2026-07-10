@@ -280,7 +280,7 @@ class FileSystemBrowser extends HTMLElement {
                         <div class="file-preview">
                             <div class="preview-content">
                                 <div style="color: red; text-align: center; padding: 20px;">
-                                    视频数据为空，无法播放。请检查后端日志。
+                                    视频数据为空，无法播放。
                                 </div>
                             </div>
                         </div>

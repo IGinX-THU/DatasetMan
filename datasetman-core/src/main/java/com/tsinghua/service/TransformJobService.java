@@ -36,7 +36,6 @@ import java.util.stream.Collectors;
 public class TransformJobService {
 
     private static final String DATA_PREFIX = "relational_system.transform_job";
-    private static final String SYS_DIR_PREFIX = "sys_data";
     private static final String JOB_OUTPUT = "job";
 
     @Autowired
@@ -64,7 +63,7 @@ public class TransformJobService {
     private void init() {
         try {
             // 创建函数目录
-            Path pathDir = Paths.get(SYS_DIR_PREFIX, JOB_OUTPUT);
+            Path pathDir = Paths.get(SchemaPrefix.SYS_DIR_PREFIX, JOB_OUTPUT);
             if (!Files.exists(pathDir)) {
                 Files.createDirectories(pathDir);
                 log.info("创建任务输出目录: {}", pathDir);
@@ -76,9 +75,10 @@ public class TransformJobService {
             request.setHasData(true);
             request.setIsReadOnly(true);
             request.setSchemaPrefix(SchemaPrefix.FILE_SYSTEM);
+            request.setDataPrefix(SchemaPrefix.SYS_DIR_PREFIX);
             request.setDescription(SchemaPrefix.FILE_SYSTEM);
             request.setPort(6666);
-            request.setDummyDir(Paths.get(SYS_DIR_PREFIX).toAbsolutePath().toString());
+            request.setDummyDir(Paths.get(SchemaPrefix.SYS_DIR_PREFIX).toAbsolutePath().toString());
             dataSourceService.registerDataSource(request);
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -322,7 +322,7 @@ public class TransformJobService {
         String filePath = null;
         if (exportType == ExportType.FILE && transformCompare.getExportFile() != null) {
             String exportFile = transformCompare.getExportFile();
-            Path basePath = Paths.get(SYS_DIR_PREFIX, JOB_OUTPUT).toAbsolutePath();
+            Path basePath = Paths.get(SchemaPrefix.SYS_DIR_PREFIX, JOB_OUTPUT).toAbsolutePath();
             // 如果路径已以basePath开头，直接使用；否则拼接
             if (exportFile.startsWith(basePath.toString())) {
                 filePath = exportFile;
