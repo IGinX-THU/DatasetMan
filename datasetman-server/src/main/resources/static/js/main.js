@@ -2076,14 +2076,33 @@ function showVisualAnalysis() {
             window.showGlobalLoading('正在加载视图...');
         }
 
-        // 检查是否为key或value节点，如果是则查询hash结构
-        const parts = fullPath.split('.');
-        const lastPart = parts[parts.length - 1];
-        if (lastPart === 'key' || lastPart === 'value') {
-            const parentPath = parts.slice(0, -1).join('.');
-            const wildcardPath = parentPath + '*';
-            showKeyValueViewer(wildcardPath);
-        } else if (dataModality === 'relational') {
+        // key/value节点的特殊处理仅在键值视图下且key和value兄弟节点共存时生效
+        if (dataModality === 'key_value') {
+            const parts = fullPath.split('.');
+            const lastPart = parts[parts.length - 1];
+            if (lastPart === 'key' || lastPart === 'value') {
+                const parentPath = parts.slice(0, -1).join('.');
+                // 检查兄弟节点中是否同时存在key和value
+                const activeNode = document.querySelector('.left-sidebar .tree-node.active');
+                if (activeNode) {
+                    const parentNode = activeNode.parentElement;
+                    const hasKey = parentNode.querySelector('[data-full-path="' + parentPath + '.key"]');
+                    const hasValue = parentNode.querySelector('[data-full-path="' + parentPath + '.value"]');
+                    if (hasKey && hasValue) {
+                        const wildcardPath = parentPath + '*';
+                        showKeyValueViewer(wildcardPath);
+                        setTimeout(() => {
+                            if (window.hideGlobalLoading) {
+                                window.hideGlobalLoading();
+                            }
+                        }, 300);
+                        return;
+                    }
+                }
+            }
+        }
+
+        if (dataModality === 'relational') {
             const pathParts = fullPath.split('.');
             const parentPath = pathParts.slice(0, -1).join('.');
             showDatabaseTable(parentPath);
