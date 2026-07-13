@@ -114,7 +114,7 @@ public class DataSourceService {
                                 String tablePrefix = StringUtils.hasText(storageEngineInfoDto.getDataPrefix()) ?
                                         storageEngineInfoDto.getSchemaPrefix() + "." + storageEngineInfoDto.getDataPrefix() :
                                         storageEngineInfoDto.getSchemaPrefix();
-                                return accessibleTable.equalsIgnoreCase(tablePrefix);
+                                return accessibleTable.equalsIgnoreCase(tablePrefix) && !"file_system.sys_data".equals(tablePrefix);
                     })
                             .collect(Collectors.toList())));
             return filteredList;
