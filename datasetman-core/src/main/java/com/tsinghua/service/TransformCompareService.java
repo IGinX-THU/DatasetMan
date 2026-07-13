@@ -15,6 +15,7 @@ import com.tsinghua.util.ConvertUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,9 +44,11 @@ public class TransformCompareService {
             
             try {
                 SessionExecuteSqlResult checkRes = iginxSession.executeSql(checkSql);
-                Object count = checkRes.getValues().get(0).get(0);
-                if (count != null && !count.equals(0L)) {
-                    throw new RuntimeException("作业名称已存在，请使用其他名称");
+                if (!CollectionUtils.isEmpty(checkRes.getValues()) && !CollectionUtils.isEmpty(checkRes.getValues().get(0))) {
+                    Object count = checkRes.getValues().get(0).get(0);
+                    if (count != null && !count.equals(0L)) {
+                        throw new RuntimeException("作业名称已存在，请使用其他名称");
+                    }
                 }
             } catch (Exception e) {
                 if (e.getMessage().contains("作业名称已存在")) {

@@ -214,8 +214,12 @@ class ScheduleEditor extends HTMLElement {
                         <label class="schedule-field-label">选择星期</label>
                         <div class="weekday-checkboxes">
                             <label class="weekday-checkbox"><input type="checkbox" value="mon"> 周一</label>
+                            <label class="weekday-checkbox"><input type="checkbox" value="tue"> 周二</label>
                             <label class="weekday-checkbox"><input type="checkbox" value="wed"> 周三</label>
+                            <label class="weekday-checkbox"><input type="checkbox" value="thu"> 周四</label>
                             <label class="weekday-checkbox"><input type="checkbox" value="fri"> 周五</label>
+                            <label class="weekday-checkbox"><input type="checkbox" value="sat"> 周六</label>
+                            <label class="weekday-checkbox"><input type="checkbox" value="sun"> 周日</label>
                         </div>
                     </div>
                     <div class="schedule-field">
