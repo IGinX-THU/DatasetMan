@@ -159,7 +159,7 @@ public class DataSourceService {
             Set<String> accessibleSet = new HashSet<>(accessibleTables);
             return tree.stream()
                     .filter(columnDto -> accessibleSet.stream()
-                            .anyMatch(prefix -> columnDto.getPath().startsWith(prefix)))
+                            .anyMatch(prefix -> columnDto.getPath().startsWith(prefix)) || columnDto.getPath().startsWith("transform."))
                     .collect(Collectors.toList());
         }
         return tree;

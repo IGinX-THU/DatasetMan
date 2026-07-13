@@ -35,14 +35,15 @@ class MenuPermission {
                 this.currentUser = data.data;
                 this.userRole = this.currentUser.role;
             } else {
-                // 降级处理：使用默认角色
-                this.userRole = 'DATA_ENGINEER';
-                this.currentUser = { username: 'user', role: this.userRole };
+                // 获取用户失败，跳转到登录页面
+                console.error('获取用户信息失败，跳转到登录页面');
+                window.location.href = '/login.html';
+                throw new Error('获取用户信息失败');
             }
         } catch (error) {
-            console.warn('获取用户角色失败，使用默认角色:', error);
-            this.userRole = 'DATA_ENGINEER';
-            this.currentUser = { username: 'user', role: this.userRole };
+            console.error('获取用户角色失败，跳转到登录页面:', error);
+            window.location.href = '/login.html';
+            throw error;
         }
     }
 
@@ -54,8 +55,8 @@ class MenuPermission {
         const menuPermissions = {
             // ADMIN - 所有菜单区域
             'ADMIN': ['data', 'model', 'schedule', 'analysis', 'user', 'tool', 'settings', 'help'],
-            // DATA_ENGINEER - 所有菜单区域（除用户管理）
-            'DATA_ENGINEER': ['data', 'model', 'schedule', 'analysis', 'tool', 'settings', 'help']
+            // DATA_ENGINEER - 含「用户」父菜单；其中「用户管理」子项仅管理员可见，由 applyUserDropdownSubmenuVisibility 控制
+            'DATA_ENGINEER': ['data', 'model', 'schedule', 'analysis', 'user', 'tool', 'settings', 'help']
         };
 
         return menuPermissions[this.userRole]?.includes(menuArea) || false;
@@ -67,9 +68,21 @@ class MenuPermission {
 
         // 控制菜单标签显示
         this.controlMenuTabs();
-        
+
+        // 「用户」下拉内：仅管理员可见「用户管理」
+        this.applyUserDropdownSubmenuVisibility();
+
         // 控制功能按钮组显示
         this.controlFunctionButtonGroups();
+    }
+
+    /** 「用户管理」仅 ADMIN；「权限管理」「修改密码」对所有已登录角色可见 */
+    applyUserDropdownSubmenuVisibility() {
+        const el = document.getElementById('userManagementMenuItem');
+        if (!el) {
+            return;
+        }
+        el.style.display = this.userRole === 'ADMIN' ? '' : 'none';
     }
 
     // 控制菜单标签
@@ -130,11 +143,12 @@ class MenuPermission {
         
         const message = `权限不足：${actionName}需要相应权限\n当前角色：${roleNames[this.userRole] || this.userRole}`;
         
-        // 尝试使用CommonUtils显示错误，否则使用alert
         if (window.CommonUtils && window.CommonUtils.showError) {
             window.CommonUtils.showError(message, 5000);
+        } else if (window.CommonUtils && window.CommonUtils.showToast) {
+            window.CommonUtils.showToast(message, 'error');
         } else {
-            alert(message);
+            console.error(message);
         }
     }
 

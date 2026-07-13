@@ -9,6 +9,7 @@ import cn.edu.tsinghua.iginx.session_v2.WriteClient;
 import cn.edu.tsinghua.iginx.session_v2.write.Point;
 import com.alibaba.fastjson2.JSONObject;
 import com.tsinghua.auth.aspect.OperationLogAspect;
+import com.tsinghua.auth.service.DataPermissionService;
 import com.tsinghua.dto.DatasetRequest;
 import com.tsinghua.entity.DatasetEntity;
 import com.tsinghua.enums.SchemaPrefix;
@@ -38,6 +39,9 @@ public class DatasetService {
 
     @Autowired
     private IginXClient iginxClient;
+
+    @Autowired
+    private DataPermissionService dataPermissionService;
 
 
     public Object testSQL(String sql) {
@@ -85,6 +89,10 @@ public class DatasetService {
         datasetEntity.setClientIp(clientIp);
 
         writeClient.writeMeasurement(datasetEntity);
+
+        dataPermissionService.saveTablePrefix(storagePath);
+        log.info("模型文件上传成功。storagePath: {}", storagePath);
+
         return datasetEntity;
     }
 
