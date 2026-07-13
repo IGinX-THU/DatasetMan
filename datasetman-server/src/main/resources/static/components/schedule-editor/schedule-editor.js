@@ -445,6 +445,7 @@ class ScheduleEditor extends HTMLElement {
         const cronExpression = cronParts.join(' ');
         this.scheduleValue = cronExpression;
         this.updateCronPreview();
+        this.shadowRoot.getElementById('schedule-output').textContent = cronExpression || '-';
         
         this.dispatchEvent(new CustomEvent('schedule-change', {
             detail: { schedule: cronExpression },
@@ -468,8 +469,7 @@ class ScheduleEditor extends HTMLElement {
                 schedule = this.buildAtSchedule();
                 break;
             case 'cron':
-                const cronInput = this.shadowRoot.getElementById('cron-expression-input');
-                schedule = cronInput ? cronInput.value : '';
+                schedule = this.scheduleValue;
                 break;
         }
 
