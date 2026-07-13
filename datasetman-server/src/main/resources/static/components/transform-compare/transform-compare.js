@@ -57,7 +57,7 @@ class TransformCompare extends HTMLElement {
                 this.data = result.data.map(job => ({
                     id: job.id, // 使用id作为唯一标识
                     name: job.name,
-                    exportFile: job.exportFiletName,
+                    exportFile: job.exportFile,
                     schedule: job.schedule,
                     createTime: job.createTime,
                     createtime: new Date(job.createTime).toLocaleString('zh-CN')
