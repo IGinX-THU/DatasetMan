@@ -21,7 +21,10 @@ public class AuthUtil {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null) {
-                return authentication.getName();
+                String name = authentication.getName();
+                if (name != null && !name.isEmpty()) {
+                    return name;
+                }
             }
         } catch (Exception e) {
             log.warn("获取当前用户失败: {}", e.getMessage());
@@ -39,7 +42,10 @@ public class AuthUtil {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null) {
-                return authentication.getName();
+                String name = authentication.getName();
+                if (name != null && !name.isEmpty()) {
+                    return name;
+                }
             }
         } catch (Exception e) {
             log.warn("获取当前用户失败: {}", e.getMessage());
