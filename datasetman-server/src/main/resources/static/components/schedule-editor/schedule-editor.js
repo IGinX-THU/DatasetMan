@@ -332,22 +332,31 @@ class ScheduleEditor extends HTMLElement {
                             </select>
                             <input type="text" class="schedule-input cron-field-input" data-field="week" placeholder="例如：1,5 或 1-7" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
                         </article>
+                        <article class="cron-field-card">
+                            <label class="schedule-label">年</label>
+                            <select class="schedule-select cron-field-select" data-field="year">
+                                <option value="*">每个值 (*)</option>
+                                <option value="specific">指定值</option>
+                                <option value="range">范围</option>
+                            </select>
+                            <input type="text" class="schedule-input cron-field-input" data-field="year" placeholder="例如：2024,2025 或 2024-2030" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+                        </article>
                     </div>
                     <div class="cron-presets">
                         <div class="cron-presets-title">常用时间预设</div>
                         <div class="cron-presets-grid">
-                            <button type="button" class="cron-preset-btn" data-cron="* * * * * ?" title="每分钟执行一次">每分钟</button>
-                            <button type="button" class="cron-preset-btn" data-cron="0 * * * * ?" title="每小时的第0分钟执行">每小时</button>
-                            <button type="button" class="cron-preset-btn" data-cron="0 0 * * * ?" title="每天午夜执行">每天</button>
-                            <button type="button" class="cron-preset-btn" data-cron="0 0 ? * 1 ?" title="每周日午夜执行">每周</button>
-                            <button type="button" class="cron-preset-btn" data-cron="0 0 1 * ?" title="每月1日午夜执行">每月</button>
-                            <button type="button" class="cron-preset-btn" data-cron="0 0 1 1 ?" title="每年1月1日午夜执行">每年</button>
-                            <button type="button" class="cron-preset-btn" data-cron="*/5 * * * * ?" title="每5分钟执行一次">每5分钟</button>
-                            <button type="button" class="cron-preset-btn" data-cron="*/15 * * * * ?" title="每15分钟执行一次">每15分钟</button>
-                            <button type="button" class="cron-preset-btn" data-cron="*/30 * * * * ?" title="每30分钟执行一次">每30分钟</button>
-                            <button type="button" class="cron-preset-btn" data-cron="0 */2 * * * ?" title="每2小时执行一次">每2小时</button>
-                            <button type="button" class="cron-preset-btn" data-cron="0 0 9-17 ? * 2-6" title="工作日9-17点每小时执行">工作时间</button>
-                            <button type="button" class="cron-preset-btn" data-cron="0 0 ? * 2-6" title="工作日午夜执行">工作日</button>
+                            <button type="button" class="cron-preset-btn" data-cron="(0 * * * * ? *)" title="每分钟执行一次">每分钟</button>
+                            <button type="button" class="cron-preset-btn" data-cron="(0 0 * * * ? *)" title="每小时的第0分钟执行">每小时</button>
+                            <button type="button" class="cron-preset-btn" data-cron="(0 0 0 * * ? *)" title="每天午夜执行">每天</button>
+                            <button type="button" class="cron-preset-btn" data-cron="(0 0 ? * 1 ? *)" title="每周日午夜执行">每周</button>
+                            <button type="button" class="cron-preset-btn" data-cron="(0 0 0 1 * ? *)" title="每月1日午夜执行">每月</button>
+                            <button type="button" class="cron-preset-btn" data-cron="(0 0 0 1 1 ? *)" title="每年1月1日午夜执行">每年</button>
+                            <button type="button" class="cron-preset-btn" data-cron="(0 */5 * * * ? *)" title="每5分钟执行一次">每5分钟</button>
+                            <button type="button" class="cron-preset-btn" data-cron="(0 */15 * * * ? *)" title="每15分钟执行一次">每15分钟</button>
+                            <button type="button" class="cron-preset-btn" data-cron="(0 */30 * * * ? *)" title="每30分钟执行一次">每30分钟</button>
+                            <button type="button" class="cron-preset-btn" data-cron="(0 0 */2 * * ? *)" title="每2小时执行一次">每2小时</button>
+                            <button type="button" class="cron-preset-btn" data-cron="(0 0 9-17 ? * 2-6 *)" title="工作日9-17点每小时执行">工作时间</button>
+                            <button type="button" class="cron-preset-btn" data-cron="(0 0 0 ? * 2-6 *)" title="工作日午夜执行">工作日</button>
                         </div>
                     </div>
                     <div class="cron-preview">
@@ -419,17 +428,17 @@ class ScheduleEditor extends HTMLElement {
     }
 
     updateCronFromFields() {
-        const fields = ['second', 'minute', 'hour', 'day', 'month', 'week'];
+        const fields = ['second', 'minute', 'hour', 'day', 'month', 'week', 'year'];
         const cronParts = [];
 
         fields.forEach(field => {
             const select = this.shadowRoot.querySelector('.cron-field-select[data-field="' + field + '"]');
             const input = this.shadowRoot.querySelector('.cron-field-input[data-field="' + field + '"]');
-            
+
             if (!select) return;
-            
+
             const type = select.value;
-            
+
             if (type === '*') {
                 cronParts.push('*');
             } else if (type === '?') {
@@ -442,11 +451,11 @@ class ScheduleEditor extends HTMLElement {
             }
         });
 
-        const cronExpression = cronParts.join(' ');
+        const cronExpression = '(' + cronParts.join(' ') + ')';
         this.scheduleValue = cronExpression;
         this.updateCronPreview();
         this.shadowRoot.getElementById('schedule-output').textContent = cronExpression || '-';
-        
+
         this.dispatchEvent(new CustomEvent('schedule-change', {
             detail: { schedule: cronExpression },
             bubbles: true,
@@ -587,18 +596,22 @@ class ScheduleEditor extends HTMLElement {
     }
 
     parseCronExpression(cron) {
-        const parts = cron.split(' ');
+        const trimmedCron = cron.trim();
+        const innerCron = trimmedCron.startsWith('(') && trimmedCron.endsWith(')')
+            ? trimmedCron.slice(1, -1)
+            : trimmedCron;
+        const parts = innerCron.split(' ');
         if (parts.length < 6) return;
 
-        const fields = ['second', 'minute', 'hour', 'day', 'month', 'week'];
-        
+        const fields = ['second', 'minute', 'hour', 'day', 'month', 'week', 'year'];
+
         fields.forEach((field, index) => {
             const part = parts[index] || (field === 'week' ? '?' : '*');
             const select = this.shadowRoot.querySelector('.cron-field-select[data-field="' + field + '"]');
             const input = this.shadowRoot.querySelector('.cron-field-input[data-field="' + field + '"]');
-            
+
             if (!select) return;
-            
+
             if (part === '*') {
                 select.value = '*';
                 if (input) input.value = '';
@@ -619,52 +632,124 @@ class ScheduleEditor extends HTMLElement {
                 if (input) input.value = part;
             }
         });
-        
+
         this.updateCronFromFields();
     }
 
     updateCronPreview() {
-        const cron = this.scheduleValue || '* * * * * ?';
-        const parts = cron.split(' ');
-        
+        const cron = this.scheduleValue || '(0 * * * * ? *)';
+        const innerCron = cron.startsWith('(') && cron.endsWith(')')
+            ? cron.slice(1, -1)
+            : cron;
+        const parts = innerCron.split(' ');
+
         const desc = this.generateCronDescription(parts);
         this.shadowRoot.getElementById('cron-desc-text').textContent = desc;
-        
+
         const nextRuns = this.generateNextRunTimes(cron);
         const nextList = this.shadowRoot.getElementById('cron-next-list');
         nextList.innerHTML = nextRuns.map(run => '<div class="cron-next-item">' + run + '</div>').join('');
     }
 
+    validate() {
+        return this.validateSchedule(this.scheduleValue);
+    }
+
+    validateSchedule(schedule) {
+        if (!schedule || !schedule.trim()) {
+            return { valid: true };
+        }
+
+        const trimmed = schedule.trim();
+
+        // every 重复执行
+        if (trimmed.startsWith('every ')) {
+            const everyIntervalRegex = /^every\s+\d+\s+(second|minute|hour|day|month|year)(\s+starts\s+'([^']+)')?(\s+ends\s+'([^']+)')?$/i;
+            const everyWeekdayRegex = /^every\s+(mon|tue|wed|thu|fri|sat|sun)(,(mon|tue|wed|thu|fri|sat|sun))*$/i;
+
+            if (everyIntervalRegex.test(trimmed) || everyWeekdayRegex.test(trimmed)) {
+                return { valid: true };
+            }
+            return { valid: false, message: 'every 格式错误，示例：every 3 minute 或 every mon,wed' };
+        }
+
+        // after 延后执行
+        if (trimmed.startsWith('after ')) {
+            const afterRegex = /^after\s+\d+\s+(second|minute|hour|day|month|year)$/i;
+            if (afterRegex.test(trimmed)) {
+                return { valid: true };
+            }
+            return { valid: false, message: 'after 格式错误，示例：after 3 minute' };
+        }
+
+        // at 定时执行
+        if (trimmed.startsWith('at ')) {
+            const atRegex = /^at\s+'([^']+)'$/i;
+            if (atRegex.test(trimmed)) {
+                return { valid: true };
+            }
+            return { valid: false, message: "at 格式错误，示例：at '2024-07-19 12:00:00' 或 at '12:00:00'" };
+        }
+
+        // Cron 格式
+        if (trimmed.startsWith('(')) {
+            if (!trimmed.endsWith(')')) {
+                return { valid: false, message: 'Cron 表达式缺少右括号，格式应为 (秒 分 时 日 月 周 年)' };
+            }
+
+            const inner = trimmed.slice(1, -1).trim();
+            const parts = inner.split(/\s+/);
+
+            if (parts.length !== 7) {
+                return { valid: false, message: 'Cron 表达式字段数错误，应为 7 个字段：秒 分 时 日 月 周 年，例如 (0 0/1 * 1/1 * ? *)' };
+            }
+
+            const fieldNames = ['秒', '分', '时', '日', '月', '周', '年'];
+            for (let i = 0; i < parts.length; i++) {
+                if (!parts[i]) {
+                    return { valid: false, message: 'Cron 表达式第 ' + (i + 1) + ' 字段（' + fieldNames[i] + '）不能为空' };
+                }
+            }
+            return { valid: true };
+        }
+
+        return { valid: false, message: '调度策略格式错误，请使用 every、after、at 或 Cron 格式' };
+    }
+
     generateCronDescription(parts) {
         if (parts.length < 6) return '无效的Cron表达式';
-        
-        const [second, minute, hour, day, month, week] = parts;
+
+        const [second, minute, hour, day, month, week, year] = parts;
         let desc = '';
-        
+
         if (second === '*') desc += '每秒';
         else if (second.includes('/')) desc += '每' + second.split('/')[1] + '秒';
         else desc += '第' + second + '秒';
-        
+
         if (minute === '*') desc += '每分';
         else if (minute.includes('/')) desc += '每' + minute.split('/')[1] + '分';
         else desc += '第' + minute + '分';
-        
+
         if (hour === '*') desc += '每小时';
         else if (hour.includes('/')) desc += '每' + hour.split('/')[1] + '小时';
         else desc += hour + '点';
-        
+
         if (day === '*') desc += '每天';
         else if (day === '?') desc += '';
         else if (day.includes('/')) desc += '每' + day.split('/')[1] + '天';
         else desc += '每月' + day + '号';
-        
+
         if (month === '*') desc += '每月';
         else desc += month + '月';
-        
+
         if (week === '*') desc += '每周';
         else if (week === '?') desc += '';
         else desc += '周' + week;
-        
+
+        if (year && year !== '*') {
+            desc += year + '年';
+        }
+
         return desc || '每秒执行';
     }
 

@@ -531,8 +531,8 @@ class TransformCompare extends HTMLElement {
             }
 
             for (const task of taskList) {
-                if (task.taskType === null || task.taskType === undefined || !task.timeout) {
-                    this.showToast('请填写完整任务信息', 'error');
+                if (task.taskType === null || task.taskType === undefined) {
+                    this.showToast('请填写任务类型', 'error');
                     return;
                 }
                 if (task.dataFlowType === null || task.dataFlowType === undefined) {
@@ -545,6 +545,15 @@ class TransformCompare extends HTMLElement {
                 }
                 if (task.taskType === 0 && !task.dataset) {
                     this.showToast('请选择数据集', 'error');
+                    return;
+                }
+            }
+
+            const scheduleEditor = form.querySelector('#scheduleEditor');
+            if (schedule && scheduleEditor && typeof scheduleEditor.validateSchedule === 'function') {
+                const validation = scheduleEditor.validateSchedule(schedule);
+                if (!validation.valid) {
+                    this.showToast(validation.message, 'error');
                     return;
                 }
             }
@@ -598,7 +607,8 @@ class TransformCompare extends HTMLElement {
                     exportType: job.exportType != null ? job.exportType : 0,
                     exportFile: job.exportFile,
                     schedule: job.schedule,
-                    taskList: taskList
+                    taskList: taskList,
+                    owner: job.owner
                 };
                 
                 const dialogHtml = `
@@ -809,8 +819,8 @@ class TransformCompare extends HTMLElement {
                     }
 
                     for (const task of taskList) {
-                        if (task.taskType === null || task.taskType === undefined || !task.timeout) {
-                            this.showToast('请填写完整任务信息', 'error');
+                        if (task.taskType === null || task.taskType === undefined) {
+                            this.showToast('请填写任务类型', 'error');
                             return;
                         }
                         if (task.dataFlowType === null || task.dataFlowType === undefined) {
@@ -827,13 +837,23 @@ class TransformCompare extends HTMLElement {
                         }
                     }
 
+                    const scheduleEditor = form.querySelector('#scheduleEditor');
+                    if (schedule && scheduleEditor && typeof scheduleEditor.validateSchedule === 'function') {
+                        const validation = scheduleEditor.validateSchedule(schedule);
+                        if (!validation.valid) {
+                            this.showToast(validation.message, 'error');
+                            return;
+                        }
+                    }
+
                     const jobData = {
                         createTime: createTime,
                         name: jobName,
                         exportType: exportType,
                         exportFile: exportType === 1 ? exportFile : null,
                         schedule,
-                        taskList
+                        taskList,
+                        owner: job.owner
                     };
 
                     console.log('Job data to update:', jobData);
@@ -1208,7 +1228,7 @@ class TransformCompare extends HTMLElement {
                         </select>
                     </div>
                     <div style="display: flex; flex-direction: column;">
-                        <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #475569;">超时时间(ms) <span style="color: #ef4444;">*</span></label>
+                        <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #475569;">超时时间(ms)</label>
                         <input type="number" class="timeout" value="${timeout}" placeholder="10000000" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
                     </div>
                 </div>
@@ -1645,11 +1665,14 @@ class TransformCompare extends HTMLElement {
             const datasetSelect = row.querySelector('.dataset-select');
             const versionSelect = row.querySelector('.version-select');
 
-            if (taskType && timeout) {
+            if (taskType) {
                 const task = {
-                    taskType: taskType === 'python' ? 1 : 0,
-                    timeout: parseInt(timeout)
+                    taskType: taskType === 'python' ? 1 : 0
                 };
+
+                if (timeout) {
+                    task.timeout = parseInt(timeout);
+                }
 
                 // 始终设置dataFlowType，即使为空，以便验证能正确检测
                 if (dataFlowType) {

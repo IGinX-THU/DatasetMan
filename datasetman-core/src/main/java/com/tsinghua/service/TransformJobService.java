@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
 import java.nio.file.Files;
@@ -307,8 +308,10 @@ public class TransformJobService {
                 taskInfo.setPyTaskName(taskInfoDto.getPyTaskName());
             }
 
-            taskInfoBo.setTimeout(taskInfoDto.getTimeout());
-            taskInfo.setTimeout(taskInfoDto.getTimeout());
+            if (taskInfoDto.getTimeout() != null) {
+                taskInfoBo.setTimeout(taskInfoDto.getTimeout());
+                taskInfo.setTimeout(taskInfoDto.getTimeout());
+            }
 
             taskInfoBoList.add(taskInfoBo);
             taskInfoList.add(taskInfo);
@@ -332,13 +335,9 @@ public class TransformJobService {
         }
 
         // 提交任务
-        long jobIdLong =
-                iginxSession.commitTransformJob(
-                        taskInfoList,
-                        ExportType.findByValue(exportType.getValue()),
-                        filePath,
-                        transformCompare.getSchedule(),
-                        true);
+        long jobIdLong = StringUtils.hasText(transformCompare.getSchedule()) ?
+                iginxSession.commitTransformJob(taskInfoList, ExportType.findByValue(exportType.getValue()), filePath, transformCompare.getSchedule()) :
+                iginxSession.commitTransformJob(taskInfoList, ExportType.findByValue(exportType.getValue()), filePath);
         String jobId = String.valueOf(jobIdLong);
 
 
@@ -360,7 +359,7 @@ public class TransformJobService {
         transformJobEntity.setCreateTime(timestamp);
         transformJobEntity.setOperator(operator);
         transformJobEntity.setClientIp(clientIp);
-        transformJobEntity.setOwner(AuthUtil.getCurrentUsername());
+        transformJobEntity.setOwner(transformCompare.getOwner());
         transformJobEntity.setJobState(0);
         transformJobEntity.setJobId(jobId);
 

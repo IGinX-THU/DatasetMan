@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -77,7 +78,7 @@ public class TransformCompareService {
         transformCompareEntity.setCreateTime(timestamp);
         transformCompareEntity.setOperator(operator);
         transformCompareEntity.setClientIp(clientIp);
-        transformCompareEntity.setOwner(AuthUtil.getCurrentUsername());
+        transformCompareEntity.setOwner(StringUtils.hasText(request.getOwner()) ? request.getOwner() : AuthUtil.getCurrentUsername());
 
         WriteClient writeClient = iginxClient.getWriteClient();
         writeClient.writeMeasurement(transformCompareEntity);

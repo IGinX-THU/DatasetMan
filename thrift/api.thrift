@@ -136,6 +136,7 @@ struct TransformJobRequest {
     4: optional i32 exportType,
     5: optional string exportFile,
     6: optional string schedule,
+    7: optional string owner,
 }
 
 struct TransformJobQueryRequest {

@@ -12,4 +12,5 @@ public class TransformJobRequest {
     private Integer exportType;
     private String exportFile;
     private String schedule;
+    private String owner;
 }

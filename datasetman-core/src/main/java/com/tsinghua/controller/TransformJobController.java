@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Api(tags = "Transform任务管理")
 @RestController
@@ -79,8 +80,10 @@ public class TransformJobController {
             @RequestParam("datasetPath") String datasetPath,
             @RequestParam(value = "sideLineage", defaultValue = "true") Boolean sideLineage) throws Exception {
         // 只查询状态为完成（JobState=1）的任务
-        List<TransformJobEntity> result = transformJobService.queryAllJobs(datasetPath, 1, sideLineage);
-        return Result.success(result);
+        List<TransformJobEntity> result = transformJobService.queryAllJobs(datasetPath, null, sideLineage);
+        return Result.success(result.stream().filter(job ->
+                        job.getJobState() == 1 || job.getJobState() == 3 || job.getJobState() == 4)
+                .collect(Collectors.toList()));
     }
 
 }
