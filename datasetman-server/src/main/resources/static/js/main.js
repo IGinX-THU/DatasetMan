@@ -78,7 +78,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'udfManagement',
             'fileSystemBrowser',
             'keyValueViewer',
-            'semiStructuredViewer'
+            'semiStructuredViewer',
+            'userManual'
         ];
         
         components.forEach(componentId => {
