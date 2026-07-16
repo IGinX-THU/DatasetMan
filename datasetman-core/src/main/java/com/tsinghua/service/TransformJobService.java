@@ -205,7 +205,9 @@ public class TransformJobService {
             String sql = "select * from %s where jobId = '%s'";
             if (!AuthUtil.isAdmin()) {
                 String currentUser = AuthUtil.getCurrentUsername();
-                sql += " AND owner = '" + currentUser + "'";
+                if (! "unknown".equals(currentUser)) {
+                    sql += " AND owner = '" + currentUser + "'";
+                }
             }
             sql += ";";
             String sqlFormat= String.format(sql, DATA_PREFIX, jobId);
@@ -395,12 +397,17 @@ public class TransformJobService {
         if (transformJob == null) {
             throw new RuntimeException("任务不存在");
         }
-        TransformClient transformClient = iginxClient.getTransformClient();
-        transformClient.cancelTransformJob(Long.parseLong(jobId));
-        // 查看任务情况
-        JobState jobState = transformClient.queryTransformJobStatus(Long.parseLong(jobId));
-        log.info("job state is " + jobState.toString());
-        transformJob.setJobState(jobState.getValue());
+        try {
+            TransformClient transformClient = iginxClient.getTransformClient();
+            transformClient.cancelTransformJob(Long.parseLong(jobId));
+            // 查看任务情况
+            JobState jobState = transformClient.queryTransformJobStatus(Long.parseLong(jobId));
+            log.info("job state is " + jobState.toString());
+            transformJob.setJobState(jobState.getValue());
+        } catch (Exception e) {
+            log.error("取消作业异常：{}", e.getMessage());
+            transformJob.setJobState(JobState.JOB_UNKNOWN.getValue());
+        }
         return saveTransform(transformJob);
     }
 
@@ -412,7 +419,9 @@ public class TransformJobService {
             // 添加owner过滤
             if (!AuthUtil.isAdmin()) {
                 String currentUser = AuthUtil.getCurrentUsername();
-                sql.append(" AND owner = '").append(currentUser).append("'");
+                if (! "unknown".equals(currentUser)) {
+                    sql.append(" AND owner = '").append(currentUser).append("'");
+                }
             }
 
             // 添加筛选条件

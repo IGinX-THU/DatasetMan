@@ -1,5 +1,7 @@
 package com.tsinghua.exception;
 
+import cn.edu.tsinghua.iginx.exception.SessionException;
+import cn.edu.tsinghua.iginx.session_v2.exception.IginXException;
 import com.tsinghua.model.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.BindException;
@@ -103,4 +105,14 @@ public class GlobalExceptionHandler {
         log.error("系统异常", e);
         return Result.error("系统异常，请联系管理员", e.getMessage());
     }
+
+    /**
+     * 处理IginX异常
+     */
+    @ExceptionHandler({IginXException.class, SessionException.class})
+    public Result<String> handleIginXException(Exception e) {
+        log.error("IGinX异常", e);
+        return Result.error("IGinX请求异常，请检查请求参数", e.getMessage());
+    }
+
 }
