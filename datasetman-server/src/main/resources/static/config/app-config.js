@@ -169,6 +169,22 @@ window.AppConfig = {
             count: '/api/transform-compare/count',
             detail: '/api/transform-compare/detail',
             delete: '/api/transform-compare/delete'
+        },
+        // 评价准则
+        evaluationCriteria: {
+            save: '/api/evaluation-criteria/save',
+            query: '/api/evaluation-criteria/query',
+            count: '/api/evaluation-criteria/count',
+            detail: '/api/evaluation-criteria/detail',
+            delete: '/api/evaluation-criteria/delete'
+        },
+        // 质量测评
+        qualityAssessment: {
+            save: '/api/quality-assessment/save',
+            query: '/api/quality-assessment/query',
+            count: '/api/quality-assessment/count',
+            detail: '/api/quality-assessment/detail',
+            delete: '/api/quality-assessment/delete'
         }
     },
     

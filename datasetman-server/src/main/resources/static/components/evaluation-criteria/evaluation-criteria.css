@@ -1,0 +1,479 @@
+@import url('../../css/variables.css');
+@import url('../../css/base-components.css');
+@import url('../../css/workbench-crud-panel.css');
+
+:host {
+    display: none;
+    width: 100%;
+    height: 100%;
+}
+
+:host([show]) {
+    display: block;
+}
+
+:host .modal {
+    width: min(720px, 92vw);
+}
+
+.ec-toolbar {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ec-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.ec-add-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 4px;
+    background: #1890ff;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.ec-add-btn:hover {
+    background: #40a9ff;
+}
+
+.ec-content {
+    flex: 1;
+    overflow: auto;
+    padding: 16px;
+}
+
+.ec-empty {
+    padding: 48px;
+    text-align: center;
+    color: #6b7280;
+}
+
+.ec-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #ffffff;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.ec-table th,
+.ec-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    color: #374151;
+}
+
+.ec-table th {
+    background: #f0f2f5;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.ec-table tr:hover {
+    background: #fafbfc;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    padding: 4px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 13px;
+    color: #6b7280;
+    transition: all 0.2s;
+}
+
+.action-btn.edit {
+    color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.action-btn.edit:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+.action-btn.delete {
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+.action-btn.delete:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.action-btn.run {
+    color: #7666EB;
+    border-color: #7666EB;
+}
+
+.action-btn.run:hover {
+    background: #7666EB;
+    color: white;
+}
+
+.action-btn.manage {
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+.action-btn.manage:hover {
+    background: #f59e0b;
+    color: white;
+}
+
+.ec-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.ec-dialog {
+    background: #ffffff;
+    border-radius: 8px;
+    width: 460px;
+    max-width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.ec-dialog-title {
+    padding: 16px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid #e5e7eb;
+    color: #1f2937;
+}
+
+.ec-dialog-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ec-dialog-body label {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.ec-dialog-body input,
+.ec-dialog-body textarea {
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+}
+
+.ec-dialog-body input:focus,
+.ec-dialog-body textarea:focus {
+    border-color: #1890ff;
+}
+
+.ec-dialog-footer {
+    padding: 12px 20px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.ec-cancel-btn {
+    padding: 6px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.ec-save-btn {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 4px;
+    background: #1890ff;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.ec-save-btn:hover {
+    background: #40a9ff;
+}
+
+/* New form styles for evaluation criteria configuration */
+.ec-form {
+    max-width: 720px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.ec-form-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.ec-form-row label,
+.ec-dimension-label {
+    width: 80px;
+    font-size: 14px;
+    color: #374151;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.ec-form-row input,
+.ec-weight-input,
+.ec-job-select {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.ec-form-row input:focus,
+.ec-weight-input:focus,
+.ec-job-select:focus {
+    border-color: #1890ff;
+}
+
+.ec-section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 24px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.ec-dimensions {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ec-dimension-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+}
+
+.ec-dimension-fields {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+}
+
+.ec-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.ec-field-wide {
+    flex: 2.5;
+}
+
+.ec-field label {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.ec-weight-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.ec-weight-input.invalid {
+    border-color: #f5222d;
+    background: #fff1f0;
+}
+
+.ec-job-select {
+    width: 100%;
+    height: 35px;
+    background: #ffffff;
+}
+
+.ec-weight-summary {
+    margin: 20px 0;
+    padding: 12px;
+    background: #f0f9ff;
+    border: 1px solid #bae0ff;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #1f2937;
+}
+
+.ec-weight-sum {
+    font-weight: 600;
+    color: #1890ff;
+}
+
+.ec-weight-sum.invalid {
+    color: #f5222d;
+}
+
+.ec-weight-hint {
+    font-size: 13px;
+    color: #f5222d;
+    margin-left: auto;
+}
+
+.ec-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.ec-cancel-btn,
+.ec-save-btn {
+    padding: 8px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+}
+
+.ec-cancel-btn {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    color: #374151;
+}
+
+.ec-cancel-btn:hover {
+    border-color: #1890ff;
+    color: #1890ff;
+}
+
+.ec-save-btn {
+    background: #1890ff;
+    color: #ffffff;
+}
+
+.ec-save-btn:hover {
+    background: #40a9ff;
+}
+
+.ec-save-btn:disabled {
+    background: #a0cfff;
+    cursor: not-allowed;
+}
+
+/* List view styles */
+.ec-add-btn {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 4px;
+    background: #1890ff;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.ec-add-btn:hover {
+    background: #40a9ff;
+}
+
+.ec-back-btn {
+    padding: 8px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #374151;
+}
+
+.ec-back-btn:hover {
+    border-color: #1890ff;
+    color: #1890ff;
+}
+
+.ec-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.ec-table th,
+.ec-table td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    color: #374151;
+    vertical-align: top;
+}
+
+.ec-table th {
+    background: #f0f2f5;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.ec-table tr:hover {
+    background: #fafbfc;
+}
+
+.ec-table .ec-empty {
+    text-align: center;
+    color: #6b7280;
+    padding: 48px;
+}

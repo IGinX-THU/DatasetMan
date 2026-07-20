@@ -54,9 +54,9 @@ class MenuPermission {
         // 根据角色定义可访问的菜单区域
         const menuPermissions = {
             // ADMIN - 所有菜单区域
-            'ADMIN': ['data', 'model', 'schedule', 'analysis', 'user', 'tool', 'settings', 'help'],
+            'ADMIN': ['data', 'model', 'schedule', 'analysis', 'quality', 'user', 'tool', 'settings', 'help'],
             // DATA_ENGINEER - 含「用户」父菜单；其中「用户管理」子项仅管理员可见，由 applyUserDropdownSubmenuVisibility 控制
-            'DATA_ENGINEER': ['data', 'model', 'schedule', 'analysis', 'user', 'tool', 'settings', 'help']
+            'DATA_ENGINEER': ['data', 'model', 'schedule', 'analysis', 'quality', 'user', 'tool', 'settings', 'help']
         };
 
         return menuPermissions[this.userRole]?.includes(menuArea) || false;
@@ -93,6 +93,7 @@ class MenuPermission {
             'scheduleDropdown': 'schedule',
             'analysisDropdown': 'analysis',
             'userDropdown': 'user',
+            'qualityDropdown': 'quality',
             'toolDropdown': 'tool',
             'settingsDropdown': 'settings',
             'helpDropdown': 'help'
@@ -168,7 +169,7 @@ class MenuPermission {
 
     // 获取可访问的菜单区域
     getAccessibleMenuAreas() {
-        const allAreas = ['data', 'model', 'schedule', 'analysis', 'user', 'tool', 'window', 'help'];
+        const allAreas = ['data', 'model', 'schedule', 'analysis', 'quality', 'user', 'tool', 'window', 'help'];
         return allAreas.filter(area => this.hasMenuPermission(area));
     }
 }

@@ -160,6 +160,22 @@ const MENU_ID_MAP = {
     'menu-job-management': {
         text: 'Transform任务管理',
         action: 'showTransformJobManagement'
+    },
+    'menu-evaluation-criteria': {
+        text: '评价准则',
+        action: 'showEvaluationCriteria'
+    },
+    'menu-quality-assessment': {
+        text: '质量测评',
+        action: 'showQualityAssessment'
+    },
+    'btn-evaluation-criteria': {
+        text: '准则',
+        action: 'showEvaluationCriteria'
+    },
+    'btn-quality-assessment': {
+        text: '测评',
+        action: 'showQualityAssessment'
     }
 };
 

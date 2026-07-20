@@ -1,0 +1,150 @@
+<div class="parsing-rules">
+    <!-- 列表页 -->
+    <div id="ecListView" class="ec-view">
+        <div class="parsing-filter-card">
+            <div class="filter-header">筛选</div>
+            <div class="filter-rows">
+                <div class="filter-row">
+                    <div class="filter-field">
+                        <span class="filter-label">准则名称</span>
+                        <input class="filter-input" type="text" placeholder="请输入准则名称" id="ecFilterName" />
+                    </div>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <div class="filter-spacer"></div>
+                <button class="filter-btn outline" type="button" id="ecResetFilters">重置</button>
+                <button class="filter-btn solid" type="button" id="ecApplyFilters">查询</button>
+            </div>
+        </div>
+
+        <div class="parsing-table-card">
+            <div class="table-toolbar">
+                <button class="toolbar-btn green" type="button" id="ecAddBtn">新增</button>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>名称</th>
+                            <th>描述</th>
+                            <th>完整性</th>
+                            <th>一致性</th>
+                            <th>时效性</th>
+                            <th>有效性</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ecTableBody">
+                        <tr>
+                            <td colspan="7" class="ec-empty">暂无评价准则，请点击"新增"添加。</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <common-pagination id="ecPagination"></common-pagination>
+        </div>
+    </div>
+
+    <!-- 新增/编辑弹窗 -->
+    <div class="modal-mask" id="ecFormModal" hidden>
+        <div class="modal">
+            <div class="modal-header">
+                <span id="ecModalTitle">新增评价准则</span>
+                <button class="modal-close" id="ecModalClose">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="ecForm" class="ec-form">
+                <input type="hidden" id="ecEditId">
+                <div class="ec-form-row">
+                    <label for="ecName">名称</label>
+                    <input type="text" id="ecName" name="name" value="dataset01_DQI" placeholder="请输入准则名称" required>
+                </div>
+                <div class="ec-form-row">
+                    <label for="ecDescription">描述</label>
+                    <input type="text" id="ecDescription" name="description" placeholder="请输入描述">
+                </div>
+
+                <div class="ec-section-title">权重与 Transform 编排绑定</div>
+
+                <div class="ec-dimensions">
+                    <div class="ec-dimension-row" data-dimension="qcom">
+                        <span class="ec-dimension-label">完整性</span>
+                        <div class="ec-dimension-fields">
+                            <div class="ec-field">
+                                <label>权重</label>
+                                <input type="number" step="0.01" min="0" max="1" class="ec-weight-input" data-dim="qcom" value="0.3" required>
+                            </div>
+                            <div class="ec-field ec-field-wide">
+                                <label>Transform编排</label>
+                                <select class="ec-job-select" data-dim="qcom" required>
+                                    <option value="">请选择编排</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ec-dimension-row" data-dimension="qcon">
+                        <span class="ec-dimension-label">一致性</span>
+                        <div class="ec-dimension-fields">
+                            <div class="ec-field">
+                                <label>权重</label>
+                                <input type="number" step="0.01" min="0" max="1" class="ec-weight-input" data-dim="qcon" value="0.2" required>
+                            </div>
+                            <div class="ec-field ec-field-wide">
+                                <label>Transform编排</label>
+                                <select class="ec-job-select" data-dim="qcon" required>
+                                    <option value="">请选择编排</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ec-dimension-row" data-dimension="qtim">
+                        <span class="ec-dimension-label">时效性</span>
+                        <div class="ec-dimension-fields">
+                            <div class="ec-field">
+                                <label>权重</label>
+                                <input type="number" step="0.01" min="0" max="1" class="ec-weight-input" data-dim="qtim" value="0.2" required>
+                            </div>
+                            <div class="ec-field ec-field-wide">
+                                <label>Transform编排</label>
+                                <select class="ec-job-select" data-dim="qtim" required>
+                                    <option value="">请选择编排</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ec-dimension-row" data-dimension="qval">
+                        <span class="ec-dimension-label">有效性</span>
+                        <div class="ec-dimension-fields">
+                            <div class="ec-field">
+                                <label>权重</label>
+                                <input type="number" step="0.01" min="0" max="1" class="ec-weight-input" data-dim="qval" value="0.3" required>
+                            </div>
+                            <div class="ec-field ec-field-wide">
+                                <label>Transform编排</label>
+                                <select class="ec-job-select" data-dim="qval" required>
+                                    <option value="">请选择编排</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ec-weight-summary">
+                    <span>权重合计：</span>
+                    <span id="ecWeightSum" class="ec-weight-sum">1.00</span>
+                    <span id="ecWeightHint" class="ec-weight-hint"></span>
+                </div>
+
+                <div class="ec-form-actions">
+                    <button type="button" class="modal-btn" id="ecCancelBtn">取消</button>
+                    <button type="submit" class="modal-btn primary" id="ecSaveBtn">保存</button>
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
+</div>

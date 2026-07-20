@@ -124,6 +124,18 @@
     <path d="M22 11V3h-7v3H9V3H2v8h7V8h2v10h4v3h7v-8h-7v3h-2V8h2v3z" fill="#FF5722"/>
     <path d="M22 11V3h-7v3H9V3H2v8h7V8h2v10h4v3h7v-8h-7v3h-2V8h2v3z" fill="none" stroke="#E64A19" stroke-width="0.5"/>
   </symbol>
+
+  <!-- 准则图标 - Material Design List/Checklist -->
+  <symbol id="icon-criteria" viewBox="0 0 24 24">
+    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM7 17H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V7h2v2zm12 8H9v-2h10v2zm0-4H9v-2h10v2zm0-4H9V7h10v2z" fill="#2196F3"/>
+    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM7 17H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V7h2v2zm12 8H9v-2h10v2zm0-4H9v-2h10v2zm0-4H9V7h10v2z" fill="none" stroke="#1976D2" stroke-width="0.5"/>
+  </symbol>
+
+  <!-- 测评图标 - Material Design Star/Assessment -->
+  <symbol id="icon-assessment" viewBox="0 0 24 24">
+    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill="#FFC107"/>
+    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill="none" stroke="#F57F17" stroke-width="0.5"/>
+  </symbol>
 </svg>
 
 <!-- 顶部导航栏（修复下拉标签嵌套，确保点击区域完整） -->
@@ -157,6 +169,13 @@
                 <ul class="dropdown-menu">
                     <li id="menu-transform-management">Transform托管</li>
                     <li id="menu-udf-management">UDF托管</li>
+                </ul>
+            </span>
+        <span class="tab dropdown" id="qualityDropdown">
+                <span class="dropdown-trigger">测评</span>
+                <ul class="dropdown-menu">
+                    <li id="menu-evaluation-criteria">评价准则</li>
+                    <li id="menu-quality-assessment">质量测评</li>
                 </ul>
             </span>
         <span class="tab dropdown" id="userDropdown">
@@ -287,6 +306,22 @@
                 </button>
             </div>
         </div>
+
+        <div class="ribbon-separator"></div>
+
+        <div class="ribbon-group">
+            <div class="ribbon-group-title">质量评价</div>
+            <div class="ribbon-buttons">
+                <button class="ribbon-btn" id="btn-evaluation-criteria">
+                    <svg class="ribbon-btn-icon"><use href="#icon-criteria"></use></svg>
+                    <span class="ribbon-btn-text">准则</span>
+                </button>
+                <button class="ribbon-btn" id="btn-quality-assessment">
+                    <svg class="ribbon-btn-icon"><use href="#icon-assessment"></use></svg>
+                    <span class="ribbon-btn-text">测评</span>
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -344,6 +379,10 @@
             <key-value-viewer id="keyValueViewer"></key-value-viewer>
             <!-- 半结构化文档查看器组件 -->
             <semi-structured-viewer id="semiStructuredViewer"></semi-structured-viewer>
+            <!-- 评价准则组件 -->
+            <evaluation-criteria id="evaluationCriteria"></evaluation-criteria>
+            <!-- 质量测评组件 -->
+            <quality-assessment id="qualityAssessment"></quality-assessment>
             <!-- 用户管理组件 -->
             <user-management id="userManagement"></user-management>
             <permission-management id="permissionManagement"></permission-management>
@@ -389,6 +428,8 @@
 <script src="./components/permission-management/permission-management.js"></script>
 <script src="./components/change-password/change-password.js"></script>
 <script src="./components/user-manual/user-manual.js"></script>
+<script src="./components/evaluation-criteria/evaluation-criteria.js"></script>
+<script src="./components/quality-assessment/quality-assessment.js"></script>
 <script src="./lib/jszip/jszip.min.js"></script>
 <script src="./lib/docx-preview/docx-preview.min.js"></script>
 <script src="./js/desktop-shell.js"></script>

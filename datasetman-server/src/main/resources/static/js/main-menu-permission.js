@@ -83,6 +83,7 @@ function checkMenuItemPermission(dropdownId, menuText) {
         'scheduleDropdown': 'schedule',
         'analysisDropdown': 'analysis',
         'userDropdown': 'user',
+        'qualityDropdown': 'quality',
         'toolDropdown': 'tool',
         'settingsDropdown': 'settings',
         'helpDropdown': 'help'

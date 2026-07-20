@@ -79,7 +79,9 @@ document.addEventListener('DOMContentLoaded', function() {
             'fileSystemBrowser',
             'keyValueViewer',
             'semiStructuredViewer',
-            'userManual'
+            'userManual',
+            'evaluationCriteria',
+            'qualityAssessment'
         ];
         
         components.forEach(componentId => {
@@ -491,6 +493,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'showTransformJobManagement':
                         console.log('Transform任务管理菜单被点击');
                         showComponent('transformJob');
+                        break;
+                    case 'showEvaluationCriteria':
+                        console.log('评价准则菜单被点击');
+                        showComponent('evaluationCriteria');
+                        break;
+                    case 'showQualityAssessment':
+                        console.log('质量测评菜单被点击');
+                        showComponent('qualityAssessment');
                         break;
                     case 'showVisualAnalysis':
                         console.log('数值与曲线分析菜单被点击');
@@ -934,6 +944,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'showUdfManagement':
                         showComponent('udfManagement');
                         break;
+                    case 'showEvaluationCriteria':
+                        showComponent('evaluationCriteria');
+                        break;
+                    case 'showQualityAssessment':
+                        showComponent('qualityAssessment');
+                        break;
                     default:
                         console.warn(`未知的按钮动作: ${action}`);
                 }
@@ -942,6 +958,22 @@ document.addEventListener('DOMContentLoaded', function() {
             console.warn(`未找到按钮ID ${btnId} 的对应动作`);
         }
     });
+
+    // 显式绑定质量评价 ribbon 按钮，避免通用绑定遗漏
+    const btnEvalCriteria = document.getElementById('btn-evaluation-criteria');
+    if (btnEvalCriteria) {
+        btnEvalCriteria.addEventListener('click', () => {
+            console.log('btn-evaluation-criteria 被点击');
+            showComponent('evaluationCriteria');
+        });
+    }
+    const btnQualityAssessmentRibbon = document.getElementById('btn-quality-assessment');
+    if (btnQualityAssessmentRibbon) {
+        btnQualityAssessmentRibbon.addEventListener('click', () => {
+            console.log('btn-quality-assessment 被点击');
+            showComponent('qualityAssessment');
+        });
+    }
 
     // 6.5 监听 dataset-history 和 dataset-dialog 组件的事件
     const datasetHistory = document.getElementById('datasetHistory');

@@ -1,0 +1,73 @@
+<div class="parsing-rules">
+    <!-- 查询任务列表 -->
+    <div id="qaListView" class="qa-view">
+        <div class="parsing-filter-card">
+            <div class="filter-header">筛选</div>
+            <div class="filter-rows">
+                <div class="filter-row">
+                    <div class="filter-field">
+                        <span class="filter-label">准则名称</span>
+                        <input class="filter-input" type="text" placeholder="请输入准则名称" id="qaFilterName" />
+                    </div>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <div class="filter-spacer"></div>
+                <button class="filter-btn outline" type="button" id="qaResetFilters">重置</button>
+                <button class="filter-btn solid" type="button" id="qaApplyFilters">查询</button>
+            </div>
+        </div>
+
+        <div class="parsing-table-card">
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>准则名称</th>
+                            <th>提交时间</th>
+                            <th>完整性</th>
+                            <th>一致性</th>
+                            <th>时效性</th>
+                            <th>有效性</th>
+                            <th>DQI</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="qaTableBody">
+                        <tr>
+                            <td colspan="8" class="qa-empty">暂无测评记录，请在"评价准则"列表点击"提交任务"。</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <common-pagination id="qaPagination"></common-pagination>
+        </div>
+    </div>
+
+    <!-- 综合质量得分详情 -->
+    <div id="qaDetailView" class="qa-view" style="display: none;">
+            <input type="hidden" id="qaRecordId">
+            <div class="qa-form-row">
+                <label>评价准则</label>
+                <div id="qaCriteriaName" class="qa-readonly-value">-</div>
+            </div>
+            <div class="qa-summary" id="qaCriteriaDescription"></div>
+
+            <div class="qa-section-title">四维度 Transform 任务</div>
+            <div class="qa-dim-tasks" id="qaDimensionTasks"></div>
+
+            <div class="qa-dqi-card" id="qaDqiCard" style="display: none;">
+                <div>
+                    <div class="qa-dqi-label">综合质量指数 DQI</div>
+                    <div class="qa-dqi-value" id="qaDqiValue">-</div>
+                </div>
+                <div class="qa-status" id="qaStatus">-</div>
+            </div>
+
+            <div class="qa-form-actions">
+                <button type="button" class="qa-back-btn" id="qaBackBtn">返回列表</button>
+                <button type="button" class="qa-query-btn" id="qaQueryBtn">查询任务</button>
+                <button type="button" class="qa-save-btn" id="qaSaveBtn">保存得分</button>
+            </div>
+        </div>
+</div>
