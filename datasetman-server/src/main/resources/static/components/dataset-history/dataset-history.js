@@ -1732,7 +1732,7 @@ class DatasetHistory extends HTMLElement {
 
         // 获取父节点名称（数据集名）
         const parentNode = activeNode.closest('.tree-children')?.parentElement;
-        const parentSpan = parentNode?.querySelector('span');
+        const parentSpan = parentNode?.querySelector('.tree-node-text');
         const datasetName = parentSpan?.textContent?.trim() || '未命名';
         console.log('父节点名称（数据集名）:', datasetName);
 

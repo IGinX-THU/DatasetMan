@@ -664,7 +664,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const activeNode = rightSidebarTree.querySelector('.tree-node.active');
         if (!activeNode) return null;
         
-        const span = activeNode.querySelector('span');
+        const span = activeNode.querySelector('.tree-node-text');
         if (!span) return null;
         
         const nodeName = span.textContent.trim();
