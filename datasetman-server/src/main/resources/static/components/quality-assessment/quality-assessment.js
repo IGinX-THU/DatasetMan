@@ -317,6 +317,8 @@ class QualityAssessment extends HTMLElement {
 
         const jobIds = this.ensureParsed(record, 'jobIds');
         const dims = ['qcom', 'qcon', 'qtim', 'qval'];
+        let successCount = 0;
+        let failCount = 0;
         for (const dim of dims) {
             const jobId = jobIds[dim] || '';
             if (!jobId) continue;
@@ -329,13 +331,25 @@ class QualityAssessment extends HTMLElement {
                     statusEl.textContent = text;
                     statusEl.className = 'qa-dim-info-value qa-dim-status ' + this.getStatusClass(code);
                 }
+                if (detail) { successCount++; } else { failCount++; }
             } catch (error) {
                 console.warn(`查询${this.dimensionLabels[dim]}任务失败:`, error);
+                failCount++;
                 const statusEl = this.querySelector(`#qaStatus_${dim}`);
                 if (statusEl) {
                     statusEl.textContent = '查询失败';
                     statusEl.className = 'qa-dim-info-value qa-dim-status qa-status-fail';
                 }
+            }
+        }
+
+        if (window.CommonUtils && window.CommonUtils.showToast) {
+            if (failCount > 0) {
+                window.CommonUtils.showToast(`查询完成：${successCount}个成功，${failCount}个失败`, 'warning');
+            } else if (successCount > 0) {
+                window.CommonUtils.showToast('任务查询完成', 'success');
+            } else {
+                window.CommonUtils.showToast('暂无可查询的任务', 'info');
             }
         }
     }
@@ -478,7 +492,7 @@ class QualityAssessment extends HTMLElement {
                 score: scores[dim]
             });
             const recordToSave = {
-                id: record.id,
+                id: record.id || record.createTime,
                 criteriaId: record.criteriaId,
                 criteriaName: record.criteriaName,
                 description: record.description || '',

@@ -1850,11 +1850,9 @@ class DatasetHistory extends HTMLElement {
             const result = await window.AppConfig.delete('dataset', 'delete', { path });
 
             if (result.success) {
-                this.dispatchEvent(new CustomEvent('show-toast', {
-                    bubbles: true,
-                    composed: true,
-                    detail: { message: '数据集删除成功', type: 'success' }
-                }));
+                if (window.CommonUtils && window.CommonUtils.showToast) {
+                    window.CommonUtils.showToast('数据集删除成功', 'success');
+                }
 
                 this.dispatchEvent(new CustomEvent('dataset-deleted', {
                     bubbles: true,
@@ -1869,11 +1867,9 @@ class DatasetHistory extends HTMLElement {
 
         } catch (error) {
             console.error('删除数据集失败:', error);
-            this.dispatchEvent(new CustomEvent('show-toast', {
-                bubbles: true,
-                composed: true,
-                detail: { message: '删除失败: ' + error.message, type: 'error' }
-            }));
+            if (window.CommonUtils && window.CommonUtils.showToast) {
+                window.CommonUtils.showToast('删除失败: ' + error.message, 'error');
+            }
         }
     }
 }

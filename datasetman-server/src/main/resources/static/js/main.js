@@ -1006,12 +1006,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (datasetDialog) {
         // 监听保存成功事件
-        datasetDialog.addEventListener('dataset-saved', function(e) {
+        datasetDialog.addEventListener('dataset-saved', async function(e) {
             console.log('数据集保存成功:', e.detail);
             showToast(e.detail.mode === 'create' ? '数据集创建成功' : '数据集保存成功', 'success');
             // 刷新数据源树以更新右侧数据集列表
             if (window.loadDataSourceTree) {
-                window.loadDataSourceTree();
+                await window.loadDataSourceTree();
+            }
+            // 自动打开数据集详情
+            const savedData = e.detail.data;
+            const storagePath = savedData?.data?.storagePath;
+            if (storagePath) {
+                const datasetHistory = document.getElementById('datasetHistory');
+                if (datasetHistory) {
+                    clearWorkspace();
+                    datasetHistory.show(storagePath);
+                }
             }
         });
     }

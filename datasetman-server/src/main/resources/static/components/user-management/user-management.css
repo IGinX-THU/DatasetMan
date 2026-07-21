@@ -7,3 +7,8 @@
 :host .modal {
     width: min(520px, 92vw);
 }
+
+.default-user-hint {
+    color: #8a8f99;
+    font-size: 13px;
+}

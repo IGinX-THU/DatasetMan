@@ -317,6 +317,7 @@ class UserManagement extends HTMLElement {
         }
 
         this.users.forEach((user) => {
+            const isDefaultAdmin = user.username === 'admin';
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${this.escapeHtml(user.username)}</td>
@@ -325,13 +326,17 @@ class UserManagement extends HTMLElement {
                 <td>${this.formatTimestamp(user.timestamp)}</td>
                 <td>
                     <div class="action-buttons">
+                        ${isDefaultAdmin ? '<span class="default-user-hint">默认用户</span>' : `
                         <button type="button" class="action-btn edit" data-username="${this.escapeHtml(user.username)}">编辑</button>
                         <button type="button" class="action-btn delete" data-username="${this.escapeHtml(user.username)}">删除</button>
+                        `}
                     </div>
                 </td>
             `;
-            row.querySelector('.action-btn.edit')?.addEventListener('click', () => this.editUser(user.username));
-            row.querySelector('.action-btn.delete')?.addEventListener('click', () => this.deleteUser(user.username));
+            if (!isDefaultAdmin) {
+                row.querySelector('.action-btn.edit')?.addEventListener('click', () => this.editUser(user.username));
+                row.querySelector('.action-btn.delete')?.addEventListener('click', () => this.deleteUser(user.username));
+            }
             tableBody.appendChild(row);
         });
     }

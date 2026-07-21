@@ -148,6 +148,7 @@ class EvaluationCriteria extends HTMLElement {
     }
 
     async showListView() {
+        await this.loadJobsFromAPI();
         await this.loadCriteriaList();
         this.renderList();
     }
@@ -163,13 +164,16 @@ class EvaluationCriteria extends HTMLElement {
         const titleEl = this.shadowRoot.querySelector('#ecModalTitle');
         if (titleEl) titleEl.textContent = record ? '编辑评价准则' : '新增评价准则';
 
-        this.editingId = record ? record.id : null;
+        this.editingId = record ? (record.id || record.createTime) : null;
         const editIdInput = this.shadowRoot.querySelector('#ecEditId');
         if (editIdInput) editIdInput.value = this.editingId || '';
 
         const nameInput = this.shadowRoot.querySelector('#ecName');
         const descInput = this.shadowRoot.querySelector('#ecDescription');
-        if (nameInput) nameInput.value = record ? record.name || '' : '';
+        if (nameInput) {
+            nameInput.value = record ? record.name || '' : '';
+            nameInput.readOnly = !!record;
+        }
         if (descInput) descInput.value = record ? record.description || '' : '';
 
         const dims = ['qcom', 'qcon', 'qtim', 'qval'];
@@ -239,11 +243,9 @@ class EvaluationCriteria extends HTMLElement {
         });
 
         this.shadowRoot.querySelectorAll('.action-btn.delete').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
+            btn.addEventListener('click', (e) => {
                 const index = parseInt(e.target.dataset.index);
-                if (confirm('确定删除该评价准则吗？')) {
-                    await this.deleteCriteria(this.criteriaList[index].id);
-                }
+                this.showDeleteConfirm(this.criteriaList[index]);
             });
         });
 
@@ -259,6 +261,99 @@ class EvaluationCriteria extends HTMLElement {
                 const index = parseInt(e.target.dataset.index);
                 this.navigateToQualityAssessment(this.criteriaList[index]);
             });
+        });
+    }
+
+    showDeleteConfirm(criteria) {
+        const dialogHtml = `
+            <div class="dialog-mask" style="
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            ">
+                <div class="dialog-content" style="
+                    background: white;
+                    border-radius: 8px;
+                    padding: 24px;
+                    max-width: 400px;
+                    width: 90%;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                ">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2329;">确认删除</h3>
+                    <p style="margin: 0 0 24px 0; color: #646a73; line-height: 1.5;">
+                        确定要删除准则 "${criteria.name || ''}" 吗？
+                    </p>
+                    <div class="dialog-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button type="button" class="cancel-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #c9cdd4;
+                            border-radius: 4px;
+                            background: white;
+                            color: #1f2329;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">取消</button>
+                        <button type="button" class="confirm-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #ff4d4f;
+                            border-radius: 4px;
+                            background: #ff4d4f;
+                            color: white;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">确认删除</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const dialog = document.createElement('div');
+        dialog.innerHTML = dialogHtml;
+        document.body.appendChild(dialog);
+
+        const dialogMask = dialog.querySelector('.dialog-mask');
+        const dialogContent = dialog.querySelector('.dialog-content');
+        const cancelBtn = dialog.querySelector('.cancel-btn');
+        const confirmBtn = dialog.querySelector('.confirm-btn');
+
+        if (dialogContent) {
+            dialogContent.addEventListener('click', (e) => e.stopPropagation());
+        }
+
+        const closeDialog = () => {
+            try {
+                if (dialog && dialog.parentNode) {
+                    dialog.parentNode.removeChild(dialog);
+                }
+            } catch (e) {
+                console.error('关闭弹窗失败:', e);
+            }
+        };
+
+        if (dialogMask) {
+            dialogMask.addEventListener('click', closeDialog);
+        }
+
+        cancelBtn.addEventListener('click', closeDialog);
+
+        confirmBtn.addEventListener('click', async () => {
+            if (confirmBtn.disabled) return;
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = '删除中...';
+            confirmBtn.style.opacity = '0.6';
+            confirmBtn.style.cursor = 'not-allowed';
+            try {
+                const id = criteria.id || criteria.createTime;
+                await this.deleteCriteria(id);
+            } catch (error) {
+                console.error('删除评价准则失败:', error);
+            } finally {
+                closeDialog();
+            }
         });
     }
 
