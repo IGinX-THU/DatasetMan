@@ -1,0 +1,29 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------< com.tsinghua:datasetman-client-go >------------------
+[INFO] Building datasetman Go Client 1.0.0
+[INFO]   from interpolated-pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- invoker:3.6.0:run (build-sdks) @ datasetman-client-go ---
+[INFO] No projects were selected for execution.
+[INFO] 
+[INFO] --- antrun:3.1.0:run (thrift-go-generate) @ datasetman-client-go ---
+[INFO] Executing tasks
+[WARNING]      [echo] Generating Go Thrift SDK...
+[INFO]    [delete] Deleting directory C:\Users\cbalt\IdeaProjects\DatasetMan\client-go\target\thrift-gen
+[INFO]     [mkdir] Created dir: C:\Users\cbalt\IdeaProjects\DatasetMan\client-go\target\thrift-gen
+[INFO]    [delete] Deleting directory C:\Users\cbalt\IdeaProjects\DatasetMan\client-go\tsinghua\api
+[INFO]     [mkdir] Created dir: C:\Users\cbalt\IdeaProjects\DatasetMan\client-go\tsinghua\api
+[INFO]      [copy] Copying 4 files to C:\Users\cbalt\IdeaProjects\DatasetMan\client-go\tsinghua\api
+[WARNING]      [echo] Go Thrift SDK generated successfully.
+[INFO] Executed tasks
+[INFO] 
+[INFO] --- install:3.1.4:install (default-install) @ datasetman-client-go ---
+[INFO] Installing C:\Users\cbalt\IdeaProjects\DatasetMan\client-go\interpolated-pom.xml to C:\Users\cbalt\.m2\repository\com\tsinghua\datasetman-client-go\1.0.0\datasetman-client-go-1.0.0.pom
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  38.838 s
+[INFO] Finished at: 2026-07-22T13:28:27+08:00
+[INFO] ------------------------------------------------------------------------

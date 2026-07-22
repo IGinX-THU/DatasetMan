@@ -86,6 +86,16 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('  Result queryDataPermissions(DataPermissionQueryRequest request)')
     print('  Result countDataPermissions(DataPermissionQueryRequest request)')
     print('  Result updateDataPermission(DataPermissionUpdateRequest request)')
+    print('  Result saveEvaluationCriteria(EvaluationCriteriaRequest request)')
+    print('  Result queryEvaluationCriteria(EvaluationCriteriaQueryRequest request)')
+    print('  Result countEvaluationCriteria(EvaluationCriteriaQueryRequest request)')
+    print('  Result getEvaluationCriteria(i64 id)')
+    print('  Result deleteEvaluationCriteria(i64 id)')
+    print('  Result saveQualityAssessment(QualityAssessmentRequest request)')
+    print('  Result queryQualityAssessments(QualityAssessmentQueryRequest request)')
+    print('  Result countQualityAssessments(QualityAssessmentQueryRequest request)')
+    print('  Result getQualityAssessment(i64 id)')
+    print('  Result deleteQualityAssessment(i64 id)')
     print('')
     sys.exit(0)
 
@@ -536,6 +546,66 @@ elif cmd == 'updateDataPermission':
         print('updateDataPermission requires 1 args')
         sys.exit(1)
     pp.pprint(client.updateDataPermission(eval(args[0]),))
+
+elif cmd == 'saveEvaluationCriteria':
+    if len(args) != 1:
+        print('saveEvaluationCriteria requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.saveEvaluationCriteria(eval(args[0]),))
+
+elif cmd == 'queryEvaluationCriteria':
+    if len(args) != 1:
+        print('queryEvaluationCriteria requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.queryEvaluationCriteria(eval(args[0]),))
+
+elif cmd == 'countEvaluationCriteria':
+    if len(args) != 1:
+        print('countEvaluationCriteria requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.countEvaluationCriteria(eval(args[0]),))
+
+elif cmd == 'getEvaluationCriteria':
+    if len(args) != 1:
+        print('getEvaluationCriteria requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.getEvaluationCriteria(eval(args[0]),))
+
+elif cmd == 'deleteEvaluationCriteria':
+    if len(args) != 1:
+        print('deleteEvaluationCriteria requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.deleteEvaluationCriteria(eval(args[0]),))
+
+elif cmd == 'saveQualityAssessment':
+    if len(args) != 1:
+        print('saveQualityAssessment requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.saveQualityAssessment(eval(args[0]),))
+
+elif cmd == 'queryQualityAssessments':
+    if len(args) != 1:
+        print('queryQualityAssessments requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.queryQualityAssessments(eval(args[0]),))
+
+elif cmd == 'countQualityAssessments':
+    if len(args) != 1:
+        print('countQualityAssessments requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.countQualityAssessments(eval(args[0]),))
+
+elif cmd == 'getQualityAssessment':
+    if len(args) != 1:
+        print('getQualityAssessment requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.getQualityAssessment(eval(args[0]),))
+
+elif cmd == 'deleteQualityAssessment':
+    if len(args) != 1:
+        print('deleteQualityAssessment requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.deleteQualityAssessment(eval(args[0]),))
 
 else:
     print('Unrecognized method %s' % cmd)

@@ -64,6 +64,12 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
     @Autowired
     private ApiGenerationService apiGenerationService;
 
+    @Autowired
+    private EvaluationCriteriaService evaluationCriteriaService;
+
+    @Autowired
+    private QualityAssessmentService qualityAssessmentService;
+
     // ========== Data Source Interface - Match DataSourceController ==========
 
     @Override
@@ -1281,6 +1287,279 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
         }
         if (thriftRequest.isSetSortDirection()) {
             dto.setSortDirection(thriftRequest.getSortDirection());
+        }
+        return dto;
+    }
+
+    // ========== Evaluation Criteria Interface ==========
+
+    @Override
+    public com.tsinghua.thrift.api.Result saveEvaluationCriteria(com.tsinghua.thrift.api.EvaluationCriteriaRequest request) throws TException {
+        try {
+            log.info("Thrift RPC: Save evaluation criteria: {}", request.getName());
+            com.tsinghua.dto.EvaluationCriteriaRequest dto = convertToEvaluationCriteriaRequest(request);
+            com.tsinghua.entity.EvaluationCriteriaEntity entity = evaluationCriteriaService.saveCriteria(dto);
+            String jsonData = convertEntityToJson(entity);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "保存成功");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Save evaluation criteria failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Save failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result queryEvaluationCriteria(com.tsinghua.thrift.api.EvaluationCriteriaQueryRequest request) throws TException {
+        try {
+            log.info("Thrift RPC: Query evaluation criteria");
+            com.tsinghua.dto.EvaluationCriteriaQueryRequest dto = convertToEvaluationCriteriaQueryRequest(request);
+            java.util.List<com.tsinghua.entity.EvaluationCriteriaEntity> list = evaluationCriteriaService.queryCriteria(dto);
+            String jsonData = convertListToJson(list);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Query evaluation criteria failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result countEvaluationCriteria(com.tsinghua.thrift.api.EvaluationCriteriaQueryRequest request) throws TException {
+        try {
+            log.info("Thrift RPC: Count evaluation criteria");
+            com.tsinghua.dto.EvaluationCriteriaQueryRequest dto = convertToEvaluationCriteriaQueryRequest(request);
+            Object count = evaluationCriteriaService.countCriteria(dto);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Count successful");
+            result.setData(String.valueOf(count));
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Count evaluation criteria failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Count failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result getEvaluationCriteria(long id) throws TException {
+        try {
+            log.info("Thrift RPC: Get evaluation criteria: {}", id);
+            com.tsinghua.entity.EvaluationCriteriaEntity entity = evaluationCriteriaService.queryById(id);
+            String jsonData = convertEntityToJson(entity);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Get evaluation criteria failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result deleteEvaluationCriteria(long id) throws TException {
+        try {
+            log.info("Thrift RPC: Delete evaluation criteria: {}", id);
+            evaluationCriteriaService.deleteCriteria(id);
+            return new com.tsinghua.thrift.api.Result(true, "删除成功");
+        } catch (Exception e) {
+            log.error("Thrift RPC: Delete evaluation criteria failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Delete failed: " + e.getMessage());
+        }
+    }
+
+    // ========== Quality Assessment Interface ==========
+
+    @Override
+    public com.tsinghua.thrift.api.Result saveQualityAssessment(com.tsinghua.thrift.api.QualityAssessmentRequest request) throws TException {
+        try {
+            log.info("Thrift RPC: Save quality assessment");
+            com.tsinghua.dto.QualityAssessmentRequest dto = convertToQualityAssessmentRequest(request);
+            com.tsinghua.entity.QualityAssessmentEntity entity = qualityAssessmentService.saveAssessment(dto);
+            String jsonData = convertEntityToJson(entity);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "保存成功");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Save quality assessment failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Save failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result queryQualityAssessments(com.tsinghua.thrift.api.QualityAssessmentQueryRequest request) throws TException {
+        try {
+            log.info("Thrift RPC: Query quality assessments");
+            com.tsinghua.dto.QualityAssessmentQueryRequest dto = convertToQualityAssessmentQueryRequest(request);
+            java.util.List<com.tsinghua.entity.QualityAssessmentEntity> list = qualityAssessmentService.queryAssessments(dto);
+            String jsonData = convertListToJson(list);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Query quality assessments failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result countQualityAssessments(com.tsinghua.thrift.api.QualityAssessmentQueryRequest request) throws TException {
+        try {
+            log.info("Thrift RPC: Count quality assessments");
+            com.tsinghua.dto.QualityAssessmentQueryRequest dto = convertToQualityAssessmentQueryRequest(request);
+            Object count = qualityAssessmentService.countAssessments(dto);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Count successful");
+            result.setData(String.valueOf(count));
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Count quality assessments failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Count failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result getQualityAssessment(long id) throws TException {
+        try {
+            log.info("Thrift RPC: Get quality assessment: {}", id);
+            com.tsinghua.entity.QualityAssessmentEntity entity = qualityAssessmentService.queryById(id);
+            String jsonData = convertEntityToJson(entity);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Get quality assessment failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result deleteQualityAssessment(long id) throws TException {
+        try {
+            log.info("Thrift RPC: Delete quality assessment: {}", id);
+            qualityAssessmentService.deleteAssessment(id);
+            return new com.tsinghua.thrift.api.Result(true, "删除成功");
+        } catch (Exception e) {
+            log.error("Thrift RPC: Delete quality assessment failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Delete failed: " + e.getMessage());
+        }
+    }
+
+    // ========== Conversion utility methods for evaluation/assessment ==========
+
+    private com.tsinghua.dto.DataQualityDimension convertToDataQualityDimension(com.tsinghua.thrift.api.DataQualityDimension thriftDim) {
+        if (thriftDim == null) {
+            return null;
+        }
+        com.tsinghua.dto.DataQualityDimension dto = new com.tsinghua.dto.DataQualityDimension();
+        if (thriftDim.isSetWeight()) {
+            dto.setWeight(thriftDim.getWeight());
+        }
+        if (thriftDim.isSetTransformId()) {
+            dto.setTransformId(thriftDim.getTransformId());
+        }
+        if (thriftDim.isSetJobId()) {
+            dto.setJobId(thriftDim.getJobId());
+        }
+        if (thriftDim.isSetName()) {
+            dto.setName(thriftDim.getName());
+        }
+        if (thriftDim.isSetExportFile()) {
+            dto.setExportFile(thriftDim.getExportFile());
+        }
+        if (thriftDim.isSetScore()) {
+            dto.setScore(thriftDim.getScore());
+        }
+        return dto;
+    }
+
+    private com.tsinghua.dto.EvaluationCriteriaRequest convertToEvaluationCriteriaRequest(com.tsinghua.thrift.api.EvaluationCriteriaRequest thriftRequest) {
+        com.tsinghua.dto.EvaluationCriteriaRequest dto = new com.tsinghua.dto.EvaluationCriteriaRequest();
+        if (thriftRequest.isSetId()) {
+            dto.setId(thriftRequest.getId());
+        }
+        dto.setName(thriftRequest.getName());
+        if (thriftRequest.isSetDescription()) {
+            dto.setDescription(thriftRequest.getDescription());
+        }
+        if (thriftRequest.isSetQcom()) {
+            dto.setQcom(convertToDataQualityDimension(thriftRequest.getQcom()));
+        }
+        if (thriftRequest.isSetQcon()) {
+            dto.setQcon(convertToDataQualityDimension(thriftRequest.getQcon()));
+        }
+        if (thriftRequest.isSetQtim()) {
+            dto.setQtim(convertToDataQualityDimension(thriftRequest.getQtim()));
+        }
+        if (thriftRequest.isSetQval()) {
+            dto.setQval(convertToDataQualityDimension(thriftRequest.getQval()));
+        }
+        if (thriftRequest.isSetOwner()) {
+            dto.setOwner(thriftRequest.getOwner());
+        }
+        return dto;
+    }
+
+    private com.tsinghua.dto.EvaluationCriteriaQueryRequest convertToEvaluationCriteriaQueryRequest(com.tsinghua.thrift.api.EvaluationCriteriaQueryRequest thriftRequest) {
+        com.tsinghua.dto.EvaluationCriteriaQueryRequest dto = new com.tsinghua.dto.EvaluationCriteriaQueryRequest();
+        if (thriftRequest.isSetPageNum()) {
+            dto.setPageNum(thriftRequest.getPageNum());
+        }
+        if (thriftRequest.isSetPageSize()) {
+            dto.setPageSize(thriftRequest.getPageSize());
+        }
+        if (thriftRequest.isSetName()) {
+            dto.setName(thriftRequest.getName());
+        }
+        return dto;
+    }
+
+    private com.tsinghua.dto.QualityAssessmentRequest convertToQualityAssessmentRequest(com.tsinghua.thrift.api.QualityAssessmentRequest thriftRequest) {
+        com.tsinghua.dto.QualityAssessmentRequest dto = new com.tsinghua.dto.QualityAssessmentRequest();
+        if (thriftRequest.isSetId()) {
+            dto.setId(thriftRequest.getId());
+        }
+        if (thriftRequest.isSetCriteriaId()) {
+            dto.setCriteriaId(thriftRequest.getCriteriaId());
+        }
+        if (thriftRequest.isSetCriteriaName()) {
+            dto.setCriteriaName(thriftRequest.getCriteriaName());
+        }
+        if (thriftRequest.isSetDescription()) {
+            dto.setDescription(thriftRequest.getDescription());
+        }
+        if (thriftRequest.isSetQcom()) {
+            dto.setQcom(convertToDataQualityDimension(thriftRequest.getQcom()));
+        }
+        if (thriftRequest.isSetQcon()) {
+            dto.setQcon(convertToDataQualityDimension(thriftRequest.getQcon()));
+        }
+        if (thriftRequest.isSetQtim()) {
+            dto.setQtim(convertToDataQualityDimension(thriftRequest.getQtim()));
+        }
+        if (thriftRequest.isSetQval()) {
+            dto.setQval(convertToDataQualityDimension(thriftRequest.getQval()));
+        }
+        if (thriftRequest.isSetDqi()) {
+            dto.setDqi(thriftRequest.getDqi());
+        }
+        if (thriftRequest.isSetPassed()) {
+            dto.setPassed(thriftRequest.getPassed());
+        }
+        if (thriftRequest.isSetOwner()) {
+            dto.setOwner(thriftRequest.getOwner());
+        }
+        return dto;
+    }
+
+    private com.tsinghua.dto.QualityAssessmentQueryRequest convertToQualityAssessmentQueryRequest(com.tsinghua.thrift.api.QualityAssessmentQueryRequest thriftRequest) {
+        com.tsinghua.dto.QualityAssessmentQueryRequest dto = new com.tsinghua.dto.QualityAssessmentQueryRequest();
+        if (thriftRequest.isSetPageNum()) {
+            dto.setPageNum(thriftRequest.getPageNum());
+        }
+        if (thriftRequest.isSetPageSize()) {
+            dto.setPageSize(thriftRequest.getPageSize());
+        }
+        if (thriftRequest.isSetCriteriaName()) {
+            dto.setCriteriaName(thriftRequest.getCriteriaName());
         }
         return dto;
     }

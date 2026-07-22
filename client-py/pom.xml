@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.tsinghua</groupId>
+        <artifactId>datasetman-parent</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>datasetman-client-py</artifactId>
+    <packaging>pom</packaging>
+
+    <name>datasetman Python Client</name>
+    <description>DatasetMan Python Client - Thrift generated Python code for accessing DatasetMan services</description>
+
+    <build>
+        <plugins>
+            <!-- Generate Python Thrift code via antrun -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>thrift-py-generate</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo message="Generating Python Thrift SDK..." />
+                                <delete dir="${project.build.directory}/thrift-gen" quiet="true" />
+                                <mkdir dir="${project.build.directory}/thrift-gen" />
+                                <exec executable="thrift" dir="${project.basedir}" failonerror="true">
+                                    <arg value="-gen" />
+                                    <arg value="py" />
+                                    <arg value="-out" />
+                                    <arg value="${project.build.directory}/thrift-gen" />
+                                    <arg value="../thrift/api.thrift" />
+                                </exec>
+                                <delete dir="${project.basedir}/tsinghua/api" quiet="true" />
+                                <mkdir dir="${project.basedir}/tsinghua/api" />
+                                <copy todir="${project.basedir}/tsinghua/api">
+                                    <fileset dir="${project.build.directory}/thrift-gen/tsinghua/api" />
+                                </copy>
+                                <echo message="Python Thrift SDK generated successfully." />
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

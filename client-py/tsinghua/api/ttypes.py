@@ -1570,18 +1570,20 @@ class TransformJobRequest(object):
      - exportType
      - exportFile
      - schedule
+     - owner
 
     """
     thrift_spec = None
 
 
-    def __init__(self, createTime = None, name = None, taskList = None, exportType = None, exportFile = None, schedule = None,):
+    def __init__(self, createTime = None, name = None, taskList = None, exportType = None, exportFile = None, schedule = None, owner = None,):
         self.createTime = createTime
         self.name = name
         self.taskList = taskList
         self.exportType = exportType
         self.exportFile = exportFile
         self.schedule = schedule
+        self.owner = owner
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -1628,6 +1630,11 @@ class TransformJobRequest(object):
                     self.schedule = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
+            elif fid == 7:
+                if ftype == TType.STRING:
+                    self.owner = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -1665,6 +1672,10 @@ class TransformJobRequest(object):
         if self.schedule is not None:
             oprot.writeFieldBegin('schedule', TType.STRING, 6)
             oprot.writeString(self.schedule.encode('utf-8') if sys.version_info[0] == 2 else self.schedule)
+            oprot.writeFieldEnd()
+        if self.owner is not None:
+            oprot.writeFieldBegin('owner', TType.STRING, 7)
+            oprot.writeString(self.owner.encode('utf-8') if sys.version_info[0] == 2 else self.owner)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -2690,6 +2701,988 @@ class DataPermissionUpdateRequest(object):
 
     def __ne__(self, other):
         return not (self == other)
+
+
+class DataQualityDimension(object):
+    """
+    Attributes:
+     - weight
+     - transformId
+     - jobId
+     - name
+     - exportFile
+     - score
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, weight = None, transformId = None, jobId = None, name = None, exportFile = None, score = None,):
+        self.weight = weight
+        self.transformId = transformId
+        self.jobId = jobId
+        self.name = name
+        self.exportFile = exportFile
+        self.score = score
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.DOUBLE:
+                    self.weight = iprot.readDouble()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.transformId = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.jobId = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.STRING:
+                    self.exportFile = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.DOUBLE:
+                    self.score = iprot.readDouble()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('DataQualityDimension')
+        if self.weight is not None:
+            oprot.writeFieldBegin('weight', TType.DOUBLE, 1)
+            oprot.writeDouble(self.weight)
+            oprot.writeFieldEnd()
+        if self.transformId is not None:
+            oprot.writeFieldBegin('transformId', TType.STRING, 2)
+            oprot.writeString(self.transformId.encode('utf-8') if sys.version_info[0] == 2 else self.transformId)
+            oprot.writeFieldEnd()
+        if self.jobId is not None:
+            oprot.writeFieldBegin('jobId', TType.STRING, 3)
+            oprot.writeString(self.jobId.encode('utf-8') if sys.version_info[0] == 2 else self.jobId)
+            oprot.writeFieldEnd()
+        if self.name is not None:
+            oprot.writeFieldBegin('name', TType.STRING, 4)
+            oprot.writeString(self.name.encode('utf-8') if sys.version_info[0] == 2 else self.name)
+            oprot.writeFieldEnd()
+        if self.exportFile is not None:
+            oprot.writeFieldBegin('exportFile', TType.STRING, 5)
+            oprot.writeString(self.exportFile.encode('utf-8') if sys.version_info[0] == 2 else self.exportFile)
+            oprot.writeFieldEnd()
+        if self.score is not None:
+            oprot.writeFieldBegin('score', TType.DOUBLE, 6)
+            oprot.writeDouble(self.score)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class EvaluationCriteriaRequest(object):
+    """
+    Attributes:
+     - id
+     - name
+     - description
+     - qcom
+     - qcon
+     - qtim
+     - qval
+     - owner
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, id = None, name = None, description = None, qcom = None, qcon = None, qtim = None, qval = None, owner = None,):
+        self.id = id
+        self.name = name
+        self.description = description
+        self.qcom = qcom
+        self.qcon = qcon
+        self.qtim = qtim
+        self.qval = qval
+        self.owner = owner
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.description = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRUCT:
+                    self.qcom = DataQualityDimension()
+                    self.qcom.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.STRUCT:
+                    self.qcon = DataQualityDimension()
+                    self.qcon.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.STRUCT:
+                    self.qtim = DataQualityDimension()
+                    self.qtim.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 7:
+                if ftype == TType.STRUCT:
+                    self.qval = DataQualityDimension()
+                    self.qval.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 8:
+                if ftype == TType.STRING:
+                    self.owner = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('EvaluationCriteriaRequest')
+        if self.id is not None:
+            oprot.writeFieldBegin('id', TType.I64, 1)
+            oprot.writeI64(self.id)
+            oprot.writeFieldEnd()
+        if self.name is not None:
+            oprot.writeFieldBegin('name', TType.STRING, 2)
+            oprot.writeString(self.name.encode('utf-8') if sys.version_info[0] == 2 else self.name)
+            oprot.writeFieldEnd()
+        if self.description is not None:
+            oprot.writeFieldBegin('description', TType.STRING, 3)
+            oprot.writeString(self.description.encode('utf-8') if sys.version_info[0] == 2 else self.description)
+            oprot.writeFieldEnd()
+        if self.qcom is not None:
+            oprot.writeFieldBegin('qcom', TType.STRUCT, 4)
+            self.qcom.write(oprot)
+            oprot.writeFieldEnd()
+        if self.qcon is not None:
+            oprot.writeFieldBegin('qcon', TType.STRUCT, 5)
+            self.qcon.write(oprot)
+            oprot.writeFieldEnd()
+        if self.qtim is not None:
+            oprot.writeFieldBegin('qtim', TType.STRUCT, 6)
+            self.qtim.write(oprot)
+            oprot.writeFieldEnd()
+        if self.qval is not None:
+            oprot.writeFieldBegin('qval', TType.STRUCT, 7)
+            self.qval.write(oprot)
+            oprot.writeFieldEnd()
+        if self.owner is not None:
+            oprot.writeFieldBegin('owner', TType.STRING, 8)
+            oprot.writeString(self.owner.encode('utf-8') if sys.version_info[0] == 2 else self.owner)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class EvaluationCriteriaQueryRequest(object):
+    """
+    Attributes:
+     - pageNum
+     - pageSize
+     - name
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, pageNum = 1, pageSize = 100, name = None,):
+        self.pageNum = pageNum
+        self.pageSize = pageSize
+        self.name = name
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I32:
+                    self.pageNum = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.I32:
+                    self.pageSize = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('EvaluationCriteriaQueryRequest')
+        if self.pageNum is not None:
+            oprot.writeFieldBegin('pageNum', TType.I32, 1)
+            oprot.writeI32(self.pageNum)
+            oprot.writeFieldEnd()
+        if self.pageSize is not None:
+            oprot.writeFieldBegin('pageSize', TType.I32, 2)
+            oprot.writeI32(self.pageSize)
+            oprot.writeFieldEnd()
+        if self.name is not None:
+            oprot.writeFieldBegin('name', TType.STRING, 3)
+            oprot.writeString(self.name.encode('utf-8') if sys.version_info[0] == 2 else self.name)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class EvaluationCriteriaEntity(object):
+    """
+    Attributes:
+     - id
+     - name
+     - description
+     - weights
+     - jobs
+     - exportFiles
+     - names
+     - createTime
+     - operator
+     - clientIp
+     - owner
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, id = None, name = None, description = None, weights = None, jobs = None, exportFiles = None, names = None, createTime = None, operator = None, clientIp = None, owner = None,):
+        self.id = id
+        self.name = name
+        self.description = description
+        self.weights = weights
+        self.jobs = jobs
+        self.exportFiles = exportFiles
+        self.names = names
+        self.createTime = createTime
+        self.operator = operator
+        self.clientIp = clientIp
+        self.owner = owner
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.description = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.weights = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.STRING:
+                    self.jobs = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.STRING:
+                    self.exportFiles = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 7:
+                if ftype == TType.STRING:
+                    self.names = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 8:
+                if ftype == TType.I64:
+                    self.createTime = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 9:
+                if ftype == TType.STRING:
+                    self.operator = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 10:
+                if ftype == TType.STRING:
+                    self.clientIp = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 11:
+                if ftype == TType.STRING:
+                    self.owner = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('EvaluationCriteriaEntity')
+        if self.id is not None:
+            oprot.writeFieldBegin('id', TType.I64, 1)
+            oprot.writeI64(self.id)
+            oprot.writeFieldEnd()
+        if self.name is not None:
+            oprot.writeFieldBegin('name', TType.STRING, 2)
+            oprot.writeString(self.name.encode('utf-8') if sys.version_info[0] == 2 else self.name)
+            oprot.writeFieldEnd()
+        if self.description is not None:
+            oprot.writeFieldBegin('description', TType.STRING, 3)
+            oprot.writeString(self.description.encode('utf-8') if sys.version_info[0] == 2 else self.description)
+            oprot.writeFieldEnd()
+        if self.weights is not None:
+            oprot.writeFieldBegin('weights', TType.STRING, 4)
+            oprot.writeString(self.weights.encode('utf-8') if sys.version_info[0] == 2 else self.weights)
+            oprot.writeFieldEnd()
+        if self.jobs is not None:
+            oprot.writeFieldBegin('jobs', TType.STRING, 5)
+            oprot.writeString(self.jobs.encode('utf-8') if sys.version_info[0] == 2 else self.jobs)
+            oprot.writeFieldEnd()
+        if self.exportFiles is not None:
+            oprot.writeFieldBegin('exportFiles', TType.STRING, 6)
+            oprot.writeString(self.exportFiles.encode('utf-8') if sys.version_info[0] == 2 else self.exportFiles)
+            oprot.writeFieldEnd()
+        if self.names is not None:
+            oprot.writeFieldBegin('names', TType.STRING, 7)
+            oprot.writeString(self.names.encode('utf-8') if sys.version_info[0] == 2 else self.names)
+            oprot.writeFieldEnd()
+        if self.createTime is not None:
+            oprot.writeFieldBegin('createTime', TType.I64, 8)
+            oprot.writeI64(self.createTime)
+            oprot.writeFieldEnd()
+        if self.operator is not None:
+            oprot.writeFieldBegin('operator', TType.STRING, 9)
+            oprot.writeString(self.operator.encode('utf-8') if sys.version_info[0] == 2 else self.operator)
+            oprot.writeFieldEnd()
+        if self.clientIp is not None:
+            oprot.writeFieldBegin('clientIp', TType.STRING, 10)
+            oprot.writeString(self.clientIp.encode('utf-8') if sys.version_info[0] == 2 else self.clientIp)
+            oprot.writeFieldEnd()
+        if self.owner is not None:
+            oprot.writeFieldBegin('owner', TType.STRING, 11)
+            oprot.writeString(self.owner.encode('utf-8') if sys.version_info[0] == 2 else self.owner)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class QualityAssessmentRequest(object):
+    """
+    Attributes:
+     - id
+     - criteriaId
+     - criteriaName
+     - description
+     - qcom
+     - qcon
+     - qtim
+     - qval
+     - dqi
+     - passed
+     - owner
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, id = None, criteriaId = None, criteriaName = None, description = None, qcom = None, qcon = None, qtim = None, qval = None, dqi = None, passed = None, owner = None,):
+        self.id = id
+        self.criteriaId = criteriaId
+        self.criteriaName = criteriaName
+        self.description = description
+        self.qcom = qcom
+        self.qcon = qcon
+        self.qtim = qtim
+        self.qval = qval
+        self.dqi = dqi
+        self.passed = passed
+        self.owner = owner
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.I64:
+                    self.criteriaId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.criteriaName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.description = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.STRUCT:
+                    self.qcom = DataQualityDimension()
+                    self.qcom.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.STRUCT:
+                    self.qcon = DataQualityDimension()
+                    self.qcon.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 7:
+                if ftype == TType.STRUCT:
+                    self.qtim = DataQualityDimension()
+                    self.qtim.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 8:
+                if ftype == TType.STRUCT:
+                    self.qval = DataQualityDimension()
+                    self.qval.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 9:
+                if ftype == TType.STRING:
+                    self.dqi = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 10:
+                if ftype == TType.STRING:
+                    self.passed = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 11:
+                if ftype == TType.STRING:
+                    self.owner = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('QualityAssessmentRequest')
+        if self.id is not None:
+            oprot.writeFieldBegin('id', TType.I64, 1)
+            oprot.writeI64(self.id)
+            oprot.writeFieldEnd()
+        if self.criteriaId is not None:
+            oprot.writeFieldBegin('criteriaId', TType.I64, 2)
+            oprot.writeI64(self.criteriaId)
+            oprot.writeFieldEnd()
+        if self.criteriaName is not None:
+            oprot.writeFieldBegin('criteriaName', TType.STRING, 3)
+            oprot.writeString(self.criteriaName.encode('utf-8') if sys.version_info[0] == 2 else self.criteriaName)
+            oprot.writeFieldEnd()
+        if self.description is not None:
+            oprot.writeFieldBegin('description', TType.STRING, 4)
+            oprot.writeString(self.description.encode('utf-8') if sys.version_info[0] == 2 else self.description)
+            oprot.writeFieldEnd()
+        if self.qcom is not None:
+            oprot.writeFieldBegin('qcom', TType.STRUCT, 5)
+            self.qcom.write(oprot)
+            oprot.writeFieldEnd()
+        if self.qcon is not None:
+            oprot.writeFieldBegin('qcon', TType.STRUCT, 6)
+            self.qcon.write(oprot)
+            oprot.writeFieldEnd()
+        if self.qtim is not None:
+            oprot.writeFieldBegin('qtim', TType.STRUCT, 7)
+            self.qtim.write(oprot)
+            oprot.writeFieldEnd()
+        if self.qval is not None:
+            oprot.writeFieldBegin('qval', TType.STRUCT, 8)
+            self.qval.write(oprot)
+            oprot.writeFieldEnd()
+        if self.dqi is not None:
+            oprot.writeFieldBegin('dqi', TType.STRING, 9)
+            oprot.writeString(self.dqi.encode('utf-8') if sys.version_info[0] == 2 else self.dqi)
+            oprot.writeFieldEnd()
+        if self.passed is not None:
+            oprot.writeFieldBegin('passed', TType.STRING, 10)
+            oprot.writeString(self.passed.encode('utf-8') if sys.version_info[0] == 2 else self.passed)
+            oprot.writeFieldEnd()
+        if self.owner is not None:
+            oprot.writeFieldBegin('owner', TType.STRING, 11)
+            oprot.writeString(self.owner.encode('utf-8') if sys.version_info[0] == 2 else self.owner)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class QualityAssessmentQueryRequest(object):
+    """
+    Attributes:
+     - pageNum
+     - pageSize
+     - criteriaName
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, pageNum = 1, pageSize = 100, criteriaName = None,):
+        self.pageNum = pageNum
+        self.pageSize = pageSize
+        self.criteriaName = criteriaName
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I32:
+                    self.pageNum = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.I32:
+                    self.pageSize = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.criteriaName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('QualityAssessmentQueryRequest')
+        if self.pageNum is not None:
+            oprot.writeFieldBegin('pageNum', TType.I32, 1)
+            oprot.writeI32(self.pageNum)
+            oprot.writeFieldEnd()
+        if self.pageSize is not None:
+            oprot.writeFieldBegin('pageSize', TType.I32, 2)
+            oprot.writeI32(self.pageSize)
+            oprot.writeFieldEnd()
+        if self.criteriaName is not None:
+            oprot.writeFieldBegin('criteriaName', TType.STRING, 3)
+            oprot.writeString(self.criteriaName.encode('utf-8') if sys.version_info[0] == 2 else self.criteriaName)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class QualityAssessmentEntity(object):
+    """
+    Attributes:
+     - id
+     - criteriaId
+     - criteriaName
+     - description
+     - weights
+     - jobs
+     - exportFiles
+     - names
+     - jobIds
+     - scores
+     - dqi
+     - passed
+     - createTime
+     - operator
+     - clientIp
+     - owner
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, id = None, criteriaId = None, criteriaName = None, description = None, weights = None, jobs = None, exportFiles = None, names = None, jobIds = None, scores = None, dqi = None, passed = None, createTime = None, operator = None, clientIp = None, owner = None,):
+        self.id = id
+        self.criteriaId = criteriaId
+        self.criteriaName = criteriaName
+        self.description = description
+        self.weights = weights
+        self.jobs = jobs
+        self.exportFiles = exportFiles
+        self.names = names
+        self.jobIds = jobIds
+        self.scores = scores
+        self.dqi = dqi
+        self.passed = passed
+        self.createTime = createTime
+        self.operator = operator
+        self.clientIp = clientIp
+        self.owner = owner
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.I64:
+                    self.criteriaId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.criteriaName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.description = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.STRING:
+                    self.weights = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.STRING:
+                    self.jobs = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 7:
+                if ftype == TType.STRING:
+                    self.exportFiles = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 8:
+                if ftype == TType.STRING:
+                    self.names = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 9:
+                if ftype == TType.STRING:
+                    self.jobIds = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 10:
+                if ftype == TType.STRING:
+                    self.scores = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 11:
+                if ftype == TType.STRING:
+                    self.dqi = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 12:
+                if ftype == TType.STRING:
+                    self.passed = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 13:
+                if ftype == TType.I64:
+                    self.createTime = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 14:
+                if ftype == TType.STRING:
+                    self.operator = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 15:
+                if ftype == TType.STRING:
+                    self.clientIp = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 16:
+                if ftype == TType.STRING:
+                    self.owner = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('QualityAssessmentEntity')
+        if self.id is not None:
+            oprot.writeFieldBegin('id', TType.I64, 1)
+            oprot.writeI64(self.id)
+            oprot.writeFieldEnd()
+        if self.criteriaId is not None:
+            oprot.writeFieldBegin('criteriaId', TType.I64, 2)
+            oprot.writeI64(self.criteriaId)
+            oprot.writeFieldEnd()
+        if self.criteriaName is not None:
+            oprot.writeFieldBegin('criteriaName', TType.STRING, 3)
+            oprot.writeString(self.criteriaName.encode('utf-8') if sys.version_info[0] == 2 else self.criteriaName)
+            oprot.writeFieldEnd()
+        if self.description is not None:
+            oprot.writeFieldBegin('description', TType.STRING, 4)
+            oprot.writeString(self.description.encode('utf-8') if sys.version_info[0] == 2 else self.description)
+            oprot.writeFieldEnd()
+        if self.weights is not None:
+            oprot.writeFieldBegin('weights', TType.STRING, 5)
+            oprot.writeString(self.weights.encode('utf-8') if sys.version_info[0] == 2 else self.weights)
+            oprot.writeFieldEnd()
+        if self.jobs is not None:
+            oprot.writeFieldBegin('jobs', TType.STRING, 6)
+            oprot.writeString(self.jobs.encode('utf-8') if sys.version_info[0] == 2 else self.jobs)
+            oprot.writeFieldEnd()
+        if self.exportFiles is not None:
+            oprot.writeFieldBegin('exportFiles', TType.STRING, 7)
+            oprot.writeString(self.exportFiles.encode('utf-8') if sys.version_info[0] == 2 else self.exportFiles)
+            oprot.writeFieldEnd()
+        if self.names is not None:
+            oprot.writeFieldBegin('names', TType.STRING, 8)
+            oprot.writeString(self.names.encode('utf-8') if sys.version_info[0] == 2 else self.names)
+            oprot.writeFieldEnd()
+        if self.jobIds is not None:
+            oprot.writeFieldBegin('jobIds', TType.STRING, 9)
+            oprot.writeString(self.jobIds.encode('utf-8') if sys.version_info[0] == 2 else self.jobIds)
+            oprot.writeFieldEnd()
+        if self.scores is not None:
+            oprot.writeFieldBegin('scores', TType.STRING, 10)
+            oprot.writeString(self.scores.encode('utf-8') if sys.version_info[0] == 2 else self.scores)
+            oprot.writeFieldEnd()
+        if self.dqi is not None:
+            oprot.writeFieldBegin('dqi', TType.STRING, 11)
+            oprot.writeString(self.dqi.encode('utf-8') if sys.version_info[0] == 2 else self.dqi)
+            oprot.writeFieldEnd()
+        if self.passed is not None:
+            oprot.writeFieldBegin('passed', TType.STRING, 12)
+            oprot.writeString(self.passed.encode('utf-8') if sys.version_info[0] == 2 else self.passed)
+            oprot.writeFieldEnd()
+        if self.createTime is not None:
+            oprot.writeFieldBegin('createTime', TType.I64, 13)
+            oprot.writeI64(self.createTime)
+            oprot.writeFieldEnd()
+        if self.operator is not None:
+            oprot.writeFieldBegin('operator', TType.STRING, 14)
+            oprot.writeString(self.operator.encode('utf-8') if sys.version_info[0] == 2 else self.operator)
+            oprot.writeFieldEnd()
+        if self.clientIp is not None:
+            oprot.writeFieldBegin('clientIp', TType.STRING, 15)
+            oprot.writeString(self.clientIp.encode('utf-8') if sys.version_info[0] == 2 else self.clientIp)
+            oprot.writeFieldEnd()
+        if self.owner is not None:
+            oprot.writeFieldBegin('owner', TType.STRING, 16)
+            oprot.writeString(self.owner.encode('utf-8') if sys.version_info[0] == 2 else self.owner)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
 all_structs.append(Result)
 Result.thrift_spec = (
     None,  # 0
@@ -2828,6 +3821,7 @@ TransformJobRequest.thrift_spec = (
     (4, TType.I32, 'exportType', None, None, ),  # 4
     (5, TType.STRING, 'exportFile', 'UTF8', None, ),  # 5
     (6, TType.STRING, 'schedule', 'UTF8', None, ),  # 6
+    (7, TType.STRING, 'owner', 'UTF8', None, ),  # 7
 )
 all_structs.append(TransformJobQueryRequest)
 TransformJobQueryRequest.thrift_spec = (
@@ -2916,6 +3910,92 @@ DataPermissionUpdateRequest.thrift_spec = (
     (1, TType.I64, 'id', None, None, ),  # 1
     (2, TType.BOOL, 'isPublic', None, None, ),  # 2
     (3, TType.STRING, 'visibleUsers', 'UTF8', None, ),  # 3
+)
+all_structs.append(DataQualityDimension)
+DataQualityDimension.thrift_spec = (
+    None,  # 0
+    (1, TType.DOUBLE, 'weight', None, None, ),  # 1
+    (2, TType.STRING, 'transformId', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'jobId', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'name', 'UTF8', None, ),  # 4
+    (5, TType.STRING, 'exportFile', 'UTF8', None, ),  # 5
+    (6, TType.DOUBLE, 'score', None, None, ),  # 6
+)
+all_structs.append(EvaluationCriteriaRequest)
+EvaluationCriteriaRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'id', None, None, ),  # 1
+    (2, TType.STRING, 'name', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'description', 'UTF8', None, ),  # 3
+    (4, TType.STRUCT, 'qcom', [DataQualityDimension, None], None, ),  # 4
+    (5, TType.STRUCT, 'qcon', [DataQualityDimension, None], None, ),  # 5
+    (6, TType.STRUCT, 'qtim', [DataQualityDimension, None], None, ),  # 6
+    (7, TType.STRUCT, 'qval', [DataQualityDimension, None], None, ),  # 7
+    (8, TType.STRING, 'owner', 'UTF8', None, ),  # 8
+)
+all_structs.append(EvaluationCriteriaQueryRequest)
+EvaluationCriteriaQueryRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.I32, 'pageNum', None, 1, ),  # 1
+    (2, TType.I32, 'pageSize', None, 100, ),  # 2
+    (3, TType.STRING, 'name', 'UTF8', None, ),  # 3
+)
+all_structs.append(EvaluationCriteriaEntity)
+EvaluationCriteriaEntity.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'id', None, None, ),  # 1
+    (2, TType.STRING, 'name', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'description', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'weights', 'UTF8', None, ),  # 4
+    (5, TType.STRING, 'jobs', 'UTF8', None, ),  # 5
+    (6, TType.STRING, 'exportFiles', 'UTF8', None, ),  # 6
+    (7, TType.STRING, 'names', 'UTF8', None, ),  # 7
+    (8, TType.I64, 'createTime', None, None, ),  # 8
+    (9, TType.STRING, 'operator', 'UTF8', None, ),  # 9
+    (10, TType.STRING, 'clientIp', 'UTF8', None, ),  # 10
+    (11, TType.STRING, 'owner', 'UTF8', None, ),  # 11
+)
+all_structs.append(QualityAssessmentRequest)
+QualityAssessmentRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'id', None, None, ),  # 1
+    (2, TType.I64, 'criteriaId', None, None, ),  # 2
+    (3, TType.STRING, 'criteriaName', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'description', 'UTF8', None, ),  # 4
+    (5, TType.STRUCT, 'qcom', [DataQualityDimension, None], None, ),  # 5
+    (6, TType.STRUCT, 'qcon', [DataQualityDimension, None], None, ),  # 6
+    (7, TType.STRUCT, 'qtim', [DataQualityDimension, None], None, ),  # 7
+    (8, TType.STRUCT, 'qval', [DataQualityDimension, None], None, ),  # 8
+    (9, TType.STRING, 'dqi', 'UTF8', None, ),  # 9
+    (10, TType.STRING, 'passed', 'UTF8', None, ),  # 10
+    (11, TType.STRING, 'owner', 'UTF8', None, ),  # 11
+)
+all_structs.append(QualityAssessmentQueryRequest)
+QualityAssessmentQueryRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.I32, 'pageNum', None, 1, ),  # 1
+    (2, TType.I32, 'pageSize', None, 100, ),  # 2
+    (3, TType.STRING, 'criteriaName', 'UTF8', None, ),  # 3
+)
+all_structs.append(QualityAssessmentEntity)
+QualityAssessmentEntity.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'id', None, None, ),  # 1
+    (2, TType.I64, 'criteriaId', None, None, ),  # 2
+    (3, TType.STRING, 'criteriaName', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'description', 'UTF8', None, ),  # 4
+    (5, TType.STRING, 'weights', 'UTF8', None, ),  # 5
+    (6, TType.STRING, 'jobs', 'UTF8', None, ),  # 6
+    (7, TType.STRING, 'exportFiles', 'UTF8', None, ),  # 7
+    (8, TType.STRING, 'names', 'UTF8', None, ),  # 8
+    (9, TType.STRING, 'jobIds', 'UTF8', None, ),  # 9
+    (10, TType.STRING, 'scores', 'UTF8', None, ),  # 10
+    (11, TType.STRING, 'dqi', 'UTF8', None, ),  # 11
+    (12, TType.STRING, 'passed', 'UTF8', None, ),  # 12
+    (13, TType.I64, 'createTime', None, None, ),  # 13
+    (14, TType.STRING, 'operator', 'UTF8', None, ),  # 14
+    (15, TType.STRING, 'clientIp', 'UTF8', None, ),  # 15
+    (16, TType.STRING, 'owner', 'UTF8', None, ),  # 16
 )
 fix_spec(all_structs)
 del all_structs

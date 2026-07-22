@@ -1,0 +1,29 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------< com.tsinghua:datasetman-client-py >------------------
+[INFO] Building datasetman Python Client 1.0.0
+[INFO]   from interpolated-pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- invoker:3.6.0:run (build-sdks) @ datasetman-client-py ---
+[INFO] No projects were selected for execution.
+[INFO] 
+[INFO] --- antrun:3.1.0:run (thrift-py-generate) @ datasetman-client-py ---
+[INFO] Executing tasks
+[WARNING]      [echo] Generating Python Thrift SDK...
+[INFO]    [delete] Deleting directory C:\Users\cbalt\IdeaProjects\DatasetMan\client-py\target\thrift-gen
+[INFO]     [mkdir] Created dir: C:\Users\cbalt\IdeaProjects\DatasetMan\client-py\target\thrift-gen
+[INFO]    [delete] Deleting directory C:\Users\cbalt\IdeaProjects\DatasetMan\client-py\tsinghua\api
+[INFO]     [mkdir] Created dir: C:\Users\cbalt\IdeaProjects\DatasetMan\client-py\tsinghua\api
+[INFO]      [copy] Copying 5 files to C:\Users\cbalt\IdeaProjects\DatasetMan\client-py\tsinghua\api
+[WARNING]      [echo] Python Thrift SDK generated successfully.
+[INFO] Executed tasks
+[INFO] 
+[INFO] --- install:3.1.4:install (default-install) @ datasetman-client-py ---
+[INFO] Installing C:\Users\cbalt\IdeaProjects\DatasetMan\client-py\interpolated-pom.xml to C:\Users\cbalt\.m2\repository\com\tsinghua\datasetman-client-py\1.0.0\datasetman-client-py-1.0.0.pom
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  17.097 s
+[INFO] Finished at: 2026-07-22T13:29:08+08:00
+[INFO] ------------------------------------------------------------------------

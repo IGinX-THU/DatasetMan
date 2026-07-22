@@ -223,6 +223,86 @@ struct DataPermissionUpdateRequest {
     3: optional string visibleUsers,
 }
 
+// ========== 质量评价相关 ==========
+struct DataQualityDimension {
+    1: optional double weight,
+    2: optional string transformId,
+    3: optional string jobId,
+    4: optional string name,
+    5: optional string exportFile,
+    6: optional double score,
+}
+
+struct EvaluationCriteriaRequest {
+    1: optional i64 id,
+    2: string name,
+    3: optional string description,
+    4: optional DataQualityDimension qcom,
+    5: optional DataQualityDimension qcon,
+    6: optional DataQualityDimension qtim,
+    7: optional DataQualityDimension qval,
+    8: optional string owner,
+}
+
+struct EvaluationCriteriaQueryRequest {
+    1: optional i32 pageNum = 1,
+    2: optional i32 pageSize = 100,
+    3: optional string name,
+}
+
+struct EvaluationCriteriaEntity {
+    1: i64 id,
+    2: string name,
+    3: optional string description,
+    4: optional string weights,
+    5: optional string jobs,
+    6: optional string exportFiles,
+    7: optional string names,
+    8: optional i64 createTime,
+    9: optional string operator,
+    10: optional string clientIp,
+    11: optional string owner,
+}
+
+struct QualityAssessmentRequest {
+    1: optional i64 id,
+    2: optional i64 criteriaId,
+    3: optional string criteriaName,
+    4: optional string description,
+    5: optional DataQualityDimension qcom,
+    6: optional DataQualityDimension qcon,
+    7: optional DataQualityDimension qtim,
+    8: optional DataQualityDimension qval,
+    9: optional string dqi,
+    10: optional string passed,
+    11: optional string owner,
+}
+
+struct QualityAssessmentQueryRequest {
+    1: optional i32 pageNum = 1,
+    2: optional i32 pageSize = 100,
+    3: optional string criteriaName,
+}
+
+struct QualityAssessmentEntity {
+    1: i64 id,
+    2: optional i64 criteriaId,
+    3: optional string criteriaName,
+    4: optional string description,
+    5: optional string weights,
+    6: optional string jobs,
+    7: optional string exportFiles,
+    8: optional string names,
+    9: optional string jobIds,
+    10: optional string scores,
+    11: optional string dqi,
+    12: optional string passed,
+    13: optional i64 createTime,
+    14: optional string operator,
+    15: optional string clientIp,
+    16: optional string owner,
+}
+
 // ========== API服务接口 - 匹配所有Controller的方法 ==========
 service ApiService {
     // ========== 数据源接口 - 匹配DataSourceController ==========
@@ -421,4 +501,36 @@ service ApiService {
     
     // POST /api/data-permission/update -> update(DataPermissionUpdateRequest)
     Result updateDataPermission(1: DataPermissionUpdateRequest request),
+
+    // ========== 评价准则接口 - 匹配EvaluationCriteriaController ==========
+    // POST /api/evaluation-criteria/save -> saveCriteria(EvaluationCriteriaRequest)
+    Result saveEvaluationCriteria(1: EvaluationCriteriaRequest request),
+    
+    // POST /api/evaluation-criteria/query -> queryCriteria(EvaluationCriteriaQueryRequest)
+    Result queryEvaluationCriteria(1: EvaluationCriteriaQueryRequest request),
+    
+    // POST /api/evaluation-criteria/count -> countCriteria(EvaluationCriteriaQueryRequest)
+    Result countEvaluationCriteria(1: EvaluationCriteriaQueryRequest request),
+    
+    // GET /api/evaluation-criteria/detail -> queryById(Long id)
+    Result getEvaluationCriteria(1: i64 id),
+    
+    // DELETE /api/evaluation-criteria/delete -> deleteCriteria(Long id)
+    Result deleteEvaluationCriteria(1: i64 id),
+
+    // ========== 质量测评接口 - 匹配QualityAssessmentController ==========
+    // POST /api/quality-assessment/save -> saveAssessment(QualityAssessmentRequest)
+    Result saveQualityAssessment(1: QualityAssessmentRequest request),
+    
+    // POST /api/quality-assessment/query -> queryAssessments(QualityAssessmentQueryRequest)
+    Result queryQualityAssessments(1: QualityAssessmentQueryRequest request),
+    
+    // POST /api/quality-assessment/count -> countAssessments(QualityAssessmentQueryRequest)
+    Result countQualityAssessments(1: QualityAssessmentQueryRequest request),
+    
+    // GET /api/quality-assessment/detail -> queryById(Long id)
+    Result getQualityAssessment(1: i64 id),
+    
+    // DELETE /api/quality-assessment/delete -> deleteAssessment(Long id)
+    Result deleteQualityAssessment(1: i64 id),
 }
