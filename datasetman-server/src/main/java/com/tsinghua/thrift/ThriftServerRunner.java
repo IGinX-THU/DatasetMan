@@ -7,6 +7,7 @@ import org.apache.thrift.server.TThreadPoolServer;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TTransportException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -21,7 +22,8 @@ public class ThriftServerRunner implements CommandLineRunner {
     @Autowired
     private ApiServiceImpl apiServiceImpl;
 
-    private static final int THRIFT_PORT = 9090;
+    @Value("${thrift.port:9090}")
+    private int thriftPort;
 
     @Override
     public void run(String... args) throws Exception {
@@ -50,7 +52,7 @@ public class ThriftServerRunner implements CommandLineRunner {
             ApiService.Processor processor = new ApiService.Processor(apiServiceImpl);
             
             // 创建服务器传输
-            TServerSocket serverTransport = new TServerSocket(THRIFT_PORT);
+            TServerSocket serverTransport = new TServerSocket(thriftPort);
             
             // 创建线程池服务器（支持多线程处理）
             TThreadPoolServer.Args serverArgs = new TThreadPoolServer.Args(serverTransport)
@@ -61,7 +63,7 @@ public class ThriftServerRunner implements CommandLineRunner {
             // 创建服务器
             TServer server = new TThreadPoolServer(serverArgs);
             
-            log.info("🚀 datasetman Thrift服务器启动在端口 {}...", THRIFT_PORT);
+            log.info("🚀 datasetman Thrift服务器启动在端口 {}...", thriftPort);
             log.info("📡 datasetman Thrift服务已就绪，支持Go/Java/Python客户端连接...");
             log.info("🔧 线程池配置: 最小5线程，最大20线程");
             

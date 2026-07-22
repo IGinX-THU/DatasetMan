@@ -26,7 +26,7 @@ iginx:
 # Spring配置
 spring:
   application:
-    name: 数据集管理软件
+    name: 多元数据集管理工具
   servlet:
     multipart:
       # 设置单个文件的最大大小，例如 2GB
@@ -56,6 +56,10 @@ springfox:
 knife4j:
   enable: false
   production: true
+
+# Thrift服务器配置
+thrift:
+  port: 9090
 
 # 离线缓存配置
 offline:
