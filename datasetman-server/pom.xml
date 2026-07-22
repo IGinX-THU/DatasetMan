@@ -108,7 +108,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.tsinghua.datasetmanApplication</mainClass>
+                    <mainClass>com.tsinghua.DatasetManApplication</mainClass>
                 </configuration>
                 <executions>
                     <execution>
