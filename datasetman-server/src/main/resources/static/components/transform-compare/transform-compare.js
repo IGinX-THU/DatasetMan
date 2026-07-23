@@ -6,6 +6,8 @@ class TransformCompare extends HTMLElement {
         this.currentPage = 1;
         this.currentAction = 'add';
         this.editingJobId = null;
+        this._datasourceTreePromise = null;
+        this._transformFunctionsPromise = null;
     }
 
     connectedCallback() {
@@ -216,6 +218,24 @@ class TransformCompare extends HTMLElement {
                 this.loadJobsFromAPI();
             });
         }
+
+        const tbody = this.querySelector('#tableBody');
+        if (tbody) {
+            tbody.addEventListener('click', (e) => {
+                const id = e.target.getAttribute('data-id');
+                const name = e.target.getAttribute('data-name');
+
+                if (e.target.classList.contains('edit')) {
+                    this.showEditModal(id);
+                } else if (e.target.classList.contains('run')) {
+                    this.showRunConfirm(id);
+                } else if (e.target.classList.contains('delete')) {
+                    this.showDeleteConfirm(id);
+                } else if (e.target.classList.contains('manage')) {
+                    this.navigateToTransformJob(name);
+                }
+            });
+        }
     }
 
     updatePagination() {
@@ -292,24 +312,6 @@ class TransformCompare extends HTMLElement {
                 </td>
             </tr>
         `).join('');
-
-        tbody.addEventListener('click', (e) => {
-            console.log('表格点击事件触发，目标:', e.target, '类名:', e.target.className);
-            const id = e.target.getAttribute('data-id');
-            const name = e.target.getAttribute('data-name');
-            console.log('data-id:', id, 'data-name:', name);
-            
-            if (e.target.classList.contains('edit')) {
-                this.showEditModal(id);
-            } else if (e.target.classList.contains('run')) {
-                this.showRunConfirm(id);
-            } else if (e.target.classList.contains('delete')) {
-                this.showDeleteConfirm(id);
-            } else if (e.target.classList.contains('manage')) {
-                console.log('检测到管理按钮点击');
-                this.navigateToTransformJob(name);
-            }
-        });
     }
 
     showAddModal() {
@@ -589,7 +591,11 @@ class TransformCompare extends HTMLElement {
         this.editingJobId = createTime;
 
         try {
-            // 从API获取作业详情
+            // 并行预取数据源树、Transform函数和作业详情
+            this._datasourceTreePromise = window.AppConfig.get('datasource', 'tree');
+            const tfUrl = window.AppConfig.getApiUrl('transform', 'query').replace('{type}', 'transform');
+            const tfHeaders = window.AppConfig.getAuthHeaders();
+            this._transformFunctionsPromise = fetch(tfUrl, { method: 'GET', headers: tfHeaders }).then(r => r.json());
             const result = await window.AppConfig.get('transformCompare', 'detail', { createTime });
             
             if (result.success && result.data) {
@@ -1423,12 +1429,19 @@ class TransformCompare extends HTMLElement {
         });
     }
 
+    getDatasourceTree() {
+        if (!this._datasourceTreePromise) {
+            this._datasourceTreePromise = window.AppConfig.get('datasource', 'tree');
+        }
+        return this._datasourceTreePromise;
+    }
+
     async loadDatasets(selectElement, callback) {
         try {
             selectElement.innerHTML = '<option value="">请选择数据集</option>';
             
-            // 从数据源树获取数据集
-            const result = await window.AppConfig.get('datasource', 'tree');
+            // 从数据源树获取数据集（使用缓存）
+            const result = await this.getDatasourceTree();
             
             if (result.success && result.data) {
                 // 提取数据集（datasets开头的数据源）
@@ -1465,8 +1478,8 @@ class TransformCompare extends HTMLElement {
             selectElement.innerHTML = '<option value="">请选择版本</option>';
             if (!datasetName) return;
             
-            // 从数据源树获取版本
-            const result = await window.AppConfig.get('datasource', 'tree');
+            // 从数据源树获取版本（使用缓存）
+            const result = await this.getDatasourceTree();
             
             if (result.success && result.data) {
                 // 提取指定数据集的版本
@@ -1498,18 +1511,22 @@ class TransformCompare extends HTMLElement {
         }
     }
 
-    async loadTransformFunctions(selectElement, callback) {
-        try {
+    getTransformFunctions() {
+        if (!this._transformFunctionsPromise) {
             const url = window.AppConfig.getApiUrl('transform', 'query').replace('{type}', 'transform');
             const headers = window.AppConfig.getAuthHeaders();
-
-            const response = await fetch(url, {
+            this._transformFunctionsPromise = fetch(url, {
                 method: 'GET',
                 headers: headers
-            });
+            }).then(response => response.json());
+        }
+        return this._transformFunctionsPromise;
+    }
 
-            const result = await response.json();
+    async loadTransformFunctions(selectElement, callback) {
+        try {
             const selectedValue = selectElement.getAttribute('data-selected');
+            const result = await this.getTransformFunctions();
 
             if (result.code === 200 && result.data) {
                 selectElement.innerHTML = '<option value="">请选择</option>';
