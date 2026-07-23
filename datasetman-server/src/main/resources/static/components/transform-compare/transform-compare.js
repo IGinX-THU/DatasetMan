@@ -317,6 +317,13 @@ class TransformCompare extends HTMLElement {
     showAddModal() {
         this.currentAction = 'add';
         this.editingJobId = null;
+
+        // 重置缓存并并行预取，确保每次打开新增窗口时下拉数据是最新的
+        this._datasourceTreePromise = window.AppConfig.get('datasource', 'tree');
+        const tfUrl = window.AppConfig.getApiUrl('transform', 'query').replace('{type}', 'transform');
+        const tfHeaders = window.AppConfig.getAuthHeaders();
+        this._transformFunctionsPromise = fetch(tfUrl, { method: 'GET', headers: tfHeaders }).then(r => r.json());
+
         const dialogHtml = `
             <div class="dialog-mask" style="
                 position: fixed;

@@ -67,7 +67,12 @@ class TransformUiTest extends UiTestBase {
             assertTrue(addBtn.isDisplayed());
             loginPage.click(addBtn);
             loginPage.sleep(1000);
-            // 验证点击后有响应
+            // 验证点击后有响应（弹窗或编辑界面出现）
+            boolean modalAppeared = false;
+            try {
+                modalAppeared = driver.findElement(By.cssSelector("#transformCompare .dialog-mask, #transformCompare .modal")).isDisplayed();
+            } catch (Exception ignored) {}
+            assertTrue(modalAppeared, "点击新增按钮后应出现弹窗或编辑界面");
         }
 
         @Test
@@ -80,7 +85,8 @@ class TransformUiTest extends UiTestBase {
             filterInput.clear();
             filterInput.sendKeys("test_job");
             loginPage.clickByCss("#transformCompare #applyFilters");
-            loginPage.sleep(2000);
+            // 等待表格刷新
+            loginPage.waitForVisible(By.cssSelector("#transformCompare #tableBody"), 10);
             loginPage.clickByCss("#transformCompare #resetFilters");
             loginPage.sleep(1000);
             assertEquals("", filterInput.getAttribute("value"), "重置后筛选框应清空");
@@ -128,7 +134,8 @@ class TransformUiTest extends UiTestBase {
             loginPage.sleep(1000);
             WebElement applyBtn = driver.findElement(By.cssSelector("#transformJob #applyFilters"));
             loginPage.click(applyBtn);
-            loginPage.sleep(2000);
+            // 等待表格刷新（接口返回数据后表格更新）
+            loginPage.waitForVisible(By.cssSelector("#transformJob #tableBody"), 10);
             assertTrue(driver.findElement(By.cssSelector("#transformJob #tableBody")).isDisplayed(),
                     "查询后表格应可见");
         }

@@ -105,7 +105,8 @@ class FunctionUiTest extends UiTestBase {
             homePage.goToTransformManagement();
             loginPage.sleep(1000);
             loginPage.clickById("refreshBtn");
-            loginPage.sleep(2000);
+            // 等待表格刷新（接口返回数据后表格更新）
+            loginPage.waitForVisible(By.id("tableBody"), 10);
             assertTrue(driver.findElement(By.id("tableBody")).isDisplayed());
         }
     }

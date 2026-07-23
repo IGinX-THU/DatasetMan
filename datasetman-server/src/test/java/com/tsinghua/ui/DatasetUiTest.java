@@ -83,8 +83,11 @@ class DatasetUiTest extends UiTestBase {
         loginPage.inputById("datasetDesc", "UI自动化测试数据集");
         loginPage.inputById("datasetRemark", "自动化创建");
         loginPage.clickById("submitBtn");
-        loginPage.sleep(3000);
-        // 提交后弹窗应关闭或显示成功提示
+        // 等待接口响应
+        String toastMsg = loginPage.waitForAnyToast(15);
+        // 验证收到了响应
+        assertTrue(!toastMsg.isEmpty() || loginPage.waitForElementHidden(org.openqa.selenium.By.id("datasetDialog"), 10),
+                "提交后应收到接口响应（Toast提示或弹窗关闭）");
     }
 
     @Test
@@ -98,8 +101,11 @@ class DatasetUiTest extends UiTestBase {
         loginPage.inputById("datasetName", longName.toString());
         loginPage.inputById("datasetSql", "SELECT 1");
         loginPage.clickById("submitBtn");
-        loginPage.sleep(2000);
-        // 验证不会崩溃
+        // 等待接口响应（成功或失败）
+        String toastMsg = loginPage.waitForAnyToast(15);
+        // 验证不崩溃且收到了响应
+        assertTrue(!toastMsg.isEmpty() || loginPage.waitForElementHidden(org.openqa.selenium.By.id("datasetDialog"), 10),
+                "提交后应收到接口响应");
     }
 
     @Test
@@ -111,7 +117,10 @@ class DatasetUiTest extends UiTestBase {
         loginPage.inputById("datasetName", "test<script>alert(1)</script>");
         loginPage.inputById("datasetSql", "SELECT 1");
         loginPage.clickById("submitBtn");
-        loginPage.sleep(2000);
-        // 验证XSS不会执行
+        // 等待接口响应（成功或失败）
+        String toastMsg = loginPage.waitForAnyToast(15);
+        // 验证XSS不会执行且收到了响应
+        assertTrue(!toastMsg.isEmpty() || loginPage.waitForElementHidden(org.openqa.selenium.By.id("datasetDialog"), 10),
+                "提交后应收到接口响应，XSS代码不应执行");
     }
 }

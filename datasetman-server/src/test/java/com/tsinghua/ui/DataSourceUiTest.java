@@ -95,8 +95,11 @@ class DataSourceUiTest extends UiTestBase {
         loginPage.inputById("port", "6667");
         loginPage.inputById("schemaPrefix", "test_prefix");
         loginPage.clickById("submitBtn");
-        loginPage.sleep(2000);
-        // 验证提交后不卡死
+        // 等待接口响应
+        String toastMsg = loginPage.waitForAnyToast(15);
+        // 验证收到了响应（成功或失败都说明接口有返回）
+        assertTrue(!toastMsg.isEmpty() || loginPage.waitForElementHidden(org.openqa.selenium.By.id("registerForm"), 10),
+                "提交后应收到接口响应（Toast提示或表单关闭）");
     }
 
     @Test

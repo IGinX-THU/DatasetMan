@@ -117,6 +117,115 @@ public abstract class BasePage {
         return waitForVisible(By.id(modalId));
     }
 
+    // ============ 接口响应等待 ============
+
+    /**
+     * 等待成功Toast出现（接口返回成功）
+     * 前端通过 showToast(message, 'success') 显示绿色提示
+     */
+    public String waitForSuccessToast(int timeoutSeconds) {
+        WebDriverWait toastWait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        try {
+            WebElement toast = toastWait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector(".toast-success")));
+            return toast.getText();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public String waitForSuccessToast() {
+        return waitForSuccessToast(15);
+    }
+
+    /**
+     * 等待错误Toast出现（接口返回失败）
+     * 前端通过 showToast(message, 'error') 显示红色提示
+     */
+    public String waitForErrorToast(int timeoutSeconds) {
+        WebDriverWait toastWait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        try {
+            WebElement toast = toastWait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector(".toast-error")));
+            return toast.getText();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public String waitForErrorToast() {
+        return waitForErrorToast(15);
+    }
+
+    /**
+     * 等待任意Toast出现（成功或失败）
+     */
+    public String waitForAnyToast(int timeoutSeconds) {
+        WebDriverWait toastWait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        try {
+            WebElement toast = toastWait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector(".toast-success, .toast-error")));
+            return toast.getText();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public String waitForAnyToast() {
+        return waitForAnyToast(15);
+    }
+
+    /**
+     * 获取当前显示的Toast类型
+     * @return "success" / "error" / ""
+     */
+    public String getToastType() {
+        try {
+            if (driver.findElement(By.cssSelector(".toast-success")).isDisplayed()) {
+                return "success";
+            }
+        } catch (Exception ignored) {}
+        try {
+            if (driver.findElement(By.cssSelector(".toast-error")).isDisplayed()) {
+                return "error";
+            }
+        } catch (Exception ignored) {}
+        return "";
+    }
+
+    /**
+     * 等待模态框关闭（接口成功后前端关闭弹窗）
+     */
+    public boolean waitForModalClosed(String modalSelector, int timeoutSeconds) {
+        WebDriverWait closeWait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        try {
+            return closeWait.until(ExpectedConditions.invisibilityOfElementLocated(
+                    By.cssSelector(modalSelector)));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean waitForModalClosed(String modalSelector) {
+        return waitForModalClosed(modalSelector, 15);
+    }
+
+    /**
+     * 等待元素变为不可见（如弹窗关闭、表单消失）
+     */
+    public boolean waitForElementHidden(By by, int timeoutSeconds) {
+        WebDriverWait hideWait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        try {
+            return hideWait.until(ExpectedConditions.invisibilityOfElementLocated(by));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean waitForElementHidden(By by) {
+        return waitForElementHidden(by, 15);
+    }
+
     // ============ 表格操作 ============
     public List<WebElement> getTableRows(String tableBodyId) {
         return findById(tableBodyId).findElements(By.tagName("tr"));

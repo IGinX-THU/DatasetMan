@@ -179,7 +179,8 @@ class QualityUiTest extends UiTestBase {
             loginPage.sleep(1000);
             loginPage.inputById("qaFilterName", "test");
             loginPage.clickById("qaApplyFilters");
-            loginPage.sleep(2000);
+            // 等待表格刷新（接口返回数据后表格更新）
+            loginPage.waitForVisible(By.id("qaTableBody"), 10);
             loginPage.clickById("qaResetFilters");
             loginPage.sleep(1000);
             assertEquals("", driver.findElement(By.id("qaFilterName")).getAttribute("value"));

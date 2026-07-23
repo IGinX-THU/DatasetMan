@@ -59,7 +59,7 @@ knife4j:
 
 # Thrift服务器配置
 thrift:
-  port: 9090
+  port: 9091
 
 # 离线缓存配置
 offline:

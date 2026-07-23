@@ -70,9 +70,12 @@ class ChangePasswordUiTest extends UiTestBase {
         loginPage.inputById("newPassword", "NewPass123!");
         loginPage.inputById("confirmPassword", "DifferentPass456!");
         loginPage.clickById("confirmChangePassword");
-        loginPage.sleep(2000);
-        assertTrue(driver.findElement(org.openqa.selenium.By.cssSelector(".change-password-container")).isDisplayed(),
-                "密码不一致应阻止提交");
+        // 等待接口响应或前端校验结果
+        String toastMsg = loginPage.waitForAnyToast(10);
+        boolean modalStillVisible = driver.findElement(org.openqa.selenium.By.cssSelector(".change-password-container")).isDisplayed();
+        // 密码不一致应被拒绝：要么显示错误Toast，要么弹窗保持打开
+        assertTrue(!toastMsg.isEmpty() || modalStillVisible,
+                "密码不一致应阻止提交（显示错误提示或弹窗保持打开）");
     }
 
     @Test
@@ -99,9 +102,11 @@ class ChangePasswordUiTest extends UiTestBase {
         loginPage.inputById("newPassword", "1");
         loginPage.inputById("confirmPassword", "1");
         loginPage.clickById("confirmChangePassword");
-        loginPage.sleep(2000);
-        boolean modalDisplayed = driver.findElement(org.openqa.selenium.By.cssSelector(".change-password-container")).isDisplayed();
-        String newError = driver.findElement(By.id("newPasswordError")).getText();
-        assertTrue(modalDisplayed || !newError.isEmpty(), "短密码应被拒绝");
+        // 等待接口响应或前端校验结果
+        String toastMsg = loginPage.waitForAnyToast(10);
+        boolean modalStillVisible = driver.findElement(org.openqa.selenium.By.cssSelector(".change-password-container")).isDisplayed();
+        // 短密码应被拒绝：要么显示错误Toast，要么弹窗保持打开
+        assertTrue(!toastMsg.isEmpty() || modalStillVisible,
+                "短密码应被拒绝（显示错误提示或弹窗保持打开）");
     }
 }

@@ -28,24 +28,31 @@ class LoginUiTest extends UiTestBase {
         loginPage.login("user", "user123");
         loginPage.waitForUrlChange("/login.html");
         assertFalse(loginPage.isLoginPage(), "登录成功后应跳转离开登录页");
+        // 等待页面加载完成，验证已进入主页
+        assertTrue(loginPage.waitForVisible(org.openqa.selenium.By.id("app"), 10).isDisplayed(),
+                "登录成功后应显示主页内容");
     }
 
     @Test
     @DisplayName("TC-UI-LOGIN-003: 错误密码登录失败")
     void testLoginWrongPassword() {
         loginPage.login("user", "wrong_password_123");
-        loginPage.sleep(2000);
+        // 等待错误响应
+        String errorToast = loginPage.waitForErrorToast(10);
         assertTrue(loginPage.isLoginPage(), "密码错误应停留在登录页");
-        assertNotEquals("", loginPage.getErrorMessage(), "应显示错误提示信息");
+        assertTrue(!errorToast.isEmpty() || !loginPage.getErrorMessage().isEmpty(),
+                "应显示错误提示信息（Toast或错误文本）");
     }
 
     @Test
     @DisplayName("TC-UI-LOGIN-004: 不存在的用户登录失败")
     void testLoginNonexistentUser() {
         loginPage.login("nonexistent_user_999", "any_password");
-        loginPage.sleep(2000);
+        // 等待错误响应
+        String errorToast = loginPage.waitForErrorToast(10);
         assertTrue(loginPage.isLoginPage(), "用户不存在应停留在登录页");
-        assertNotEquals("", loginPage.getErrorMessage(), "应显示错误提示信息");
+        assertTrue(!errorToast.isEmpty() || !loginPage.getErrorMessage().isEmpty(),
+                "应显示错误提示信息（Toast或错误文本）");
     }
 
     @Test
@@ -85,15 +92,21 @@ class LoginUiTest extends UiTestBase {
         StringBuilder longUsername = new StringBuilder();
         for (int i = 0; i < 256; i++) { longUsername.append("a"); }
         loginPage.login(longUsername.toString(), "user123");
-        loginPage.sleep(2000);
+        // 等待错误响应
+        String errorToast = loginPage.waitForErrorToast(10);
         assertTrue(loginPage.isLoginPage(), "超长用户名登录应失败");
+        assertTrue(!errorToast.isEmpty() || !loginPage.getErrorMessage().isEmpty(),
+                "应显示错误提示信息");
     }
 
     @Test
     @DisplayName("TC-UI-LOGIN-009: 用户名含特殊字符边界测试")
     void testLoginSpecialCharsUsername() {
         loginPage.login("user<script>alert(1)</script>", "user123");
-        loginPage.sleep(2000);
+        // 等待错误响应
+        String errorToast = loginPage.waitForErrorToast(10);
         assertTrue(loginPage.isLoginPage(), "含特殊字符用户名应登录失败");
+        assertTrue(!errorToast.isEmpty() || !loginPage.getErrorMessage().isEmpty(),
+                "应显示错误提示信息，XSS代码不执行");
     }
 }

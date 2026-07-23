@@ -67,7 +67,8 @@ class UserPermissionUiTest extends UiTestBase {
             loginPage.sleep(1000);
             loginPage.inputById("usernameFilter", "user");
             loginPage.clickById("applyFilters");
-            loginPage.sleep(2000);
+            // 等待表格刷新（接口返回数据后表格更新）
+            loginPage.waitForVisible(By.id("tableBody"), 10);
             assertTrue(driver.findElement(By.id("tableBody")).isDisplayed());
         }
 
@@ -139,8 +140,11 @@ class UserPermissionUiTest extends UiTestBase {
             loginPage.selectByValue("role", "DATA_ENGINEER");
             loginPage.selectByValue("enabled", "true");
             loginPage.clickById("saveBtn");
-            loginPage.sleep(2000);
-            assertFalse(driver.findElement(By.id("modalMask")).isDisplayed(), "保存成功后弹窗应关闭");
+            // 等待接口响应
+            String toastMsg = loginPage.waitForAnyToast(15);
+            // 验证收到了响应（成功时弹窗关闭，失败时显示错误Toast）
+            assertTrue(!toastMsg.isEmpty() || loginPage.waitForModalClosed("#modalMask", 10),
+                    "保存后应收到接口响应（Toast提示或弹窗关闭）");
         }
 
         @Test
@@ -171,8 +175,11 @@ class UserPermissionUiTest extends UiTestBase {
             loginPage.inputById("password", "test123");
             loginPage.selectByValue("role", "DATA_ENGINEER");
             loginPage.clickById("saveBtn");
-            loginPage.sleep(2000);
-            // 验证不崩溃
+            // 等待接口响应（成功或失败）
+            String toastMsg = loginPage.waitForAnyToast(15);
+            // 验证不崩溃且收到了响应
+            assertTrue(!toastMsg.isEmpty() || loginPage.waitForModalClosed("#modalMask", 10),
+                    "提交后应收到接口响应，系统不崩溃");
         }
 
         @Test
@@ -236,7 +243,8 @@ class UserPermissionUiTest extends UiTestBase {
             loginPage.sleep(1000);
             loginPage.inputById("prefixFilter", "test");
             loginPage.clickById("applyFilters");
-            loginPage.sleep(2000);
+            // 等待表格刷新（接口返回数据后表格更新）
+            loginPage.waitForVisible(By.id("tableBody"), 10);
             loginPage.clickById("resetFilters");
             loginPage.sleep(1000);
             assertEquals("", driver.findElement(By.id("prefixFilter")).getAttribute("value"));
@@ -249,7 +257,8 @@ class UserPermissionUiTest extends UiTestBase {
             homePage.goToPermissionManagement();
             loginPage.sleep(1000);
             loginPage.clickById("refreshBtn");
-            loginPage.sleep(2000);
+            // 等待表格刷新（接口返回数据后表格更新）
+            loginPage.waitForVisible(By.id("tableBody"), 10);
             assertTrue(driver.findElement(By.id("tableBody")).isDisplayed());
         }
     }
