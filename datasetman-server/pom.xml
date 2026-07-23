@@ -220,7 +220,7 @@
                     <systemProperties>
                         <property>
                             <name>allure.results.directory</name>
-                            <value>${project.build.directory}/allure-results</value>
+                            <value>${project.basedir}/src/test/resources/allure-results</value>
                         </property>
                     </systemProperties>
                 </configuration>
@@ -409,8 +409,8 @@
                 <version>2.12.0</version>
                 <configuration>
                     <reportVersion>2.24.0</reportVersion>
-                    <resultsDirectory>${project.build.directory}/allure-results</resultsDirectory>
-                    <reportDirectory>${project.build.directory}/allure-report</reportDirectory>
+                    <resultsDirectory>${project.basedir}/src/test/resources/allure-results</resultsDirectory>
+                    <reportDirectory>${project.basedir}/src/test/resources/allure-report</reportDirectory>
                 </configuration>
             </plugin>
         </plugins>
