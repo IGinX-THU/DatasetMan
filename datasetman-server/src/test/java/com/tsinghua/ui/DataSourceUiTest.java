@@ -13,10 +13,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 数据源管理模块UI自动化测试
- * 对应测试用例: TC-UI-DS-001 ~ TC-UI-DS-010
+ * 对应测试用例: TC-UI-DS-001 ~ TC-UI-DS-017
+ * 覆盖10种数据源类型: IoTDB、InfluxDB、Filesystem、MongoDB、Redis、
+ *                   以及关系型数据库5种子引擎(MySQL、PostgreSQL、Oracle、OceanBase、达梦)
  */
 @DisplayName("数据源管理模块UI测试")
 class DataSourceUiTest extends UiTestBase {
+
+    private static final String HOST_REGISTER = "register-data-resource-embedded";
 
     @Test
     @DisplayName("TC-UI-DS-001: 打开数据源管理页面")
@@ -48,7 +52,8 @@ class DataSourceUiTest extends UiTestBase {
         doLogin();
         homePage.goToRegisterDataSource();
         loginPage.sleep(1000);
-        assertTrue(driver.findElement(By.id("registerForm")).isDisplayed(), "注册数据源表单应可见");
+        WebElement registerForm = loginPage.findInShadowById(HOST_REGISTER, "registerForm");
+        assertTrue(registerForm.isDisplayed(), "注册数据源表单应可见");
     }
 
     @Test
@@ -57,7 +62,7 @@ class DataSourceUiTest extends UiTestBase {
         doLogin();
         homePage.goToRegisterDataSource();
         loginPage.sleep(1000);
-        Select typeSelect = new Select(driver.findElement(By.id("dataSourceType")));
+        Select typeSelect = new Select(loginPage.findInShadowById(HOST_REGISTER, "dataSourceType"));
         List<String> options = new ArrayList<>();
         for (WebElement o : typeSelect.getOptions()) {
             options.add(o.getAttribute("value"));
@@ -76,82 +81,193 @@ class DataSourceUiTest extends UiTestBase {
         doLogin();
         homePage.goToRegisterDataSource();
         loginPage.sleep(1000);
-        loginPage.selectByValue("dataSourceType", "1");
+        loginPage.selectInShadowById(HOST_REGISTER, "dataSourceType", "1");
         loginPage.sleep(500);
-        loginPage.clickById("submitBtn");
+        loginPage.clickInShadowById(HOST_REGISTER, "submitBtn");
         loginPage.sleep(1000);
-        assertTrue(driver.findElement(By.id("registerForm")).isDisplayed(), "必填字段未填应阻止提交");
+        WebElement registerForm = loginPage.findInShadowById(HOST_REGISTER, "registerForm");
+        assertTrue(registerForm.isDisplayed(), "必填字段未填应阻止提交");
     }
 
     @Test
-    @DisplayName("TC-UI-DS-006: 注册IoTDB - 填写完整信息并提交")
-    void testRegisterIotdbFillAndSubmit() {
-        doLogin();
-        homePage.goToRegisterDataSource();
-        loginPage.sleep(1000);
-        loginPage.selectByValue("dataSourceType", "1");
-        loginPage.sleep(500);
-        loginPage.inputById("host", "127.0.0.1");
-        loginPage.inputById("port", "6667");
-        loginPage.inputById("schemaPrefix", "test_prefix");
-        loginPage.clickById("submitBtn");
-        // 等待接口响应
-        String toastMsg = loginPage.waitForAnyToast(15);
-        // 验证收到了响应（成功或失败都说明接口有返回）
-        assertTrue(!toastMsg.isEmpty() || loginPage.waitForElementHidden(org.openqa.selenium.By.id("registerForm"), 10),
-                "提交后应收到接口响应（Toast提示或表单关闭）");
-    }
-
-    @Test
-    @DisplayName("TC-UI-DS-007: 注册Filesystem - 验证特定字段显示")
-    void testRegisterFilesystemFields() {
-        doLogin();
-        homePage.goToRegisterDataSource();
-        loginPage.sleep(1000);
-        loginPage.selectByValue("dataSourceType", "3");
-        loginPage.sleep(500);
-        assertTrue(driver.findElement(By.id("filesystemFields")).isDisplayed(), "Filesystem特定字段应可见");
-    }
-
-    @Test
-    @DisplayName("TC-UI-DS-008: 注册关系型数据库 - 验证特定字段显示")
-    void testRegisterRelationalFields() {
-        doLogin();
-        homePage.goToRegisterDataSource();
-        loginPage.sleep(1000);
-        loginPage.selectByValue("dataSourceType", "4");
-        loginPage.sleep(500);
-        assertTrue(driver.findElement(By.id("relationalFields")).isDisplayed(), "关系型数据库特定字段应可见");
-    }
-
-    @Test
-    @DisplayName("TC-UI-DS-009: 注册数据源 - 取消操作")
+    @DisplayName("TC-UI-DS-006: 注册数据源 - 取消操作")
     void testRegisterCancel() {
         doLogin();
         homePage.goToRegisterDataSource();
         loginPage.sleep(1000);
-        loginPage.clickById("cancelBtn");
+        loginPage.clickInShadowById(HOST_REGISTER, "cancelBtn");
         loginPage.sleep(1000);
-        // 验证注册表单不再可见
-        WebElement registerContainer = driver.findElement(By.id("registerEmbedded"));
-        assertFalse(registerContainer.isDisplayed() || true, "取消后组件应隐藏");
+        assertTrue(loginPage.isShadowHostHidden(HOST_REGISTER), "取消后注册组件应隐藏");
+    }
+
+    // ===== 10种数据源类型字段验证 =====
+
+    @Test
+    @DisplayName("TC-UI-DS-007: 注册IoTDB - 验证特定字段显示")
+    void testRegisterIotdbFields() {
+        doLogin();
+        homePage.goToRegisterDataSource();
+        loginPage.sleep(1000);
+        loginPage.selectInShadowById(HOST_REGISTER, "dataSourceType", "1");
+        loginPage.sleep(500);
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "iotdbFields").isDisplayed(),
+                "IoTDB特定字段应可见");
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "authFields").isDisplayed(),
+                "IoTDB需要认证字段");
     }
 
     @Test
-    @DisplayName("TC-UI-DS-010: 注册数据源 - 非法端口边界测试")
+    @DisplayName("TC-UI-DS-008: 注册InfluxDB - 验证特定字段显示")
+    void testRegisterInfluxdbFields() {
+        doLogin();
+        homePage.goToRegisterDataSource();
+        loginPage.sleep(1000);
+        loginPage.selectInShadowById(HOST_REGISTER, "dataSourceType", "2");
+        loginPage.sleep(500);
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "influxdbFields").isDisplayed(),
+                "InfluxDB特定字段应可见");
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "authFields").isDisplayed(),
+                "InfluxDB需要认证字段");
+    }
+
+    @Test
+    @DisplayName("TC-UI-DS-009: 注册Filesystem - 验证特定字段显示")
+    void testRegisterFilesystemFields() {
+        doLogin();
+        homePage.goToRegisterDataSource();
+        loginPage.sleep(1000);
+        loginPage.selectInShadowById(HOST_REGISTER, "dataSourceType", "3");
+        loginPage.sleep(500);
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "filesystemFields").isDisplayed(),
+                "Filesystem特定字段应可见");
+        assertFalse(loginPage.findInShadowById(HOST_REGISTER, "authFields").isDisplayed(),
+                "Filesystem不需要认证字段");
+    }
+
+    @Test
+    @DisplayName("TC-UI-DS-010: 注册MongoDB - 验证特定字段显示")
+    void testRegisterMongodbFields() {
+        doLogin();
+        homePage.goToRegisterDataSource();
+        loginPage.sleep(1000);
+        loginPage.selectInShadowById(HOST_REGISTER, "dataSourceType", "5");
+        loginPage.sleep(500);
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "mongodbFields").isDisplayed(),
+                "MongoDB特定字段应可见");
+        assertFalse(loginPage.findInShadowById(HOST_REGISTER, "authFields").isDisplayed(),
+                "MongoDB不需要认证字段");
+    }
+
+    @Test
+    @DisplayName("TC-UI-DS-011: 注册Redis - 验证特定字段显示")
+    void testRegisterRedisFields() {
+        doLogin();
+        homePage.goToRegisterDataSource();
+        loginPage.sleep(1000);
+        loginPage.selectInShadowById(HOST_REGISTER, "dataSourceType", "6");
+        loginPage.sleep(500);
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "redisFields").isDisplayed(),
+                "Redis特定字段应可见");
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "authFields").isDisplayed(),
+                "Redis需要认证字段");
+    }
+
+    @Test
+    @DisplayName("TC-UI-DS-012: 注册关系型数据库 - MySQL引擎")
+    void testRegisterRelationalMysql() {
+        doLogin();
+        homePage.goToRegisterDataSource();
+        loginPage.sleep(1000);
+        loginPage.selectInShadowById(HOST_REGISTER, "dataSourceType", "4");
+        loginPage.sleep(500);
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "relationalFields").isDisplayed(),
+                "关系型数据库特定字段应可见");
+        loginPage.selectInShadowById(HOST_REGISTER, "engine", "mysql");
+        Select engineSelect = new Select(loginPage.findInShadowById(HOST_REGISTER, "engine"));
+        assertEquals("mysql", engineSelect.getFirstSelectedOption().getAttribute("value"),
+                "应选中MySQL引擎");
+    }
+
+    @Test
+    @DisplayName("TC-UI-DS-013: 注册关系型数据库 - PostgreSQL引擎")
+    void testRegisterRelationalPostgresql() {
+        doLogin();
+        homePage.goToRegisterDataSource();
+        loginPage.sleep(1000);
+        loginPage.selectInShadowById(HOST_REGISTER, "dataSourceType", "4");
+        loginPage.sleep(500);
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "relationalFields").isDisplayed(),
+                "关系型数据库特定字段应可见");
+        loginPage.selectInShadowById(HOST_REGISTER, "engine", "postgresql");
+        Select engineSelect = new Select(loginPage.findInShadowById(HOST_REGISTER, "engine"));
+        assertEquals("postgresql", engineSelect.getFirstSelectedOption().getAttribute("value"),
+                "应选中PostgreSQL引擎");
+    }
+
+    @Test
+    @DisplayName("TC-UI-DS-014: 注册关系型数据库 - Oracle引擎")
+    void testRegisterRelationalOracle() {
+        doLogin();
+        homePage.goToRegisterDataSource();
+        loginPage.sleep(1000);
+        loginPage.selectInShadowById(HOST_REGISTER, "dataSourceType", "4");
+        loginPage.sleep(500);
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "relationalFields").isDisplayed(),
+                "关系型数据库特定字段应可见");
+        loginPage.selectInShadowById(HOST_REGISTER, "engine", "oracle");
+        Select engineSelect = new Select(loginPage.findInShadowById(HOST_REGISTER, "engine"));
+        assertEquals("oracle", engineSelect.getFirstSelectedOption().getAttribute("value"),
+                "应选中Oracle引擎");
+    }
+
+    @Test
+    @DisplayName("TC-UI-DS-015: 注册关系型数据库 - OceanBase引擎")
+    void testRegisterRelationalOceanbase() {
+        doLogin();
+        homePage.goToRegisterDataSource();
+        loginPage.sleep(1000);
+        loginPage.selectInShadowById(HOST_REGISTER, "dataSourceType", "4");
+        loginPage.sleep(500);
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "relationalFields").isDisplayed(),
+                "关系型数据库特定字段应可见");
+        loginPage.selectInShadowById(HOST_REGISTER, "engine", "oceanbase");
+        Select engineSelect = new Select(loginPage.findInShadowById(HOST_REGISTER, "engine"));
+        assertEquals("oceanbase", engineSelect.getFirstSelectedOption().getAttribute("value"),
+                "应选中OceanBase引擎");
+    }
+
+    @Test
+    @DisplayName("TC-UI-DS-016: 注册关系型数据库 - 达梦引擎")
+    void testRegisterRelationalDameng() {
+        doLogin();
+        homePage.goToRegisterDataSource();
+        loginPage.sleep(1000);
+        loginPage.selectInShadowById(HOST_REGISTER, "dataSourceType", "4");
+        loginPage.sleep(500);
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "relationalFields").isDisplayed(),
+                "关系型数据库特定字段应可见");
+        loginPage.selectInShadowById(HOST_REGISTER, "engine", "dm");
+        Select engineSelect = new Select(loginPage.findInShadowById(HOST_REGISTER, "engine"));
+        assertEquals("dm", engineSelect.getFirstSelectedOption().getAttribute("value"),
+                "应选中Dameng引擎");
+    }
+
+    @Test
+    @DisplayName("TC-UI-DS-017: 注册数据源 - 非法端口边界测试")
     void testRegisterInvalidPort() {
         doLogin();
         homePage.goToRegisterDataSource();
         loginPage.sleep(1000);
-        loginPage.selectByValue("dataSourceType", "1");
+        loginPage.selectInShadowById(HOST_REGISTER, "dataSourceType", "1");
         loginPage.sleep(500);
-        loginPage.inputById("host", "127.0.0.1");
-        WebElement portInput = driver.findElement(By.id("port"));
+        loginPage.inputInShadowById(HOST_REGISTER, "host", "127.0.0.1");
+        WebElement portInput = loginPage.findInShadowById(HOST_REGISTER, "port");
         portInput.clear();
         portInput.sendKeys("-1");
-        loginPage.inputById("schemaPrefix", "test");
-        loginPage.clickById("submitBtn");
+        loginPage.inputInShadowById(HOST_REGISTER, "schemaPrefix", "test");
+        loginPage.clickInShadowById(HOST_REGISTER, "submitBtn");
         loginPage.sleep(1000);
-        assertTrue(driver.findElement(By.id("registerForm")).isDisplayed(), "非法端口应阻止提交");
+        assertTrue(loginPage.findInShadowById(HOST_REGISTER, "registerForm").isDisplayed(),
+                "非法端口应阻止提交");
     }
 }

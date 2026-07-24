@@ -286,7 +286,7 @@ public abstract class BasePage {
      * 获取自定义元素的 Shadow Root
      */
     public WebElement getShadowHost(String cssSelector) {
-        return waitForVisible(By.cssSelector(cssSelector));
+        return wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(cssSelector)));
     }
 
     public boolean isShadowHostHidden(String cssSelector) {

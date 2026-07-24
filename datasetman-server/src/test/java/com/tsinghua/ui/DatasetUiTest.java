@@ -2,7 +2,7 @@ package com.tsinghua.ui;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
+import org.openqa.selenium.WebElement;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -13,13 +13,27 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("数据集管理模块UI测试")
 class DatasetUiTest extends UiTestBase {
 
+    private static final String HOST_DIALOG = "dataset-dialog";
+
+    private void inputSql(String sql) {
+        java.util.List<WebElement> textareas = loginPage.findsInShadow(HOST_DIALOG, ".sql-textarea");
+        if (textareas.isEmpty()) {
+            loginPage.clickInShadowById(HOST_DIALOG, "addSqlBtn");
+            loginPage.sleep(300);
+            textareas = loginPage.findsInShadow(HOST_DIALOG, ".sql-textarea");
+        }
+        WebElement sqlTextarea = textareas.get(0);
+        sqlTextarea.clear();
+        sqlTextarea.sendKeys(sql);
+    }
+
     @Test
     @DisplayName("TC-UI-DATASET-001: 打开创建数据集弹窗")
     void testOpenDatasetCreateDialog() {
         doLogin();
         homePage.goToDatasetCreate();
         loginPage.sleep(1000);
-        assertTrue(driver.findElement(By.id("datasetDialog")).isDisplayed(), "创建数据集弹窗应可见");
+        assertFalse(loginPage.isShadowHostHidden(HOST_DIALOG), "创建数据集弹窗应可见");
     }
 
     @Test
@@ -28,12 +42,11 @@ class DatasetUiTest extends UiTestBase {
         doLogin();
         homePage.goToDatasetCreate();
         loginPage.sleep(1000);
-        assertTrue(driver.findElement(By.id("datasetName")).isDisplayed());
-        assertTrue(driver.findElement(By.id("datasetSql")).isDisplayed());
-        assertTrue(driver.findElement(By.id("datasetDesc")).isDisplayed());
-        assertTrue(driver.findElement(By.id("datasetRemark")).isDisplayed());
-        assertTrue(driver.findElement(By.id("submitBtn")).isDisplayed());
-        assertTrue(driver.findElement(By.id("cancelBtn")).isDisplayed());
+        assertTrue(loginPage.findInShadowById(HOST_DIALOG, "datasetName").isDisplayed());
+        assertTrue(loginPage.findInShadowById(HOST_DIALOG, "datasetRemark").isDisplayed());
+        assertTrue(loginPage.findInShadowById(HOST_DIALOG, "addSqlBtn").isDisplayed());
+        assertTrue(loginPage.findInShadowById(HOST_DIALOG, "submitBtn").isDisplayed());
+        assertTrue(loginPage.findInShadowById(HOST_DIALOG, "cancelBtn").isDisplayed());
     }
 
     @Test
@@ -42,10 +55,11 @@ class DatasetUiTest extends UiTestBase {
         doLogin();
         homePage.goToDatasetCreate();
         loginPage.sleep(1000);
-        loginPage.inputById("datasetSql", "SELECT * FROM test");
-        loginPage.clickById("submitBtn");
+        inputSql("SELECT * FROM test");
+        loginPage.clickInShadowById(HOST_DIALOG, "submitBtn");
         loginPage.sleep(1000);
-        assertTrue(driver.findElement(By.id("datasetNameError")).isDisplayed(), "空名称应显示错误提示");
+        WebElement resultArea = loginPage.findInShadowById(HOST_DIALOG, "resultArea");
+        assertTrue(resultArea.getText().contains("数据集名称"), "空名称应在结果区域显示错误提示");
     }
 
     @Test
@@ -54,10 +68,11 @@ class DatasetUiTest extends UiTestBase {
         doLogin();
         homePage.goToDatasetCreate();
         loginPage.sleep(1000);
-        loginPage.inputById("datasetName", "test_dataset");
-        loginPage.clickById("submitBtn");
+        loginPage.inputInShadowById(HOST_DIALOG, "datasetName", "test_dataset");
+        loginPage.clickInShadowById(HOST_DIALOG, "submitBtn");
         loginPage.sleep(1000);
-        assertTrue(driver.findElement(By.id("datasetSqlError")).isDisplayed(), "空SQL应显示错误提示");
+        WebElement resultArea = loginPage.findInShadowById(HOST_DIALOG, "resultArea");
+        assertTrue(resultArea.getText().contains("SQL"), "空SQL应在结果区域显示错误提示");
     }
 
     @Test
@@ -66,10 +81,10 @@ class DatasetUiTest extends UiTestBase {
         doLogin();
         homePage.goToDatasetCreate();
         loginPage.sleep(1000);
-        loginPage.inputById("datasetName", "cancel_test");
-        loginPage.clickById("cancelBtn");
+        loginPage.inputInShadowById(HOST_DIALOG, "datasetName", "cancel_test");
+        loginPage.clickInShadowById(HOST_DIALOG, "cancelBtn");
         loginPage.sleep(1000);
-        assertFalse(driver.findElement(By.id("datasetDialog")).isDisplayed(), "取消后弹窗应关闭");
+        assertTrue(loginPage.isShadowHostHidden(HOST_DIALOG), "取消后弹窗应关闭");
     }
 
     @Test
@@ -78,15 +93,14 @@ class DatasetUiTest extends UiTestBase {
         doLogin();
         homePage.goToDatasetCreate();
         loginPage.sleep(1000);
-        loginPage.inputById("datasetName", "ui_test_dataset");
-        loginPage.inputById("datasetSql", "SELECT * FROM test.cpu");
-        loginPage.inputById("datasetDesc", "UI自动化测试数据集");
-        loginPage.inputById("datasetRemark", "自动化创建");
-        loginPage.clickById("submitBtn");
+        loginPage.inputInShadowById(HOST_DIALOG, "datasetName", "ui_test_dataset");
+        inputSql("SELECT * FROM test.cpu");
+        loginPage.inputInShadowById(HOST_DIALOG, "datasetRemark", "自动化创建");
+        loginPage.clickInShadowById(HOST_DIALOG, "submitBtn");
         // 等待接口响应
         String toastMsg = loginPage.waitForAnyToast(15);
         // 验证收到了响应
-        assertTrue(!toastMsg.isEmpty() || loginPage.waitForElementHidden(org.openqa.selenium.By.id("datasetDialog"), 10),
+        assertTrue(!toastMsg.isEmpty() || loginPage.isShadowHostHidden(HOST_DIALOG),
                 "提交后应收到接口响应（Toast提示或弹窗关闭）");
     }
 
@@ -98,13 +112,13 @@ class DatasetUiTest extends UiTestBase {
         loginPage.sleep(1000);
         StringBuilder longName = new StringBuilder();
         for (int i = 0; i < 200; i++) { longName.append("d"); }
-        loginPage.inputById("datasetName", longName.toString());
-        loginPage.inputById("datasetSql", "SELECT 1");
-        loginPage.clickById("submitBtn");
+        loginPage.inputInShadowById(HOST_DIALOG, "datasetName", longName.toString());
+        inputSql("SELECT 1");
+        loginPage.clickInShadowById(HOST_DIALOG, "submitBtn");
         // 等待接口响应（成功或失败）
         String toastMsg = loginPage.waitForAnyToast(15);
         // 验证不崩溃且收到了响应
-        assertTrue(!toastMsg.isEmpty() || loginPage.waitForElementHidden(org.openqa.selenium.By.id("datasetDialog"), 10),
+        assertTrue(!toastMsg.isEmpty() || loginPage.isShadowHostHidden(HOST_DIALOG),
                 "提交后应收到接口响应");
     }
 
@@ -114,13 +128,12 @@ class DatasetUiTest extends UiTestBase {
         doLogin();
         homePage.goToDatasetCreate();
         loginPage.sleep(1000);
-        loginPage.inputById("datasetName", "test<script>alert(1)</script>");
-        loginPage.inputById("datasetSql", "SELECT 1");
-        loginPage.clickById("submitBtn");
-        // 等待接口响应（成功或失败）
-        String toastMsg = loginPage.waitForAnyToast(15);
-        // 验证XSS不会执行且收到了响应
-        assertTrue(!toastMsg.isEmpty() || loginPage.waitForElementHidden(org.openqa.selenium.By.id("datasetDialog"), 10),
-                "提交后应收到接口响应，XSS代码不应执行");
+        loginPage.inputInShadowById(HOST_DIALOG, "datasetName", "test<script>alert(1)</script>");
+        inputSql("SELECT 1");
+        loginPage.clickInShadowById(HOST_DIALOG, "submitBtn");
+        loginPage.sleep(1000);
+        // 名称含特殊字符，前端校验应拒绝并提示错误
+        WebElement resultArea = loginPage.findInShadowById(HOST_DIALOG, "resultArea");
+        assertTrue(resultArea.getText().contains("字母"), "特殊字符名称应被校验拒绝并提示错误");
     }
 }

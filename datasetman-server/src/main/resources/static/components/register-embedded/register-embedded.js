@@ -371,6 +371,11 @@ class RegisterDataResourceEmbedded extends HTMLElement {
             return false;
         }
 
+        if (data.port < 1 || data.port > 65535) {
+            this.showMessage('端口范围应为1-65535', 'error');
+            return false;
+        }
+
         // 模式前缀必填验证
         if (!data.schemaPrefix || data.schemaPrefix.trim() === '') {
             this.showMessage('请输入模式前缀', 'error');
