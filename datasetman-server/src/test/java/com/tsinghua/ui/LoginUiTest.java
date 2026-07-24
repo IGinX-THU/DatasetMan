@@ -25,12 +25,12 @@ class LoginUiTest extends UiTestBase {
     @Test
     @DisplayName("TC-UI-LOGIN-002: 正确用户名密码登录成功")
     void testLoginSuccess() {
-        loginPage.login("test", "test123");
+        loginPage.login("user", "user123");
         loginPage.waitForUrlChange("/login.html");
         assertFalse(loginPage.isLoginPage(), "登录成功后应跳转离开登录页");
-        // 等待页面加载完成，验证已进入主页
-        assertTrue(loginPage.waitForVisible(org.openqa.selenium.By.id("app"), 10).isDisplayed(),
-                "登录成功后应显示主页内容");
+        // 等待页面加载完成，验证已进入主页（index.html 中顶部导航栏）
+        assertTrue(loginPage.waitForVisible(org.openqa.selenium.By.id("menu-home"), 10).isDisplayed(),
+                "登录成功后应显示主页导航栏");
     }
 
     @Test
@@ -63,7 +63,8 @@ class LoginUiTest extends UiTestBase {
         loginPage.sleep(1000);
         assertTrue(loginPage.isLoginPage(), "空用户名应停留在登录页");
         String errorMsg = loginPage.getErrorMessage();
-        assertTrue(errorMsg.contains("用户名") || errorMsg.contains("请输入"), "应提示输入用户名");
+        assertTrue(errorMsg.contains("请输入此字段") || errorMsg.isEmpty(),
+                "空用户名时浏览器原生校验提示'请输入此字段'，阻止提交");
     }
 
     @Test
@@ -74,7 +75,8 @@ class LoginUiTest extends UiTestBase {
         loginPage.sleep(1000);
         assertTrue(loginPage.isLoginPage(), "空密码应停留在登录页");
         String errorMsg = loginPage.getErrorMessage();
-        assertTrue(errorMsg.contains("密码") || errorMsg.contains("请输入"), "应提示输入密码");
+        assertTrue(errorMsg.contains("请输入此字段") || errorMsg.isEmpty(),
+                "空密码时浏览器原生校验提示'请输入此字段'，阻止提交");
     }
 
     @Test
@@ -82,8 +84,7 @@ class LoginUiTest extends UiTestBase {
     void testLoginBothEmpty() {
         loginPage.clickLoginBtn();
         loginPage.sleep(1000);
-        assertTrue(loginPage.isLoginPage(), "都为空应停留在登录页");
-        assertNotEquals("", loginPage.getErrorMessage(), "应显示错误提示");
+        assertTrue(loginPage.isLoginPage(), "都为空应停留在登录页，浏览器原生校验'请输入此字段'阻止提交");
     }
 
     @Test

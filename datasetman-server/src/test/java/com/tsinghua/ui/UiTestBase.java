@@ -16,7 +16,7 @@ public abstract class UiTestBase {
     protected LoginPage loginPage;
     protected HomePage homePage;
 
-    private static final String BASE_URL = System.getenv().getOrDefault("TEST_BASE_URL", "http://localhost:8081");
+    private static final String BASE_URL = System.getenv().getOrDefault("TEST_BASE_URL", "http://124.65.131.2:18081");
     private static final String TEST_USERNAME = System.getenv().getOrDefault("TEST_USER", "test");
     private static final String TEST_PASSWORD = System.getenv().getOrDefault("TEST_PASS", "test123");
     private static final String ADMIN_USERNAME = System.getenv().getOrDefault("ADMIN_USER", "admin");
