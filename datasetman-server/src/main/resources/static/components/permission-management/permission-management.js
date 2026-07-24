@@ -200,9 +200,13 @@ class PermissionManagement extends HTMLElement {
             emptyHint.hidden = true;
         }
 
+        const isAdmin = window.MenuPermission?.getCurrentRole() === 'ADMIN';
         this.rows.forEach((row) => {
             const pk = this.rowPrimaryKey(row);
             const tr = document.createElement('tr');
+            const deleteBtnHtml = isAdmin
+                ? `<button type="button" class="action-btn delete" data-id="${pk != null ? pk : ''}">删除</button>`
+                : '';
             tr.innerHTML = `
                 <td>${this.escapeHtml(row.tablePrefix || '')}</td>
                 <td>${this.escapeHtml(row.owner || '')}</td>
@@ -212,12 +216,17 @@ class PermissionManagement extends HTMLElement {
                 <td>
                     <div class="action-buttons">
                         <button type="button" class="action-btn edit" data-id="${pk != null ? pk : ''}">编辑</button>
+                        ${deleteBtnHtml}
                     </div>
                 </td>
             `;
             const editBtn = tr.querySelector('.action-btn.edit');
             if (editBtn && pk != null) {
                 editBtn.addEventListener('click', () => this.openEditModal(row));
+            }
+            const delBtn = tr.querySelector('.action-btn.delete');
+            if (delBtn) {
+                delBtn.addEventListener('click', () => this.deletePermission(row));
             }
             tableBody.appendChild(tr);
         });
@@ -409,6 +418,30 @@ class PermissionManagement extends HTMLElement {
             return '-';
         }
         return new Date(n).toLocaleString('zh-CN');
+    }
+
+    async deletePermission(row) {
+        const tablePrefix = row.tablePrefix;
+        if (!tablePrefix) {
+            this.showToast('表前缀缺失，无法删除', 'error');
+            return;
+        }
+        if (!confirm(`确定要删除权限记录「${tablePrefix}」吗？`)) {
+            return;
+        }
+        try {
+            const url = window.AppConfig.getApiUrl('dataPermission', 'delete').replace('{tablePrefix}', encodeURIComponent(tablePrefix));
+            const result = await window.AppConfig.request(url, { method: 'DELETE' });
+            if (result.success) {
+                this.showToast(result.message || '删除成功');
+                await this.loadList();
+            } else {
+                this.showToast(result.message || '删除失败', 'error');
+            }
+        } catch (error) {
+            console.error('删除权限失败:', error);
+            this.showToast('删除权限失败: ' + error.message, 'error');
+        }
     }
 
     showToast(message, type = 'success') {

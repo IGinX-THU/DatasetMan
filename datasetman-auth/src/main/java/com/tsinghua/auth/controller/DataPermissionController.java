@@ -8,11 +8,7 @@ import com.tsinghua.model.Result;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -54,4 +50,19 @@ public class DataPermissionController {
             return Result.error(e.getMessage());
         }
     }
+
+    @ApiOperation("删除权限（仅管理员）")
+    @DeleteMapping("/delete/{tablePrefix}")
+    public Result<Void> delete(@PathVariable("tablePrefix") String tablePrefix) {
+        try {
+            if (tablePrefix == null || tablePrefix.trim().isEmpty()) {
+                return Result.error("表前缀不能为空");
+            }
+            dataPermissionService.deleteByTablePrefix(tablePrefix);
+            return Result.success("删除成功");
+        } catch (Exception e) {
+            return Result.error("删除失败: " + e.getMessage());
+        }
+    }
+
 }
