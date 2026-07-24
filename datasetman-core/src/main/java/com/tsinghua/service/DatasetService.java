@@ -141,6 +141,7 @@ public class DatasetService {
         }
         DeleteClient deleteClient = iginxClient.getDeleteClient();
         deleteClient.deleteMeasurement(path);
+        dataPermissionService.deleteByTablePrefix(path);
     }
 
     /**
