@@ -200,33 +200,39 @@ class PermissionManagement extends HTMLElement {
             emptyHint.hidden = true;
         }
 
-        const isAdmin = window.MenuPermission?.getCurrentRole() === 'ADMIN';
+        // 检查当前用户是否是管理员
+        const userRole = window.MenuPermission ? window.MenuPermission.getCurrentRole() : null;
+        const isAdmin = userRole === 'ADMIN';
+
         this.rows.forEach((row) => {
             const pk = this.rowPrimaryKey(row);
             const tr = document.createElement('tr');
-            const deleteBtnHtml = isAdmin
-                ? `<button type="button" class="action-btn delete" data-id="${pk != null ? pk : ''}">删除</button>`
-                : '';
+            let actionButtonsHtml = `
+                <div class="action-buttons">
+                    <button type="button" class="action-btn edit" data-id="${pk != null ? pk : ''}">编辑</button>
+            `;
+            if (isAdmin) {
+                actionButtonsHtml += `
+                    <button type="button" class="action-btn delete" data-table-prefix="${this.escapeHtml(row.tablePrefix || '')}">删除</button>
+                `;
+            }
+            actionButtonsHtml += '</div>';
+
             tr.innerHTML = `
                 <td>${this.escapeHtml(row.tablePrefix || '')}</td>
                 <td>${this.escapeHtml(row.owner || '')}</td>
                 <td>${row.isPublic ? '是' : '否'}</td>
                 <td>${this.escapeHtml(row.visibleUsers || '-')}</td>
                 <td>${this.formatTime(row.createTime)}</td>
-                <td>
-                    <div class="action-buttons">
-                        <button type="button" class="action-btn edit" data-id="${pk != null ? pk : ''}">编辑</button>
-                        ${deleteBtnHtml}
-                    </div>
-                </td>
+                <td>${actionButtonsHtml}</td>
             `;
             const editBtn = tr.querySelector('.action-btn.edit');
             if (editBtn && pk != null) {
                 editBtn.addEventListener('click', () => this.openEditModal(row));
             }
-            const delBtn = tr.querySelector('.action-btn.delete');
-            if (delBtn) {
-                delBtn.addEventListener('click', () => this.deletePermission(row));
+            const deleteBtn = tr.querySelector('.action-btn.delete');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => this.showDeleteConfirm(row.tablePrefix));
             }
             tableBody.appendChild(tr);
         });
@@ -420,22 +426,14 @@ class PermissionManagement extends HTMLElement {
         return new Date(n).toLocaleString('zh-CN');
     }
 
-    async deletePermission(row) {
-        const tablePrefix = row.tablePrefix;
-        if (!tablePrefix) {
-            this.showToast('表前缀缺失，无法删除', 'error');
-            return;
-        }
-        const confirmed = await confirmDialog(
-            `确定要删除权限记录「${this.escapeHtml(tablePrefix)}」吗？<br><br><span style="color: #f5222d;">此操作不可恢复！</span>`,
-            '确认删除'
-        );
-        if (!confirmed) {
-            return;
-        }
+    async deletePermission(tablePrefix) {
         try {
-            const url = window.AppConfig.getApiUrl('dataPermission', 'delete').replace('{tablePrefix}', encodeURIComponent(tablePrefix));
-            const result = await window.AppConfig.request(url, { method: 'DELETE' });
+            const url = `${window.AppConfig.api.baseURL}/api/data-permission/delete/${encodeURIComponent(tablePrefix)}`;
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: window.AppConfig.getAuthHeaders()
+            });
+            const result = await response.json();
             if (result.success) {
                 this.showToast(result.message || '删除成功');
                 await this.loadList();
@@ -444,8 +442,100 @@ class PermissionManagement extends HTMLElement {
             }
         } catch (error) {
             console.error('删除权限失败:', error);
-            this.showToast('删除权限失败: ' + error.message, 'error');
+            this.showToast('删除权限失败', 'error');
         }
+    }
+
+    showDeleteConfirm(tablePrefix) {
+        const dialogHtml = `
+            <div class="dialog-mask" style="
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            ">
+                <div class="dialog-content" style="
+                    background: white;
+                    border-radius: 8px;
+                    padding: 24px;
+                    max-width: 400px;
+                    width: 90%;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                ">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2329;">确认删除</h3>
+                    <p style="margin: 0 0 24px 0; color: #646a73; line-height: 1.5;">
+                        确定要删除权限 "${tablePrefix}" 吗？
+                    </p>
+                    <div class="dialog-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button type="button" class="cancel-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #c9cdd4;
+                            border-radius: 4px;
+                            background: white;
+                            color: #1f2329;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">取消</button>
+                        <button type="button" class="confirm-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #ff4d4f;
+                            border-radius: 4px;
+                            background: #ff4d4f;
+                            color: white;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">确认删除</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const dialog = document.createElement('div');
+        dialog.innerHTML = dialogHtml;
+        document.body.appendChild(dialog);
+
+        const dialogMask = dialog.querySelector('.dialog-mask');
+        const dialogContent = dialog.querySelector('.dialog-content');
+        const cancelBtn = dialog.querySelector('.cancel-btn');
+        const confirmBtn = dialog.querySelector('.confirm-btn');
+
+        if (dialogContent) {
+            dialogContent.addEventListener('click', (e) => e.stopPropagation());
+        }
+
+        const closeDialog = () => {
+            try {
+                if (dialog && dialog.parentNode) {
+                    dialog.parentNode.removeChild(dialog);
+                }
+            } catch (e) {
+                console.error('关闭弹窗失败:', e);
+            }
+        };
+
+        if (dialogMask) {
+            dialogMask.addEventListener('click', closeDialog);
+        }
+
+        cancelBtn.addEventListener('click', closeDialog);
+
+        confirmBtn.addEventListener('click', async () => {
+            if (confirmBtn.disabled) return;
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = '删除中...';
+            confirmBtn.style.opacity = '0.6';
+            confirmBtn.style.cursor = 'not-allowed';
+            try {
+                await this.deletePermission(tablePrefix);
+            } catch (error) {
+                console.error('删除权限失败:', error);
+            } finally {
+                closeDialog();
+            }
+        });
     }
 
     showToast(message, type = 'success') {
