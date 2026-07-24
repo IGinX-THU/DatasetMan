@@ -426,7 +426,11 @@ class PermissionManagement extends HTMLElement {
             this.showToast('表前缀缺失，无法删除', 'error');
             return;
         }
-        if (!confirm(`确定要删除权限记录「${tablePrefix}」吗？`)) {
+        const confirmed = await confirmDialog(
+            `确定要删除权限记录「${this.escapeHtml(tablePrefix)}」吗？<br><br><span style="color: #f5222d;">此操作不可恢复！</span>`,
+            '确认删除'
+        );
+        if (!confirmed) {
             return;
         }
         try {
