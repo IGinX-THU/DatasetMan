@@ -11,6 +11,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.tsinghua.auth.aspect.OperationLogAspect;
 import com.tsinghua.auth.service.DataPermissionService;
 import com.tsinghua.auth.util.AuthUtil;
+import org.springframework.util.CollectionUtils;
 import com.tsinghua.dto.DatasetRequest;
 import com.tsinghua.entity.DatasetEntity;
 import com.tsinghua.enums.SchemaPrefix;
@@ -88,7 +89,6 @@ public class DatasetService {
         datasetEntity.setCreateTime(timestamp);
         datasetEntity.setOperator(operator);
         datasetEntity.setClientIp(clientIp);
-        datasetEntity.setOwner(AuthUtil.getCurrentUsername());
 
         writeClient.writeMeasurement(datasetEntity);
 
@@ -99,13 +99,15 @@ public class DatasetService {
     }
 
     public DatasetEntity queryMeta(String path) {
-        try {
-            String sql = "select * from %s where storagePath = '%s'";
-            if (!AuthUtil.isAdmin()) {
-                String currentUser = AuthUtil.getCurrentUsername();
-                sql += " AND owner = '" + currentUser + "'";
+        if (!AuthUtil.isAdmin()) {
+            List<String> accessibleTables = dataPermissionService.getCurrentUserAccessibleTables();
+            if (CollectionUtils.isEmpty(accessibleTables) || !accessibleTables.contains(path)) {
+                log.warn("用户{}无权访问数据集: {}", AuthUtil.getCurrentUsername(), path);
+                return null;
             }
-            sql += ";";
+        }
+        try {
+            String sql = "select * from %s where storagePath = '%s';";
             String formatSQL = String.format(sql, META_PREFIX, path);
             log.info(formatSQL);
             SessionExecuteSqlResult res = iginxSession.executeSql(formatSQL);
@@ -148,12 +150,7 @@ public class DatasetService {
      */
     public List<com.tsinghua.dto.DatasetVersionTreeDTO> getVersionHistory(String datasetName) {
         try {
-            String sql = "select * from %s where datasetName = '%s'";
-            if (!AuthUtil.isAdmin()) {
-                String currentUser = AuthUtil.getCurrentUsername();
-                sql += " AND owner = '" + currentUser + "'";
-            }
-            sql += " order by createTime desc;";
+            String sql = "select * from %s where datasetName = '%s' order by createTime desc;";
             String formatSQL = String.format(sql, META_PREFIX, datasetName);
             log.info(formatSQL);
             SessionExecuteSqlResult res = iginxSession.executeSql(formatSQL);
@@ -163,6 +160,9 @@ public class DatasetService {
                 return new ArrayList<>();
             }
 
+            // 非管理员用户根据数据集路径权限过滤
+            List<String> accessibleTables = AuthUtil.isAdmin() ? null : dataPermissionService.getCurrentUserAccessibleTables();
+
             List<DatasetEntity> versionList = new ArrayList<>();
             for (Map<String, Object> rs : records) {
                 DatasetEntity entity = new DatasetEntity();
@@ -170,6 +170,9 @@ public class DatasetService {
                     String fieldName = k.replace(META_PREFIX + ".", "");
                     ConvertUtil.setEntityField(entity, META_PREFIX, fieldName, v);
                 });
+                if (accessibleTables != null && !accessibleTables.contains(entity.getStoragePath())) {
+                    continue;
+                }
                 versionList.add(entity);
             }
 
