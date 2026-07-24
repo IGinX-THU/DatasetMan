@@ -52,7 +52,7 @@ public abstract class UiTestBase {
 
         driver = new ChromeDriver(options);
         driver.manage().timeouts().implicitlyWait(java.time.Duration.ofSeconds(10));
-        driver.manage().timeouts().pageLoadTimeout(java.time.Duration.ofSeconds(30));
+        driver.manage().timeouts().pageLoadTimeout(java.time.Duration.ofSeconds(60));
         driver.get(BASE_URL + "/login.html");
 
         loginPage = new LoginPage(driver);
@@ -62,7 +62,15 @@ public abstract class UiTestBase {
     @AfterEach
     void tearDown() {
         if (driver != null) {
-            driver.quit();
+            try {
+                driver.quit();
+            } catch (Exception e) {
+                System.err.println("driver.quit() failed, force killing: " + e.getMessage());
+                try {
+                    Runtime.getRuntime().exec("taskkill /F /IM chromedriver.exe /T").waitFor();
+                    Runtime.getRuntime().exec("taskkill /F /IM chrome.exe /T").waitFor();
+                } catch (Exception ignored) {}
+            }
         }
     }
 

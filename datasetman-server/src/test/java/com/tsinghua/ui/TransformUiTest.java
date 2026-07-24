@@ -70,7 +70,7 @@ class TransformUiTest extends UiTestBase {
             // 验证点击后有响应（弹窗或编辑界面出现）
             boolean modalAppeared = false;
             try {
-                modalAppeared = driver.findElement(By.cssSelector("#transformCompare .dialog-mask, #transformCompare .modal")).isDisplayed();
+                modalAppeared = driver.findElement(By.cssSelector(".dialog-mask")).isDisplayed();
             } catch (Exception ignored) {}
             assertTrue(modalAppeared, "点击新增按钮后应出现弹窗或编辑界面");
         }

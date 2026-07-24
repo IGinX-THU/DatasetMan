@@ -54,7 +54,7 @@ class FunctionUiTest extends UiTestBase {
             loginPage.sleep(1000);
             loginPage.clickById("registerTransformBtn");
             loginPage.sleep(1000);
-            assertTrue(driver.findElement(By.id("modalMask")).isDisplayed(), "注册Transform弹窗应可见");
+            assertTrue(driver.findElement(By.cssSelector(".dialog-mask")).isDisplayed(), "注册Transform弹窗应可见");
         }
 
         @Test
@@ -65,11 +65,11 @@ class FunctionUiTest extends UiTestBase {
             loginPage.sleep(1000);
             loginPage.clickById("registerTransformBtn");
             loginPage.sleep(1000);
-            assertTrue(driver.findElement(By.id("transformName")).isDisplayed());
-            assertTrue(driver.findElement(By.id("className")).isDisplayed());
-            assertTrue(driver.findElement(By.id("transformFile")).isDisplayed());
-            assertTrue(driver.findElement(By.id("saveBtn")).isDisplayed());
-            assertTrue(driver.findElement(By.id("cancelBtn")).isDisplayed());
+            assertTrue(driver.findElement(By.cssSelector(".dialog-mask #transformName")).isDisplayed());
+            assertTrue(driver.findElement(By.cssSelector(".dialog-mask #className")).isDisplayed());
+            assertTrue(driver.findElement(By.cssSelector(".dialog-mask #uploadArea")).isDisplayed());
+            assertTrue(driver.findElement(By.cssSelector(".dialog-mask .confirm-btn")).isDisplayed());
+            assertTrue(driver.findElement(By.cssSelector(".dialog-mask .cancel-btn")).isDisplayed());
         }
 
         @Test
@@ -80,9 +80,10 @@ class FunctionUiTest extends UiTestBase {
             loginPage.sleep(1000);
             loginPage.clickById("registerTransformBtn");
             loginPage.sleep(1000);
-            loginPage.clickById("saveBtn");
+            loginPage.clickByCss(".dialog-mask .confirm-btn");
             loginPage.sleep(1000);
-            assertTrue(driver.findElement(By.id("modalMask")).isDisplayed(), "空别名应阻止提交");
+            // 空名称时浏览器原生required验证会阻止提交，弹窗仍应存在
+            assertTrue(driver.findElement(By.cssSelector(".dialog-mask")).isDisplayed(), "空别名应阻止提交");
         }
 
         @Test
@@ -93,9 +94,13 @@ class FunctionUiTest extends UiTestBase {
             loginPage.sleep(1000);
             loginPage.clickById("registerTransformBtn");
             loginPage.sleep(1000);
-            loginPage.clickById("cancelBtn");
+            loginPage.clickByCss(".dialog-mask .cancel-btn");
             loginPage.sleep(1000);
-            assertFalse(driver.findElement(By.id("modalMask")).isDisplayed(), "取消后弹窗应关闭");
+            boolean dialogExists = false;
+            try {
+                dialogExists = driver.findElement(By.cssSelector(".dialog-mask")).isDisplayed();
+            } catch (Exception ignored) {}
+            assertFalse(dialogExists, "取消后弹窗应关闭");
         }
 
         @Test
@@ -132,7 +137,7 @@ class FunctionUiTest extends UiTestBase {
             loginPage.sleep(1000);
             loginPage.clickById("registerUdfBtn");
             loginPage.sleep(1000);
-            assertTrue(driver.findElement(By.id("udfModal")).isDisplayed(), "注册UDF弹窗应可见");
+            assertTrue(driver.findElement(By.cssSelector(".dialog-mask")).isDisplayed(), "注册UDF弹窗应可见");
         }
 
         @Test
@@ -143,10 +148,10 @@ class FunctionUiTest extends UiTestBase {
             loginPage.sleep(1000);
             loginPage.clickById("registerUdfBtn");
             loginPage.sleep(1000);
-            assertTrue(driver.findElement(By.id("udfType")).isDisplayed());
-            assertTrue(driver.findElement(By.id("udfName")).isDisplayed());
-            assertTrue(driver.findElement(By.id("className")).isDisplayed());
-            assertTrue(driver.findElement(By.id("udfFile")).isDisplayed());
+            assertTrue(driver.findElement(By.cssSelector(".dialog-mask #udfType")).isDisplayed());
+            assertTrue(driver.findElement(By.cssSelector(".dialog-mask #udfName")).isDisplayed());
+            assertTrue(driver.findElement(By.cssSelector(".dialog-mask #className")).isDisplayed());
+            assertTrue(driver.findElement(By.cssSelector(".dialog-mask #uploadArea")).isDisplayed());
         }
 
         @Test
@@ -157,7 +162,7 @@ class FunctionUiTest extends UiTestBase {
             loginPage.sleep(1000);
             loginPage.clickById("registerUdfBtn");
             loginPage.sleep(1000);
-            Select typeSelect = new Select(driver.findElement(By.id("udfType")));
+            Select typeSelect = new Select(driver.findElement(By.cssSelector(".dialog-mask #udfType")));
             List<String> options = new ArrayList<>();
             for (WebElement o : typeSelect.getOptions()) { options.add(o.getAttribute("value")); }
             assertTrue(options.contains("UDAF"), "应包含UDAF选项");

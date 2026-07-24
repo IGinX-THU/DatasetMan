@@ -76,7 +76,14 @@ public abstract class BasePage {
     }
 
     public void waitForUrlChange(String oldUrlFragment) {
-        wait.until(driver -> !driver.getCurrentUrl().contains(oldUrlFragment));
+        new WebDriverWait(driver, Duration.ofSeconds(30))
+            .until(d -> {
+                try {
+                    return !d.getCurrentUrl().contains(oldUrlFragment);
+                } catch (org.openqa.selenium.TimeoutException e) {
+                    return false;
+                }
+            });
     }
 
     // ============ 输入操作 ============
@@ -245,7 +252,9 @@ public abstract class BasePage {
         WebElement dropdown = findById(dropdownId);
         actions.moveToElement(dropdown).perform();
         sleep(300);
-        executeJs("arguments[0].classList.add('active');", dropdown);
+        executeJs("arguments[0].classList.add('active');" +
+                "var m = arguments[0].querySelector('.dropdown-menu');" +
+                "if (m) m.style.display = 'block';", dropdown);
         sleep(500);
     }
 

@@ -18,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("评价准则与质量测评模块UI测试")
 class QualityUiTest extends UiTestBase {
 
+    private static final String HOST_EC = "evaluation-criteria";
+
     @Nested
     @DisplayName("评价准则")
     class EvaluationCriteria {
@@ -28,7 +30,7 @@ class QualityUiTest extends UiTestBase {
             doLogin();
             homePage.goToEvaluationCriteria();
             loginPage.sleep(1000);
-            assertTrue(driver.findElement(By.id("evaluationCriteria")).isDisplayed(), "评价准则组件应可见");
+            assertFalse(loginPage.isShadowHostHidden(HOST_EC), "评价准则组件应可见");
         }
 
         @Test
@@ -37,7 +39,7 @@ class QualityUiTest extends UiTestBase {
             doLogin();
             homePage.goToEvaluationCriteria();
             loginPage.sleep(1000);
-            assertTrue(driver.findElement(By.id("ecListView")).isDisplayed(), "评价准则列表视图应可见");
+            assertTrue(loginPage.findInShadowById(HOST_EC, "ecListView").isDisplayed(), "评价准则列表视图应可见");
         }
 
         @Test
@@ -46,9 +48,9 @@ class QualityUiTest extends UiTestBase {
             doLogin();
             homePage.goToEvaluationCriteria();
             loginPage.sleep(1000);
-            assertTrue(driver.findElement(By.id("ecFilterName")).isDisplayed());
-            assertTrue(driver.findElement(By.id("ecApplyFilters")).isDisplayed());
-            assertTrue(driver.findElement(By.id("ecResetFilters")).isDisplayed());
+            assertTrue(loginPage.findInShadowById(HOST_EC, "ecFilterName").isDisplayed());
+            assertTrue(loginPage.findInShadowById(HOST_EC, "ecApplyFilters").isDisplayed());
+            assertTrue(loginPage.findInShadowById(HOST_EC, "ecResetFilters").isDisplayed());
         }
 
         @Test
@@ -57,7 +59,7 @@ class QualityUiTest extends UiTestBase {
             doLogin();
             homePage.goToEvaluationCriteria();
             loginPage.sleep(1000);
-            List<WebElement> headers = driver.findElements(By.cssSelector("#evaluationCriteria th"));
+            List<WebElement> headers = loginPage.findsInShadow(HOST_EC, "th");
             List<String> texts = new ArrayList<>();
             for (WebElement h : headers) { texts.add(h.getText()); }
             assertTrue(texts.contains("名称"));
@@ -75,9 +77,10 @@ class QualityUiTest extends UiTestBase {
             doLogin();
             homePage.goToEvaluationCriteria();
             loginPage.sleep(1000);
-            loginPage.clickById("ecAddBtn");
+            loginPage.clickInShadowById(HOST_EC, "ecAddBtn");
             loginPage.sleep(1000);
-            assertTrue(driver.findElement(By.id("ecFormModal")).isDisplayed(), "新增评价准则弹窗应可见");
+            WebElement modal = loginPage.findInShadowById(HOST_EC, "ecFormModal");
+            assertFalse(modal.getAttribute("hidden") != null, "新增评价准则弹窗应可见");
         }
 
         @Test
@@ -86,13 +89,13 @@ class QualityUiTest extends UiTestBase {
             doLogin();
             homePage.goToEvaluationCriteria();
             loginPage.sleep(1000);
-            loginPage.clickById("ecAddBtn");
+            loginPage.clickInShadowById(HOST_EC, "ecAddBtn");
             loginPage.sleep(1000);
-            assertTrue(driver.findElement(By.id("ecName")).isDisplayed());
-            assertTrue(driver.findElement(By.id("ecDescription")).isDisplayed());
-            List<WebElement> weightInputs = driver.findElements(By.cssSelector(".ec-weight-input"));
+            assertTrue(loginPage.findInShadowById(HOST_EC, "ecName").isDisplayed());
+            assertTrue(loginPage.findInShadowById(HOST_EC, "ecDescription").isDisplayed());
+            List<WebElement> weightInputs = loginPage.findsInShadow(HOST_EC, ".ec-weight-input");
             assertEquals(4, weightInputs.size(), "应有4个维度权重输入框");
-            List<WebElement> jobSelects = driver.findElements(By.cssSelector(".ec-job-select"));
+            List<WebElement> jobSelects = loginPage.findsInShadow(HOST_EC, ".ec-job-select");
             assertEquals(4, jobSelects.size(), "应有4个维度编排选择框");
         }
 
@@ -102,9 +105,9 @@ class QualityUiTest extends UiTestBase {
             doLogin();
             homePage.goToEvaluationCriteria();
             loginPage.sleep(1000);
-            loginPage.clickById("ecAddBtn");
+            loginPage.clickInShadowById(HOST_EC, "ecAddBtn");
             loginPage.sleep(1000);
-            WebElement weightSum = driver.findElement(By.id("ecWeightSum"));
+            WebElement weightSum = loginPage.findInShadowById(HOST_EC, "ecWeightSum");
             assertTrue(weightSum.isDisplayed(), "权重合计应可见");
             assertEquals("1.00", weightSum.getText(), "默认权重合计应为1.00");
         }
@@ -115,11 +118,12 @@ class QualityUiTest extends UiTestBase {
             doLogin();
             homePage.goToEvaluationCriteria();
             loginPage.sleep(1000);
-            loginPage.clickById("ecAddBtn");
+            loginPage.clickInShadowById(HOST_EC, "ecAddBtn");
             loginPage.sleep(1000);
-            loginPage.clickById("ecCancelBtn");
+            loginPage.clickInShadowById(HOST_EC, "ecCancelBtn");
             loginPage.sleep(1000);
-            assertFalse(driver.findElement(By.id("ecFormModal")).isDisplayed(), "取消后弹窗应关闭");
+            WebElement modal = loginPage.findInShadowById(HOST_EC, "ecFormModal");
+            assertTrue(modal.getAttribute("hidden") != null, "取消后弹窗应关闭");
         }
     }
 
