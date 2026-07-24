@@ -276,4 +276,106 @@ public abstract class BasePage {
     public Object executeJs(String script, Object... args) {
         return ((JavascriptExecutor) driver).executeScript(script, args);
     }
+
+    // ============ Shadow DOM 操作 ============
+
+    /**
+     * 获取自定义元素的 Shadow Root
+     */
+    public WebElement getShadowHost(String cssSelector) {
+        return waitForVisible(By.cssSelector(cssSelector));
+    }
+
+    /**
+     * 在 Shadow DOM 中查找元素
+     */
+    public WebElement findInShadow(String hostCssSelector, String innerCssSelector) {
+        WebElement host = getShadowHost(hostCssSelector);
+        return host.getShadowRoot().findElement(By.cssSelector(innerCssSelector));
+    }
+
+    /**
+     * 在 Shadow DOM 中通过 id 查找元素
+     */
+    public WebElement findInShadowById(String hostCssSelector, String id) {
+        return findInShadow(hostCssSelector, "#" + id);
+    }
+
+    /**
+     * 在 Shadow DOM 中点击元素
+     */
+    public void clickInShadow(String hostCssSelector, String innerCssSelector) {
+        WebElement el = findInShadow(hostCssSelector, innerCssSelector);
+        waitForClickable(el);
+        el.click();
+    }
+
+    /**
+     * 在 Shadow DOM 中通过 id 点击元素
+     */
+    public void clickInShadowById(String hostCssSelector, String id) {
+        clickInShadow(hostCssSelector, "#" + id);
+    }
+
+    /**
+     * 在 Shadow DOM 中输入文本
+     */
+    public void inputInShadow(String hostCssSelector, String innerCssSelector, String text) {
+        WebElement el = findInShadow(hostCssSelector, innerCssSelector);
+        el.clear();
+        el.sendKeys(text);
+    }
+
+    /**
+     * 在 Shadow DOM 中通过 id 输入文本
+     */
+    public void inputInShadowById(String hostCssSelector, String id, String text) {
+        inputInShadow(hostCssSelector, "#" + id, text);
+    }
+
+    /**
+     * 在 Shadow DOM 中通过 id 选择下拉框
+     */
+    public void selectInShadowById(String hostCssSelector, String id, String value) {
+        new Select(findInShadowById(hostCssSelector, id)).selectByValue(value);
+    }
+
+    /**
+     * 在 Shadow DOM 中等待元素可见
+     */
+    public WebElement waitForVisibleInShadow(String hostCssSelector, String innerCssSelector, int timeoutSeconds) {
+        WebDriverWait shadowWait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        return shadowWait.until(d -> {
+            try {
+                WebElement host = d.findElement(By.cssSelector(hostCssSelector));
+                return host.getShadowRoot().findElement(By.cssSelector(innerCssSelector));
+            } catch (Exception e) {
+                return null;
+            }
+        });
+    }
+
+    /**
+     * 在 Shadow DOM 中等待元素隐藏
+     */
+    public boolean waitForHiddenInShadow(String hostCssSelector, String innerCssSelector, int timeoutSeconds) {
+        WebDriverWait shadowWait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+        return shadowWait.until(d -> {
+            try {
+                WebElement host = d.findElement(By.cssSelector(hostCssSelector));
+                WebElement el = host.getShadowRoot().findElement(By.cssSelector(innerCssSelector));
+                return !el.isDisplayed();
+            } catch (Exception e) {
+                return true;
+            }
+        });
+    }
+
+    /**
+     * 在 Shadow DOM 中查找多个元素
+     */
+    public List<WebElement> findsInShadow(String hostCssSelector, String innerCssSelector) {
+        WebElement host = getShadowHost(hostCssSelector);
+        return host.getShadowRoot().findElements(By.cssSelector(innerCssSelector));
+    }
 }

@@ -2,7 +2,6 @@ package com.tsinghua.ui;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -13,13 +12,15 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("修改密码模块UI测试")
 class ChangePasswordUiTest extends UiTestBase {
 
+    private static final String HOST = "change-password";
+
     @Test
     @DisplayName("TC-UI-PWD-001: 打开修改密码弹窗")
     void testOpenChangePasswordModal() {
         doLogin();
         homePage.goToChangePassword();
-        loginPage.sleep(1000);
-        assertTrue(driver.findElement(org.openqa.selenium.By.cssSelector(".change-password-container")).isDisplayed(),
+        loginPage.sleep(2000);
+        assertTrue(loginPage.findInShadow(HOST, ".change-password-container").isDisplayed(),
                 "修改密码弹窗应可见");
     }
 
@@ -28,13 +29,13 @@ class ChangePasswordUiTest extends UiTestBase {
     void testChangePasswordFormElements() {
         doLogin();
         homePage.goToChangePassword();
-        loginPage.sleep(1000);
-        assertTrue(driver.findElement(By.id("currentUsername")).isDisplayed());
-        assertTrue(driver.findElement(By.id("oldPassword")).isDisplayed());
-        assertTrue(driver.findElement(By.id("newPassword")).isDisplayed());
-        assertTrue(driver.findElement(By.id("confirmPassword")).isDisplayed());
-        assertTrue(driver.findElement(By.id("confirmChangePassword")).isDisplayed());
-        assertTrue(driver.findElement(By.id("cancelChangePassword")).isDisplayed());
+        loginPage.sleep(2000);
+        assertTrue(loginPage.findInShadowById(HOST, "currentUsername").isDisplayed());
+        assertTrue(loginPage.findInShadowById(HOST, "oldPassword").isDisplayed());
+        assertTrue(loginPage.findInShadowById(HOST, "newPassword").isDisplayed());
+        assertTrue(loginPage.findInShadowById(HOST, "confirmPassword").isDisplayed());
+        assertTrue(loginPage.findInShadowById(HOST, "confirmChangePassword").isDisplayed());
+        assertTrue(loginPage.findInShadowById(HOST, "cancelChangePassword").isDisplayed());
     }
 
     @Test
@@ -42,8 +43,8 @@ class ChangePasswordUiTest extends UiTestBase {
     void testChangePasswordUsernameReadonly() {
         doLogin();
         homePage.goToChangePassword();
-        loginPage.sleep(1000);
-        assertNotNull(driver.findElement(By.id("currentUsername")).getAttribute("readonly"),
+        loginPage.sleep(2000);
+        assertNotNull(loginPage.findInShadowById(HOST, "currentUsername").getAttribute("readonly"),
                 "用户名应为只读");
     }
 
@@ -52,12 +53,12 @@ class ChangePasswordUiTest extends UiTestBase {
     void testChangePasswordEmptyOld() {
         doLogin();
         homePage.goToChangePassword();
+        loginPage.sleep(2000);
+        loginPage.inputInShadowById(HOST, "newPassword", "NewPass123!");
+        loginPage.inputInShadowById(HOST, "confirmPassword", "NewPass123!");
+        loginPage.clickInShadowById(HOST, "confirmChangePassword");
         loginPage.sleep(1000);
-        loginPage.inputById("newPassword", "NewPass123!");
-        loginPage.inputById("confirmPassword", "NewPass123!");
-        loginPage.clickById("confirmChangePassword");
-        loginPage.sleep(1000);
-        assertNotNull(driver.findElement(By.id("oldPassword")).getAttribute("required"));
+        assertNotNull(loginPage.findInShadowById(HOST, "oldPassword").getAttribute("required"));
     }
 
     @Test
@@ -65,15 +66,13 @@ class ChangePasswordUiTest extends UiTestBase {
     void testChangePasswordMismatch() {
         doLogin();
         homePage.goToChangePassword();
-        loginPage.sleep(1000);
-        loginPage.inputById("oldPassword", "user123");
-        loginPage.inputById("newPassword", "NewPass123!");
-        loginPage.inputById("confirmPassword", "DifferentPass456!");
-        loginPage.clickById("confirmChangePassword");
-        // 等待接口响应或前端校验结果
+        loginPage.sleep(2000);
+        loginPage.inputInShadowById(HOST, "oldPassword", "test123");
+        loginPage.inputInShadowById(HOST, "newPassword", "NewPass123!");
+        loginPage.inputInShadowById(HOST, "confirmPassword", "DifferentPass456!");
+        loginPage.clickInShadowById(HOST, "confirmChangePassword");
         String toastMsg = loginPage.waitForAnyToast(10);
-        boolean modalStillVisible = driver.findElement(org.openqa.selenium.By.cssSelector(".change-password-container")).isDisplayed();
-        // 密码不一致应被拒绝：要么显示错误Toast，要么弹窗保持打开
+        boolean modalStillVisible = loginPage.findInShadow(HOST, ".change-password-container").isDisplayed();
         assertTrue(!toastMsg.isEmpty() || modalStillVisible,
                 "密码不一致应阻止提交（显示错误提示或弹窗保持打开）");
     }
@@ -83,12 +82,12 @@ class ChangePasswordUiTest extends UiTestBase {
     void testChangePasswordCancel() {
         doLogin();
         homePage.goToChangePassword();
+        loginPage.sleep(2000);
+        loginPage.inputInShadowById(HOST, "oldPassword", "test123");
+        loginPage.inputInShadowById(HOST, "newPassword", "NewPass123!");
+        loginPage.clickInShadowById(HOST, "cancelChangePassword");
         loginPage.sleep(1000);
-        loginPage.inputById("oldPassword", "user123");
-        loginPage.inputById("newPassword", "NewPass123!");
-        loginPage.clickById("cancelChangePassword");
-        loginPage.sleep(1000);
-        assertFalse(driver.findElement(org.openqa.selenium.By.cssSelector(".change-password-container")).isDisplayed(),
+        assertFalse(loginPage.findInShadow(HOST, ".change-password-container").isDisplayed(),
                 "取消后弹窗应关闭");
     }
 
@@ -97,15 +96,13 @@ class ChangePasswordUiTest extends UiTestBase {
     void testChangePasswordShortNew() {
         doLogin();
         homePage.goToChangePassword();
-        loginPage.sleep(1000);
-        loginPage.inputById("oldPassword", "user123");
-        loginPage.inputById("newPassword", "1");
-        loginPage.inputById("confirmPassword", "1");
-        loginPage.clickById("confirmChangePassword");
-        // 等待接口响应或前端校验结果
+        loginPage.sleep(2000);
+        loginPage.inputInShadowById(HOST, "oldPassword", "test123");
+        loginPage.inputInShadowById(HOST, "newPassword", "1");
+        loginPage.inputInShadowById(HOST, "confirmPassword", "1");
+        loginPage.clickInShadowById(HOST, "confirmChangePassword");
         String toastMsg = loginPage.waitForAnyToast(10);
-        boolean modalStillVisible = driver.findElement(org.openqa.selenium.By.cssSelector(".change-password-container")).isDisplayed();
-        // 短密码应被拒绝：要么显示错误Toast，要么弹窗保持打开
+        boolean modalStillVisible = loginPage.findInShadow(HOST, ".change-password-container").isDisplayed();
         assertTrue(!toastMsg.isEmpty() || modalStillVisible,
                 "短密码应被拒绝（显示错误提示或弹窗保持打开）");
     }

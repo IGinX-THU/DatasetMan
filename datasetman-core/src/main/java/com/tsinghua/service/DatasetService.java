@@ -10,6 +10,7 @@ import cn.edu.tsinghua.iginx.session_v2.write.Point;
 import com.alibaba.fastjson2.JSONObject;
 import com.tsinghua.auth.aspect.OperationLogAspect;
 import com.tsinghua.auth.service.DataPermissionService;
+import com.tsinghua.auth.util.AuthUtil;
 import com.tsinghua.dto.DatasetRequest;
 import com.tsinghua.entity.DatasetEntity;
 import com.tsinghua.enums.SchemaPrefix;
@@ -87,6 +88,7 @@ public class DatasetService {
         datasetEntity.setCreateTime(timestamp);
         datasetEntity.setOperator(operator);
         datasetEntity.setClientIp(clientIp);
+        datasetEntity.setOwner(AuthUtil.getCurrentUsername());
 
         writeClient.writeMeasurement(datasetEntity);
 
@@ -98,7 +100,12 @@ public class DatasetService {
 
     public DatasetEntity queryMeta(String path) {
         try {
-            String sql = "select * from %s where storagePath = '%s';";
+            String sql = "select * from %s where storagePath = '%s'";
+            if (!AuthUtil.isAdmin()) {
+                String currentUser = AuthUtil.getCurrentUsername();
+                sql += " AND owner = '" + currentUser + "'";
+            }
+            sql += ";";
             String formatSQL = String.format(sql, META_PREFIX, path);
             log.info(formatSQL);
             SessionExecuteSqlResult res = iginxSession.executeSql(formatSQL);
@@ -141,7 +148,12 @@ public class DatasetService {
      */
     public List<com.tsinghua.dto.DatasetVersionTreeDTO> getVersionHistory(String datasetName) {
         try {
-            String sql = "select * from %s where datasetName = '%s' order by createTime desc;";
+            String sql = "select * from %s where datasetName = '%s'";
+            if (!AuthUtil.isAdmin()) {
+                String currentUser = AuthUtil.getCurrentUsername();
+                sql += " AND owner = '" + currentUser + "'";
+            }
+            sql += " order by createTime desc;";
             String formatSQL = String.format(sql, META_PREFIX, datasetName);
             log.info(formatSQL);
             SessionExecuteSqlResult res = iginxSession.executeSql(formatSQL);

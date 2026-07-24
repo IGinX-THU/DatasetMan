@@ -25,7 +25,7 @@ class LoginUiTest extends UiTestBase {
     @Test
     @DisplayName("TC-UI-LOGIN-002: 正确用户名密码登录成功")
     void testLoginSuccess() {
-        loginPage.login("user", "user123");
+        loginPage.login("test", "test123");
         loginPage.waitForUrlChange("/login.html");
         assertFalse(loginPage.isLoginPage(), "登录成功后应跳转离开登录页");
         // 等待页面加载完成，验证已进入主页
@@ -36,7 +36,7 @@ class LoginUiTest extends UiTestBase {
     @Test
     @DisplayName("TC-UI-LOGIN-003: 错误密码登录失败")
     void testLoginWrongPassword() {
-        loginPage.login("user", "wrong_password_123");
+        loginPage.login("test", "wrong_password_123");
         // 等待错误响应
         String errorToast = loginPage.waitForErrorToast(10);
         assertTrue(loginPage.isLoginPage(), "密码错误应停留在登录页");
@@ -58,7 +58,7 @@ class LoginUiTest extends UiTestBase {
     @Test
     @DisplayName("TC-UI-LOGIN-005: 空用户名提交 - 前端校验")
     void testLoginEmptyUsername() {
-        loginPage.inputPassword("user123");
+        loginPage.inputPassword("test123");
         loginPage.clickLoginBtn();
         loginPage.sleep(1000);
         assertTrue(loginPage.isLoginPage(), "空用户名应停留在登录页");
@@ -69,7 +69,7 @@ class LoginUiTest extends UiTestBase {
     @Test
     @DisplayName("TC-UI-LOGIN-006: 空密码提交 - 前端校验")
     void testLoginEmptyPassword() {
-        loginPage.inputUsername("user");
+        loginPage.inputUsername("test");
         loginPage.clickLoginBtn();
         loginPage.sleep(1000);
         assertTrue(loginPage.isLoginPage(), "空密码应停留在登录页");
@@ -91,7 +91,7 @@ class LoginUiTest extends UiTestBase {
     void testLoginLongUsername() {
         StringBuilder longUsername = new StringBuilder();
         for (int i = 0; i < 256; i++) { longUsername.append("a"); }
-        loginPage.login(longUsername.toString(), "user123");
+        loginPage.login(longUsername.toString(), "test123");
         // 等待错误响应
         String errorToast = loginPage.waitForErrorToast(10);
         assertTrue(loginPage.isLoginPage(), "超长用户名登录应失败");
@@ -102,7 +102,7 @@ class LoginUiTest extends UiTestBase {
     @Test
     @DisplayName("TC-UI-LOGIN-009: 用户名含特殊字符边界测试")
     void testLoginSpecialCharsUsername() {
-        loginPage.login("user<script>alert(1)</script>", "user123");
+        loginPage.login("test<script>alert(1)</script>", "test123");
         // 等待错误响应
         String errorToast = loginPage.waitForErrorToast(10);
         assertTrue(loginPage.isLoginPage(), "含特殊字符用户名应登录失败");

@@ -53,4 +53,10 @@ public class DatasetEntity {
     @Field(name = "deleted")
     private boolean deleted;
 
+    /**
+     * 所有者（用于用户级别权限隔离）
+     */
+    @Field(name = "owner")
+    private String owner;
+
 }

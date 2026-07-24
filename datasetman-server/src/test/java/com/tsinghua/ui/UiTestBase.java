@@ -17,8 +17,10 @@ public abstract class UiTestBase {
     protected HomePage homePage;
 
     private static final String BASE_URL = System.getenv().getOrDefault("TEST_BASE_URL", "http://localhost:8081");
-    private static final String TEST_USERNAME = System.getenv().getOrDefault("TEST_USER", "user");
-    private static final String TEST_PASSWORD = System.getenv().getOrDefault("TEST_PASS", "user123");
+    private static final String TEST_USERNAME = System.getenv().getOrDefault("TEST_USER", "test");
+    private static final String TEST_PASSWORD = System.getenv().getOrDefault("TEST_PASS", "test123");
+    private static final String ADMIN_USERNAME = System.getenv().getOrDefault("ADMIN_USER", "admin");
+    private static final String ADMIN_PASSWORD = System.getenv().getOrDefault("ADMIN_PASS", "admin123");
 
     @BeforeAll
     static void setUpClass() {
@@ -69,6 +71,22 @@ public abstract class UiTestBase {
      */
     protected void doLogin() {
         loginPage.login(TEST_USERNAME, TEST_PASSWORD);
+        loginPage.waitForUrlChange("/login.html");
+    }
+
+    /**
+     * 用管理员账号登录
+     */
+    protected void doLoginAsAdmin() {
+        loginPage.login(ADMIN_USERNAME, ADMIN_PASSWORD);
+        loginPage.waitForUrlChange("/login.html");
+    }
+
+    /**
+     * 用指定账号登录
+     */
+    protected void doLoginAs(String username, String password) {
+        loginPage.login(username, password);
         loginPage.waitForUrlChange("/login.html");
     }
 
