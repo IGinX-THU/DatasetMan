@@ -115,11 +115,10 @@ class DatasetUiTest extends UiTestBase {
         loginPage.inputInShadowById(HOST_DIALOG, "datasetName", longName.toString());
         inputSql("SELECT 1");
         loginPage.clickInShadowById(HOST_DIALOG, "submitBtn");
-        // 等待接口响应（成功或失败）
-        String toastMsg = loginPage.waitForAnyToast(15);
-        // 验证不崩溃且收到了响应
-        assertTrue(!toastMsg.isEmpty() || loginPage.isShadowHostHidden(HOST_DIALOG),
-                "提交后应收到接口响应");
+        loginPage.sleep(1000);
+        // 前端校验应拒绝超长名称并提示错误
+        WebElement resultArea = loginPage.findInShadowById(HOST_DIALOG, "resultArea");
+        assertTrue(resultArea.getText().contains("50"), "超长名称应被前端校验拒绝，提示长度不能超过50个字符");
     }
 
     @Test

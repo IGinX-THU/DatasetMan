@@ -587,7 +587,12 @@ class DatasetDialog extends HTMLElement {
             this.showResult('请输入数据集名称', 'error');
             return false;
         }
-        
+
+        if (name.length > 50) {
+            this.showResult('数据集名称长度不能超过50个字符', 'error');
+            return false;
+        }
+
         // 验证名称只允许字母、数字、下划线和中文
         const nameRegex = /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/;
         if (!nameRegex.test(name)) {

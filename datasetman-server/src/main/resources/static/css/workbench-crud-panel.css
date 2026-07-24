@@ -181,6 +181,29 @@
     font-size: var(--font-size-base);
 }
 
+.data-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.data-table th,
+.data-table td {
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    padding: 8px 10px;
+    vertical-align: middle;
+}
+
+.data-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.data-table td:hover {
+    white-space: normal;
+}
+
 .modal-mask {
     position: fixed;
     inset: 0;

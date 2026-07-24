@@ -26,74 +26,50 @@ public class HomePage extends BasePage {
 
     // ============ 导航操作 ============
     public void goToDataSourceManagement() {
-        hoverDropdown("dataSourceDropdown");
-        clickById("menu-data-source-management");
-        sleep(1000);
+        clickDropdownMenuItem("dataSourceDropdown", "menu-data-source-management");
     }
 
     public void goToRegisterDataSource() {
-        hoverDropdown("dataSourceDropdown");
-        clickById("menu-register-heterogeneous-data-source");
-        sleep(1000);
+        clickDropdownMenuItem("dataSourceDropdown", "menu-register-heterogeneous-data-source");
     }
 
     public void goToDatasetCreate() {
-        hoverDropdown("datasetDropdown");
-        clickById("menu-dataset-create");
-        sleep(1000);
+        clickDropdownMenuItem("datasetDropdown", "menu-dataset-create");
     }
 
     public void goToJobOrchestration() {
-        hoverDropdown("jobDropdown");
-        clickById("menu-job-orchestration");
-        sleep(1000);
+        clickDropdownMenuItem("jobDropdown", "menu-job-orchestration");
     }
 
     public void goToJobManagement() {
-        hoverDropdown("jobDropdown");
-        clickById("menu-job-management");
-        sleep(1000);
+        clickDropdownMenuItem("jobDropdown", "menu-job-management");
     }
 
     public void goToTransformManagement() {
-        hoverDropdown("functionDropdown");
-        clickById("menu-transform-management");
-        sleep(1000);
+        clickDropdownMenuItem("functionDropdown", "menu-transform-management");
     }
 
     public void goToUdfManagement() {
-        hoverDropdown("functionDropdown");
-        clickById("menu-udf-management");
-        sleep(1000);
+        clickDropdownMenuItem("functionDropdown", "menu-udf-management");
     }
 
     public void goToEvaluationCriteria() {
-        hoverDropdown("qualityDropdown");
-        clickById("menu-evaluation-criteria");
-        sleep(1000);
+        clickDropdownMenuItem("qualityDropdown", "menu-evaluation-criteria");
     }
 
     public void goToQualityAssessment() {
-        hoverDropdown("qualityDropdown");
-        clickById("menu-quality-assessment");
-        sleep(1000);
+        clickDropdownMenuItem("qualityDropdown", "menu-quality-assessment");
     }
 
     public void goToUserManagement() {
-        hoverDropdown("userDropdown");
-        clickById("userManagementMenuItem");
-        sleep(1000);
+        clickDropdownMenuItem("userDropdown", "userManagementMenuItem");
     }
 
     public void goToPermissionManagement() {
-        hoverDropdown("userDropdown");
-        clickById("permissionManagementMenuItem");
-        sleep(1000);
+        clickDropdownMenuItem("userDropdown", "permissionManagementMenuItem");
     }
 
     public void goToChangePassword() {
-        hoverDropdown("userDropdown");
-        clickById("changePasswordMenuItem");
-        sleep(1000);
+        clickDropdownMenuItem("userDropdown", "changePasswordMenuItem");
     }
 }

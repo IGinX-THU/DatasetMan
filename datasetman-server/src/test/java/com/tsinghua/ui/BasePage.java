@@ -258,6 +258,13 @@ public abstract class BasePage {
         sleep(500);
     }
 
+    public void clickDropdownMenuItem(String dropdownId, String menuItemId) {
+        hoverDropdown(dropdownId);
+        WebElement item = findById(menuItemId);
+        executeJs("arguments[0].click();", item);
+        sleep(1000);
+    }
+
     // ============ 工具方法 ============
     public void sleep(long millis) {
         try {
