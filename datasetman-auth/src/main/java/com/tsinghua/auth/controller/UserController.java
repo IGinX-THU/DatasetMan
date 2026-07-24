@@ -14,6 +14,7 @@ import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +34,10 @@ public class UserController {
     @RequirePermission(Permission.USER_CREATE)
     @OperationLog(value = "创建用户", type = OperationLog.OperationType.CREATE)
     public Result<Void> saveUser(@RequestBody UserEntity user) throws Exception {
+        // 检查用户名长度
+        if (!StringUtils.hasText(user.getUsername()) || user.getUsername().length() > 50) {
+            return Result.error("用户名长度不能超过50个字符");
+        }
         // 检查用户名是否已存在
         UserEntity existingUser = rolePermissionService.getUser(user.getUsername());
         if (existingUser != null) {

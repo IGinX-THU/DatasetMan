@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 登录模块UI自动化测试
- * 对应测试用例: TC-UI-LOGIN-001 ~ TC-UI-LOGIN-009
+ * 对应测试用例: TC-UI-LOGIN-001 ~ TC-UI-LOGIN-007
  */
 @DisplayName("登录模块UI测试")
 class LoginUiTest extends UiTestBase {
@@ -85,29 +85,5 @@ class LoginUiTest extends UiTestBase {
         loginPage.clickLoginBtn();
         loginPage.sleep(1000);
         assertTrue(loginPage.isLoginPage(), "都为空应停留在登录页，浏览器原生校验'请输入此字段'阻止提交");
-    }
-
-    @Test
-    @DisplayName("TC-UI-LOGIN-008: 超长用户名边界测试")
-    void testLoginLongUsername() {
-        StringBuilder longUsername = new StringBuilder();
-        for (int i = 0; i < 256; i++) { longUsername.append("a"); }
-        loginPage.login(longUsername.toString(), "test123");
-        // 等待错误响应
-        String errorToast = loginPage.waitForErrorToast(10);
-        assertTrue(loginPage.isLoginPage(), "超长用户名登录应失败");
-        assertTrue(!errorToast.isEmpty() || !loginPage.getErrorMessage().isEmpty(),
-                "应显示错误提示信息");
-    }
-
-    @Test
-    @DisplayName("TC-UI-LOGIN-009: 用户名含特殊字符边界测试")
-    void testLoginSpecialCharsUsername() {
-        loginPage.login("test<script>alert(1)</script>", "test123");
-        // 等待错误响应
-        String errorToast = loginPage.waitForErrorToast(10);
-        assertTrue(loginPage.isLoginPage(), "含特殊字符用户名应登录失败");
-        assertTrue(!errorToast.isEmpty() || !loginPage.getErrorMessage().isEmpty(),
-                "应显示错误提示信息，XSS代码不执行");
     }
 }

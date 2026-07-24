@@ -242,7 +242,10 @@ public abstract class BasePage {
 
     // ============ 菜单导航 ============
     public void hoverDropdown(String dropdownId) {
-        actions.moveToElement(findById(dropdownId)).perform();
+        WebElement dropdown = findById(dropdownId);
+        actions.moveToElement(dropdown).perform();
+        sleep(300);
+        executeJs("arguments[0].classList.add('active');", dropdown);
         sleep(500);
     }
 
@@ -284,6 +287,15 @@ public abstract class BasePage {
      */
     public WebElement getShadowHost(String cssSelector) {
         return waitForVisible(By.cssSelector(cssSelector));
+    }
+
+    public boolean isShadowHostHidden(String cssSelector) {
+        try {
+            WebElement host = driver.findElement(By.cssSelector(cssSelector));
+            return !host.isDisplayed();
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     /**
