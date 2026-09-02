@@ -682,6 +682,172 @@
   border: 1px solid var(--color-warning);
 }
 
+/* ============================================================
+   公共弹窗样式（所有组件复用）
+   用法：JS 动态生成下方结构 append 到 body
+   <div class="app-dialog-mask">
+     <div class="app-dialog">
+       <button class="app-dialog-close">&times;</button>
+       <h3 class="app-dialog-title">标题</h3>
+       <div class="app-dialog-body">...</div>
+       <div class="app-dialog-footer">...</div>
+     </div>
+   </div>
+   ============================================================ */
+
+.app-dialog-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.app-dialog {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* 尺寸修饰符 */
+.app-dialog.app-dialog-sm { max-width: 400px; }
+.app-dialog.app-dialog-md { max-width: 600px; }
+.app-dialog.app-dialog-lg { max-width: 720px; }
+.app-dialog.app-dialog-xl { max-width: 900px; }
+
+.app-dialog-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+  color: #8c8c8c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.app-dialog-close:hover {
+  background: #f5f5f5;
+  color: #595959;
+}
+
+.app-dialog-title {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.app-dialog-body {
+  margin-bottom: 16px;
+}
+
+.app-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+/* 弹窗内表单元素 */
+.app-dialog .form-group {
+  margin-bottom: 16px;
+}
+
+.app-dialog .form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2329;
+}
+
+.app-dialog .form-group input,
+.app-dialog .form-group select,
+.app-dialog .form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #c9cdd4;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #1f2329;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.app-dialog .form-group textarea {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.app-dialog .required {
+  color: #ef4444;
+}
+
+/* 弹窗内按钮 */
+.app-dialog .btn-primary {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  background: #1976d2;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.app-dialog .btn-primary:hover {
+  background: #1565c0;
+}
+
+.app-dialog .btn-primary:disabled {
+  background: #90caf9;
+  cursor: not-allowed;
+}
+
+.app-dialog .btn-secondary {
+  padding: 8px 20px;
+  border: 1px solid #c9cdd4;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  color: #1f2329;
+}
+
+.app-dialog .btn-secondary:hover {
+  background: #f5f5f5;
+}
+
+.app-dialog .btn-danger {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  background: #ef4444;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.app-dialog .btn-danger:hover {
+  background: #dc2626;
+}
+
 .badge-danger {
   background: var(--color-danger-light);
   color: var(--color-danger);

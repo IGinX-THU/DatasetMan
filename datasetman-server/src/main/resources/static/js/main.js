@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'transformCompare',
             'transformManagement',
             'udfManagement',
+            'sqlSnippetManagement',
             'fileSystemBrowser',
             'keyValueViewer',
             'semiStructuredViewer',
@@ -573,6 +574,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (menuId === 'menu-udf-management') {
                     console.log('UDF管理菜单被点击');
                     showComponent('udfManagement');
+                } else if (menuId === 'menu-sql-snippet-management') {
+                    console.log('SQL片段管理菜单被点击');
+                    showComponent('sqlSnippetManagement');
                 } else if (this.dataset && this.dataset.scale) {
                     applyFontScale(this.dataset.scale);
                 } else {

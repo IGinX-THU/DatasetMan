@@ -15,6 +15,7 @@ import com.tsinghua.dto.TaskInfoDto;
 import com.tsinghua.dto.TransformJobQueryRequest;
 import com.tsinghua.dto.request.FilesystemStorageRequest;
 import com.tsinghua.entity.DatasetEntity;
+import com.tsinghua.entity.SqlSnippetEntity;
 import com.tsinghua.entity.TransformCompareEntity;
 import com.tsinghua.entity.TransformJobEntity;
 import com.tsinghua.enums.SchemaPrefix;
@@ -53,6 +54,9 @@ public class TransformJobService {
 
     @Autowired
     private DataSourceService dataSourceService;
+
+    @Autowired
+    private SqlSnippetService sqlSnippetService;
 
     @Value("${iginx.ip}")
     private String ip;
@@ -300,10 +304,21 @@ public class TransformJobService {
             TaskInfo taskInfo = new TaskInfo(taskType, dataFlowType);
 
             if (taskType == TaskType.IGINX) {
-                DatasetEntity datasetEntity = datasetService.queryMeta(taskInfoDto.getDataset());
-                taskInfoBo.setDataset(datasetEntity);
-
-                List<String> sqlList = JSONArray.parseArray(datasetEntity.getDatasetSql(), String.class);
+                List<String> sqlList;
+                // 优先使用sqlSnippetId引用SQL片段（新方式）
+                if (taskInfoDto.getSqlSnippetId() != null) {
+                    SqlSnippetEntity sqlSnippetEntity = sqlSnippetService.queryById(taskInfoDto.getSqlSnippetId());
+                    if (sqlSnippetEntity == null) {
+                        throw new RuntimeException("SQL片段不存在: id=" + taskInfoDto.getSqlSnippetId());
+                    }
+                    taskInfoBo.setSqlSnippet(sqlSnippetEntity);
+                    sqlList = JSONArray.parseArray(sqlSnippetEntity.getSqlList(), String.class);
+                } else {
+                    // 兼容旧方式：通过dataset(storagePath)查DatasetEntity拿SQL
+                    DatasetEntity datasetEntity = datasetService.queryMeta(taskInfoDto.getDataset());
+                    taskInfoBo.setDataset(datasetEntity);
+                    sqlList = JSONArray.parseArray(datasetEntity.getDatasetSql(), String.class);
+                }
                 taskInfo.setSqlList(sqlList);
             } else {
                 taskInfoBo.setPyTaskName(taskInfoDto.getPyTaskName());

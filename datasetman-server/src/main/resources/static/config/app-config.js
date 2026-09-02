@@ -146,6 +146,13 @@ window.AppConfig = {
             query: '/api/function/query/{type}',
             download: '/api/function/download/udf/{fileName}'
         },
+        // SQL片段相关
+        sqlSnippet: {
+            save: '/api/sql-snippet/save',
+            list: '/api/sql-snippet/list',
+            metas: '/api/sql-snippet/metas',
+            delete: '/api/sql-snippet/delete'
+        },
         // Transform作业相关
         job: {
             save: '/api/job/save',

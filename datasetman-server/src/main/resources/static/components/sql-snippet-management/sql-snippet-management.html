@@ -1,0 +1,25 @@
+<div class="sql-snippet-management">
+    <div class="db-table-card">
+        <div class="table-toolbar">
+            <input type="text" id="searchInput" class="search-input" placeholder="按名称搜索..." style="flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px;">
+            <button class="toolbar-btn green" type="button" id="createBtn">新建SQL片段</button>
+            <button class="toolbar-btn blue" type="button" id="refreshBtn">刷新</button>
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>名称</th>
+                        <th>描述</th>
+                        <th>SQL数量</th>
+                        <th>创建者</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

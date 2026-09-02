@@ -552,8 +552,8 @@ class TransformCompare extends HTMLElement {
                     this.showToast('请选择Transform函数', 'error');
                     return;
                 }
-                if (task.taskType === 0 && !task.dataset) {
-                    this.showToast('请选择数据集', 'error');
+                if (task.taskType === 0 && !task.dataset && !task.sqlSnippetId) {
+                    this.showToast('请选择SQL片段或数据集', 'error');
                     return;
                 }
             }
@@ -844,8 +844,8 @@ class TransformCompare extends HTMLElement {
                             this.showToast('请选择Transform函数', 'error');
                             return;
                         }
-                        if (task.taskType === 0 && !task.dataset) {
-                            this.showToast('请选择数据集', 'error');
+                        if (task.taskType === 0 && !task.dataset && !task.sqlSnippetId) {
+                            this.showToast('请选择SQL片段或数据集', 'error');
                             return;
                         }
                     }
@@ -1170,9 +1170,10 @@ class TransformCompare extends HTMLElement {
         const dataFlowType = task?.dataFlowType || '';
         const timeout = task?.timeout || '';
         const dataset = task?.dataset || '';
+        const sqlSnippetId = task?.sqlSnippetId || '';
         const pyTaskName = task?.pyTaskName || '';
 
-        // 解析dataset路径，提取数据集名称和版本
+        // 解析dataset路径，提取数据集名称和版本（旧数据兼容回显）
         let datasetName = '';
         let version = '';
         if (dataset) {
@@ -1183,23 +1184,31 @@ class TransformCompare extends HTMLElement {
                     version = parts[2];
                 }
             } else {
-                // 如果不是标准格式，直接使用dataset作为datasetName
                 datasetName = dataset;
             }
         }
 
         let configHTML = '';
         if (taskType === 'iginx') {
+            // 优先使用SQL片段（新方式）；若有旧dataset值则兼容回显
+            const hasLegacyDataset = !!datasetName;
             configHTML = `
-                <div style="display: flex; gap: 8px;">
-                    <select class="dataset-select" style="flex: 2; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
-                        <option value="">请选择数据集</option>
-                        <option value="${datasetName}" ${datasetName ? 'selected' : ''}>${datasetName}</option>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <select class="sql-snippet-select" data-selected="${sqlSnippetId}" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                        <option value="">请选择SQL片段</option>
+                        ${sqlSnippetId ? `<option value="${sqlSnippetId}" selected>SQL片段#${sqlSnippetId}</option>` : ''}
                     </select>
-                    <select class="version-select" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
-                        <option value="">请选择版本</option>
-                        <option value="${version}" ${version ? 'selected' : ''}>${version}</option>
-                    </select>
+                    ${hasLegacyDataset ? `
+                        <span style="color: #9ca3af; font-size: 12px; white-space: nowrap;">或旧数据集:</span>
+                        <select class="dataset-select" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                            <option value="">请选择数据集</option>
+                            <option value="${datasetName}" selected>${datasetName}</option>
+                        </select>
+                        <select class="version-select" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                            <option value="">请选择版本</option>
+                            <option value="${version}" selected>${version}</option>
+                        </select>
+                    ` : ''}
                 </div>
             `;
         } else if (taskType === 'python') {
@@ -1247,7 +1256,7 @@ class TransformCompare extends HTMLElement {
                 </div>
                 <div class="task-config" style="padding-top: 16px; border-top: 1px solid #e5e7eb;">
                     <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #475569;">
-                        ${taskType === 'iginx' ? '数据集 <span style="color: #ef4444;">*</span>' : taskType === 'python' ? 'Transform函数 <span style="color: #ef4444;">*</span>' : '配置'}
+                        ${taskType === 'iginx' ? 'SQL片段 <span style="color: #ef4444;">*</span>' : taskType === 'python' ? 'Transform函数 <span style="color: #ef4444;">*</span>' : '配置'}
                     </label>
                     <div class="config-content iginx-config" style="display: ${taskType === 'iginx' ? 'block' : 'none'};">
                         ${configHTML}
@@ -1311,6 +1320,7 @@ class TransformCompare extends HTMLElement {
         const pyTaskNameSelect = row.querySelector('.py-task-name');
         const datasetSelect = row.querySelector('.dataset-select');
         const versionSelect = row.querySelector('.version-select');
+        const sqlSnippetSelect = row.querySelector('.sql-snippet-select');
 
         if (removeBtn) {
             removeBtn.addEventListener('click', () => {
@@ -1357,22 +1367,15 @@ class TransformCompare extends HTMLElement {
                     // 动态更新内容
                     if (taskType === 'iginx') {
                         iginxConfig.innerHTML = `
-                            <div style="display: flex; gap: 8px;">
-                                <select class="dataset-select" style="flex: 2; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
-                                    <option value="">请选择数据集</option>
-                                </select>
-                                <select class="version-select" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
-                                    <option value="">请选择版本</option>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select class="sql-snippet-select" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                                    <option value="">请选择SQL片段</option>
                                 </select>
                             </div>
                         `;
-                        const newDatasetSelect = iginxConfig.querySelector('.dataset-select');
-                        const newVersionSelect = iginxConfig.querySelector('.version-select');
-                        if (newDatasetSelect) {
-                            this.loadDatasets(newDatasetSelect);
-                            newDatasetSelect.addEventListener('change', () => {
-                                this.loadDatasetVersions(newDatasetSelect.value, newVersionSelect);
-                            });
+                        const newSqlSnippetSelect = iginxConfig.querySelector('.sql-snippet-select');
+                        if (newSqlSnippetSelect) {
+                            this.loadSqlSnippets(newSqlSnippetSelect);
                         }
                     } else if (taskType === 'python') {
                         pythonConfig.innerHTML = `
@@ -1389,7 +1392,7 @@ class TransformCompare extends HTMLElement {
 
                 if (configLabel) {
                     if (taskType === 'iginx') {
-                        configLabel.innerHTML = '数据集 <span style="color: #ef4444;">*</span>';
+                        configLabel.innerHTML = 'SQL片段 <span style="color: #ef4444;">*</span>';
                     } else if (taskType === 'python') {
                         configLabel.innerHTML = 'Transform函数 <span style="color: #ef4444;">*</span>';
                     } else {
@@ -1413,6 +1416,16 @@ class TransformCompare extends HTMLElement {
                     versionSelect.value = currentVersionValue;
                 });
             }
+        }
+
+        // 加载SQL片段列表（新方式）
+        if (sqlSnippetSelect && taskTypeSelect?.value === 'iginx') {
+            const currentSqlSnippetId = sqlSnippetSelect.getAttribute('data-selected') || sqlSnippetSelect.value;
+            this.loadSqlSnippets(sqlSnippetSelect, () => {
+                if (currentSqlSnippetId) {
+                    sqlSnippetSelect.value = currentSqlSnippetId;
+                }
+            });
         }
 
         if (pyTaskNameSelect && taskTypeSelect?.value === 'python') {
@@ -1441,6 +1454,33 @@ class TransformCompare extends HTMLElement {
             this._datasourceTreePromise = window.AppConfig.get('datasource', 'tree');
         }
         return this._datasourceTreePromise;
+    }
+
+    getSqlSnippets() {
+        if (!this._sqlSnippetsPromise) {
+            this._sqlSnippetsPromise = window.AppConfig.get('sqlSnippet', 'list');
+        }
+        return this._sqlSnippetsPromise;
+    }
+
+    async loadSqlSnippets(selectElement, callback) {
+        try {
+            selectElement.innerHTML = '<option value="">请选择SQL片段</option>';
+            const result = await this.getSqlSnippets();
+            if (result.code === 200 && result.data) {
+                result.data.forEach(snippet => {
+                    const option = document.createElement('option');
+                    option.value = snippet.id;
+                    option.textContent = snippet.name;
+                    selectElement.appendChild(option);
+                });
+                if (callback) callback();
+            } else {
+                console.error('获取SQL片段列表失败:', result.message);
+            }
+        } catch (error) {
+            console.error('加载SQL片段异常:', error);
+        }
     }
 
     async loadDatasets(selectElement, callback) {
@@ -1688,6 +1728,7 @@ class TransformCompare extends HTMLElement {
             const pyTaskName = row.querySelector('.py-task-name')?.value;
             const datasetSelect = row.querySelector('.dataset-select');
             const versionSelect = row.querySelector('.version-select');
+            const sqlSnippetSelect = row.querySelector('.sql-snippet-select');
 
             if (taskType) {
                 const task = {
@@ -1709,11 +1750,18 @@ class TransformCompare extends HTMLElement {
                     if (pyTaskName) {
                         task.pyTaskName = pyTaskName;
                     }
-                } else if (taskType === 'iginx' && datasetSelect) {
-                    const dataset = datasetSelect?.value;
-                    const version = versionSelect?.value;
-                    if (dataset && version) {
-                        task.dataset = `datasets.${dataset}.${version}`;
+                } else if (taskType === 'iginx') {
+                    // 优先使用SQL片段（新方式）
+                    const sqlSnippetId = sqlSnippetSelect?.value;
+                    if (sqlSnippetId) {
+                        task.sqlSnippetId = parseInt(sqlSnippetId);
+                    } else if (datasetSelect && versionSelect) {
+                        // 兼容旧方式：通过数据集storagePath引用SQL
+                        const dataset = datasetSelect?.value;
+                        const version = versionSelect?.value;
+                        if (dataset && version) {
+                            task.dataset = `datasets.${dataset}.${version}`;
+                        }
                     }
                 }
 
