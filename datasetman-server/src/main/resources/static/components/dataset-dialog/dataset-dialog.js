@@ -1,17 +1,15 @@
 class DatasetDialog extends HTMLElement {
     constructor() {
         super();
-        this.mode = 'create'; // 'create' or 'edit'
-        this.datasetData = null;
-        this._isSubmitting = false; // 防止重复提交标志
-        this.sqlList = []; // SQL列表
-        this.debounceTimer = null; // 防抖定时器
+        this.currentStep = 1;
+        this.totalSteps = 4;
+        this.options = { sources: [], datasets: [], snippets: [], udfs: [], jobs: [] };
         this.attachShadow({ mode: 'open' });
     }
 
     connectedCallback() {
         this.render();
-        this.initEventListeners();
+        this.bindEvents();
     }
 
     render() {
@@ -19,876 +17,759 @@ class DatasetDialog extends HTMLElement {
             <style>
                 :host {
                     display: none;
-                    position: fixed;
-                    inset: 0;
-                    background: rgba(15, 23, 42, 0.35);
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 2000;
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    width: 100%;
+                    height: 100%;
+                    overflow: auto;
+                    box-sizing: border-box;
+                    background: #f8fafc;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                    color: #1f2937;
                 }
-                
-                :host(.show) {
-                    display: flex;
+                :host([show]) {
+                    display: block;
                 }
-                
-                .modal {
-                    background: white;
-                    border-radius: 8px;
-                    width: 95%;
-                    max-width: 800px;
-                    max-height: 90vh;
-                    overflow-y: auto;
-                    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
+                .wizard-container {
+                    max-width: 960px;
+                    margin: 24px auto;
+                    background: #ffffff;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+                    overflow: hidden;
                 }
-                
-                .modal-header {
+                .wizard-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 12px 16px;
-                    border-bottom: 1px solid #e2e6ef;
+                    padding: 20px 28px;
+                    border-bottom: 1px solid #e5e7eb;
+                    background: #ffffff;
                 }
-                
-                .modal-title {
-                    font-size: 14px;
-                    font-weight: 500;
-                    color: #1f2329;
+                .wizard-title {
                     margin: 0;
-                }
-                
-                .modal-close {
-                    border: none;
-                    background: transparent;
                     font-size: 18px;
+                    font-weight: 600;
+                    color: #111827;
+                }
+                .close-btn {
+                    border: 0;
+                    background: transparent;
+                    font-size: 24px;
+                    line-height: 1;
                     cursor: pointer;
-                    color: #8c8c8c;
-                    padding: 0;
-                    width: 24px;
-                    height: 24px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: 4px;
+                    color: #9ca3af;
+                    padding: 4px;
                 }
-                
-                .modal-close:hover {
-                    background: #f5f5f5;
-                    color: #595959;
+                .close-btn:hover {
+                    color: #4b5563;
                 }
-                
-                .modal-body {
-                    padding: 16px;
+                .steps {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    padding: 20px 28px 0;
+                    gap: 12px;
                 }
-                
-                .modal-footer {
-                    padding: 12px 16px 16px;
-                    display: flex;
-                    justify-content: flex-end;
-                    gap: 8px;
+                .step-indicator {
+                    padding: 10px 12px;
+                    text-align: center;
+                    border-radius: 6px;
+                    color: #6b7280;
+                    background: #f3f4f6;
+                    font-size: 13px;
+                    font-weight: 500;
+                    transition: all 0.2s ease;
                 }
-                
-                .modal-btn {
-                    padding: 6px 14px;
-                    border-radius: 4px;
-                    border: 1px solid #e2e6ef;
-                    background: white;
+                .step-indicator.active {
+                    color: #ffffff;
+                    background: #2563eb;
+                }
+                .step-indicator.done {
+                    color: #1d4ed8;
+                    background: #dbeafe;
+                }
+                .wizard-body {
+                    padding: 28px;
+                    min-height: 380px;
+                }
+                .step-panel {
+                    display: none;
+                }
+                .step-panel.active {
+                    display: block;
+                }
+                .section-title {
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: #1f2937;
+                    margin-bottom: 18px;
+                }
+                .types-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 14px;
+                }
+                .type-card {
+                    border: 1.5px solid #e5e7eb;
+                    border-radius: 8px;
+                    padding: 16px 18px;
                     cursor: pointer;
-                    font-size: 12px;
-                    transition: all 0.2s;
+                    background: #ffffff;
+                    transition: all 0.15s ease;
                 }
-                
-                .modal-btn:hover {
-                    border-color: #4c89ff;
-                    color: #4c89ff;
+                .type-card:hover {
+                    border-color: #93c5fd;
+                    background: #f8fafc;
                 }
-                
-                .modal-btn.primary {
-                    background: #4c89ff;
-                    color: #fff;
-                    border-color: #4c89ff;
+                .type-card.selected {
+                    border-color: #2563eb;
+                    background: #eff6ff;
                 }
-                
-                .modal-btn.primary:hover {
-                    background: #3d7bf7;
+                .type-card strong {
+                    display: block;
+                    margin-bottom: 6px;
+                    color: #111827;
+                    font-size: 14px;
                 }
-                
-                /* 表单样式 - 复用 parsing-rules */
-                .modal-form {
-                    display: flex;
-                    flex-direction: column;
+                .type-card span {
+                    color: #6b7280;
+                    font-size: 13px;
+                    line-height: 1.5;
+                }
+                .form-group {
+                    margin-bottom: 18px;
+                }
+                .form-row {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
                     gap: 16px;
                 }
-                
-                .modal-form-row {
-                    display: flex;
-                    align-items: flex-start;
-                    gap: 12px;
+                label {
+                    display: block;
+                    margin-bottom: 7px;
+                    color: #374151;
+                    font-size: 14px;
+                    font-weight: 500;
                 }
-                
-                .modal-label {
-                    min-width: 80px;
-                    color: #5f6b7a;
-                    font-size: 12px;
-                    padding-top: 8px;
-                }
-                
-                .modal-input-wrapper {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                }
-                
-                .modal-input {
-                    flex: 1;
-                    border: 1px solid #e2e6ef;
-                    border-radius: 4px;
-                    padding: 8px 12px;
-                    font-size: 13px;
-                    background: #fafbff;
-                    transition: all 0.2s;
-                    box-sizing: border-box;
-                }
-                
-                .modal-input:focus {
-                    border-color: #4c89ff;
-                    outline: none;
-                    background: white;
-                }
-                
-                .modal-textarea {
-                    flex: 1;
-                    border: 1px solid #e2e6ef;
-                    border-radius: 4px;
-                    padding: 8px 12px;
-                    font-size: 13px;
-                    background: #fafbff;
-                    resize: vertical;
-                    min-height: 120px;
-                    font-family: 'Consolas', 'Monaco', monospace;
-                    box-sizing: border-box;
+                input, select, textarea {
                     width: 100%;
-                }
-                
-                .modal-textarea:focus {
-                    border-color: #4c89ff;
-                    outline: none;
-                    background: white;
-                }
-                
-                /* 测试按钮行 */
-                .test-row {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-top: 4px;
-                }
-                
-                .btn-test {
-                    padding: 6px 16px;
-                    border-radius: 4px;
-                    border: none;
-                    background: #52c41a;
-                    color: white;
-                    cursor: pointer;
-                    font-size: 12px;
-                    transition: all 0.2s;
-                }
-                
-                .btn-test:hover {
-                    background: #389e0d;
-                }
-                
-                .btn-test:disabled {
-                    background: #bfbfbf;
-                    cursor: not-allowed;
-                }
-                
-                /* 执行结果显示区 */
-                .result-area {
-                    margin-top: 8px;
-                    border: 1px solid #e2e6ef;
+                    box-sizing: border-box;
+                    border: 1px solid #d1d5db;
                     border-radius: 6px;
-                    padding: 12px;
-                    background: #f8f9fa;
-                    min-height: 150px;
-                    max-height: 300px;
-                    overflow-y: auto;
+                    padding: 10px 12px;
+                    font-size: 14px;
+                    background: #ffffff;
+                    color: #1f2937;
+                    outline: none;
+                    transition: border-color 0.15s;
                 }
-                
-                .result-placeholder {
-                    color: #999;
+                input:focus, select:focus, textarea:focus {
+                    border-color: #2563eb;
+                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+                }
+                select[multiple] {
+                    min-height: 120px;
+                }
+                textarea {
+                    min-height: 80px;
+                    resize: vertical;
+                }
+                .required {
+                    color: #ef4444;
+                }
+                .hint {
+                    color: #6b7280;
                     font-size: 12px;
+                    margin-top: 5px;
+                }
+                .empty {
+                    color: #9ca3af;
+                    padding: 30px;
                     text-align: center;
-                    padding: 50px 0;
+                    background: #f9fafb;
+                    border-radius: 6px;
                 }
-                
-                .result-content {
-                    font-family: 'Consolas', 'Monaco', monospace;
-                    font-size: 12px;
-                    line-height: 1.5;
-                    white-space: pre-wrap;
+                .summary {
+                    display: grid;
+                    grid-template-columns: 140px 1fr;
+                    gap: 12px;
+                    font-size: 14px;
+                    background: #f9fafb;
+                    padding: 18px;
+                    border-radius: 8px;
+                }
+                .summary dt {
+                    color: #6b7280;
+                    font-weight: 500;
+                }
+                .summary dd {
+                    margin: 0;
+                    color: #111827;
                     word-break: break-all;
                 }
-                
-                .result-success {
-                    color: #52c41a;
-                }
-                
-                .result-error {
-                    color: #ff4d4f;
-                }
-                
-                .result-loading {
-                    color: #4c89ff;
-                }
-                
-                /* SQL列表样式 */
-                .sql-list {
+                .wizard-footer {
                     display: flex;
-                    flex-direction: column;
-                    gap: 12px;
-                }
-                
-                .sql-item {
-                    display: flex;
-                    gap: 8px;
-                    align-items: flex-start;
-                }
-                
-                .sql-item-number {
-                    min-width: 24px;
-                    height: 36px;
-                    display: flex;
+                    justify-content: space-between;
                     align-items: center;
-                    justify-content: center;
-                    background: #e2e6ef;
-                    border-radius: 4px;
-                    font-size: 12px;
-                    font-weight: 500;
-                    color: #5f6b7a;
+                    padding: 18px 28px;
+                    border-top: 1px solid #e5e7eb;
+                    background: #fafafa;
                 }
-                
-                .sql-item-content {
-                    flex: 1;
-                    min-width: 0;
-                    width: 100%;
-                }
-                
-                .sql-item-actions {
+                .right-actions {
                     display: flex;
-                    flex-direction: column;
-                    gap: 4px;
-                    min-width: 32px;
+                    gap: 10px;
                 }
-                
-                .sql-action-btn {
-                    padding: 4px 8px;
-                    border: 1px solid #e2e6ef;
-                    background: white;
-                    border-radius: 4px;
+                button.action-btn {
+                    padding: 9px 22px;
+                    border-radius: 6px;
                     cursor: pointer;
-                    font-size: 11px;
-                    transition: all 0.2s;
-                    min-width: 32px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    transition: all 0.15s ease;
                 }
-                
-                .sql-action-btn:hover {
-                    border-color: #4c89ff;
-                    color: #4c89ff;
+                .secondary-btn {
+                    border: 1px solid #d1d5db;
+                    background: #ffffff;
+                    color: #374151;
                 }
-                
-                .sql-action-btn.delete:hover {
-                    border-color: #ff4d4f;
-                    color: #ff4d4f;
+                .secondary-btn:hover {
+                    background: #f3f4f6;
                 }
-                
-                .sql-action-btn.test:hover {
-                    border-color: #52c41a;
-                    color: #52c41a;
+                .primary-btn {
+                    border: 1px solid #2563eb;
+                    background: #2563eb;
+                    color: #ffffff;
                 }
-                
-                .sql-action-btn:disabled {
-                    opacity: 0.4;
+                .primary-btn:hover {
+                    background: #1d4ed8;
+                }
+                button:disabled {
+                    opacity: 0.55;
                     cursor: not-allowed;
                 }
-                
-                .btn-add-sql {
-                    padding: 6px 12px;
-                    border: 1px dashed #e2e6ef;
-                    background: white;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 12px;
-                    color: #5f6b7a;
-                    transition: all 0.2s;
-                    margin-top: 8px;
-                }
-                
-                .btn-add-sql:hover {
-                    border-color: #4c89ff;
-                    color: #4c89ff;
+                .error-box {
+                    display: none;
+                    color: #dc2626;
+                    font-size: 13px;
+                    margin-bottom: 16px;
+                    padding: 10px 14px;
+                    background: #fef2f2;
+                    border: 1px solid #fecaca;
+                    border-radius: 6px;
                 }
             </style>
-            
-            <div class="modal" id="datasetModal">
-                <div class="modal-header">
-                    <h3 class="modal-title" id="dialogTitle">创建数据集</h3>
-                    <button class="modal-close" id="closeBtn">&times;</button>
+            <div class="wizard-container">
+                <div class="wizard-header">
+                    <h3 class="wizard-title" id="wizardTitle">创建数据集</h3>
+                    <button class="close-btn" id="closeBtn" type="button" title="关闭">&times;</button>
                 </div>
-                
-                <div class="modal-body">
-                    <form class="modal-form" id="datasetForm">
-                        <!-- 名称 -->
-                        <div class="modal-form-row">
-                            <label class="modal-label">名称 <span style="color: red;">*</span> :</label>
-                            <div class="modal-input-wrapper">
-                                <input type="text" class="modal-input" id="datasetName" placeholder="请输入数据集名称" />
-                            </div>
-                        </div>
-
-                        <!-- 备注 -->
-                        <div class="modal-form-row">
-                            <label class="modal-label">备注 :</label>
-                            <div class="modal-input-wrapper">
-                                <input type="text" class="modal-input" id="datasetRemark" placeholder="请输入描述信息" />
-                            </div>
-                        </div>
-
-                        <!-- SQL -->
-                        <div class="modal-form-row">
-                            <label class="modal-label">SQL <span style="color: red;">*</span> :</label>
-                            <div class="modal-input-wrapper">
-                                <div class="sql-list" id="sqlList">
-                                    <!-- SQL列表将动态生成 -->
-                                </div>
-                                <div style="display: flex; gap: 8px; margin-top: 8px;">
-                                    <button type="button" class="btn-add-sql" id="addSqlBtn">+ 添加SQL</button>
-                                    <button type="button" class="btn-add-sql" id="uploadSqlBtn">📁 上传SQL脚本</button>
-                                    <input type="file" id="sqlFileInput" accept=".sql,.txt" style="display: none;">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 执行结果显示区 -->
-                        <div class="modal-form-row">
-                            <label class="modal-label">执行结果显示 :</label>
-                            <div class="modal-input-wrapper">
-                                <div class="result-area" id="resultArea">
-                                    <div class="result-placeholder">执行结果将显示在这里</div>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
+                <div class="steps">
+                    <div class="step-indicator" data-step="1">1. 类型与名称</div>
+                    <div class="step-indicator" data-step="2">2. 配置数据源 / 上游</div>
+                    <div class="step-indicator" data-step="3">3. 配置变换</div>
+                    <div class="step-indicator" data-step="4">4. 确认创建</div>
                 </div>
-                
-                <div class="modal-footer">
-                    <button type="button" class="modal-btn" id="cancelBtn">取消</button>
-                    <button type="button" class="modal-btn primary" id="submitBtn">保存</button>
+                <div class="wizard-body">
+                    <div class="error-box" id="errorBox"></div>
+                    <section class="step-panel" data-step="1">
+                        <div class="section-title">选择数据集产出方式</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>数据集名称 <span class="required">*</span></label>
+                                <input id="datasetName" maxlength="80" placeholder="已有名称将追加新版本">
+                            </div>
+                            <div class="form-group">
+                                <label>数据类型 (Data Type) <span class="required">*</span></label>
+                                <select id="datasetModality">
+                                    <option value="relational" selected>关系数据 (relational)</option>
+                                    <option value="time_series">时序数据 (time_series)</option>
+                                    <option value="key_value">键值数据 (key_value)</option>
+                                    <option value="semi_structured">半结构化数据 (semi_structured)</option>
+                                    <option value="file_system">文件型数据 (file_system)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="types-grid">
+                            <div class="type-card" data-type="SOURCE">
+                                <strong>注册数据源</strong>
+                                <span>接入并挂载一个外部数据源作为初始数据集。</span>
+                            </div>
+                            <div class="type-card" data-type="SELECT">
+                                <strong>数据源的一部分</strong>
+                                <span>执行 SELECT 并将查询结果物化为新版本。</span>
+                            </div>
+                            <div class="type-card" data-type="SELECT_UDF">
+                                <strong>SELECT + UDF</strong>
+                                <span>执行包含 UDF 的 SELECT，保存处理后的具体结果。</span>
+                            </div>
+                            <div class="type-card" data-type="TRANSFORM_SQL">
+                                <strong>Transform 结果</strong>
+                                <span>使用已完成 Transform 作业的物化输出。</span>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="step-panel" data-step="2">
+                        <div id="upstreamContent"></div>
+                    </section>
+                    <section class="step-panel" data-step="3">
+                        <div id="configContent"></div>
+                    </section>
+                    <section class="step-panel" data-step="4">
+                        <div class="section-title">确认数据集版本信息</div>
+                        <dl class="summary" id="summary"></dl>
+                        <div class="form-group" style="margin-top:20px">
+                            <label>描述</label>
+                            <textarea id="description" placeholder="数据集描述（可选）"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>版本备注</label>
+                            <textarea id="remark" placeholder="本次变化说明（可选）"></textarea>
+                        </div>
+                    </section>
+                </div>
+                <div class="wizard-footer">
+                    <button class="action-btn secondary-btn" id="cancelBtn" type="button">关闭</button>
+                    <div class="right-actions">
+                        <button class="action-btn secondary-btn" id="prevBtn" type="button">上一步</button>
+                        <button class="action-btn primary-btn" id="nextBtn" type="button">下一步</button>
+                        <button class="action-btn primary-btn" id="submitBtn" type="button">完成并创建</button>
+                    </div>
                 </div>
             </div>
         `;
     }
 
-    initEventListeners() {
-        // 关闭按钮
+    bindEvents() {
         this.shadowRoot.querySelector('#closeBtn').addEventListener('click', () => this.hide());
         this.shadowRoot.querySelector('#cancelBtn').addEventListener('click', () => this.hide());
-
-        // 表单提交事件 - 防止表单默认提交
-        this.shadowRoot.querySelector('#datasetForm').addEventListener('submit', (e) => {
-            e.preventDefault();
+        this.shadowRoot.querySelector('#prevBtn').addEventListener('click', () => this.go(this.currentStep - 1));
+        this.shadowRoot.querySelector('#nextBtn').addEventListener('click', () => {
+            if (this.validateStep()) this.go(this.currentStep + 1);
         });
-
-        // 阻止Enter键触发表单提交
-        this.shadowRoot.querySelector('#datasetForm').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-            }
-        });
-
-        // 保存按钮 - 使用防抖函数
-        const submitBtn = this.shadowRoot.querySelector('#submitBtn');
-
-        submitBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            if (this.debounceTimer) return; // 防抖中，直接返回
-
-            this.debounceTimer = setTimeout(() => {
-                this.debounceTimer = null;
-            }, 500); // 500ms防抖
-
-            if (this._isSubmitting) return;
-
-            this._isSubmitting = true;
-            submitBtn.disabled = true;
-            submitBtn.style.pointerEvents = 'none';
-            submitBtn.style.opacity = '0.6';
-
-            this.handleSubmit();
-        });
-
-        // 添加SQL按钮
-        this.shadowRoot.querySelector('#addSqlBtn').addEventListener('click', () => this.addSql());
-
-        // 上传SQL脚本按钮
-        this.shadowRoot.querySelector('#uploadSqlBtn').addEventListener('click', () => {
-            this.shadowRoot.querySelector('#sqlFileInput').click();
-        });
-
-        // 文件选择变化事件
-        this.shadowRoot.querySelector('#sqlFileInput').addEventListener('change', (e) => this.handleSqlFileUpload(e));
+        this.shadowRoot.querySelector('#submitBtn').addEventListener('click', () => this.submit());
+        this.shadowRoot.querySelectorAll('.type-card').forEach(card => card.addEventListener('click', () => {
+            this.shadowRoot.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+        }));
     }
 
-    // 显示弹窗 - 创建模式
-    showCreate() {
-        this.mode = 'create';
-        this.datasetData = null;
-        this.resetForm();
-        this.shadowRoot.querySelector('#dialogTitle').textContent = '新增数据集';
-        this.shadowRoot.querySelector('#submitBtn').textContent = '保存';
-        this.classList.add('show');
-        // 确保按钮可点击
-        this._isSubmitting = false;
-        this.debounceTimer = null; // 清除防抖定时器
-        const submitBtn = this.shadowRoot.querySelector('#submitBtn');
-        submitBtn.disabled = false;
-        submitBtn.style.pointerEvents = '';
-        submitBtn.style.opacity = '';
-    }
+    show(data) {
+        this.setAttribute('show', '');
+        this.currentStep = 1;
+        const titleEl = this.shadowRoot.querySelector('#wizardTitle');
+        const nameInput = this.shadowRoot.querySelector('#datasetName');
+        const descInput = this.shadowRoot.querySelector('#description');
+        const remarkInput = this.shadowRoot.querySelector('#remark');
 
-    // 显示弹窗 - 编辑模式
-    async showEdit(datasetData) {
-        this.mode = 'edit';
-        this.datasetData = datasetData;
-
-        // 重置提交状态和按钮
-        this._isSubmitting = false;
-        this.debounceTimer = null; // 清除防抖定时器
-        const submitBtn = this.shadowRoot.querySelector('#submitBtn');
-        submitBtn.disabled = false;
-        submitBtn.style.pointerEvents = '';
-        submitBtn.style.opacity = '';
-        submitBtn.textContent = '保存';
-
-        // 如果只有 storagePath，先获取完整数据
-        if (datasetData.storagePath && !datasetData.datasetName) {
-            try {
-                const result = await window.AppConfig.get('dataset', 'metas', { path: datasetData.storagePath });
-                if (result.code === 200 && result.data) {
-                    this.datasetData = result.data;
-                    this.fillForm(result.data);
-                } else {
-                    this.dispatchEvent(new CustomEvent('show-toast', {
-                        bubbles: true,
-                        composed: true,
-                        detail: { message: '获取数据集信息失败: ' + result.message, type: 'error' }
-                    }));
-                    return;
-                }
-            } catch (error) {
-                console.error('获取数据集信息失败:', error);
-                this.dispatchEvent(new CustomEvent('show-toast', {
-                    bubbles: true,
-                    composed: true,
-                    detail: { message: '获取数据集信息失败: ' + error.message, type: 'error' }
-                }));
-                return;
-            }
+        if (data && (data.datasetName || data.name)) {
+            titleEl.textContent = '创建数据集新版本';
+            nameInput.value = data.datasetName || data.name || '';
         } else {
-            this.fillForm(datasetData);
+            titleEl.textContent = '创建数据集';
+            nameInput.value = '';
         }
+        if (descInput) descInput.value = '';
+        if (remarkInput) remarkInput.value = '';
+        this.shadowRoot.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+        this.loadOptions().then(() => this.go(1));
+    }
 
-        this.shadowRoot.querySelector('#dialogTitle').textContent = '编辑数据集';
-        this.shadowRoot.querySelector('#submitBtn').textContent = '保存';
-        this.classList.add('show');
+    showCreate() {
+        this.show();
+    }
+
+    showEdit(data) {
+        this.show(data);
     }
 
     hide() {
-        this.classList.remove('show');
+        this.removeAttribute('show');
     }
 
-    resetForm() {
-        this.shadowRoot.querySelector('#datasetForm').reset();
-        this.shadowRoot.querySelector('#datasetName').readOnly = false;
-        this.clearResult();
-        this.sqlList = []; // 初始化为空列表
-        this.renderSqlList();
-        // 重置提交状态和按钮
-        this._isSubmitting = false;
-        const submitBtn = this.shadowRoot.querySelector('#submitBtn');
-        submitBtn.disabled = false;
-        submitBtn.style.pointerEvents = '';
-        submitBtn.style.opacity = '';
-        submitBtn.textContent = '保存';
+    async loadOptions() {
+        const jobQuery = { pageNum: 1, pageSize: 500 };
+        const [sources, datasets, snippets, udfs, jobs] = await Promise.allSettled([
+            window.AppConfig.get('datasource', 'list'),
+            window.AppConfig.get('dataset', 'tree'),
+            window.AppConfig.get('sqlSnippet', 'list'),
+            window.AppConfig.request(window.AppConfig.getApiUrl('udf', 'query').replace('{type}', 'udf')),
+            window.AppConfig.post('transformJob', 'query', jobQuery)
+        ]);
+        this.options.sources = this.resultData(sources).map(s => ({ value: s.dataPrefix ? `${s.schemaPrefix}.${s.dataPrefix}` : s.schemaPrefix, label: s.dataPrefix ? `${s.schemaPrefix}.${s.dataPrefix}` : s.schemaPrefix }));
+        this.options.datasets = this.resultData(datasets);
+        this.options.snippets = this.resultData(snippets);
+        this.options.udfs = this.resultData(udfs);
+        this.options.jobs = this.resultData(jobs).filter(j => j.jobState === 1);
     }
 
-    fillForm(data) {
-        this.shadowRoot.querySelector('#datasetName').value = data.name || data.datasetName || '';
-        this.shadowRoot.querySelector('#datasetName').readOnly = true;
-        this.shadowRoot.querySelector('#datasetRemark').value = data.remark || '';
-        this.clearResult();
-        
-        // 处理SQL列表
-        if (data.sql || data.datasetSql) {
-            const sqlValue = data.sql || data.datasetSql;
-            if (Array.isArray(sqlValue)) {
-                this.sqlList = sqlValue;
-            } else if (typeof sqlValue === 'string') {
-                try {
-                    // 尝试解析JSON字符串
-                    const parsed = JSON.parse(sqlValue);
-                    if (Array.isArray(parsed)) {
-                        this.sqlList = parsed;
-                    } else {
-                        // 如果解析出来不是数组，按分号分割
-                        this.sqlList = sqlValue.split(';').map(s => s.trim()).filter(s => s);
-                        if (this.sqlList.length === 0) {
-                            this.sqlList = [sqlValue];
-                        }
-                    }
-                } catch (e) {
-                    // JSON解析失败，按分号分割
-                    this.sqlList = sqlValue.split(';').map(s => s.trim()).filter(s => s);
-                    if (this.sqlList.length === 0) {
-                        this.sqlList = [sqlValue];
-                    }
+    resultData(settled) {
+        if (settled.status !== 'fulfilled') return [];
+        const result = settled.value;
+        return (result && (result.success || result.code === 200) && Array.isArray(result.data)) ? result.data : [];
+    }
+
+    go(step) {
+        if (step < 1 || step > this.totalSteps) return;
+        this.currentStep = step;
+        this.shadowRoot.querySelectorAll('.step-panel').forEach(el => el.classList.toggle('active', Number(el.dataset.step) === step));
+        this.shadowRoot.querySelectorAll('.step-indicator').forEach(el => {
+            const n = Number(el.dataset.step);
+            el.classList.toggle('active', n === step);
+            el.classList.toggle('done', n < step);
+        });
+        if (step === 2) this.renderUpstream();
+        if (step === 3) this.renderConfig();
+        if (step === 4) this.renderSummary();
+        this.shadowRoot.querySelector('#prevBtn').style.visibility = step === 1 ? 'hidden' : 'visible';
+        this.shadowRoot.querySelector('#nextBtn').style.display = step === 4 ? 'none' : 'inline-block';
+        this.shadowRoot.querySelector('#submitBtn').style.display = step === 4 ? 'inline-block' : 'none';
+        this.hideError();
+    }
+
+    selectedType() {
+        return this.shadowRoot.querySelector('.type-card.selected')?.dataset.type || '';
+    }
+
+    renderUpstream() {
+        const type = this.selectedType();
+        const container = this.shadowRoot.querySelector('#upstreamContent');
+        if (type === 'SOURCE') {
+            container.innerHTML = `
+                <div class="section-title">填写外部数据源连接信息</div>
+                <div class="form-group">
+                    <label>数据源类型 <span class="required">*</span></label>
+                    <select id="srcStorageEngineType">
+                        <option value="">请选择数据源类型</option>
+                        <option value="1">iotdb12</option>
+                        <option value="2">influxdb</option>
+                        <option value="3">filesystem</option>
+                        <option value="4" selected>relational</option>
+                        <option value="5">mongodb</option>
+                        <option value="6">redis</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>主机地址 <span class="required">*</span></label>
+                        <input id="srcHost" placeholder="如 127.0.0.1" value="127.0.0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>端口 <span class="required">*</span></label>
+                        <input id="srcPort" type="number" placeholder="如 3306" value="3306">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>模式前缀 (Schema Prefix) <span class="required">*</span></label>
+                        <input id="srcSchemaPrefix" placeholder="虚拟前缀，如 mysql8">
+                    </div>
+                    <div class="form-group">
+                        <label>数据前缀 (Data Prefix)</label>
+                        <input id="srcDataPrefix" placeholder="原数据库表名，如 t_user（可选）">
+                    </div>
+                </div>
+                <div class="form-row" id="srcAuthFields">
+                    <div class="form-group">
+                        <label>用户名</label>
+                        <input id="srcUsername" placeholder="请输入用户名" value="root">
+                    </div>
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input id="srcPassword" type="password" placeholder="请输入密码">
+                    </div>
+                </div>
+                <div id="srcRelationalFields" style="display:block;">
+                    <div class="form-group">
+                        <label>数据库引擎</label>
+                        <select id="srcRelationalEngine">
+                            <option value="mysql">MySQL</option>
+                            <option value="postgresql">PostgreSQL</option>
+                            <option value="oracle">Oracle</option>
+                            <option value="oceanbase">OceanBase</option>
+                            <option value="dm">Dameng</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="srcFsFields" style="display:none;">
+                    <div class="form-group">
+                        <label>IGinX节点端口 <span class="required">*</span></label>
+                        <input id="srcIginxPort" type="number" placeholder="6888" value="6888">
+                    </div>
+                    <div class="form-group">
+                        <label>历史数据文件读取目录 <span class="required">*</span></label>
+                        <input id="srcDummyDir" placeholder="请输入文件读取绝对目录">
+                    </div>
+                </div>
+                <div id="srcInfluxFields" style="display:none;">
+                    <div class="form-group">
+                        <label>InfluxDB URL <span class="required">*</span></label>
+                        <input id="srcInfluxUrl" placeholder="http://localhost:8086/">
+                    </div>
+                    <div class="form-group">
+                        <label>访问令牌</label>
+                        <input id="srcInfluxToken" placeholder="请输入访问令牌">
+                    </div>
+                </div>
+                <div id="srcMongoFields" style="display:none;">
+                    <div class="form-group">
+                        <label>MongoDB连接字符串</label>
+                        <input id="srcMongoUri" placeholder="mongodb://localhost:27017">
+                    </div>
+                </div>
+                <div class="hint">配置将直接注册外部存储引擎并作为 SOURCE 数据集初始版本挂载。</div>
+            `;
+            const typeSelect = container.querySelector('#srcStorageEngineType');
+            typeSelect.addEventListener('change', () => {
+                const val = typeSelect.value;
+                const authFields = container.querySelector('#srcAuthFields');
+                const relationalFields = container.querySelector('#srcRelationalFields');
+                const fsFields = container.querySelector('#srcFsFields');
+                const influxFields = container.querySelector('#srcInfluxFields');
+                const mongoFields = container.querySelector('#srcMongoFields');
+
+                authFields.style.display = (val === '1' || val === '2' || val === '4' || val === '6') ? 'grid' : 'none';
+                relationalFields.style.display = (val === '4') ? 'block' : 'none';
+                fsFields.style.display = (val === '3') ? 'block' : 'none';
+                influxFields.style.display = (val === '2') ? 'block' : 'none';
+                mongoFields.style.display = (val === '5') ? 'block' : 'none';
+
+                const mainModality = this.shadowRoot.querySelector('#datasetModality');
+                if (mainModality) {
+                    if (val === '1' || val === '2') mainModality.value = 'time_series';
+                    else if (val === '3') mainModality.value = 'file_system';
+                    else if (val === '4') mainModality.value = 'relational';
+                    else if (val === '5') mainModality.value = 'semi_structured';
+                    else if (val === '6') mainModality.value = 'key_value';
                 }
-            }
+            });
+            return;
+        }
+        const options = this.options.datasets.flatMap(d => (d.versions || []).map(v => ({ id: v.versionId, text: `${d.datasetName} / ${v.versionNo}`, path: v.storagePath })));
+        container.innerHTML = `
+            <div class="section-title">选择上游数据集版本</div>
+            <div class="form-group">
+                <label>主上游版本 <span class="required">*</span></label>
+                <select id="upstreamVersion">
+                    <option value="">请选择</option>
+                    ${options.map(o => `<option value="${o.id}" data-path="${this.escape(o.path)}">${this.escape(o.text)}</option>`).join('')}
+                </select>
+                <div class="hint">新版本将基于该上游数据进行处理，并在血缘图谱中建立依赖关系。</div>
+            </div>
+        `;
+    }
+
+    renderConfig() {
+        const type = this.selectedType();
+        const container = this.shadowRoot.querySelector('#configContent');
+        if (type === 'SOURCE') {
+            container.innerHTML = `
+                <div class="section-title">数据源挂载信息</div>
+                <div class="empty">已在第 2 步配置完整数据源连接参数，无需额外 SQL 变换配置。</div>
+            `;
+        } else if (type === 'SELECT' || type === 'SELECT_UDF') {
+            container.innerHTML = `
+                <div class="section-title">配置 SQL 变换</div>
+                <div class="form-group">
+                    <label>SQL片段 <span class="required">*</span></label>
+                    <select id="sqlSnippet">
+                        <option value="">请选择</option>
+                        ${this.options.snippets.map(s => `<option value="${s.id}">${this.escape(s.name)}</option>`).join('')}
+                    </select>
+                    <div class="hint">SQL可使用 {upstream} 占位符引用主上游路径。</div>
+                </div>
+                ${type === 'SELECT_UDF' ? `
+                    <div class="form-group">
+                        <label>涉及的 UDF <span class="required">*</span></label>
+                        <select id="udfNames" multiple>
+                            ${this.options.udfs.map(u => `<option value="${this.escape(u.name)}">${this.escape(u.name)}</option>`).join('')}
+                        </select>
+                    </div>
+                ` : ''}
+            `;
         } else {
-            this.sqlList = [];
+            container.innerHTML = `
+                <div class="section-title">选择已完成的 Transform 任务</div>
+                <div class="form-group">
+                    <label>Transform任务 <span class="required">*</span></label>
+                    <select id="transformJob">
+                        <option value="">请选择</option>
+                        ${this.options.jobs.map(j => `<option value="${this.escape(j.jobId)}">${this.escape(j.name)} (${this.escape(j.jobId)})</option>`).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>物化输出路径</label>
+                    <input id="transformOutputPath" placeholder="文件导出任务可留空；IGinX输出请填写路径">
+                    <div class="hint">任务必须已完成且结果已经落盘。</div>
+                </div>
+            `;
         }
-        this.renderSqlList();
     }
 
-    clearResult() {
-        const resultArea = this.shadowRoot.querySelector('#resultArea');
-        resultArea.innerHTML = '<div class="result-placeholder">执行结果将显示在这里</div>';
-    }
-
-    showResult(content, type = 'success') {
-        const resultArea = this.shadowRoot.querySelector('#resultArea');
-        const className = type === 'success' ? 'result-success' : 
-                         type === 'error' ? 'result-error' : 
-                         type === 'loading' ? 'result-loading' : '';
-        resultArea.innerHTML = `<div class="result-content ${className}">${content}</div>`;
-    }
-
-    validateForm() {
-        const name = this.shadowRoot.querySelector('#datasetName').value.trim();
-        
-        // 更新sqlList
-        this.updateSqlListFromDOM();
-        
-        if (!name) {
-            this.showResult('请输入数据集名称', 'error');
-            return false;
+    validateStep() {
+        if (this.currentStep === 1) {
+            if (!this.shadowRoot.querySelector('#datasetName').value.trim()) return this.fail('请输入数据集名称');
+            if (!this.selectedType()) return this.fail('请选择数据集产出方式');
         }
-
-        if (name.length > 50) {
-            this.showResult('数据集名称长度不能超过50个字符', 'error');
-            return false;
+        if (this.currentStep === 2) {
+            if (this.selectedType() === 'SOURCE') {
+                const engineType = this.shadowRoot.querySelector('#srcStorageEngineType')?.value;
+                const host = this.shadowRoot.querySelector('#srcHost')?.value?.trim();
+                const port = this.shadowRoot.querySelector('#srcPort')?.value?.trim();
+                const schema = this.shadowRoot.querySelector('#srcSchemaPrefix')?.value?.trim();
+                if (!engineType) return this.fail('请选择数据源类型');
+                if (!host) return this.fail('请输入主机地址');
+                if (!port) return this.fail('请输入端口号');
+                if (!schema) return this.fail('请输入模式前缀');
+            } else {
+                if (!this.shadowRoot.querySelector('#upstreamVersion')?.value) return this.fail('请选择上游版本');
+            }
         }
-
-        // 验证名称只允许字母、数字、下划线和中文
-        const nameRegex = /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/;
-        if (!nameRegex.test(name)) {
-            this.showResult('数据集名称只能包含字母、数字、下划线和中文', 'error');
-            return false;
+        if (this.currentStep === 3) {
+            const type = this.selectedType();
+            if ((type === 'SELECT' || type === 'SELECT_UDF') && !this.shadowRoot.querySelector('#sqlSnippet')?.value) return this.fail('请选择SQL片段');
+            if (type === 'SELECT_UDF' && this.selectedValues('#udfNames').length === 0) return this.fail('请选择至少一个UDF');
+            if (type === 'TRANSFORM_SQL' && !this.shadowRoot.querySelector('#transformJob')?.value) return this.fail('请选择已完成的Transform任务');
         }
-        
-        if (!this.sqlList || this.sqlList.length === 0 || this.sqlList.every(sql => !sql.trim())) {
-            this.showResult('请输入至少一条SQL查询语句', 'error');
-            return false;
-        }
-        
+        this.hideError();
         return true;
     }
 
-    async handleTest(index) {
-        // 更新sqlList
-        this.updateSqlListFromDOM();
-        
-        const sqlToTest = this.sqlList[index];
-        
-        if (!sqlToTest || !sqlToTest.trim()) {
-            this.showResult('请输入要测试的SQL查询语句', 'error');
-            return;
-        }
-        
-        const testBtn = this.shadowRoot.querySelector(`[data-action="test"][data-index="${index}"]`);
-        testBtn.disabled = true;
-        testBtn.textContent = '测试中...';
-        this.showResult('正在执行SQL测试...', 'loading');
-        
-        try {
-            // 后端是@PostMapping但使用@RequestParam，所以需要POST请求但参数在URL中
-            const url = window.AppConfig.getApiUrl('dataset', 'testsql');
-            const queryString = new URLSearchParams({ sql: sqlToTest.trim() }).toString();
-            const fullUrl = url + (url.includes('?') ? '&' : '?') + queryString;
-            
-            const result = await window.AppConfig.request(fullUrl, {
-                method: 'POST'
-            });
-            
-            if (result.success) {
-                this.showResult(JSON.stringify(result.data, null, 2), 'success');
-            } else {
-                this.showResult(`测试失败: ${result.message || 'SQL执行失败'}`, 'error');
-            }
-            
-        } catch (error) {
-            console.error('SQL测试失败:', error);
-            this.showResult(`测试失败: ${error.message}`, 'error');
-        } finally {
-            testBtn.disabled = false;
-            testBtn.textContent = '测试';
-        }
-    }
+    renderSummary() {
+        const type = this.selectedType();
+        const typeLabels = { SOURCE: '注册数据源', SELECT: 'SELECT', SELECT_UDF: 'SELECT + UDF', TRANSFORM_SQL: 'Transform结果' };
+        const datasetName = this.shadowRoot.querySelector('#datasetName').value.trim();
+        let upstream = '-';
+        let config = '-';
 
-    async handleSubmit() {
-        if (!this.validateForm()) {
-            // 验证失败时恢复按钮状态
-            this._isSubmitting = false;
-            const submitBtn = this.shadowRoot.querySelector('#submitBtn');
-            submitBtn.disabled = false;
-            submitBtn.style.pointerEvents = '';
-            submitBtn.style.opacity = '';
-            return;
-        }
-
-        const submitBtn = this.shadowRoot.querySelector('#submitBtn');
-        submitBtn.textContent = '保存中...';
-        this.showResult('正在保存数据集...', 'loading');
-
-        // 确保sqlList是最新的
-        this.updateSqlListFromDOM();
-
-        // 过滤掉空SQL并清理SQL（去除多余换行符和空格）
-        const validSqlList = this.sqlList
-            .filter(sql => sql && sql.trim())
-            .map(sql => {
-                // 去除首尾空格
-                let cleanedSql = sql.trim();
-                // 将多个连续空格替换为单个空格
-                cleanedSql = cleanedSql.replace(/\s+/g, ' ');
-                return cleanedSql;
-            });
-        
-        const formData = {
-            datasetName: this.shadowRoot.querySelector('#datasetName').value.trim(),
-            datasetSql: validSqlList,
-            parent: this.datasetData?.createTime || 0,
-            remark: this.shadowRoot.querySelector('#datasetRemark')?.value.trim() || ''
-        };
-
-        try {
-            const result = await window.AppConfig.post('dataset', 'save', formData);
-
-            if (result.success) {
-                // 触发成功事件
-                this.dispatchEvent(new CustomEvent('dataset-saved', {
-                    bubbles: true,
-                    composed: true,
-                    detail: {
-                        mode: this.mode,
-                        data: result
-                    }
-                }));
-
-                this.showResult(this.mode === 'create' ? '数据集创建成功!' : '数据集保存成功!', 'success');
-
-                // 立即关闭弹窗
-                this.hide();
-            } else {
-                this.showResult(result.message || (this.mode === 'create' ? '创建失败' : '保存失败'), 'error');
-                // 失败时重新启用按钮
-                this._isSubmitting = false;
-                submitBtn.disabled = false;
-                submitBtn.style.pointerEvents = '';
-                submitBtn.style.opacity = '';
-                submitBtn.textContent = '保存';
-            }
-
-        } catch (error) {
-            console.error(this.mode === 'create' ? '创建数据集失败:' : '保存数据集失败:', error);
-            this.showResult((this.mode === 'create' ? '创建失败: ' : '保存失败: ') + error.message, 'error');
-            // 失败时重新启用按钮
-            this._isSubmitting = false;
-            submitBtn.disabled = false;
-            submitBtn.style.pointerEvents = '';
-            submitBtn.style.opacity = '';
-            submitBtn.textContent = '保存';
-        }
-    }
-
-    showToast(message, type = 'info') {
-        this.dispatchEvent(new CustomEvent('show-toast', {
-            bubbles: true,
-            composed: true,
-            detail: { message, type }
-        }));
-    }
-    
-    // 渲染SQL列表
-    renderSqlList() {
-        const sqlListContainer = this.shadowRoot.querySelector('#sqlList');
-        sqlListContainer.innerHTML = '';
-        
-        this.sqlList.forEach((sql, index) => {
-            const sqlItem = document.createElement('div');
-            sqlItem.className = 'sql-item';
-            sqlItem.innerHTML = `
-                <div class="sql-item-number">${index + 1}</div>
-                <div class="sql-item-content">
-                    <textarea class="modal-textarea sql-textarea" data-index="${index}" placeholder="请输入SQL查询语句" rows="1">${sql}</textarea>
-                </div>
-                <div class="sql-item-actions">
-                    <button type="button" class="sql-action-btn" data-action="up" data-index="${index}" title="上移" ${index === 0 ? 'disabled' : ''}>↑</button>
-                    <button type="button" class="sql-action-btn" data-action="down" data-index="${index}" title="下移" ${index === this.sqlList.length - 1 ? 'disabled' : ''}>↓</button>
-                    <button type="button" class="sql-action-btn delete" data-action="delete" data-index="${index}" title="删除" ${this.sqlList.length === 1 ? 'disabled' : ''}>×</button>
-                    <button type="button" class="sql-action-btn test" data-action="test" data-index="${index}" title="测试">测试</button>
-                </div>
-            `;
-            sqlListContainer.appendChild(sqlItem);
-        });
-        
-        // 绑定事件
-        this.bindSqlListEvents();
-    }
-    
-    // 绑定SQL列表事件
-    bindSqlListEvents() {
-        const sqlListContainer = this.shadowRoot.querySelector('#sqlList');
-        
-        // 上移按钮
-        sqlListContainer.querySelectorAll('[data-action="up"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(e.target.dataset.index);
-                this.moveSqlUp(index);
-            });
-        });
-        
-        // 下移按钮
-        sqlListContainer.querySelectorAll('[data-action="down"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(e.target.dataset.index);
-                this.moveSqlDown(index);
-            });
-        });
-        
-        // 删除按钮
-        sqlListContainer.querySelectorAll('[data-action="delete"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(e.target.dataset.index);
-                this.deleteSql(index);
-            });
-        });
-        
-        // 测试按钮
-        sqlListContainer.querySelectorAll('[data-action="test"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(e.target.dataset.index);
-                this.handleTest(index);
-            });
-        });
-    }
-    
-    // 添加SQL
-    addSql() {
-        this.updateSqlListFromDOM();
-        this.sqlList.push('');
-        this.renderSqlList();
-    }
-    
-    // 删除SQL
-    deleteSql(index) {
-        this.updateSqlListFromDOM();
-        this.sqlList.splice(index, 1);
-        this.renderSqlList();
-    }
-    
-    // 上移SQL
-    moveSqlUp(index) {
-        if (index <= 0) return;
-        this.updateSqlListFromDOM();
-        [this.sqlList[index - 1], this.sqlList[index]] = [this.sqlList[index], this.sqlList[index - 1]];
-        this.renderSqlList();
-    }
-    
-    // 下移SQL
-    moveSqlDown(index) {
-        if (index >= this.sqlList.length - 1) return;
-        this.updateSqlListFromDOM();
-        [this.sqlList[index], this.sqlList[index + 1]] = [this.sqlList[index + 1], this.sqlList[index]];
-        this.renderSqlList();
-    }
-    
-    // 从DOM更新sqlList
-    updateSqlListFromDOM() {
-        const sqlTextareas = this.shadowRoot.querySelectorAll('.sql-textarea');
-        this.sqlList = Array.from(sqlTextareas).map(textarea => textarea.value);
-    }
-    
-    // 获取当前聚焦的SQL输入框索引
-    getFocusedSqlIndex() {
-        const sqlTextareas = this.shadowRoot.querySelectorAll('.sql-textarea');
-        for (let i = 0; i < sqlTextareas.length; i++) {
-            if (document.activeElement === sqlTextareas[i]) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    // 处理SQL文件上传
-    handleSqlFileUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const content = e.target.result;
-            this.parseAndFillSql(content);
-            // 清空文件输入，允许重复上传同一文件
-            event.target.value = '';
-        };
-        reader.onerror = () => {
-            this.showResult('文件读取失败', 'error');
-        };
-        reader.readAsText(file);
-    }
-
-    // 解析SQL内容并填充到sqlList
-    parseAndFillSql(content) {
-        // 按分号分割SQL语句，过滤空语句，保留分号
-        const sqlStatements = content
-            .split(';')
-            .map(sql => sql.trim())
-            .filter(sql => sql.length > 0)
-            .map(sql => sql + ';');
-
-        if (sqlStatements.length === 0) {
-            this.showResult('未找到有效的SQL语句', 'error');
-            return;
-        }
-
-        // 更新sqlList
-        this.updateSqlListFromDOM();
-        
-        // 如果当前sqlList为空或只有一个空SQL，直接替换
-        if (this.sqlList.length === 0 || (this.sqlList.length === 1 && !this.sqlList[0].trim())) {
-            this.sqlList = sqlStatements;
+        if (type === 'SOURCE') {
+            const host = this.shadowRoot.querySelector('#srcHost')?.value;
+            const port = this.shadowRoot.querySelector('#srcPort')?.value;
+            const schema = this.shadowRoot.querySelector('#srcSchemaPrefix')?.value;
+            upstream = '无（外部数据源接入）';
+            config = `${schema} (${host}:${port})`;
         } else {
-            // 否则追加到现有列表
-            this.sqlList = [...this.sqlList, ...sqlStatements];
+            upstream = this.shadowRoot.querySelector('#upstreamVersion')?.selectedOptions[0]?.textContent || '-';
+            config = this.shadowRoot.querySelector('#sqlSnippet')?.selectedOptions[0]?.textContent || this.shadowRoot.querySelector('#transformJob')?.selectedOptions[0]?.textContent || '-';
         }
 
-        this.renderSqlList();
-        this.showResult(`成功加载 ${sqlStatements.length} 条SQL语句`, 'success');
+        this.shadowRoot.querySelector('#summary').innerHTML = `
+            <dt>数据集名称</dt><dd>${this.escape(datasetName)}</dd>
+            <dt>产出方式</dt><dd>${typeLabels[type] || type}</dd>
+            <dt>上游版本</dt><dd>${this.escape(upstream)}</dd>
+            <dt>配置概要</dt><dd>${this.escape(config)}</dd>
+        `;
+    }
+
+    buildSourceRegisterData() {
+        const type = parseInt(this.shadowRoot.querySelector('#srcStorageEngineType')?.value);
+        const host = this.shadowRoot.querySelector('#srcHost')?.value?.trim();
+        const port = parseInt(this.shadowRoot.querySelector('#srcPort')?.value?.trim());
+        const schema = this.shadowRoot.querySelector('#srcSchemaPrefix')?.value?.trim();
+        const dataPrefix = this.shadowRoot.querySelector('#srcDataPrefix')?.value?.trim();
+        const username = this.shadowRoot.querySelector('#srcUsername')?.value?.trim();
+        const password = this.shadowRoot.querySelector('#srcPassword')?.value?.trim();
+        const modality = this.shadowRoot.querySelector('#datasetModality')?.value?.trim();
+
+        const datasetName = this.shadowRoot.querySelector('#datasetName')?.value?.trim();
+        const description = this.shadowRoot.querySelector('#description')?.value?.trim() || '';
+
+        const data = {
+            storageEngineType: type,
+            ip: host,
+            port: port,
+            schemaPrefix: schema,
+            hasData: true,
+            isReadOnly: true,
+            datasetName: datasetName,
+            dataModality: modality || 'relational',
+            description: description
+        };
+        if (dataPrefix) data.dataPrefix = dataPrefix;
+        if (username) data.username = username;
+        if (password) data.password = password;
+
+        if (type === 4) { // relational
+            data.engine = this.shadowRoot.querySelector('#srcRelationalEngine')?.value || 'mysql';
+        } else if (type === 3) { // fs
+            const igPort = this.shadowRoot.querySelector('#srcIginxPort')?.value;
+            const dummyDir = this.shadowRoot.querySelector('#srcDummyDir')?.value?.trim();
+            if (igPort) data.iginxPort = parseInt(igPort);
+            if (dummyDir) data.dummyDir = dummyDir;
+        } else if (type === 2) { // influx
+            const url = this.shadowRoot.querySelector('#srcInfluxUrl')?.value?.trim();
+            const token = this.shadowRoot.querySelector('#srcInfluxToken')?.value?.trim();
+            if (url) data.url = url;
+            if (token) data.token = token;
+        } else if (type === 5) { // mongo
+            const uri = this.shadowRoot.querySelector('#srcMongoUri')?.value?.trim();
+            if (uri) data.mongodbUri = uri;
+        }
+        return data;
+    }
+
+    buildRequest() {
+        const type = this.selectedType();
+        const upstream = this.shadowRoot.querySelector('#upstreamVersion')?.value;
+        const request = {
+            datasetName: this.shadowRoot.querySelector('#datasetName').value.trim(),
+            provenanceType: type,
+            dataModality: this.shadowRoot.querySelector('#datasetModality')?.value || 'relational',
+            description: this.shadowRoot.querySelector('#description')?.value.trim() || '',
+            remark: this.shadowRoot.querySelector('#remark')?.value.trim() || ''
+        };
+        if (upstream) request.upstreamVersionIds = [Number(upstream)];
+        if (type === 'SELECT' || type === 'SELECT_UDF') request.sqlSnippetId = Number(this.shadowRoot.querySelector('#sqlSnippet')?.value);
+        if (type === 'SELECT_UDF') request.udfNames = this.selectedValues('#udfNames');
+        if (type === 'TRANSFORM_SQL') {
+            request.transformJobId = this.shadowRoot.querySelector('#transformJob')?.value;
+            request.transformOutputPath = this.shadowRoot.querySelector('#transformOutputPath')?.value.trim() || '';
+        }
+        return request;
+    }
+
+    selectedValues(selector) {
+        const el = this.shadowRoot.querySelector(selector);
+        return el ? Array.from(el.selectedOptions).map(o => o.value) : [];
+    }
+
+    async submit() {
+        if (!this.validateStep()) return;
+        const button = this.shadowRoot.querySelector('#submitBtn');
+        button.disabled = true;
+        button.textContent = '创建中...';
+        try {
+            const type = this.selectedType();
+            let result;
+            if (type === 'SOURCE') {
+                const sourceData = this.buildSourceRegisterData();
+                result = await window.AppConfig.post('datasource', 'register', sourceData);
+            } else {
+                result = await window.AppConfig.post('dataset', 'create', this.buildRequest());
+            }
+
+            if (!(result.success || result.code === 200)) throw new Error(result.message || '创建失败');
+            this.hide();
+            this.dispatchEvent(new CustomEvent('dataset-saved', { bubbles:true, composed:true, detail:{ mode:'create', data:result } }));
+        } catch (error) {
+            this.fail(error.message || '创建失败');
+        } finally {
+            button.disabled = false;
+            button.textContent = '完成并创建';
+        }
+    }
+
+    fail(message) {
+        const el = this.shadowRoot.querySelector('#errorBox');
+        el.textContent = message;
+        el.style.display = 'block';
+        return false;
+    }
+
+    hideError() {
+        this.shadowRoot.querySelector('#errorBox').style.display = 'none';
+    }
+
+    escape(value) {
+        return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 }
 

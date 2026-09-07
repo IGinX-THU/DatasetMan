@@ -13,4 +13,8 @@ public class TransformJobRequest {
     private String exportFile;
     private String schedule;
     private String owner;
+    private Boolean registerDatasetVersion;
+    private String targetDatasetName;
+    private List<Long> upstreamVersionIds;
+    private String transformOutputPath;
 }

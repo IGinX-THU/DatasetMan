@@ -256,30 +256,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.restoreUserSettings = restoreUserSettings;
 
-    // 2.5. 右侧数据集库树形节点点击事件
-    const rightSidebarTree = document.querySelector('.right-sidebar .tree');
+    // 2.5. 右侧数据集库树形节点点击委托处理
+    const rightSidebarTree = document.getElementById('datasetTree');
     if (rightSidebarTree) {
-        const rightTreeNodes = rightSidebarTree.querySelectorAll('.tree-node');
-        rightTreeNodes.forEach(node => {
-            node.addEventListener('click', function(e) {
-                e.stopPropagation();
-                
-                // 确保只处理右侧的节点
-                if (!this.closest('.right-sidebar')) {
-                    return;
-                }
-                
-                // 先清除所有选中状态（仅限右侧）
-                rightSidebarTree.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
-                
-                // 设置当前选中
-                this.classList.add('active');
-                
-                // 展开收起（如果有子节点）
-                if (this.querySelector('.tree-children')) {
-                    this.classList.toggle('expanded');
-                }
-            });
+        rightSidebarTree.addEventListener('click', function(e) {
+            const node = e.target.closest('.tree-node');
+            if (!node || !rightSidebarTree.contains(node)) return;
+            e.stopPropagation();
+
+            rightSidebarTree.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
+            node.classList.add('active');
+
+            const children = Array.from(node.children).find(child => child.classList.contains('tree-children'));
+            if (children) {
+                node.classList.toggle('expanded');
+                return;
+            }
+
+            const rawVersionId = node.getAttribute('data-version-id');
+            const versionId = rawVersionId && !isNaN(Number(rawVersionId)) ? Number(rawVersionId) : null;
+            const datasetId = Number(node.getAttribute('data-dataset-id'));
+            const storagePath = node.getAttribute('data-full-path');
+            console.log('🌲 点击右侧数据集叶子节点:', { versionId, datasetId, storagePath });
+            if (versionId) {
+                showComponent('datasetHistory', { versionId, datasetId, storagePath });
+            }
         });
     }
 
@@ -453,19 +454,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         break;
                     case 'showDatasetCreate':
                         console.log('创建数据集菜单被点击');
-                        const datasetDialogCreate = document.getElementById('datasetDialog');
-                        if (datasetDialogCreate) {
-                            datasetDialogCreate.showCreate();
-                        }
+                        showComponent('datasetDialog');
                         break;
                     case 'showDatasetEdit':
                         console.log('编辑数据集菜单被点击');
                         const selectedDatasetEdit = getSelectedDataset();
                         if (selectedDatasetEdit) {
-                            const datasetDialogEdit = document.getElementById('datasetDialog');
-                            if (datasetDialogEdit) {
-                                datasetDialogEdit.showEdit({ storagePath: selectedDatasetEdit });
-                            }
+                            showComponent('datasetDialog', { datasetName: selectedDatasetEdit });
                         } else {
                             showWorkspaceMessage('请先选择要编辑的数据集', 'warning');
                         }
@@ -688,6 +683,19 @@ document.addEventListener('DOMContentLoaded', function() {
         return fullPath;
     }
 
+    function getSelectedDatasetInfo() {
+        const activeNode = document.querySelector('.right-sidebar .tree-node.active[data-is-leaf="true"]');
+        if (!activeNode) return null;
+        const datasetNode = activeNode.parentElement?.parentElement;
+        return {
+            versionId: Number(activeNode.getAttribute('data-version-id')),
+            datasetId: Number(activeNode.getAttribute('data-dataset-id')),
+            storagePath: activeNode.getAttribute('data-full-path'),
+            versionNo: activeNode.querySelector('.tree-node-text')?.textContent.trim() || '',
+            datasetName: datasetNode?.querySelector(':scope > .tree-node-text')?.textContent.trim() || ''
+        };
+    }
+
     // 显示数据集删除确认对话框
     async function showDeleteDatasetConfirmDialog(dataset) {
         // 如果是字符串路径，包装成对象
@@ -710,7 +718,7 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
 
         const datasetName = dataset.name || dataset.datasetName || dataset.storagePath || '未命名';
-        const version = dataset.version || 'v1.0.0';
+        const version = dataset.versionNo || dataset.version || '-';
         
         overlay.innerHTML = `
             <div style="
@@ -764,21 +772,24 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmBtn.textContent = '删除中...';
 
             try {
-                const path = dataset.storagePath;
-                console.log('准备删除数据集, path:', path);
+                const result = dataset.versionId
+                    ? await window.AppConfig.delete('dataset', 'versionDelete', { versionId: dataset.versionId })
+                    : await window.AppConfig.delete('dataset', 'delete', { path: dataset.storagePath });
 
-                const result = await window.AppConfig.delete('dataset', 'delete', { path });
-
-                if (result.success) {
+                if (result.success || result.code === 200) {
                     showToast('数据集删除成功', 'success');
 
-                    // 刷新右侧树
-                    const datasetTree = document.querySelector('.right-sidebar .tree');
-                    if (datasetTree) {
-                        const activeNode = datasetTree.querySelector('.tree-node.active');
-                        if (activeNode) {
-                            activeNode.remove();
-                        }
+                    // 重新请求接口全量刷新左侧数据资源库和右侧数据集库
+                    if (window.loadDataSourceTree) {
+                        await window.loadDataSourceTree();
+                    }
+                    if (window.loadDatasetTree) {
+                        await window.loadDatasetTree();
+                    }
+                    // 如果当前详情页展示的是被删除版本，隐藏详情页
+                    const datasetHistory = document.getElementById('datasetHistory');
+                    if (datasetHistory && typeof datasetHistory.hide === 'function') {
+                        datasetHistory.hide();
                     }
                 } else {
                     throw new Error(result.message || '删除失败');
@@ -800,35 +811,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-
-    // 5. 右侧树节点单击事件 - 显示模型详情或数据集详情
-    document.querySelectorAll('.right-sidebar .tree-node').forEach(node => {
-        node.addEventListener('click', function() {
-            console.log('单击节点:', this);
-            
-            // 尝试获取选中的数据集
-            const selectedDataset = getSelectedDataset();
-            if (selectedDataset) {
-                console.log('显示数据集详情:', selectedDataset);
-                const datasetHistory = document.getElementById('datasetHistory');
-                if (datasetHistory) {
-                    clearWorkspace();
-                    datasetHistory.show(selectedDataset);
-                }
-                return;
-            }
-            
-            // 尝试获取选中的模型（向后兼容）
-            const selectedModel = getSelectedModel();
-            const modelDetail = document.getElementById('modelDetail');
-            if (selectedModel && selectedModel.version && modelDetail) {
-                console.log('显示模型详情:', selectedModel);
-                showComponent('modelDetail', selectedModel);
-            } else {
-                console.log('未获取到有效信息、点击的是父节点或模型组件不存在');
-            }
-        });
-    });
 
     // 6. 功能按钮点击事件 - 使用ID绑定而非文本绑定
     const addBtns = document.querySelectorAll('.func-btn, .ribbon-btn');
@@ -904,28 +886,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         break;
                     case 'showDatasetCreate':
                         console.log('创建数据集按钮被点击');
-                        const datasetDialogCreate = document.getElementById('datasetDialog');
-                        if (datasetDialogCreate) {
-                            datasetDialogCreate.showCreate();
-                        }
+                        showComponent('datasetDialog');
                         break;
                     case 'showDatasetEdit':
                         console.log('编辑数据集按钮被点击');
-                        const selectedDatasetEdit = getSelectedDataset();
+                        const selectedDatasetEdit = getSelectedDatasetInfo();
                         if (selectedDatasetEdit) {
-                            const datasetDialogEdit = document.getElementById('datasetDialog');
-                            if (datasetDialogEdit) {
-                                datasetDialogEdit.showEdit({ storagePath: selectedDatasetEdit });
-                            }
+                            showComponent('datasetDialog', selectedDatasetEdit);
                         } else {
                             showWorkspaceMessage('请先选择要编辑的数据集', 'warning');
                         }
                         break;
                     case 'handleDeleteDataset':
                         console.log('删除数据集按钮被点击');
-                        const selectedDatasetDelete = getSelectedDataset();
+                        const selectedDatasetDelete = getSelectedDatasetInfo();
                         if (selectedDatasetDelete) {
-                            showDeleteDatasetConfirmDialog({ storagePath: selectedDatasetDelete });
+                            showDeleteDatasetConfirmDialog(selectedDatasetDelete);
                         } else {
                             showWorkspaceMessage('请先选择要删除的数据集', 'warning');
                         }
@@ -987,21 +963,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // 监听编辑事件
         datasetHistory.addEventListener('edit-dataset', function(e) {
             console.log('详情页编辑按钮被点击:', e.detail);
-            if (datasetDialog && e.detail) {
-                datasetDialog.showEdit(e.detail);
+            if (e.detail) {
+                showComponent('datasetDialog', e.detail);
             }
         });
 
         // 监听删除事件
-        datasetHistory.addEventListener('dataset-deleted', function(e) {
+        datasetHistory.addEventListener('dataset-deleted', async function(e) {
             console.log('详情页删除按钮被点击，数据集已删除:', e.detail);
-            // 刷新右侧树
-            const rightSidebarTree = document.querySelector('.right-sidebar .tree');
-            if (rightSidebarTree) {
-                const activeNode = rightSidebarTree.querySelector('.tree-node.active');
-                if (activeNode) {
-                    activeNode.remove();
-                }
+            // 重新请求接口全量刷新左侧数据资源库和右侧数据集库
+            if (window.loadDataSourceTree) {
+                await window.loadDataSourceTree();
+            }
+            if (window.loadDatasetTree) {
+                await window.loadDatasetTree();
             }
             // 隐藏详情页
             datasetHistory.hide();
@@ -1013,18 +988,23 @@ document.addEventListener('DOMContentLoaded', function() {
         datasetDialog.addEventListener('dataset-saved', async function(e) {
             console.log('数据集保存成功:', e.detail);
             showToast(e.detail.mode === 'create' ? '数据集创建成功' : '数据集保存成功', 'success');
-            // 刷新数据源树以更新右侧数据集列表
+            // 同步刷新左侧数据资源库和右侧数据集库
             if (window.loadDataSourceTree) {
                 await window.loadDataSourceTree();
             }
-            // 自动打开数据集详情
-            const savedData = e.detail.data;
-            const storagePath = savedData?.data?.storagePath;
-            if (storagePath) {
+            if (window.loadDatasetTree) {
+                await window.loadDatasetTree();
+            }
+            const savedData = e.detail.data?.data || e.detail.data;
+            if (savedData?.id) {
                 const datasetHistory = document.getElementById('datasetHistory');
                 if (datasetHistory) {
                     clearWorkspace();
-                    datasetHistory.show(storagePath);
+                    datasetHistory.show({
+                        versionId: savedData.id,
+                        datasetId: savedData.datasetId,
+                        storagePath: savedData.storagePath
+                    });
                 }
             }
         });
@@ -1945,8 +1925,8 @@ function showVisualAnalysis() {
     async function loadDataSourceTree() {
         try {
             // 同时显示右侧loading
-            const rightSidebarTree = document.querySelector('.right-sidebar .tree');
-            if (rightSidebarTree) {
+            const rightSidebarTree = document.getElementById('datasetTree');
+            if (rightSidebarTree && rightSidebarTree.children.length === 0) {
                 rightSidebarTree.innerHTML = '<div class="loading-placeholder">正在同步数据集...</div>';
             }
             
@@ -1955,8 +1935,7 @@ function showVisualAnalysis() {
             
             if (result.success && result.data) {
                 renderDataSourceTree(result.data);
-                // 同步filesystem数据到右侧数据集库
-                syncFilesystemToModelAssets(result.data);
+                loadDatasetTree();
             } else {
                 console.error('加载数据源树失败:', result.message);
                 document.getElementById('dataSourceTree').innerHTML = '<div class="error-placeholder">加载数据源失败</div>';
@@ -2226,199 +2205,84 @@ function showVisualAnalysis() {
     }
     
     // 同步filesystem数据到右侧数据集库
-    function syncFilesystemToModelAssets(allData) {
+    async function loadDatasetTree() {
+        const rightSidebarTree = document.getElementById('datasetTree');
+        if (!rightSidebarTree) return;
+        rightSidebarTree.innerHTML = '<div class="loading-placeholder">正在加载数据集...</div>';
         try {
-            // 过滤出以"datasets"开头的路径数据
-            const filesystemData = allData.filter(item => {
-                const path = typeof item === 'string' ? item : item.path;
-                return path && path.startsWith('datasets');
-            });
-            
-            console.log('过滤出的datasets数据:', filesystemData);
-            
-            if (filesystemData.length > 0) {
-                // 获取右侧树容器
-                const rightSidebarTree = document.querySelector('.right-sidebar .tree');
-                if (!rightSidebarTree) return;
-                
-                // 构建树结构
-                const treeMap = {};
-                filesystemData.forEach(item => {
-                    const path = typeof item === 'string' ? item : item.path;
-                    const parts = path.split('.');
-                    
-                    let current = treeMap;
-                    for (let i = 0; i < parts.length; i++) {
-                        const part = parts[i];
-                        if (!current[part]) {
-                            current[part] = {
-                                name: part,
-                                children: {},
-                                fullPath: parts.slice(0, i + 1).join('.'),
-                                isLeaf: i === parts.length - 1,
-                                level: i
-                            };
-                        }
-                        current = current[part].children;
+            const result = await window.AppConfig.get('dataset', 'tree');
+            if (!(result.success || result.code === 200) || !Array.isArray(result.data)) {
+                rightSidebarTree.innerHTML = '<div class="error-placeholder">加载数据集失败</div>';
+                return;
+            }
+            if (result.data.length === 0) {
+                rightSidebarTree.innerHTML = '<div class="empty-placeholder">暂无数据集</div>';
+                return;
+            }
+            rightSidebarTree.innerHTML = result.data.map(dataset => `
+                <div class="tree-node expanded" data-dataset-id="${dataset.datasetId}" data-is-leaf="false">
+                    <span class="tree-icon folder-icon"></span>
+                    <span class="tree-node-text">${escapeHtml(dataset.datasetName)}</span>
+                    <div class="tree-children">
+                        ${(dataset.versions || []).map(version => {
+                            const vId = version.versionId || version.createTime || version.id || '';
+                            return `
+                            <div class="tree-node" data-is-leaf="true"
+                                 data-dataset-id="${dataset.datasetId}"
+                                 data-version-id="${vId}"
+                                 data-full-path="${escapeHtml(version.storagePath)}">
+                                <span class="tree-icon"></span>
+                                <span class="tree-node-text">${escapeHtml(version.versionNo)}</span>
+                            </div>
+                        `;}).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            rightSidebarTree.querySelectorAll('.tree-node').forEach(node => {
+                node.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    rightSidebarTree.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
+                    this.classList.add('active');
+                    const children = Array.from(this.children).find(child => child.classList.contains('tree-children'));
+                    if (children) {
+                        this.classList.toggle('expanded');
+                        return;
+                    }
+                    const rawVersionId = this.getAttribute('data-version-id');
+                    const versionId = rawVersionId && !isNaN(Number(rawVersionId)) ? Number(rawVersionId) : null;
+                    const datasetId = Number(this.getAttribute('data-dataset-id'));
+                    const storagePath = this.getAttribute('data-full-path');
+                    console.log('🌲 直接绑定点击右侧叶子节点:', { versionId, datasetId, storagePath });
+                    if (versionId) {
+                        showComponent('datasetHistory', { versionId, datasetId, storagePath });
                     }
                 });
-                
-                // 递归创建DOM树节点
-                function createTreeNodes(nodes, container, level = 0) {
-                    Object.values(nodes).forEach(node => {
-                        const hasChildren = Object.keys(node.children).length > 0;
-                        
-                        // 创建树节点
-                        const treeNode = document.createElement('div');
-                        treeNode.className = hasChildren ? 'tree-node expanded' : 'tree-node';
-                        treeNode.setAttribute('data-full-path', node.fullPath);
-                        treeNode.setAttribute('data-is-leaf', node.isLeaf.toString());
-                        
-                        // 父节点有图标
-                        if (hasChildren) {
-                            if (level === 0) {
-                                // 根节点使用cube-icon
-                                const icon = document.createElement('i');
-                                icon.className = 'tree-icon folder-icon';
-                                icon.textContent = '🗃️';
-                                treeNode.appendChild(icon);
-                            } else {
-                                // 中间节点使用📂
-                                const icon = document.createElement('span');
-                                icon.className = 'tree-icon';
-                                icon.textContent = '📂';
-                                treeNode.appendChild(icon);
-                            }
-                        } else {
-                            // 叶子节点添加图标📦
-                            const icon = document.createElement('span');
-                            icon.className = 'tree-icon';
-                            icon.textContent = '💾';
-                            treeNode.appendChild(icon);
-                        }
-
-                        // 添加节点名称
-                        const span = document.createElement('span');
-                        span.className = 'tree-node-text';
-                        span.textContent = node.name;
-                        treeNode.appendChild(span);
-                        
-                        // 如果有子节点，创建子容器并递归
-                        if (hasChildren) {
-                            const childrenContainer = document.createElement('div');
-                            childrenContainer.className = 'tree-children';
-                            createTreeNodes(node.children, childrenContainer, level + 1);
-                            treeNode.appendChild(childrenContainer);
-                        }
-                        
-                        // 添加到容器
-                        container.appendChild(treeNode);
-                    });
-                }
-                
-                // 清空容器并创建新树
-                rightSidebarTree.innerHTML = '';
-                createTreeNodes(treeMap, rightSidebarTree);
-                
-                // 重新绑定右侧树节点事件（保持原有逻辑）
-                const rightTreeNodes = rightSidebarTree.querySelectorAll('.tree-node');
-                rightTreeNodes.forEach(node => {
-                    node.addEventListener('click', function(e) {
-                        e.stopPropagation();
-
-                        // 确保只处理右侧的节点
-                        if (!this.closest('.right-sidebar')) {
-                            return;
-                        }
-
-                        // 先清除所有选中状态（仅限右侧）
-                        rightSidebarTree.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
-
-                        // 设置当前选中
-                        this.classList.add('active');
-
-                        // 展开收起（如果有子节点）
-                        if (this.querySelector('.tree-children')) {
-                            this.classList.toggle('expanded');
-                        }
-
-                        // 检查是否是叶子节点
-                        const isLeaf = this.getAttribute('data-is-leaf') === 'true';
-                        if (!isLeaf) {
-                            // 父级节点只负责展开和收起，不显示详情
-                            return;
-                        }
-
-                        // 只有叶子节点才显示数据集详情
-                        const selectedDataset = getSelectedDataset();
-                        if (selectedDataset) {
-                            console.log('显示数据集详情:', selectedDataset);
-                            const datasetHistory = document.getElementById('datasetHistory');
-                            if (datasetHistory) {
-                                clearWorkspace();
-                                datasetHistory.show(selectedDataset);
-                            }
-                            return;
-                        }
-                    });
-                });
-                
-            } else {
-                // 如果没有filesystem数据，显示空状态
-                const rightSidebarTree = document.querySelector('.right-sidebar .tree');
-                if (rightSidebarTree) {
-                    rightSidebarTree.innerHTML = '<div class="empty-placeholder">暂无数据集</div>';
-                }
-            }
-            
+            });
         } catch (error) {
-            console.error('同步filesystem数据到数据集库失败:', error);
-            const rightSidebarTree = document.querySelector('.right-sidebar .tree');
-            if (rightSidebarTree) {
-                rightSidebarTree.innerHTML = '<div class="error-placeholder">同步数据集失败</div>';
-            }
+            console.error('加载数据集树异常:', error);
+            rightSidebarTree.innerHTML = '<div class="error-placeholder">网络错误，无法加载数据集</div>';
         }
+    }
+
+    window.loadDatasetTree = loadDatasetTree;
+
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function syncFilesystemToModelAssets(allData) {
+        loadDatasetTree();
     }
     
     // 将loadDataSourceTree函数暴露到全局作用域，供其他组件调用
     window.loadDataSourceTree = loadDataSourceTree;
 });
-
-// 确保函数在全局作用域可用
-window.loadDataSourceTree = async function() {
-    console.log('🔄 loadDataSourceTree 被调用，开始重新加载数据源树...');
-    try {
-        // 显示全局loading
-        window.showGlobalLoading('正在加载数据资源...');
-        
-        // 同时显示右侧loading
-        const rightSidebarTree = document.querySelector('.right-sidebar .tree');
-        if (rightSidebarTree) {
-            rightSidebarTree.innerHTML = '<div class="loading-placeholder">正在同步数据集...</div>';
-        }
-        
-        console.log('🔄 调用接口:', window.AppConfig.getApiUrl('datasource', 'tree'));
-        const result = await window.AppConfig.get('datasource', 'tree');
-        
-        console.log('🔄 接口响应:', result);
-        
-        if (result.success && result.data) {
-            renderDataSourceTree(result.data);
-            // 同步filesystem数据到右侧数据集库
-            syncFilesystemToModelAssets(result.data);
-            console.log('🔄 数据源树重新加载完成');
-        } else {
-            console.error('加载数据源树失败:', result.message);
-            document.getElementById('dataSourceTree').innerHTML = '<div class="error-placeholder">加载数据源失败</div>';
-        }
-    } catch (error) {
-        console.error('加载数据源树异常:', error);
-        document.getElementById('dataSourceTree').innerHTML = '<div class="error-placeholder">网络错误，无法加载数据源</div>';
-    } finally {
-        // 隐藏全局loading
-        window.hideGlobalLoading();
-    }
-};
 
 // 全局函数：显示修改密码弹窗
 window.showChangePasswordModal = function() {

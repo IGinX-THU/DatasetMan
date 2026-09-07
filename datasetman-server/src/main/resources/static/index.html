@@ -146,7 +146,6 @@
                 <span class="dropdown-trigger">数据源</span>
                 <ul class="dropdown-menu">
                     <li id="menu-data-source-management">数据源管理</li>
-                    <li id="menu-register-heterogeneous-data-source">注册异构数据源</li>
                 </ul>
             </span>
         <span class="tab dropdown" id="datasetDropdown">
@@ -245,10 +244,6 @@
         <div class="ribbon-group">
             <div class="ribbon-group-title">数据源管理</div>
             <div class="ribbon-buttons">
-                <button class="ribbon-btn" id="btn-add">
-                    <svg class="ribbon-btn-icon"><use href="#icon-add"></use></svg>
-                    <span class="ribbon-btn-text">新增</span>
-                </button>
                 <button class="ribbon-btn" id="btn-manage">
                     <svg class="ribbon-btn-icon"><use href="#icon-unload"></use></svg>
                     <span class="ribbon-btn-text">管理</span>
@@ -354,6 +349,8 @@
     <div class="workspace">
         <div class="workspace-title">工作区</div>
         <div class="workspace-content">
+            <!-- 数据集创建向导组件 -->
+            <dataset-dialog id="datasetDialog"></dataset-dialog>
             <!-- 注册异构数据源组件 -->
             <register-data-resource-embedded id="registerEmbedded"></register-data-resource-embedded>
             <!-- 数据集历史详情组件 -->
@@ -406,7 +403,6 @@
 </div>
 
 <script src="./config/app-config.js"></script>
-<script src="./lib/d3/d3.min.js"></script>
 <script src="./js/menu-permission.js"></script>
 <script src="./js/main-menu-permission.js"></script>
 <script src="./js/button-id-mapping.js"></script>
@@ -441,9 +437,6 @@
 
 <!-- 修改密码模态框 -->
 <change-password></change-password>
-
-<!-- 数据集创建/编辑弹窗 -->
-<dataset-dialog id="datasetDialog"></dataset-dialog>
 
 </body>
 </html>

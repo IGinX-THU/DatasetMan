@@ -56,6 +56,12 @@ public abstract class BaseStorageEngineRequest {
     @ApiModelProperty(value = "描述信息")
     private String description;
 
+    @ApiModelProperty(value = "数据集名称（绑定作为逻辑数据集展示名称）")
+    private String datasetName;
+
+    @ApiModelProperty(value = "数据类型/模态")
+    private String dataModality;
+
     /**
      * 构建额外参数字典
      */

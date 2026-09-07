@@ -3,10 +3,18 @@ package com.tsinghua.controller;
 import com.tsinghua.auth.annotation.OperationLog;
 import com.tsinghua.auth.annotation.RequirePermission;
 import com.tsinghua.auth.enums.Permission;
+import com.tsinghua.dto.DatasetChangeProcessDTO;
+import com.tsinghua.dto.DatasetCreateRequest;
 import com.tsinghua.dto.DatasetRequest;
+import com.tsinghua.dto.DatasetTreeDTO;
+import com.tsinghua.dto.LineageGraphDTO;
 import com.tsinghua.entity.DatasetEntity;
+import com.tsinghua.entity.DatasetVersionEntity;
 import com.tsinghua.model.Result;
+import com.tsinghua.service.DatasetCreationService;
 import com.tsinghua.service.DatasetService;
+import com.tsinghua.service.DatasetVersionService;
+import com.tsinghua.service.LineageService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +32,15 @@ public class DatasetController {
 
     @Autowired
     private DatasetService datasetService;
+
+    @Autowired
+    private DatasetVersionService datasetVersionService;
+
+    @Autowired
+    private DatasetCreationService datasetCreationService;
+
+    @Autowired
+    private LineageService lineageService;
 
     @ApiOperation("测试SQL")
     @PostMapping("/testsql")
@@ -59,13 +76,50 @@ public class DatasetController {
         return Result.success("删除成功");
     }
 
-    @ApiOperation("版本历史")
-    @GetMapping("/history")
+    @ApiOperation("向导式创建数据集版本")
+    @PostMapping("/create")
+    @RequirePermission(Permission.CREATE)
+    @OperationLog(value = "创建数据集版本", type = OperationLog.OperationType.CREATE)
+    public Result<DatasetVersionEntity> create(@Validated @RequestBody DatasetCreateRequest request) throws Exception {
+        return Result.success(datasetCreationService.create(request));
+    }
+
+    @ApiOperation("数据集名称和版本树")
+    @GetMapping("/tree")
     @RequirePermission(Permission.READ)
-    public Result<List<com.tsinghua.dto.DatasetVersionTreeDTO>> getVersionHistory(
-            @RequestParam("datasetName") String datasetName) throws Exception {
-        List<com.tsinghua.dto.DatasetVersionTreeDTO> result = datasetService.getVersionHistory(datasetName);
-        return Result.success(result);
+    public Result<List<DatasetTreeDTO>> tree() {
+        return Result.success(datasetVersionService.getDatasetTree());
+    }
+
+    @ApiOperation("数据集版本详情")
+    @GetMapping("/version/metas")
+    @RequirePermission(Permission.READ)
+    public Result<DatasetVersionEntity> versionMeta(@RequestParam("versionId") Long versionId) {
+        return Result.success(datasetVersionService.queryVersion(versionId));
+    }
+
+    @ApiOperation("数据集变化过程表格")
+    @GetMapping("/changes")
+    @RequirePermission(Permission.READ)
+    public Result<List<DatasetChangeProcessDTO>> changes(@RequestParam("datasetId") Long datasetId) {
+        return Result.success(lineageService.getChangeProcess(datasetId));
+    }
+
+    @ApiOperation("数据集血缘图谱")
+    @GetMapping("/lineage")
+    @RequirePermission(Permission.READ)
+    public Result<LineageGraphDTO> lineage(
+            @RequestParam("versionId") Long versionId,
+            @RequestParam(value = "sideLineage", defaultValue = "true") boolean sideLineage) {
+        return Result.success(lineageService.getLineageGraph(versionId, sideLineage));
+    }
+
+    @ApiOperation("删除数据集版本")
+    @DeleteMapping("/version/delete")
+    @RequirePermission(Permission.DELETE)
+    public Result<Void> deleteVersion(@RequestParam("versionId") Long versionId) {
+        datasetVersionService.softDeleteVersion(versionId);
+        return Result.success("删除成功");
     }
 
 }

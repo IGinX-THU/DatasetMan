@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
@@ -68,6 +69,20 @@ public class GlobalExceptionHandler {
     public Result<Void> handleIllegalArgumentException(IllegalArgumentException e) {
         log.error("非法参数异常", e);
         return Result.paramError(e.getMessage());
+    }
+
+    /**
+     * 处理参数类型转换异常
+     * 通常发生在前端将 null/undefined 序列化为字面量 "null" 传给后端 Long/Integer 参数时
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public Result<Void> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
+        log.warn("参数类型转换异常: 参数={} 值={} 目标类型={}",
+                e.getName(), e.getValue(), e.getRequiredType());
+        String paramName = e.getName();
+        String value = String.valueOf(e.getValue());
+        String expected = e.getRequiredType() != null ? e.getRequiredType().getSimpleName() : "未知";
+        return Result.paramError("参数[" + paramName + "]期望类型为" + expected + "，但收到非法值: " + value);
     }
 
     /**

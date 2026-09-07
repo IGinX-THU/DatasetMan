@@ -126,11 +126,16 @@ window.AppConfig = {
         },
         // 数据集相关
         dataset: {
+            create: '/api/dataset/create',
+            tree: '/api/dataset/tree',
+            versionMetas: '/api/dataset/version/metas',
+            changes: '/api/dataset/changes',
+            lineage: '/api/dataset/lineage',
+            versionDelete: '/api/dataset/version/delete',
             save: '/api/dataset/save',
             testsql: '/api/dataset/testsql',
             metas: '/api/dataset/metas',
-            delete: '/api/dataset/delete',
-            history: '/api/dataset/history'
+            delete: '/api/dataset/delete'
         },
         // Transform相关
         transform: {
@@ -358,9 +363,13 @@ window.AppConfig = {
     async get(module, endpoint, params = {}) {
         let url = this.getApiUrl(module, endpoint);
         
-        // 添加查询参数
-        if (Object.keys(params).length > 0) {
-            const queryString = new URLSearchParams(params).toString();
+        // 添加查询参数（过滤掉 null/undefined，避免发送字面量 "null"）
+        const filtered = {};
+        Object.entries(params).forEach(([k, v]) => {
+            if (v !== null && v !== undefined && v !== '') filtered[k] = v;
+        });
+        if (Object.keys(filtered).length > 0) {
+            const queryString = new URLSearchParams(filtered).toString();
             url += (url.includes('?') ? '&' : '?') + queryString;
         }
         
@@ -436,9 +445,13 @@ window.AppConfig = {
     async delete(module, endpoint, params = {}) {
         let url = this.getApiUrl(module, endpoint);
         
-        // 添加查询参数
-        if (Object.keys(params).length > 0) {
-            const queryString = new URLSearchParams(params).toString();
+        // 添加查询参数（过滤掉 null/undefined，避免发送字面量 "null"）
+        const filtered = {};
+        Object.entries(params).forEach(([k, v]) => {
+            if (v !== null && v !== undefined && v !== '') filtered[k] = v;
+        });
+        if (Object.keys(filtered).length > 0) {
+            const queryString = new URLSearchParams(filtered).toString();
             url += (url.includes('?') ? '&' : '?') + queryString;
         }
         

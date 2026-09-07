@@ -66,5 +66,19 @@ public class TransformJobEntity {
     @Field(name = "owner")
     private String owner;
 
+    @Field(name = "registerDatasetVersion")
+    private boolean registerDatasetVersion;
+
+    @Field(name = "targetDatasetName")
+    private String targetDatasetName;
+
+    @Field(name = "upstreamVersionIds")
+    private String upstreamVersionIds;
+
+    @Field(name = "transformOutputPath")
+    private String transformOutputPath;
+
+    @Field(name = "datasetVersionId")
+    private Long datasetVersionId;
 
 }

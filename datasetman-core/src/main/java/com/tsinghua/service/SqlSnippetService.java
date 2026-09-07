@@ -80,7 +80,8 @@ public class SqlSnippetService {
      */
     public SqlSnippetEntity queryById(Long id) {
         try {
-            String sql = "select * from %s where id = %s";
+            // id 即 createTime（timestamp 列不可直接作为过滤条件，统一用 createTime 过滤）
+            String sql = "select * from %s where createTime = %s";
             if (!AuthUtil.isAdmin()) {
                 String currentUser = AuthUtil.getCurrentUsername();
                 if (!"unknown".equals(currentUser)) {
@@ -116,7 +117,7 @@ public class SqlSnippetService {
                 }
             }
             sql += " ORDER BY createTime DESC LIMIT 1;";
-            String formatSQL = String.format(sql, META_PREFIX, name);
+            String formatSQL = String.format(sql, META_PREFIX, escape(name));
             log.info(formatSQL);
             SessionExecuteSqlResult res = iginxSession.executeSql(formatSQL);
             List<Map<String, Object>> records = ConvertUtil.getRecords(res);
@@ -148,7 +149,7 @@ public class SqlSnippetService {
             }
 
             if (StringUtils.hasText(name)) {
-                sql.append(" AND name LIKE '%").append(name.trim()).append("%'");
+                sql.append(" AND name LIKE '%").append(escape(name.trim())).append("%'");
             }
 
             sql.append(" ORDER BY createTime DESC;");
@@ -204,6 +205,10 @@ public class SqlSnippetService {
             throw new RuntimeException("SQL片段不存在: name=" + name);
         }
         return JSONArray.parseArray(entity.getSqlList(), String.class);
+    }
+
+    private static String escape(String value) {
+        return value == null ? "" : value.replace("'", "''");
     }
 
     private SqlSnippetEntity mapToEntity(Map<String, Object> record) {

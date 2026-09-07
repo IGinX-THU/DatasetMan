@@ -38,6 +38,11 @@ public class TransformCompareService {
 
     public TransformCompareEntity saveTransform(TransformJobRequest request) throws Exception {
 
+        if (Boolean.TRUE.equals(request.getRegisterDatasetVersion())
+                && !StringUtils.hasText(request.getTargetDatasetName())) {
+            throw new IllegalArgumentException("登记数据集版本时必须填写目标数据集名称");
+        }
+
         // 检查作业名称是否重复（仅在新增时检查）
         if (request.getCreateTime() == null) {
             String checkSql = String.format("SELECT COUNT(1) FROM %s WHERE name = '%s';", DATA_PREFIX, request.getName());
@@ -79,6 +84,11 @@ public class TransformCompareService {
         transformCompareEntity.setOperator(operator);
         transformCompareEntity.setClientIp(clientIp);
         transformCompareEntity.setOwner(StringUtils.hasText(request.getOwner()) ? request.getOwner() : AuthUtil.getCurrentUsername());
+        transformCompareEntity.setRegisterDatasetVersion(Boolean.TRUE.equals(request.getRegisterDatasetVersion()));
+        transformCompareEntity.setTargetDatasetName(request.getTargetDatasetName());
+        transformCompareEntity.setUpstreamVersionIds(JSONObject.toJSONString(
+                request.getUpstreamVersionIds() == null ? java.util.Collections.emptyList() : request.getUpstreamVersionIds()));
+        transformCompareEntity.setTransformOutputPath(request.getTransformOutputPath());
 
         WriteClient writeClient = iginxClient.getWriteClient();
         writeClient.writeMeasurement(transformCompareEntity);

@@ -320,6 +320,7 @@ class TransformCompare extends HTMLElement {
 
         // 重置缓存并并行预取，确保每次打开新增窗口时下拉数据是最新的
         this._datasourceTreePromise = window.AppConfig.get('datasource', 'tree');
+        this._sqlSnippetsPromise = window.AppConfig.get('sqlSnippet', 'list');
         const tfUrl = window.AppConfig.getApiUrl('transform', 'query').replace('{type}', 'transform');
         const tfHeaders = window.AppConfig.getAuthHeaders();
         this._transformFunctionsPromise = fetch(tfUrl, { method: 'GET', headers: tfHeaders }).then(r => r.json());
@@ -437,6 +438,7 @@ class TransformCompare extends HTMLElement {
         const confirmBtn = dialog.querySelector('.confirm-btn');
         const closeBtn = dialog.querySelector('.dialog-close-btn');
         const form = dialog.querySelector('#jobForm');
+        this.bindDatasetRegistration(form);
         const addTaskBtn = dialog.querySelector('#addTask');
         const tasksList = dialog.querySelector('#tasksList');
 
@@ -523,6 +525,7 @@ class TransformCompare extends HTMLElement {
             const exportFile = form.querySelector('#exportFile')?.value;
             const schedule = form.querySelector('#schedule')?.value.trim();
             const taskList = this.collectTasks(tasksList);
+            const datasetRegistration = this.collectDatasetRegistration(form);
 
             if (!jobName || isNaN(exportType)) {
                 this.showToast('请填写完整作业配置', 'error');
@@ -536,6 +539,11 @@ class TransformCompare extends HTMLElement {
 
             if (taskList.length === 0) {
                 this.showToast('请至少添加一个任务', 'error');
+                return;
+            }
+            if (datasetRegistration.registerDatasetVersion
+                    && (!datasetRegistration.targetDatasetName || datasetRegistration.upstreamVersionIds.length === 0)) {
+                this.showToast('请填写目标数据集名称并选择主上游版本', 'error');
                 return;
             }
 
@@ -572,7 +580,8 @@ class TransformCompare extends HTMLElement {
                 exportType: exportType,
                 exportFile: exportType === 1 ? exportFile : null,
                 schedule,
-                taskList
+                taskList,
+                ...datasetRegistration
             };
 
             console.log('Job data to save:', jobData);
@@ -621,7 +630,11 @@ class TransformCompare extends HTMLElement {
                     exportFile: job.exportFile,
                     schedule: job.schedule,
                     taskList: taskList,
-                    owner: job.owner
+                    owner: job.owner,
+                    registerDatasetVersion: job.registerDatasetVersion,
+                    targetDatasetName: job.targetDatasetName,
+                    upstreamVersionIds: job.upstreamVersionIds,
+                    transformOutputPath: job.transformOutputPath
                 };
                 
                 const dialogHtml = `
@@ -737,6 +750,7 @@ class TransformCompare extends HTMLElement {
                 const confirmBtn = dialog.querySelector('.confirm-btn');
                 const closeBtn = dialog.querySelector('.dialog-close-btn');
                 const form = dialog.querySelector('#jobForm');
+                this.bindDatasetRegistration(form);
                 const addTaskBtn = dialog.querySelector('#addTask');
                 const tasksList = dialog.querySelector('#tasksList');
 
@@ -815,6 +829,7 @@ class TransformCompare extends HTMLElement {
                     const exportFile = form.querySelector('#exportFile')?.value;
                     const schedule = form.querySelector('#schedule')?.value.trim();
                     const taskList = this.collectTasks(tasksList);
+                    const datasetRegistration = this.collectDatasetRegistration(form);
 
                     if (!jobName || isNaN(exportType)) {
                         this.showToast('请填写完整作业配置', 'error');
@@ -828,6 +843,11 @@ class TransformCompare extends HTMLElement {
 
                     if (taskList.length === 0) {
                         this.showToast('请至少添加一个任务', 'error');
+                        return;
+                    }
+                    if (datasetRegistration.registerDatasetVersion
+                            && (!datasetRegistration.targetDatasetName || datasetRegistration.upstreamVersionIds.length === 0)) {
+                        this.showToast('请填写目标数据集名称并选择主上游版本', 'error');
                         return;
                     }
 
@@ -866,7 +886,8 @@ class TransformCompare extends HTMLElement {
                         exportFile: exportType === 1 ? exportFile : null,
                         schedule,
                         taskList,
-                        owner: job.owner
+                        owner: job.owner,
+                        ...datasetRegistration
                     };
 
                     console.log('Job data to update:', jobData);
@@ -1097,6 +1118,12 @@ class TransformCompare extends HTMLElement {
     getJobFormHTML(job = null) {
         const isEdit = job !== null;
         const isAdmin = window.MenuPermission?.getCurrentRole() === 'ADMIN';
+        let upstreamVersionId = '';
+        try {
+            upstreamVersionId = JSON.parse(job?.upstreamVersionIds || '[]')[0] || '';
+        } catch (e) {
+            upstreamVersionId = '';
+        }
         
         // 根据用户角色生成导出类型选项
         let exportTypeOptions = '';
@@ -1152,6 +1179,18 @@ class TransformCompare extends HTMLElement {
                             <label for="exportFile">输出文件名 <span class="required">*</span></label>
                             <input type="text" id="exportFile" name="exportFile" placeholder="请输入输出文件名" value="${job?.exportFile || ''}">
                         </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="registerDatasetVersion" ${job?.registerDatasetVersion ? 'checked' : ''} style="width:auto;"> 作业完成后登记为数据集新版本</label>
+                        </div>
+                    </div>
+                    <div id="datasetRegistration" style="display:${job?.registerDatasetVersion ? 'block' : 'none'};padding:16px;background:#f8fafc;border-radius:8px;margin-bottom:16px;">
+                        <div class="form-row">
+                            <div class="form-group"><label>目标数据集名称 <span class="required">*</span></label><input type="text" id="targetDatasetName" value="${job?.targetDatasetName || ''}" placeholder="已有名称将追加版本"></div>
+                            <div class="form-group"><label>主上游版本 <span class="required">*</span></label><select id="datasetUpstreamVersion" data-selected="${upstreamVersionId}"><option value="">请选择</option></select></div>
+                        </div>
+                        <div class="form-row"><div class="form-group"><label>物化输出路径</label><input type="text" id="transformOutputPath" value="${job?.transformOutputPath || ''}" placeholder="文件输出可留空；IGinX输出请填写"></div></div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -1272,11 +1311,67 @@ class TransformCompare extends HTMLElement {
         `;
     }
 
+    async bindDatasetRegistration(form) {
+        if (!form) return;
+        const checkbox = form.querySelector('#registerDatasetVersion');
+        const panel = form.querySelector('#datasetRegistration');
+        const select = form.querySelector('#datasetUpstreamVersion');
+        if (checkbox && panel) {
+            checkbox.addEventListener('change', () => {
+                panel.style.display = checkbox.checked ? 'block' : 'none';
+            });
+        }
+        if (select) await this.loadDatasetVersionOptions(select);
+    }
+
+    async loadDatasetVersionOptions(select) {
+        try {
+            const selected = select.dataset.selected || '';
+            const result = await window.AppConfig.get('dataset', 'tree');
+            if (!(result.success || result.code === 200) || !Array.isArray(result.data)) return;
+            select.innerHTML = '<option value="">请选择</option>';
+            result.data.forEach(dataset => (dataset.versions || []).forEach(version => {
+                const option = document.createElement('option');
+                option.value = version.versionId;
+                option.textContent = `${dataset.datasetName} / ${version.versionNo}`;
+                option.selected = String(version.versionId) === String(selected);
+                select.appendChild(option);
+            }));
+        } catch (error) {
+            console.error('加载数据集版本失败:', error);
+        }
+    }
+
+    collectDatasetRegistration(form) {
+        const registerDatasetVersion = !!form.querySelector('#registerDatasetVersion')?.checked;
+        const targetDatasetName = form.querySelector('#targetDatasetName')?.value.trim() || '';
+        const upstream = form.querySelector('#datasetUpstreamVersion')?.value;
+        const transformOutputPath = form.querySelector('#transformOutputPath')?.value.trim() || '';
+        return {
+            registerDatasetVersion,
+            targetDatasetName,
+            upstreamVersionIds: upstream ? [Number(upstream)] : [],
+            transformOutputPath
+        };
+    }
+
     bindFormEvents() {
         const form = this.querySelector('#jobForm');
         const addTaskBtn = this.querySelector('#addTask');
         const tasksList = this.querySelector('#tasksList');
         const modalFooter = this.querySelector('#modalFooter');
+        const registerDatasetVersion = this.querySelector('#registerDatasetVersion');
+        const datasetRegistration = this.querySelector('#datasetRegistration');
+        const datasetUpstreamVersion = this.querySelector('#datasetUpstreamVersion');
+
+        if (registerDatasetVersion && datasetRegistration) {
+            registerDatasetVersion.addEventListener('change', () => {
+                datasetRegistration.style.display = registerDatasetVersion.checked ? 'block' : 'none';
+            });
+        }
+        if (datasetUpstreamVersion) {
+            this.loadDatasetVersionOptions(datasetUpstreamVersion);
+        }
 
         if (addTaskBtn) {
             addTaskBtn.addEventListener('click', () => {
