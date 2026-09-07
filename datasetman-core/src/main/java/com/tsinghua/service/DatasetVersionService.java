@@ -68,6 +68,8 @@ public class DatasetVersionService {
         if (dataset == null) {
             dataset = createDataset(request.getDatasetName(), request.getDescription(), request.getDataModality(), request.getProject());
         }
+        // datasetId 是 DatasetInfoEntity 的 timestamp 字段，从 IginX 读回来可能为 null，用 createTime 兜底
+        Long datasetId = dataset.getId() != null ? dataset.getId() : dataset.getCreateTime();
 
         long timestamp = nextId();
         String operator = OperationLogAspect.getCurrentUser();
@@ -77,7 +79,7 @@ public class DatasetVersionService {
         List<Long> upstreams = request.getUpstreamVersionIds() == null
                 ? new ArrayList<>() : new ArrayList<>(request.getUpstreamVersionIds());
         if (upstreams.isEmpty() && type != ProvenanceType.SOURCE) {
-            DatasetVersionEntity latest = latestVersion(dataset.getId());
+            DatasetVersionEntity latest = latestVersion(datasetId);
             if (latest != null) {
                 upstreams.add(latest.getId());
             }
@@ -85,7 +87,7 @@ public class DatasetVersionService {
 
         DatasetVersionEntity version = new DatasetVersionEntity();
         version.setId(timestamp);
-        version.setDatasetId(dataset.getId());
+        version.setDatasetId(datasetId);
         version.setDatasetName(dataset.getName());
         version.setVersionNo(CommonUtil.generateVersion(timestamp));
         version.setProvenanceType(type.name());
@@ -135,7 +137,7 @@ public class DatasetVersionService {
         dataset.setName(name);
         dataset.setDescription(nvl(description));
         dataset.setDataModality(StringUtils.hasText(dataModality) ? dataModality : "relational");
-        dataset.setProject(nvl(project));
+        dataset.setProject(StringUtils.hasText(project) ? project : "default");
         dataset.setOwner(AuthUtil.getCurrentUsername());
         dataset.setCreateTime(timestamp);
         dataset.setOperator(OperationLogAspect.getCurrentUser());
@@ -193,7 +195,13 @@ public class DatasetVersionService {
 
     /** 某数据集的全部版本（含已软删，按时间倒序），供变化过程表格使用 */
     public List<DatasetVersionEntity> listVersions(Long datasetId, boolean includeDeleted) {
-        String sql = String.format("select * from %s where datasetId = %d;", VERSION_PREFIX, datasetId);
+        String sql;
+        if (datasetId != null && datasetId > 0) {
+            sql = String.format("select * from %s where datasetId = %d;", VERSION_PREFIX, datasetId);
+        } else {
+            // datasetId 无效时返回空
+            return new ArrayList<>();
+        }
         return query(sql, DatasetVersionEntity::new, VERSION_PREFIX).stream()
                 .filter(v -> includeDeleted || !v.isDeleted())
                 .sorted(Comparator.comparing(DatasetVersionEntity::getCreateTime).reversed())

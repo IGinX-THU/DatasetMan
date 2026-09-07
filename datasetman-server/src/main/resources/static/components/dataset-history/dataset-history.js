@@ -41,8 +41,9 @@ class DatasetHistory extends HTMLElement {
                 tbody tr:hover { background:#f9fafb; }
                 tbody tr.active { background:#dbeafe; }
                 .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap; }
-                .SOURCE { background:#dbeafe; color:#1d4ed8; } .SELECT { background:#cffafe; color:#0e7490; }
-                .SELECT_UDF { background:#ffedd5; color:#c2410c; } .TRANSFORM_SQL { background:#ede9fe; color:#6d28d9; }
+                .SOURCE { background:#dbeafe; color:#1d4ed8; }
+                .SQL_QUERY, .SELECT, .SELECT_UDF { background:#cffafe; color:#0e7490; }
+                .TRANSFORM, .TRANSFORM_SQL { background:#ede9fe; color:#6d28d9; }
                 .graph { width:100%; min-height:380px; overflow:auto; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; }
                 .node { cursor:pointer; } .node circle { stroke:#fff; stroke-width:3; } .node.focus circle { stroke:#111827; stroke-width:4; }
                 .node text { font-size:11px; fill:#374151; text-anchor:middle; }
@@ -122,7 +123,14 @@ class DatasetHistory extends HTMLElement {
 
     renderOverview() {
         const v = this.version;
-        const labels = { SOURCE:'数据源', SELECT:'SELECT', SELECT_UDF:'SELECT + UDF', TRANSFORM_SQL:'Transform结果' };
+        const labels = {
+            SOURCE: '数据源挂载',
+            SQL_QUERY: 'SQL查询/转换',
+            TRANSFORM: 'Transform变换',
+            SELECT: 'SQL查询',
+            SELECT_UDF: 'SQL+UDF处理',
+            TRANSFORM_SQL: 'Transform变换'
+        };
         this.setText('#name', v.datasetName);
         this.setText('#versionNo', v.versionNo);
         this.setText('#type', labels[v.provenanceType] || v.provenanceType);
@@ -175,7 +183,14 @@ class DatasetHistory extends HTMLElement {
         const height = Math.max(360, datasetRows.length * 130 + 100);
         const position = new Map();
         ordered.forEach((n,i) => position.set(n.versionId, { x:80 + i * 160, y:80 + datasetRows.indexOf(n.datasetId) * 120 }));
-        const colors = { SOURCE:'#3b82f6', SELECT:'#06b6d4', SELECT_UDF:'#f97316', TRANSFORM_SQL:'#8b5cf6' };
+        const colors = {
+            SOURCE: '#3b82f6',
+            SQL_QUERY: '#06b6d4',
+            SELECT: '#06b6d4',
+            SELECT_UDF: '#f97316',
+            TRANSFORM: '#8b5cf6',
+            TRANSFORM_SQL: '#8b5cf6'
+        };
         container.innerHTML = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8"></path></marker></defs>${(this.graph.edges || []).map(e => {
             const from=position.get(e.from), to=position.get(e.to); if(!from||!to)return '';
             return `<line x1="${from.x+24}" y1="${from.y}" x2="${to.x-24}" y2="${to.y}" stroke="#94a3b8" stroke-width="2" stroke-dasharray="${e.primary ? '' : '6 5'}" marker-end="url(#arrow)"></line><text x="${(from.x+to.x)/2}" y="${(from.y+to.y)/2-7}" font-size="10" fill="#64748b" text-anchor="middle">${this.escape(e.relationType)}</text>`;

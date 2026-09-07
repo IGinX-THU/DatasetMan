@@ -6,12 +6,10 @@ package com.tsinghua.enums;
 public enum ProvenanceType {
     /** 直接挂载已注册数据源（不复制数据，storagePath 指向源库前缀） */
     SOURCE("数据源挂载", "source"),
-    /** 对上游版本执行 SELECT 后物化 */
-    SELECT("SQL查询", "select"),
-    /** 对上游版本执行含 UDF 的 SELECT 后物化 */
-    SELECT_UDF("SQL+UDF处理", "udf"),
+    /** 选取 SQL 脚本或直接执行 SQL 语句（可包含 UDF 转换）物化为新数据集 */
+    SQL_QUERY("SQL查询/转换", "sql"),
     /** Transform 作业产出后物化 */
-    TRANSFORM_SQL("Transform变换", "transform");
+    TRANSFORM("Transform变换", "transform");
 
     private final String label;
     /** 血缘边上的关系类型标注 */
@@ -31,6 +29,16 @@ public enum ProvenanceType {
     }
 
     public static ProvenanceType of(String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("产出方式不能为空");
+        }
+        // 兼容旧枚举标识映射
+        if ("SELECT".equalsIgnoreCase(name) || "SELECT_UDF".equalsIgnoreCase(name)) {
+            return SQL_QUERY;
+        }
+        if ("TRANSFORM_SQL".equalsIgnoreCase(name)) {
+            return TRANSFORM;
+        }
         for (ProvenanceType t : values()) {
             if (t.name().equalsIgnoreCase(name)) {
                 return t;

@@ -1,9 +1,8 @@
 class DatasetDialog extends HTMLElement {
     constructor() {
         super();
-        this.currentStep = 1;
-        this.totalSteps = 4;
-        this.options = { sources: [], datasets: [], snippets: [], udfs: [], jobs: [] };
+        this.options = { sources: [], snippets: [], jobs: [] };
+        this.selectedType = 'SOURCE'; // SOURCE | SQL_QUERY | TRANSFORM
         this.attachShadow({ mode: 'open' });
     }
 
@@ -28,8 +27,8 @@ class DatasetDialog extends HTMLElement {
                 :host([show]) {
                     display: block;
                 }
-                .wizard-container {
-                    max-width: 960px;
+                .container {
+                    max-width: 900px;
                     margin: 24px auto;
                     background: #ffffff;
                     border: 1px solid #e5e7eb;
@@ -37,302 +36,291 @@ class DatasetDialog extends HTMLElement {
                     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
                     overflow: hidden;
                 }
-                .wizard-header {
+                .header {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 20px 28px;
+                    padding: 18px 24px;
                     border-bottom: 1px solid #e5e7eb;
                     background: #ffffff;
                 }
-                .wizard-title {
+                .title {
                     margin: 0;
-                    font-size: 18px;
+                    font-size: 17px;
                     font-weight: 600;
                     color: #111827;
                 }
                 .close-btn {
                     border: 0;
                     background: transparent;
-                    font-size: 24px;
+                    font-size: 22px;
                     line-height: 1;
                     cursor: pointer;
                     color: #9ca3af;
-                    padding: 4px;
                 }
                 .close-btn:hover {
                     color: #4b5563;
                 }
-                .steps {
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    padding: 20px 28px 0;
-                    gap: 12px;
+                .body {
+                    padding: 24px;
                 }
-                .step-indicator {
-                    padding: 10px 12px;
-                    text-align: center;
-                    border-radius: 6px;
-                    color: #6b7280;
-                    background: #f3f4f6;
-                    font-size: 13px;
-                    font-weight: 500;
-                    transition: all 0.2s ease;
-                }
-                .step-indicator.active {
-                    color: #ffffff;
-                    background: #2563eb;
-                }
-                .step-indicator.done {
-                    color: #1d4ed8;
-                    background: #dbeafe;
-                }
-                .wizard-body {
-                    padding: 28px;
-                    min-height: 380px;
-                }
-                .step-panel {
-                    display: none;
-                }
-                .step-panel.active {
-                    display: block;
+                .form-section {
+                    margin-bottom: 24px;
                 }
                 .section-title {
-                    font-size: 15px;
+                    font-size: 14px;
                     font-weight: 600;
-                    color: #1f2937;
-                    margin-bottom: 18px;
+                    color: #374151;
+                    margin-bottom: 12px;
+                    padding-bottom: 6px;
+                    border-bottom: 1px solid #f3f4f6;
                 }
-                .types-grid {
+                .form-group {
+                    margin-bottom: 16px;
+                }
+                .form-row {
+                    display: flex;
+                    gap: 16px;
+                }
+                .form-row .form-group {
+                    flex: 1;
+                }
+                label {
+                    display: block;
+                    font-size: 13px;
+                    font-weight: 500;
+                    margin-bottom: 6px;
+                    color: #4b5563;
+                }
+                .required {
+                    color: #ef4444;
+                }
+                input, select, textarea {
+                    width: 100%;
+                    padding: 9px 12px;
+                    border: 1px solid #d1d5db;
+                    border-radius: 6px;
+                    font-size: 13px;
+                    box-sizing: border-box;
+                    background: #ffffff;
+                    color: #1f2937;
+                    transition: border-color 0.2s;
+                }
+                input:focus, select:focus, textarea:focus {
+                    outline: none;
+                    border-color: #2563eb;
+                    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+                }
+                .type-cards {
                     display: grid;
-                    grid-template-columns: repeat(2, 1fr);
+                    grid-template-columns: repeat(3, 1fr);
                     gap: 14px;
+                    margin-bottom: 20px;
                 }
                 .type-card {
-                    border: 1.5px solid #e5e7eb;
+                    border: 2px solid #e5e7eb;
                     border-radius: 8px;
-                    padding: 16px 18px;
+                    padding: 14px;
                     cursor: pointer;
+                    transition: all 0.2s ease;
                     background: #ffffff;
-                    transition: all 0.15s ease;
                 }
                 .type-card:hover {
                     border-color: #93c5fd;
                     background: #f8fafc;
                 }
-                .type-card.selected {
+                .type-card.active {
                     border-color: #2563eb;
                     background: #eff6ff;
                 }
                 .type-card strong {
                     display: block;
-                    margin-bottom: 6px;
-                    color: #111827;
                     font-size: 14px;
+                    color: #111827;
+                    margin-bottom: 4px;
                 }
                 .type-card span {
-                    color: #6b7280;
-                    font-size: 13px;
-                    line-height: 1.5;
-                }
-                .form-group {
-                    margin-bottom: 18px;
-                }
-                .form-row {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 16px;
-                }
-                label {
-                    display: block;
-                    margin-bottom: 7px;
-                    color: #374151;
-                    font-size: 14px;
-                    font-weight: 500;
-                }
-                input, select, textarea {
-                    width: 100%;
-                    box-sizing: border-box;
-                    border: 1px solid #d1d5db;
-                    border-radius: 6px;
-                    padding: 10px 12px;
-                    font-size: 14px;
-                    background: #ffffff;
-                    color: #1f2937;
-                    outline: none;
-                    transition: border-color 0.15s;
-                }
-                input:focus, select:focus, textarea:focus {
-                    border-color: #2563eb;
-                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-                }
-                select[multiple] {
-                    min-height: 120px;
-                }
-                textarea {
-                    min-height: 80px;
-                    resize: vertical;
-                }
-                .required {
-                    color: #ef4444;
-                }
-                .hint {
-                    color: #6b7280;
                     font-size: 12px;
-                    margin-top: 5px;
-                }
-                .empty {
-                    color: #9ca3af;
-                    padding: 30px;
-                    text-align: center;
-                    background: #f9fafb;
-                    border-radius: 6px;
-                }
-                .summary {
-                    display: grid;
-                    grid-template-columns: 140px 1fr;
-                    gap: 12px;
-                    font-size: 14px;
-                    background: #f9fafb;
-                    padding: 18px;
-                    border-radius: 8px;
-                }
-                .summary dt {
                     color: #6b7280;
-                    font-weight: 500;
+                    line-height: 1.4;
                 }
-                .summary dd {
-                    margin: 0;
-                    color: #111827;
-                    word-break: break-all;
+                .type-panel {
+                    display: none;
+                    background: #fafbff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 16px;
+                    margin-top: 12px;
                 }
-                .wizard-footer {
+                .type-panel.active {
+                    display: block;
+                }
+                .footer {
                     display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 18px 28px;
+                    justify-content: flex-end;
+                    gap: 12px;
+                    padding: 16px 24px;
                     border-top: 1px solid #e5e7eb;
-                    background: #fafafa;
-                }
-                .right-actions {
-                    display: flex;
-                    gap: 10px;
-                }
-                button.action-btn {
-                    padding: 9px 22px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 14px;
-                    font-weight: 500;
-                    transition: all 0.15s ease;
-                }
-                .secondary-btn {
-                    border: 1px solid #d1d5db;
                     background: #ffffff;
+                }
+                .btn {
+                    padding: 9px 20px;
+                    border-radius: 6px;
+                    font-size: 13px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    border: 1px solid transparent;
+                }
+                .btn-cancel {
+                    background: #ffffff;
+                    border-color: #d1d5db;
                     color: #374151;
                 }
-                .secondary-btn:hover {
-                    background: #f3f4f6;
-                }
-                .primary-btn {
-                    border: 1px solid #2563eb;
+                .btn-cancel:hover { background: #f3f4f6; }
+                .btn-primary {
                     background: #2563eb;
                     color: #ffffff;
                 }
-                .primary-btn:hover {
-                    background: #1d4ed8;
-                }
-                button:disabled {
-                    opacity: 0.55;
-                    cursor: not-allowed;
-                }
+                .btn-primary:hover { background: #1d4ed8; }
                 .error-box {
-                    display: none;
-                    color: #dc2626;
-                    font-size: 13px;
-                    margin-bottom: 16px;
                     padding: 10px 14px;
                     background: #fef2f2;
-                    border: 1px solid #fecaca;
+                    border: 1px solid #fee2e2;
                     border-radius: 6px;
+                    color: #b91c1c;
+                    font-size: 13px;
+                    margin-bottom: 16px;
+                    display: none;
+                }
+                .hint {
+                    font-size: 12px;
+                    color: #6b7280;
+                    margin-top: 4px;
+                }
+                .storage-path-box {
+                    margin-top: 10px;
+                    padding: 8px 12px;
+                    background: #f1f5f9;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    color: #334155;
+                    display: none;
+                    word-break: break-all;
+                }
+                .storage-path-box .label {
+                    color: #64748b;
+                    margin-right: 6px;
+                }
+                .storage-path-box .value {
+                    font-family: 'Consolas', 'Monaco', monospace;
+                    color: #1e40af;
                 }
             </style>
-            <div class="wizard-container">
-                <div class="wizard-header">
-                    <h3 class="wizard-title" id="wizardTitle">创建数据集</h3>
-                    <button class="close-btn" id="closeBtn" type="button" title="关闭">&times;</button>
+
+            <div class="container">
+                <div class="header">
+                    <h3 class="title">创建数据集</h3>
+                    <button class="close-btn" id="closeBtn">&times;</button>
                 </div>
-                <div class="steps">
-                    <div class="step-indicator" data-step="1">1. 类型与名称</div>
-                    <div class="step-indicator" data-step="2">2. 配置数据源 / 上游</div>
-                    <div class="step-indicator" data-step="3">3. 配置变换</div>
-                    <div class="step-indicator" data-step="4">4. 确认创建</div>
-                </div>
-                <div class="wizard-body">
+
+                <div class="body">
                     <div class="error-box" id="errorBox"></div>
-                    <section class="step-panel" data-step="1">
-                        <div class="section-title">选择数据集产出方式</div>
+
+                    <!-- 1. 基本信息 -->
+                    <div class="form-section">
+                        <div class="section-title">基本信息</div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>数据集名称 <span class="required">*</span></label>
-                                <input id="datasetName" maxlength="80" placeholder="已有名称将追加新版本">
+                                <input type="text" id="datasetName" placeholder="例如：vehicle_speed_stats" maxlength="50" required>
                             </div>
                             <div class="form-group">
-                                <label>数据类型 (Data Type) <span class="required">*</span></label>
-                                <select id="datasetModality">
-                                    <option value="relational" selected>关系数据 (relational)</option>
-                                    <option value="time_series">时序数据 (time_series)</option>
-                                    <option value="key_value">键值数据 (key_value)</option>
-                                    <option value="semi_structured">半结构化数据 (semi_structured)</option>
-                                    <option value="file_system">文件型数据 (file_system)</option>
+                                <label>数据类型 <span class="required">*</span></label>
+                                <select id="dataModality">
+                                    <option value="relational">关系型 (Relational)</option>
+                                    <option value="time_series">时序数据 (Time Series)</option>
+                                    <option value="key_value">键值 (Key-Value)</option>
+                                    <option value="semi_structured">半结构化/文档 (Document)</option>
+                                    <option value="file_system">文件系统 (FileSystem)</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="types-grid">
-                            <div class="type-card" data-type="SOURCE">
-                                <strong>注册数据源</strong>
-                                <span>接入并挂载一个外部数据源作为初始数据集。</span>
-                            </div>
-                            <div class="type-card" data-type="SELECT">
-                                <strong>数据源的一部分</strong>
-                                <span>执行 SELECT 并将查询结果物化为新版本。</span>
-                            </div>
-                            <div class="type-card" data-type="SELECT_UDF">
-                                <strong>SELECT + UDF</strong>
-                                <span>执行包含 UDF 的 SELECT，保存处理后的具体结果。</span>
-                            </div>
-                            <div class="type-card" data-type="TRANSFORM_SQL">
-                                <strong>Transform 结果</strong>
-                                <span>使用已完成 Transform 作业的物化输出。</span>
-                            </div>
-                        </div>
-                    </section>
-                    <section class="step-panel" data-step="2">
-                        <div id="upstreamContent"></div>
-                    </section>
-                    <section class="step-panel" data-step="3">
-                        <div id="configContent"></div>
-                    </section>
-                    <section class="step-panel" data-step="4">
-                        <div class="section-title">确认数据集版本信息</div>
-                        <dl class="summary" id="summary"></dl>
-                        <div class="form-group" style="margin-top:20px">
-                            <label>描述</label>
-                            <textarea id="description" placeholder="数据集描述（可选）"></textarea>
-                        </div>
                         <div class="form-group">
-                            <label>版本备注</label>
-                            <textarea id="remark" placeholder="本次变化说明（可选）"></textarea>
+                            <label>备注信息</label>
+                            <input type="text" id="remark" placeholder="创建备注（可选）">
                         </div>
-                    </section>
-                </div>
-                <div class="wizard-footer">
-                    <button class="action-btn secondary-btn" id="cancelBtn" type="button">关闭</button>
-                    <div class="right-actions">
-                        <button class="action-btn secondary-btn" id="prevBtn" type="button">上一步</button>
-                        <button class="action-btn primary-btn" id="nextBtn" type="button">下一步</button>
-                        <button class="action-btn primary-btn" id="submitBtn" type="button">完成并创建</button>
                     </div>
+
+                    <!-- 2. 产出方式三选一（仅选取已编排好的资源） -->
+                    <div class="form-section">
+                        <div class="section-title">产出方式</div>
+                        <div class="type-cards">
+                            <div class="type-card active" data-type="SOURCE">
+                                <strong>1. 数据源</strong>
+                                <span>选取已注册的异构数据源，即时挂载为零拷贝数据集。</span>
+                            </div>
+                            <div class="type-card" data-type="SQL_QUERY">
+                                <strong>2. SQL 脚本</strong>
+                                <span>选取「SQL脚本托管」中已编排好的脚本执行并物化为新版本。</span>
+                            </div>
+                            <div class="type-card" data-type="TRANSFORM">
+                                <strong>3. Transform 作业</strong>
+                                <span>选取已编排完成的 Transform 作业，将其物化输出注册为新版本。</span>
+                            </div>
+                        </div>
+
+                        <!-- 方式一面板：SOURCE -->
+                        <div class="type-panel active" id="panel-SOURCE">
+                            <div class="form-group">
+                                <label>选取已注册数据源 <span class="required">*</span></label>
+                                <select id="sourcePath">
+                                    <option value="">请选择数据源...</option>
+                                    ${this.options.sources.map(s => `<option value="${s.name}" data-desc="${this.escape(s.desc || '')}">${s.name}${s.desc ? ' (' + this.escape(s.desc) + ')' : ''}</option>`).join('')}
+                                </select>
+                                <div class="hint">如需接入新引擎，请通过顶部菜单「数据源 → 注册异构数据源」完成接入。</div>
+                                <div class="storage-path-box" id="sourcePathBox">
+                                    <span class="label">存储路径：</span><span class="value" id="sourcePathValue"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 方式二面板：SQL_QUERY -->
+                        <div class="type-panel" id="panel-SQL_QUERY">
+                            <div class="form-group">
+                                <label>选取已托管 SQL 脚本 <span class="required">*</span></label>
+                                <select id="sqlSnippet">
+                                    <option value="">请选择 SQL 脚本...</option>
+                                    ${this.options.snippets.map(s => `<option value="${s.createTime || s.id}">${this.escape(s.name)}</option>`).join('')}
+                                </select>
+                                <div class="hint">脚本在「SQL脚本托管」菜单中编排与上传，此处仅选取引用。</div>
+                                <div class="storage-path-box" id="sourcePathBox-SQL">
+                                    <span class="label">存储路径：</span><span class="value" id="sqlPathValue"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 方式三面板：TRANSFORM -->
+                        <div class="type-panel" id="panel-TRANSFORM">
+                            <div class="form-group">
+                                <label>选取已编排的 Transform 作业 <span class="required">*</span></label>
+                                <select id="transformJob">
+                                    <option value="">请选择 Transform 作业...</option>
+                                    ${this.options.jobs.map(j => `<option value="${j.createTime}" data-export-type="${j.exportType || ''}" data-export-file="${this.escape(j.exportFile || '')}">${this.escape(j.name)}</option>`).join('')}
+                                </select>
+                                <div class="hint">作业在「Transform 编排」菜单中编排，提交创建时将自动执行并物化输出。</div>
+                                <div class="storage-path-box" id="sourcePathBox-TRANSFORM">
+                                    <span class="label">存储路径：</span><span class="value" id="transformPathValue"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <button class="btn btn-cancel" id="cancelBtn">取消</button>
+                    <button class="btn btn-primary" id="submitBtn">创建数据集</button>
                 </div>
             </div>
         `;
@@ -341,435 +329,239 @@ class DatasetDialog extends HTMLElement {
     bindEvents() {
         this.shadowRoot.querySelector('#closeBtn').addEventListener('click', () => this.hide());
         this.shadowRoot.querySelector('#cancelBtn').addEventListener('click', () => this.hide());
-        this.shadowRoot.querySelector('#prevBtn').addEventListener('click', () => this.go(this.currentStep - 1));
-        this.shadowRoot.querySelector('#nextBtn').addEventListener('click', () => {
-            if (this.validateStep()) this.go(this.currentStep + 1);
+        this.shadowRoot.querySelector('#submitBtn').addEventListener('click', () => this.handleSubmit());
+
+        // 产出方式卡片切换
+        this.shadowRoot.querySelectorAll('.type-card').forEach(card => {
+            card.addEventListener('click', () => {
+                this.shadowRoot.querySelectorAll('.type-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                this.selectedType = card.dataset.type;
+                this.shadowRoot.querySelectorAll('.type-panel').forEach(p => p.classList.remove('active'));
+                const targetPanel = this.shadowRoot.querySelector(`#panel-${this.selectedType}`);
+                if (targetPanel) targetPanel.classList.add('active');
+                this.updateStoragePathDisplay();
+            });
         });
-        this.shadowRoot.querySelector('#submitBtn').addEventListener('click', () => this.submit());
-        this.shadowRoot.querySelectorAll('.type-card').forEach(card => card.addEventListener('click', () => {
-            this.shadowRoot.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-        }));
-    }
 
-    show(data) {
-        this.setAttribute('show', '');
-        this.currentStep = 1;
-        const titleEl = this.shadowRoot.querySelector('#wizardTitle');
-        const nameInput = this.shadowRoot.querySelector('#datasetName');
-        const descInput = this.shadowRoot.querySelector('#description');
-        const remarkInput = this.shadowRoot.querySelector('#remark');
-
-        if (data && (data.datasetName || data.name)) {
-            titleEl.textContent = '创建数据集新版本';
-            nameInput.value = data.datasetName || data.name || '';
-        } else {
-            titleEl.textContent = '创建数据集';
-            nameInput.value = '';
+        // 数据源选取后同步数据类型下拉并显示存储路径
+        const sourcePathSelect = this.shadowRoot.querySelector('#sourcePath');
+        if (sourcePathSelect) {
+            sourcePathSelect.addEventListener('change', (e) => {
+                const selected = e.target.selectedOptions[0];
+                const desc = selected ? selected.getAttribute('data-desc') : '';
+                const modalitySelect = this.shadowRoot.querySelector('#dataModality');
+                if (modalitySelect && desc) {
+                    const option = Array.from(modalitySelect.options).find(o => o.value === desc);
+                    if (option) {
+                        modalitySelect.value = desc;
+                    }
+                }
+                this.updateStoragePathDisplay();
+            });
         }
-        if (descInput) descInput.value = '';
-        if (remarkInput) remarkInput.value = '';
-        this.shadowRoot.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
-        this.loadOptions().then(() => this.go(1));
+
+        // Transform 作业选取后显示物化输出路径
+        const transformJobSelect = this.shadowRoot.querySelector('#transformJob');
+        if (transformJobSelect) {
+            transformJobSelect.addEventListener('change', () => this.updateStoragePathDisplay());
+        }
+
+        // 数据集名称输入后实时刷新 SQL 物化路径预览
+        const datasetNameInput = this.shadowRoot.querySelector('#datasetName');
+        if (datasetNameInput) {
+            datasetNameInput.addEventListener('input', () => this.updateStoragePathDisplay());
+        }
     }
 
-    showCreate() {
-        this.show();
+    /**
+     * 复刻后端 normalizePath：将非法字符替换为下划线，折叠连续点号，去除首尾点号
+     */
+    normalizePath(path) {
+        if (!path) return 'value';
+        return path
+            .replace(/[^a-zA-Z0-9_\u4e00-\u9fa5.]/g, '_')
+            .replace(/\.{2,}/g, '.')
+            .replace(/^\.|\.$/g, '');
     }
 
-    showEdit(data) {
-        this.show(data);
+    /**
+     * 复刻后端 CommonUtil.generateVersion：v_yyMMdd_HHmmss (Asia/Shanghai)
+     */
+    generateVersion(timestamp) {
+        const date = new Date(timestamp);
+        const fmt = new Intl.DateTimeFormat('zh-CN', {
+            timeZone: 'Asia/Shanghai',
+            year: '2-digit', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: false
+        });
+        const parts = {};
+        fmt.formatToParts(date).forEach(p => { parts[p.type] = p.value; });
+        const yy = parts.year;
+        const MM = parts.month;
+        const dd = parts.day;
+        const HH = parts.hour;
+        const mm = parts.minute;
+        const ss = parts.second;
+        return `v_${yy}${MM}${dd}_${HH}${mm}${ss}`;
+    }
+
+    /**
+     * 复刻后端 nextStoragePath：datasets.<safeName>.<version>
+     */
+    previewSqlStoragePath() {
+        const datasetName = this.shadowRoot.querySelector('#datasetName').value.trim();
+        const safeName = this.normalizePath(datasetName).replace(/\./g, '_');
+        const version = this.generateVersion(Date.now());
+        return `datasets.${safeName || '<数据集名称>'}.${version}`;
+    }
+
+    updateStoragePathDisplay() {
+        if (this.selectedType === 'SOURCE') {
+            const sourcePath = this.shadowRoot.querySelector('#sourcePath').value;
+            const box = this.shadowRoot.querySelector('#sourcePathBox');
+            const valueEl = this.shadowRoot.querySelector('#sourcePathValue');
+            if (sourcePath) {
+                if (valueEl) valueEl.textContent = sourcePath;
+                if (box) box.style.display = 'block';
+            } else {
+                if (box) box.style.display = 'none';
+            }
+        } else if (this.selectedType === 'SQL_QUERY') {
+            const box = this.shadowRoot.querySelector('#sourcePathBox-SQL');
+            const valueEl = this.shadowRoot.querySelector('#sqlPathValue');
+            if (valueEl) valueEl.textContent = this.previewSqlStoragePath();
+            if (box) box.style.display = 'block';
+        } else if (this.selectedType === 'TRANSFORM') {
+            const jobSelect = this.shadowRoot.querySelector('#transformJob');
+            const selected = jobSelect.selectedOptions[0];
+            const box = this.shadowRoot.querySelector('#sourcePathBox-TRANSFORM');
+            const valueEl = this.shadowRoot.querySelector('#transformPathValue');
+            if (selected && selected.value) {
+                const exportType = selected.getAttribute('data-export-type');
+                const exportFile = selected.getAttribute('data-export-file') || '';
+                let path = '';
+                if (exportType === '2') {
+                    // IGinX 输出：列名默认加 transform. 前缀
+                    path = 'transform';
+                } else if (exportType === '1' && exportFile) {
+                    let file = exportFile.replace(/\\/g, '/');
+                    file = file.substring(file.lastIndexOf('/') + 1);
+                    path = 'file_system.sys_data.job.' + file;
+                }
+                if (valueEl) valueEl.textContent = path || '无法解析输出路径（需作业 exportType=1 或 2 且有导出信息）';
+                if (box) box.style.display = 'block';
+            } else {
+                if (box) box.style.display = 'none';
+            }
+        }
+    }
+
+    async show(context) {
+        this.style.display = 'block';
+        this.setAttribute('show', '');
+        await this.loadOptions();
+        this.render();
+        this.bindEvents();
+
+        if (context?.datasetName) {
+            const nameInput = this.shadowRoot.querySelector('#datasetName');
+            if (nameInput) nameInput.value = context.datasetName;
+        }
     }
 
     hide() {
+        this.style.display = 'none';
         this.removeAttribute('show');
+        this.hideError();
     }
 
     async loadOptions() {
-        const jobQuery = { pageNum: 1, pageSize: 500 };
-        const [sources, datasets, snippets, udfs, jobs] = await Promise.allSettled([
-            window.AppConfig.get('datasource', 'list'),
-            window.AppConfig.get('dataset', 'tree'),
-            window.AppConfig.get('sqlSnippet', 'list'),
-            window.AppConfig.request(window.AppConfig.getApiUrl('udf', 'query').replace('{type}', 'udf')),
-            window.AppConfig.post('transformJob', 'query', jobQuery)
-        ]);
-        this.options.sources = this.resultData(sources).map(s => ({ value: s.dataPrefix ? `${s.schemaPrefix}.${s.dataPrefix}` : s.schemaPrefix, label: s.dataPrefix ? `${s.schemaPrefix}.${s.dataPrefix}` : s.schemaPrefix }));
-        this.options.datasets = this.resultData(datasets);
-        this.options.snippets = this.resultData(snippets);
-        this.options.udfs = this.resultData(udfs);
-        this.options.jobs = this.resultData(jobs).filter(j => j.jobState === 1);
-    }
-
-    resultData(settled) {
-        if (settled.status !== 'fulfilled') return [];
-        const result = settled.value;
-        return (result && (result.success || result.code === 200) && Array.isArray(result.data)) ? result.data : [];
-    }
-
-    go(step) {
-        if (step < 1 || step > this.totalSteps) return;
-        this.currentStep = step;
-        this.shadowRoot.querySelectorAll('.step-panel').forEach(el => el.classList.toggle('active', Number(el.dataset.step) === step));
-        this.shadowRoot.querySelectorAll('.step-indicator').forEach(el => {
-            const n = Number(el.dataset.step);
-            el.classList.toggle('active', n === step);
-            el.classList.toggle('done', n < step);
-        });
-        if (step === 2) this.renderUpstream();
-        if (step === 3) this.renderConfig();
-        if (step === 4) this.renderSummary();
-        this.shadowRoot.querySelector('#prevBtn').style.visibility = step === 1 ? 'hidden' : 'visible';
-        this.shadowRoot.querySelector('#nextBtn').style.display = step === 4 ? 'none' : 'inline-block';
-        this.shadowRoot.querySelector('#submitBtn').style.display = step === 4 ? 'inline-block' : 'none';
-        this.hideError();
-    }
-
-    selectedType() {
-        return this.shadowRoot.querySelector('.type-card.selected')?.dataset.type || '';
-    }
-
-    renderUpstream() {
-        const type = this.selectedType();
-        const container = this.shadowRoot.querySelector('#upstreamContent');
-        if (type === 'SOURCE') {
-            container.innerHTML = `
-                <div class="section-title">填写外部数据源连接信息</div>
-                <div class="form-group">
-                    <label>数据源类型 <span class="required">*</span></label>
-                    <select id="srcStorageEngineType">
-                        <option value="">请选择数据源类型</option>
-                        <option value="1">iotdb12</option>
-                        <option value="2">influxdb</option>
-                        <option value="3">filesystem</option>
-                        <option value="4" selected>relational</option>
-                        <option value="5">mongodb</option>
-                        <option value="6">redis</option>
-                    </select>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>主机地址 <span class="required">*</span></label>
-                        <input id="srcHost" placeholder="如 127.0.0.1" value="127.0.0.1">
-                    </div>
-                    <div class="form-group">
-                        <label>端口 <span class="required">*</span></label>
-                        <input id="srcPort" type="number" placeholder="如 3306" value="3306">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>模式前缀 (Schema Prefix) <span class="required">*</span></label>
-                        <input id="srcSchemaPrefix" placeholder="虚拟前缀，如 mysql8">
-                    </div>
-                    <div class="form-group">
-                        <label>数据前缀 (Data Prefix)</label>
-                        <input id="srcDataPrefix" placeholder="原数据库表名，如 t_user（可选）">
-                    </div>
-                </div>
-                <div class="form-row" id="srcAuthFields">
-                    <div class="form-group">
-                        <label>用户名</label>
-                        <input id="srcUsername" placeholder="请输入用户名" value="root">
-                    </div>
-                    <div class="form-group">
-                        <label>密码</label>
-                        <input id="srcPassword" type="password" placeholder="请输入密码">
-                    </div>
-                </div>
-                <div id="srcRelationalFields" style="display:block;">
-                    <div class="form-group">
-                        <label>数据库引擎</label>
-                        <select id="srcRelationalEngine">
-                            <option value="mysql">MySQL</option>
-                            <option value="postgresql">PostgreSQL</option>
-                            <option value="oracle">Oracle</option>
-                            <option value="oceanbase">OceanBase</option>
-                            <option value="dm">Dameng</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="srcFsFields" style="display:none;">
-                    <div class="form-group">
-                        <label>IGinX节点端口 <span class="required">*</span></label>
-                        <input id="srcIginxPort" type="number" placeholder="6888" value="6888">
-                    </div>
-                    <div class="form-group">
-                        <label>历史数据文件读取目录 <span class="required">*</span></label>
-                        <input id="srcDummyDir" placeholder="请输入文件读取绝对目录">
-                    </div>
-                </div>
-                <div id="srcInfluxFields" style="display:none;">
-                    <div class="form-group">
-                        <label>InfluxDB URL <span class="required">*</span></label>
-                        <input id="srcInfluxUrl" placeholder="http://localhost:8086/">
-                    </div>
-                    <div class="form-group">
-                        <label>访问令牌</label>
-                        <input id="srcInfluxToken" placeholder="请输入访问令牌">
-                    </div>
-                </div>
-                <div id="srcMongoFields" style="display:none;">
-                    <div class="form-group">
-                        <label>MongoDB连接字符串</label>
-                        <input id="srcMongoUri" placeholder="mongodb://localhost:27017">
-                    </div>
-                </div>
-                <div class="hint">配置将直接注册外部存储引擎并作为 SOURCE 数据集初始版本挂载。</div>
-            `;
-            const typeSelect = container.querySelector('#srcStorageEngineType');
-            typeSelect.addEventListener('change', () => {
-                const val = typeSelect.value;
-                const authFields = container.querySelector('#srcAuthFields');
-                const relationalFields = container.querySelector('#srcRelationalFields');
-                const fsFields = container.querySelector('#srcFsFields');
-                const influxFields = container.querySelector('#srcInfluxFields');
-                const mongoFields = container.querySelector('#srcMongoFields');
-
-                authFields.style.display = (val === '1' || val === '2' || val === '4' || val === '6') ? 'grid' : 'none';
-                relationalFields.style.display = (val === '4') ? 'block' : 'none';
-                fsFields.style.display = (val === '3') ? 'block' : 'none';
-                influxFields.style.display = (val === '2') ? 'block' : 'none';
-                mongoFields.style.display = (val === '5') ? 'block' : 'none';
-
-                const mainModality = this.shadowRoot.querySelector('#datasetModality');
-                if (mainModality) {
-                    if (val === '1' || val === '2') mainModality.value = 'time_series';
-                    else if (val === '3') mainModality.value = 'file_system';
-                    else if (val === '4') mainModality.value = 'relational';
-                    else if (val === '5') mainModality.value = 'semi_structured';
-                    else if (val === '6') mainModality.value = 'key_value';
-                }
-            });
-            return;
-        }
-        const options = this.options.datasets.flatMap(d => (d.versions || []).map(v => ({ id: v.versionId, text: `${d.datasetName} / ${v.versionNo}`, path: v.storagePath })));
-        container.innerHTML = `
-            <div class="section-title">选择上游数据集版本</div>
-            <div class="form-group">
-                <label>主上游版本 <span class="required">*</span></label>
-                <select id="upstreamVersion">
-                    <option value="">请选择</option>
-                    ${options.map(o => `<option value="${o.id}" data-path="${this.escape(o.path)}">${this.escape(o.text)}</option>`).join('')}
-                </select>
-                <div class="hint">新版本将基于该上游数据进行处理，并在血缘图谱中建立依赖关系。</div>
-            </div>
-        `;
-    }
-
-    renderConfig() {
-        const type = this.selectedType();
-        const container = this.shadowRoot.querySelector('#configContent');
-        if (type === 'SOURCE') {
-            container.innerHTML = `
-                <div class="section-title">数据源挂载信息</div>
-                <div class="empty">已在第 2 步配置完整数据源连接参数，无需额外 SQL 变换配置。</div>
-            `;
-        } else if (type === 'SELECT' || type === 'SELECT_UDF') {
-            container.innerHTML = `
-                <div class="section-title">配置 SQL 变换</div>
-                <div class="form-group">
-                    <label>SQL片段 <span class="required">*</span></label>
-                    <select id="sqlSnippet">
-                        <option value="">请选择</option>
-                        ${this.options.snippets.map(s => `<option value="${s.id}">${this.escape(s.name)}</option>`).join('')}
-                    </select>
-                    <div class="hint">SQL可使用 {upstream} 占位符引用主上游路径。</div>
-                </div>
-                ${type === 'SELECT_UDF' ? `
-                    <div class="form-group">
-                        <label>涉及的 UDF <span class="required">*</span></label>
-                        <select id="udfNames" multiple>
-                            ${this.options.udfs.map(u => `<option value="${this.escape(u.name)}">${this.escape(u.name)}</option>`).join('')}
-                        </select>
-                    </div>
-                ` : ''}
-            `;
-        } else {
-            container.innerHTML = `
-                <div class="section-title">选择已完成的 Transform 任务</div>
-                <div class="form-group">
-                    <label>Transform任务 <span class="required">*</span></label>
-                    <select id="transformJob">
-                        <option value="">请选择</option>
-                        ${this.options.jobs.map(j => `<option value="${this.escape(j.jobId)}">${this.escape(j.name)} (${this.escape(j.jobId)})</option>`).join('')}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>物化输出路径</label>
-                    <input id="transformOutputPath" placeholder="文件导出任务可留空；IGinX输出请填写路径">
-                    <div class="hint">任务必须已完成且结果已经落盘。</div>
-                </div>
-            `;
-        }
-    }
-
-    validateStep() {
-        if (this.currentStep === 1) {
-            if (!this.shadowRoot.querySelector('#datasetName').value.trim()) return this.fail('请输入数据集名称');
-            if (!this.selectedType()) return this.fail('请选择数据集产出方式');
-        }
-        if (this.currentStep === 2) {
-            if (this.selectedType() === 'SOURCE') {
-                const engineType = this.shadowRoot.querySelector('#srcStorageEngineType')?.value;
-                const host = this.shadowRoot.querySelector('#srcHost')?.value?.trim();
-                const port = this.shadowRoot.querySelector('#srcPort')?.value?.trim();
-                const schema = this.shadowRoot.querySelector('#srcSchemaPrefix')?.value?.trim();
-                if (!engineType) return this.fail('请选择数据源类型');
-                if (!host) return this.fail('请输入主机地址');
-                if (!port) return this.fail('请输入端口号');
-                if (!schema) return this.fail('请输入模式前缀');
-            } else {
-                if (!this.shadowRoot.querySelector('#upstreamVersion')?.value) return this.fail('请选择上游版本');
-            }
-        }
-        if (this.currentStep === 3) {
-            const type = this.selectedType();
-            if ((type === 'SELECT' || type === 'SELECT_UDF') && !this.shadowRoot.querySelector('#sqlSnippet')?.value) return this.fail('请选择SQL片段');
-            if (type === 'SELECT_UDF' && this.selectedValues('#udfNames').length === 0) return this.fail('请选择至少一个UDF');
-            if (type === 'TRANSFORM_SQL' && !this.shadowRoot.querySelector('#transformJob')?.value) return this.fail('请选择已完成的Transform任务');
-        }
-        this.hideError();
-        return true;
-    }
-
-    renderSummary() {
-        const type = this.selectedType();
-        const typeLabels = { SOURCE: '注册数据源', SELECT: 'SELECT', SELECT_UDF: 'SELECT + UDF', TRANSFORM_SQL: 'Transform结果' };
-        const datasetName = this.shadowRoot.querySelector('#datasetName').value.trim();
-        let upstream = '-';
-        let config = '-';
-
-        if (type === 'SOURCE') {
-            const host = this.shadowRoot.querySelector('#srcHost')?.value;
-            const port = this.shadowRoot.querySelector('#srcPort')?.value;
-            const schema = this.shadowRoot.querySelector('#srcSchemaPrefix')?.value;
-            upstream = '无（外部数据源接入）';
-            config = `${schema} (${host}:${port})`;
-        } else {
-            upstream = this.shadowRoot.querySelector('#upstreamVersion')?.selectedOptions[0]?.textContent || '-';
-            config = this.shadowRoot.querySelector('#sqlSnippet')?.selectedOptions[0]?.textContent || this.shadowRoot.querySelector('#transformJob')?.selectedOptions[0]?.textContent || '-';
-        }
-
-        this.shadowRoot.querySelector('#summary').innerHTML = `
-            <dt>数据集名称</dt><dd>${this.escape(datasetName)}</dd>
-            <dt>产出方式</dt><dd>${typeLabels[type] || type}</dd>
-            <dt>上游版本</dt><dd>${this.escape(upstream)}</dd>
-            <dt>配置概要</dt><dd>${this.escape(config)}</dd>
-        `;
-    }
-
-    buildSourceRegisterData() {
-        const type = parseInt(this.shadowRoot.querySelector('#srcStorageEngineType')?.value);
-        const host = this.shadowRoot.querySelector('#srcHost')?.value?.trim();
-        const port = parseInt(this.shadowRoot.querySelector('#srcPort')?.value?.trim());
-        const schema = this.shadowRoot.querySelector('#srcSchemaPrefix')?.value?.trim();
-        const dataPrefix = this.shadowRoot.querySelector('#srcDataPrefix')?.value?.trim();
-        const username = this.shadowRoot.querySelector('#srcUsername')?.value?.trim();
-        const password = this.shadowRoot.querySelector('#srcPassword')?.value?.trim();
-        const modality = this.shadowRoot.querySelector('#datasetModality')?.value?.trim();
-
-        const datasetName = this.shadowRoot.querySelector('#datasetName')?.value?.trim();
-        const description = this.shadowRoot.querySelector('#description')?.value?.trim() || '';
-
-        const data = {
-            storageEngineType: type,
-            ip: host,
-            port: port,
-            schemaPrefix: schema,
-            hasData: true,
-            isReadOnly: true,
-            datasetName: datasetName,
-            dataModality: modality || 'relational',
-            description: description
-        };
-        if (dataPrefix) data.dataPrefix = dataPrefix;
-        if (username) data.username = username;
-        if (password) data.password = password;
-
-        if (type === 4) { // relational
-            data.engine = this.shadowRoot.querySelector('#srcRelationalEngine')?.value || 'mysql';
-        } else if (type === 3) { // fs
-            const igPort = this.shadowRoot.querySelector('#srcIginxPort')?.value;
-            const dummyDir = this.shadowRoot.querySelector('#srcDummyDir')?.value?.trim();
-            if (igPort) data.iginxPort = parseInt(igPort);
-            if (dummyDir) data.dummyDir = dummyDir;
-        } else if (type === 2) { // influx
-            const url = this.shadowRoot.querySelector('#srcInfluxUrl')?.value?.trim();
-            const token = this.shadowRoot.querySelector('#srcInfluxToken')?.value?.trim();
-            if (url) data.url = url;
-            if (token) data.token = token;
-        } else if (type === 5) { // mongo
-            const uri = this.shadowRoot.querySelector('#srcMongoUri')?.value?.trim();
-            if (uri) data.mongodbUri = uri;
-        }
-        return data;
-    }
-
-    buildRequest() {
-        const type = this.selectedType();
-        const upstream = this.shadowRoot.querySelector('#upstreamVersion')?.value;
-        const request = {
-            datasetName: this.shadowRoot.querySelector('#datasetName').value.trim(),
-            provenanceType: type,
-            dataModality: this.shadowRoot.querySelector('#datasetModality')?.value || 'relational',
-            description: this.shadowRoot.querySelector('#description')?.value.trim() || '',
-            remark: this.shadowRoot.querySelector('#remark')?.value.trim() || ''
-        };
-        if (upstream) request.upstreamVersionIds = [Number(upstream)];
-        if (type === 'SELECT' || type === 'SELECT_UDF') request.sqlSnippetId = Number(this.shadowRoot.querySelector('#sqlSnippet')?.value);
-        if (type === 'SELECT_UDF') request.udfNames = this.selectedValues('#udfNames');
-        if (type === 'TRANSFORM_SQL') {
-            request.transformJobId = this.shadowRoot.querySelector('#transformJob')?.value;
-            request.transformOutputPath = this.shadowRoot.querySelector('#transformOutputPath')?.value.trim() || '';
-        }
-        return request;
-    }
-
-    selectedValues(selector) {
-        const el = this.shadowRoot.querySelector(selector);
-        return el ? Array.from(el.selectedOptions).map(o => o.value) : [];
-    }
-
-    async submit() {
-        if (!this.validateStep()) return;
-        const button = this.shadowRoot.querySelector('#submitBtn');
-        button.disabled = true;
-        button.textContent = '创建中...';
         try {
-            const type = this.selectedType();
-            let result;
-            if (type === 'SOURCE') {
-                const sourceData = this.buildSourceRegisterData();
-                result = await window.AppConfig.post('datasource', 'register', sourceData);
-            } else {
-                result = await window.AppConfig.post('dataset', 'create', this.buildRequest());
-            }
+            const [sourcesRes, snippetsRes, jobsRes] = await Promise.all([
+                window.AppConfig.get('datasource', 'archives').catch(() => ({ data: [] })),
+                window.AppConfig.get('sqlSnippet', 'list').catch(() => ({ data: [] })),
+                window.AppConfig.post('transformCompare', 'query', { pageNum: 1, pageSize: 50 }).catch(() => ({ data: [] }))
+            ]);
 
-            if (!(result.success || result.code === 200)) throw new Error(result.message || '创建失败');
-            this.hide();
-            this.dispatchEvent(new CustomEvent('dataset-saved', { bubbles:true, composed:true, detail:{ mode:'create', data:result } }));
-        } catch (error) {
-            this.fail(error.message || '创建失败');
-        } finally {
-            button.disabled = false;
-            button.textContent = '完成并创建';
+            this.options.sources = sourcesRes.data || [];
+            this.options.snippets = snippetsRes.data || [];
+            this.options.jobs = jobsRes.data || [];
+        } catch (e) {
+            console.error('加载选项数据失败:', e);
         }
     }
 
-    fail(message) {
-        const el = this.shadowRoot.querySelector('#errorBox');
-        el.textContent = message;
-        el.style.display = 'block';
-        return false;
+    async handleSubmit() {
+        const datasetName = this.shadowRoot.querySelector('#datasetName').value.trim();
+        const dataModality = this.shadowRoot.querySelector('#dataModality').value;
+        const remark = this.shadowRoot.querySelector('#remark').value.trim();
+
+        if (!datasetName) return this.fail('请输入数据集名称');
+
+        const request = {
+            datasetName,
+            dataModality,
+            remark,
+            provenanceType: this.selectedType
+        };
+
+        if (this.selectedType === 'SOURCE') {
+            const sourcePath = this.shadowRoot.querySelector('#sourcePath').value;
+            if (!sourcePath) return this.fail('请选择数据源');
+            request.sourcePath = sourcePath;
+        } else if (this.selectedType === 'SQL_QUERY') {
+            const snippetId = this.shadowRoot.querySelector('#sqlSnippet').value;
+            if (!snippetId) return this.fail('请选择已托管的 SQL 脚本');
+            request.sqlSnippetId = Number(snippetId);
+        } else if (this.selectedType === 'TRANSFORM') {
+            const createTime = this.shadowRoot.querySelector('#transformJob').value;
+            if (!createTime) return this.fail('请选择已编排的 Transform 作业');
+            request.transformCompareCreateTime = Number(createTime);
+        }
+
+        const submitBtn = this.shadowRoot.querySelector('#submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '创建中...';
+
+        try {
+            const result = await window.AppConfig.post('dataset', 'create', request);
+            if (result.success || result.code === 200) {
+                if (window.CommonUtils?.showToast) {
+                    window.CommonUtils.showToast('数据集创建成功', 'success');
+                }
+                this.dispatchEvent(new CustomEvent('dataset-created', { bubbles: true, composed: true, detail: result.data }));
+                if (window.loadDataSourceTree) await window.loadDataSourceTree();
+                if (window.loadDatasetTree) await window.loadDatasetTree();
+                this.hide();
+            } else {
+                this.fail(result.message || '创建失败');
+            }
+        } catch (error) {
+            console.error('创建数据集失败:', error);
+            this.fail(error.message || '网络或系统异常');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '创建数据集';
+        }
+    }
+
+    fail(msg) {
+        const errorBox = this.shadowRoot.querySelector('#errorBox');
+        if (errorBox) {
+            errorBox.textContent = msg;
+            errorBox.style.display = 'block';
+        }
     }
 
     hideError() {
-        this.shadowRoot.querySelector('#errorBox').style.display = 'none';
+        const errorBox = this.shadowRoot.querySelector('#errorBox');
+        if (errorBox) errorBox.style.display = 'none';
     }
 
-    escape(value) {
-        return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    escape(val) {
+        return String(val == null ? '' : val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 }
 

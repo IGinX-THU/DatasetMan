@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tsinghua.dto.ColumnDto;
 import com.tsinghua.dto.StorageEngineInfoDto;
 import com.tsinghua.dto.request.*;
+import com.tsinghua.entity.DataArchiveEntity;
 import com.tsinghua.service.DataSourceService;
 import com.tsinghua.model.Result;
 import com.tsinghua.auth.annotation.RequirePermission;
@@ -120,6 +121,17 @@ public class DataSourceController {
     @OperationLog(value = "查询数据资源树", type = OperationLog.OperationType.QUERY, recordResult = false)
     public Result<List<ColumnDto>> tree() throws Exception {
         return Result.success(dataSourceService.dataSourceTree());
+    }
+
+    /**
+     * 已注册数据源档案列表（供创建数据集弹窗下拉选取）
+     */
+    @ApiOperation("已注册数据源档案列表")
+    @GetMapping("/archives")
+    @RequirePermission(Permission.DATASOURCE_READ)
+    @OperationLog(value = "查询数据源档案列表", type = OperationLog.OperationType.QUERY, recordResult = false)
+    public Result<List<DataArchiveEntity>> archives() {
+        return Result.success(dataSourceService.dataSourceArchives());
     }
 
 }

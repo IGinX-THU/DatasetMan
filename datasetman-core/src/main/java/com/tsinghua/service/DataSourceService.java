@@ -10,12 +10,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tsinghua.auth.service.DataPermissionService;
 import com.tsinghua.auth.util.AuthUtil;
 import com.tsinghua.dto.ColumnDto;
-import com.tsinghua.dto.DataSourceRequest;
-import com.tsinghua.dto.DatasetVersionRegisterRequest;
 import com.tsinghua.dto.StorageEngineInfoDto;
 import com.tsinghua.dto.request.BaseStorageEngineRequest;
-import com.tsinghua.entity.DatasetInfoEntity;
-import com.tsinghua.entity.DatasetVersionEntity;
+import com.tsinghua.entity.DataArchiveEntity;
+import com.tsinghua.enums.SchemaPrefix;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,7 +38,7 @@ public class DataSourceService {
     private DataPermissionService dataPermissionService;
 
     @Autowired
-    private DatasetVersionService datasetVersionService;
+    private DataArchiveService dataArchiveService;
 
     /**
      * 注册异构数据源
@@ -63,27 +61,9 @@ public class DataSourceService {
         dataPermissionService.saveTablePrefix(tablePrefix);
         log.info("成功注册数据源: {}", request);
 
-        // 系统作业目录不是业务数据集；其余数据源注册后自动作为 SOURCE 类型数据集与版本挂载
-        if (!"file_system.sys_data".equals(tablePrefix)) {
-            String logicalDatasetName = StringUtils.hasText(request.getDatasetName()) ? request.getDatasetName().trim() : tablePrefix;
-            String modality = StringUtils.hasText(request.getDataModality()) ? request.getDataModality().trim() : "relational";
-
-            DatasetVersionRegisterRequest versionRequest = new DatasetVersionRegisterRequest();
-            versionRequest.setDatasetName(logicalDatasetName);
-            versionRequest.setProvenanceType("SOURCE");
-            versionRequest.setStoragePath(tablePrefix);
-            versionRequest.setDescription(request.getDescription());
-            versionRequest.setDataModality(modality);
-            Map<String, Object> config = new HashMap<>();
-            config.put("tablePrefix", tablePrefix);
-            config.put("storageEngineType", request.getStorageEngineType());
-            config.put("ip", request.getIp());
-            config.put("port", request.getPort());
-            config.put("schemaPrefix", request.getSchemaPrefix());
-            config.put("dataPrefix", request.getDataPrefix());
-            config.put("engineConfig", request.buildExtraParams());
-            versionRequest.setDerivationConfig(config);
-            datasetVersionService.registerVersion(versionRequest);
+        // 系统内部注册的作业输出目录不保存为用户可见的数据档案
+        if (!(SchemaPrefix.FILE_SYSTEM + "." + SchemaPrefix.SYS_DIR_PREFIX).equals(tablePrefix)) {
+            saveDataSourceArchive(request, tablePrefix);
         }
 
         return true;
@@ -94,21 +74,27 @@ public class DataSourceService {
      */
     public boolean removeDataSource(StorageEngineInfoDto storageEngineInfoDto) throws Exception {
 
+        // 删除对应的数据档案元数据
         String tablePrefix = StringUtils.hasText(storageEngineInfoDto.getDataPrefix()) ?
                 storageEngineInfoDto.getSchemaPrefix() + "." + storageEngineInfoDto.getDataPrefix() :
                 storageEngineInfoDto.getSchemaPrefix();
-
-        DatasetVersionEntity sourceVersion = datasetVersionService.queryVersionByStoragePath(tablePrefix);
-        if (sourceVersion != null && "SOURCE".equals(sourceVersion.getProvenanceType())) {
-            // 通过 datasetVersionService.softDeleteVersion 统一完成依赖检查、卸载存储引擎、清理权限与元数据
-            datasetVersionService.softDeleteVersion(sourceVersion.getId());
-        } else {
-            // 若无版本关联记录，执行底层存储引擎注销
-            RemovedStorageEngineInfo removedStorageEngineInfo = new RemovedStorageEngineInfo(storageEngineInfoDto.getIp(), storageEngineInfoDto.getPort(), storageEngineInfoDto.getSchemaPrefix(), storageEngineInfoDto.getDataPrefix());
-            List<RemovedStorageEngineInfo> removedStorageEngineList = Collections.singletonList(removedStorageEngineInfo);
-            iginxSession.removeStorageEngine(removedStorageEngineList);
-            dataPermissionService.deleteByTablePrefix(tablePrefix);
+        try {
+            DataArchiveEntity archive = dataArchiveService.findByName(tablePrefix);
+            if (archive != null && archive.getCreateTime() != null) {
+                dataArchiveService.deleteArchive(archive.getCreateTime());
+                log.info("已删除数据源档案元数据: {}", tablePrefix);
+            }
+        } catch (Exception e) {
+            log.error("删除数据源档案元数据失败", e);
         }
+
+        // iginxSession.openSession();
+        RemovedStorageEngineInfo removedStorageEngineInfo = new RemovedStorageEngineInfo(storageEngineInfoDto.getIp(), storageEngineInfoDto.getPort(), storageEngineInfoDto.getSchemaPrefix(), storageEngineInfoDto.getDataPrefix());
+        List<RemovedStorageEngineInfo> removedStorageEngineList = Collections.singletonList(removedStorageEngineInfo);
+        iginxSession.removeStorageEngine(removedStorageEngineList);
+        // iginxSession.closeSession();
+
+        dataPermissionService.deleteByTablePrefix(tablePrefix);
 
         return true;
     }
@@ -138,15 +124,21 @@ public class DataSourceService {
         return storageEngineInfoDtos;
     }
 
+    /**
+     * 查询全部已注册数据源档案（type=datasource），供创建数据集弹窗下拉选取。
+     */
+    public List<DataArchiveEntity> dataSourceArchives() {
+        return dataArchiveService.queryArchives(null, "datasource", null, null, null, null);
+    }
+
     public List<ColumnDto> dataSourceTree() throws Exception {
-        // 从 DatasetInfo 获取模态信息 (优先 dataModality，回退 description)
-        List<DatasetInfoEntity> datasets = datasetVersionService.listDatasets();
-        Map<String, String> datasetModalityMap = new HashMap<>();
-        if (!CollectionUtils.isEmpty(datasets)) {
-            datasets.forEach(d -> {
-                String modality = StringUtils.hasText(d.getDataModality()) ? d.getDataModality() : d.getDescription();
-                if (StringUtils.hasText(d.getName()) && StringUtils.hasText(modality)) {
-                    datasetModalityMap.putIfAbsent(d.getName(), modality);
+        // 从数据档案获取描述/模态信息
+        List<DataArchiveEntity> archives = dataArchiveService.findAll();
+        Map<String, String> archiveMap = new HashMap<>();
+        if (!CollectionUtils.isEmpty(archives)) {
+            archives.forEach(archive -> {
+                if (StringUtils.hasText(archive.getName()) && StringUtils.hasText(archive.getDesc())) {
+                    archiveMap.putIfAbsent(archive.getName(), archive.getDesc());
                 }
             });
         }
@@ -157,8 +149,8 @@ public class DataSourceService {
                     ColumnDto dto = new ColumnDto();
                     dto.setPath(column.getPath());
                     dto.setDataType(column.getDataType().getValue());
-                    if (!datasetModalityMap.isEmpty()) {
-                        String modality = datasetModalityMap.entrySet().stream()
+                    if (!archiveMap.isEmpty()) {
+                        String modality = archiveMap.entrySet().stream()
                                 .filter(entry -> column.getPath().startsWith(entry.getKey()))
                                 .map(Map.Entry::getValue)
                                 .findFirst()
@@ -181,6 +173,34 @@ public class DataSourceService {
                     .collect(Collectors.toList());
         }
         return tree;
+    }
+
+    /**
+     * 保存数据源档案
+     */
+    private void saveDataSourceArchive(BaseStorageEngineRequest request, String tablePrefix) {
+        try {
+            DataArchiveEntity archive = new DataArchiveEntity();
+            archive.setName(tablePrefix);
+            archive.setType("datasource");
+            archive.setDesc(request.getDescription());
+
+            log.info("准备保存数据源档案: name={}, desc={}", archive.getName(), archive.getDesc());
+
+            // 从上下文获取用户名
+            archive.setOwner(AuthUtil.getCurrentUsername());
+
+            // 将请求对象转换为JSON字符串保存到config字段
+            ObjectMapper objectMapper = new ObjectMapper();
+            String configJson = objectMapper.writeValueAsString(request);
+            archive.setConfig(configJson);
+
+            dataArchiveService.saveArchive(archive);
+            log.info("数据源档案已保存: {}, desc={}", tablePrefix, archive.getDesc());
+        } catch (Exception e) {
+            log.error("保存数据源档案失败", e);
+            // 不抛出异常，避免影响主流程
+        }
     }
 
 }

@@ -10,13 +10,20 @@ public class DatasetCreateRequest {
     @NotBlank(message = "数据集名称不能为空")
     private String datasetName;
     @NotBlank(message = "产出方式不能为空")
-    private String provenanceType;
+    private String provenanceType; // SOURCE / SQL_QUERY / TRANSFORM
+
+    // 1. SOURCE 对应参数
     private String sourcePath;
-    private List<Long> upstreamVersionIds;
+
+    // 2. SQL_QUERY 对应参数
     private Long sqlSnippetId;
+    private List<Long> upstreamVersionIds;
     private List<String> udfNames;
-    private String transformJobId;
-    private String transformOutputPath;
+
+    // 3. TRANSFORM 对应参数
+    private Long transformCompareCreateTime;
+
+    // 通用元数据
     private String description;
     private String dataModality;
     private String project;

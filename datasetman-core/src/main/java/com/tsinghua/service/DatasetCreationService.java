@@ -6,8 +6,10 @@ import cn.edu.tsinghua.iginx.session_v2.IginXClient;
 import cn.edu.tsinghua.iginx.session_v2.write.Point;
 import com.tsinghua.dto.DatasetCreateRequest;
 import com.tsinghua.dto.DatasetVersionRegisterRequest;
+import com.tsinghua.entity.DataArchiveEntity;
 import com.tsinghua.entity.DatasetVersionEntity;
 import com.tsinghua.entity.SqlSnippetEntity;
+import com.tsinghua.entity.TransformCompareEntity;
 import com.tsinghua.entity.TransformJobEntity;
 import com.tsinghua.enums.ProvenanceType;
 import com.tsinghua.enums.SchemaPrefix;
@@ -37,6 +39,12 @@ public class DatasetCreationService {
     @Autowired
     private TransformJobService transformJobService;
 
+    @Autowired
+    private TransformCompareService transformCompareService;
+
+    @Autowired
+    private DataArchiveService dataArchiveService;
+
     public DatasetVersionEntity create(DatasetCreateRequest request) throws Exception {
         ProvenanceType type = ProvenanceType.of(request.getProvenanceType());
         DatasetVersionRegisterRequest registration = new DatasetVersionRegisterRequest();
@@ -55,41 +63,49 @@ public class DatasetCreationService {
                 throw new IllegalArgumentException("请选择数据源");
             }
             storagePath = request.getSourcePath();
-            config.put("tablePrefix", request.getSourcePath());
-        } else if (type == ProvenanceType.SELECT || type == ProvenanceType.SELECT_UDF) {
+            // 快照 DataArchiveEntity 完整 JSON
+            DataArchiveEntity archive = dataArchiveService.findByName(request.getSourcePath());
+            if (archive != null) {
+                config.put("dataArchive", com.alibaba.fastjson2.JSONObject.from(archive));
+            }
+        } else if (type == ProvenanceType.SQL_QUERY) {
             if (request.getSqlSnippetId() == null) {
-                throw new IllegalArgumentException("请选择SQL片段");
+                throw new IllegalArgumentException("请选择已托管的 SQL 脚本");
             }
             SqlSnippetEntity snippet = sqlSnippetService.queryById(request.getSqlSnippetId());
             if (snippet == null) {
-                throw new IllegalArgumentException("SQL片段不存在");
+                throw new IllegalArgumentException("SQL脚本不存在");
             }
+            List<String> rawSqlList = sqlSnippetService.getSqlListById(request.getSqlSnippetId());
+            if (rawSqlList == null || rawSqlList.isEmpty()) {
+                throw new IllegalArgumentException("SQL脚本内容为空");
+            }
+            // 快照 SqlSnippetEntity 完整 JSON
+            config.put("sqlSnippet", com.alibaba.fastjson2.JSONObject.from(snippet));
+
+            if (request.getUdfNames() != null && !request.getUdfNames().isEmpty()) {
+                config.put("udfNames", request.getUdfNames());
+            }
+
             storagePath = nextStoragePath(request.getDatasetName());
-            MaterializeResult result = materializeSql(snippet, request.getUpstreamVersionIds(), storagePath);
-            config.put("sqlSnippetId", request.getSqlSnippetId());
-            config.put("sqlSnippetName", snippet.getName());
-            if (type == ProvenanceType.SELECT_UDF) {
-                config.put("udfNames", request.getUdfNames() == null ? Collections.emptyList() : request.getUdfNames());
-            }
+            MaterializeResult result = materializeSql(rawSqlList, request.getUpstreamVersionIds(), storagePath);
             registration.setRowCount(result.rowCount);
             registration.setSchemaJson(com.alibaba.fastjson2.JSONArray.toJSONString(result.paths));
         } else {
-            if (!StringUtils.hasText(request.getTransformJobId())) {
-                throw new IllegalArgumentException("请选择Transform任务");
+            if (request.getTransformCompareCreateTime() == null) {
+                throw new IllegalArgumentException("请选择 Transform 作业");
             }
-            TransformJobEntity job = transformJobService.queryJob(request.getTransformJobId());
-            if (job == null) {
-                throw new IllegalArgumentException("Transform任务不存在");
+            TransformCompareEntity compare = transformCompareService.queryJob(request.getTransformCompareCreateTime());
+            if (compare == null) {
+                throw new IllegalArgumentException("Transform作业不存在");
             }
-            if (job.getJobState() != 1) {
-                throw new IllegalArgumentException("只能使用已完成的Transform任务创建数据集版本");
-            }
-            storagePath = StringUtils.hasText(request.getTransformOutputPath())
-                    ? request.getTransformOutputPath() : resolveTransformOutputPath(job);
-            config.put("transformJobId", request.getTransformJobId());
-            config.put("transformJobName", job.getName());
-            config.put("exportType", job.getExportType());
-            config.put("exportFile", job.getExportFiletName());
+            // 快照 TransformCompareEntity 完整 JSON
+            config.put("transformCompare", com.alibaba.fastjson2.JSONObject.from(compare));
+
+            // 提交执行，快照执行后的 TransformJobEntity
+            TransformJobEntity job = transformJobService.commitJob(request.getTransformCompareCreateTime());
+            storagePath = resolveTransformOutputPath(job);
+            config.put("transformJob", com.alibaba.fastjson2.JSONObject.from(job));
         }
 
         registration.setStoragePath(storagePath);
@@ -97,8 +113,10 @@ public class DatasetCreationService {
         return datasetVersionService.registerVersion(registration);
     }
 
-    private MaterializeResult materializeSql(SqlSnippetEntity snippet, List<Long> upstreamIds, String storagePath) throws Exception {
-        List<String> sqlList = sqlSnippetService.getSqlListById(snippet.getId());
+    private MaterializeResult materializeSql(List<String> sqlList, List<Long> upstreamIds, String storagePath) throws Exception {
+        if (sqlList == null || sqlList.isEmpty()) {
+            throw new IllegalArgumentException("SQL语句列表为空");
+        }
         String upstreamPath = firstUpstreamPath(upstreamIds);
         List<Point> points = new ArrayList<>();
         Set<String> paths = new LinkedHashSet<>();
@@ -106,7 +124,9 @@ public class DatasetCreationService {
         long keyBase = System.currentTimeMillis();
 
         for (int queryIndex = 0; queryIndex < sqlList.size(); queryIndex++) {
-            String sql = bindSql(sqlList.get(queryIndex), upstreamPath, storagePath);
+            String rawSql = sqlList.get(queryIndex);
+            if (!StringUtils.hasText(rawSql)) continue;
+            String sql = bindSql(rawSql.trim(), upstreamPath, storagePath);
             CommonUtil.validateSql(sql);
             SessionExecuteSqlResult result = iginxSession.executeSql(sql);
             List<Map<String, Object>> records = ConvertUtil.getRecords(result);

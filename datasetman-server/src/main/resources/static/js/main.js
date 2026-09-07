@@ -256,31 +256,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.restoreUserSettings = restoreUserSettings;
 
-    // 2.5. 右侧数据集库树形节点点击委托处理
+    // 2.5. 右侧数据集库树形节点点击委托处理（仅处理父节点折叠/展开，叶子节点由 loadDatasetTree 中的直接绑定处理）
     const rightSidebarTree = document.getElementById('datasetTree');
     if (rightSidebarTree) {
         rightSidebarTree.addEventListener('click', function(e) {
             const node = e.target.closest('.tree-node');
             if (!node || !rightSidebarTree.contains(node)) return;
-            e.stopPropagation();
-
-            rightSidebarTree.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
-            node.classList.add('active');
-
-            const children = Array.from(node.children).find(child => child.classList.contains('tree-children'));
-            if (children) {
-                node.classList.toggle('expanded');
-                return;
-            }
-
-            const rawVersionId = node.getAttribute('data-version-id');
-            const versionId = rawVersionId && !isNaN(Number(rawVersionId)) ? Number(rawVersionId) : null;
-            const datasetId = Number(node.getAttribute('data-dataset-id'));
-            const storagePath = node.getAttribute('data-full-path');
-            console.log('🌲 点击右侧数据集叶子节点:', { versionId, datasetId, storagePath });
-            if (versionId) {
-                showComponent('datasetHistory', { versionId, datasetId, storagePath });
-            }
+            // 不调用 stopPropagation，让直接绑定的处理器也能收到事件
         });
     }
 
@@ -570,7 +552,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('UDF管理菜单被点击');
                     showComponent('udfManagement');
                 } else if (menuId === 'menu-sql-snippet-management') {
-                    console.log('SQL片段管理菜单被点击');
+                    console.log('SQL脚本托管菜单被点击');
                     showComponent('sqlSnippetManagement');
                 } else if (this.dataset && this.dataset.scale) {
                     applyFontScale(this.dataset.scale);
@@ -2241,11 +2223,15 @@ function showVisualAnalysis() {
 
             rightSidebarTree.querySelectorAll('.tree-node').forEach(node => {
                 node.addEventListener('click', function(e) {
-                    e.stopPropagation();
+                    const isLeaf = this.getAttribute('data-is-leaf') === 'true';
+                    if (isLeaf) {
+                        // 叶子节点：阻止冒泡到父节点，避免树折叠
+                        e.stopPropagation();
+                    }
                     rightSidebarTree.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
                     this.classList.add('active');
-                    const children = Array.from(this.children).find(child => child.classList.contains('tree-children'));
-                    if (children) {
+                    if (!isLeaf) {
+                        // 父节点：切换展开/折叠
                         this.classList.toggle('expanded');
                         return;
                     }
@@ -2253,9 +2239,11 @@ function showVisualAnalysis() {
                     const versionId = rawVersionId && !isNaN(Number(rawVersionId)) ? Number(rawVersionId) : null;
                     const datasetId = Number(this.getAttribute('data-dataset-id'));
                     const storagePath = this.getAttribute('data-full-path');
-                    console.log('🌲 直接绑定点击右侧叶子节点:', { versionId, datasetId, storagePath });
+                    console.log('🌲 直接绑定点击右侧叶子节点:', { versionId, datasetId, storagePath, rawVersionId });
                     if (versionId) {
                         showComponent('datasetHistory', { versionId, datasetId, storagePath });
+                    } else {
+                        console.warn('⚠️ versionId 为空，无法显示数据集历史', { rawVersionId, node: this });
                     }
                 });
             });

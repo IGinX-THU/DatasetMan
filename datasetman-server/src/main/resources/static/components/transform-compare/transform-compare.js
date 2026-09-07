@@ -1125,20 +1125,12 @@ class TransformCompare extends HTMLElement {
             upstreamVersionId = '';
         }
         
-        // 根据用户角色生成导出类型选项
-        let exportTypeOptions = '';
-        if (isAdmin) {
-            exportTypeOptions = `
-                <option value="0" ${job?.exportType === 0 ? 'selected' : ''}>none</option>
-                <option value="2" ${job?.exportType === 2 ? 'selected' : ''}>IGinX</option>
-                <option value="1" ${job?.exportType === 1 || job?.exportType === undefined || job?.exportType === null ? 'selected' : ''}>file</option>
-            `;
-        } else {
-            exportTypeOptions = `
-                <option value="0" ${job?.exportType === 0 ? 'selected' : ''}>none</option>
-                <option value="1" ${job?.exportType === 1 || job?.exportType === undefined || job?.exportType === null ? 'selected' : ''}>file</option>
-            `;
-        }
+        // 导出类型选项：none / IGinX / file
+        let exportTypeOptions = `
+            <option value="0" ${job?.exportType === 0 ? 'selected' : ''}>none</option>
+            <option value="2" ${job?.exportType === 2 ? 'selected' : ''}>IGinX</option>
+            <option value="1" ${job?.exportType === 1 || job?.exportType === undefined || job?.exportType === null ? 'selected' : ''}>file</option>
+        `;
         
         return `
             <form id="jobForm" class="job-form">
