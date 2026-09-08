@@ -1291,7 +1291,7 @@ document.addEventListener('DOMContentLoaded', function() {
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            z-index: 10000;
             opacity: 0;
             transition: opacity 0.3s ease;
         `;
@@ -1384,6 +1384,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 300);
         }
     }
+
+    // 暴露通用确认弹窗到全局，供各组件使用
+    window.showConfirmDialog = showConfirmDialog;
 
     // 删除数据源的API调用
     async function removeDataSource(alias) {

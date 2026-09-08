@@ -38,14 +38,17 @@ public class LineageService {
             return graph;
         }
 
+        // 1. 从血缘边表获取连通的边
         List<DatasetLineageEntity> allEdges = datasetVersionService.listAllEdges().stream()
                 .filter(e -> sideLineage || e.isPrimary())
                 .collect(Collectors.toList());
 
-        Map<Long, List<DatasetLineageEntity>> byFrom = allEdges.stream()
-                .collect(Collectors.groupingBy(DatasetLineageEntity::getFromVersionId));
-        Map<Long, List<DatasetLineageEntity>> byTo = allEdges.stream()
-                .collect(Collectors.groupingBy(DatasetLineageEntity::getToVersionId));
+        Map<Long, List<DatasetLineageEntity>> byFrom = new HashMap<>();
+        Map<Long, List<DatasetLineageEntity>> byTo = new HashMap<>();
+        for (DatasetLineageEntity e : allEdges) {
+            if (e.getFromVersionId() != null) byFrom.computeIfAbsent(e.getFromVersionId(), k -> new ArrayList<>()).add(e);
+            if (e.getToVersionId() != null) byTo.computeIfAbsent(e.getToVersionId(), k -> new ArrayList<>()).add(e);
+        }
 
         // BFS 双向遍历，收集连通的版本与边
         Set<Long> visited = new LinkedHashSet<>();
@@ -57,11 +60,33 @@ public class LineageService {
             Long cur = queue.poll();
             for (DatasetLineageEntity e : byTo.getOrDefault(cur, Collections.emptyList())) {
                 edges.add(e);
-                if (visited.add(e.getFromVersionId())) queue.add(e.getFromVersionId());
+                if (e.getFromVersionId() != null && visited.add(e.getFromVersionId())) queue.add(e.getFromVersionId());
             }
             for (DatasetLineageEntity e : byFrom.getOrDefault(cur, Collections.emptyList())) {
                 edges.add(e);
-                if (visited.add(e.getToVersionId())) queue.add(e.getToVersionId());
+                if (e.getToVersionId() != null && visited.add(e.getToVersionId())) queue.add(e.getToVersionId());
+            }
+        }
+
+        // 2. 补充：从版本的 upstreamVersionIds 补全血缘边（兼容边表缺失或 IginX 读回异常的情况）
+        for (Long id : new ArrayList<>(visited)) {
+            DatasetVersionEntity v = datasetVersionService.queryVersion(id);
+            if (v == null) continue;
+            List<Long> upstreamIds = datasetVersionService.parseUpstreamIds(v);
+            for (Long uid : upstreamIds) {
+                if (uid == null) continue;
+                // 构造补充边
+                boolean alreadyExists = edges.stream().anyMatch(e ->
+                        uid.equals(e.getFromVersionId()) && id.equals(e.getToVersionId()));
+                if (!alreadyExists) {
+                    DatasetLineageEntity supplemental = new DatasetLineageEntity();
+                    supplemental.setFromVersionId(uid);
+                    supplemental.setToVersionId(id);
+                    supplemental.setRelationType(label(v.getProvenanceType()));
+                    supplemental.setPrimary(uid.equals(upstreamIds.get(0)));
+                    edges.add(supplemental);
+                }
+                if (visited.add(uid)) queue.add(uid);
             }
         }
 

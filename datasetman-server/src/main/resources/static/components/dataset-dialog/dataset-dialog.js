@@ -196,10 +196,13 @@ class DatasetDialog extends HTMLElement {
                 if (opt) opt.selected = true;
             }
 
-            // 预填数据集名称
+            // 预填数据集名称并设为只读（沿用父级数据集名称）
             if (context.datasetName) {
                 const nameInput = $('datasetName');
-                if (nameInput) nameInput.value = context.datasetName;
+                if (nameInput) {
+                    nameInput.value = context.datasetName;
+                    nameInput.disabled = true;
+                }
             }
 
             // 默认选 SQL_QUERY

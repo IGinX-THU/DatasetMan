@@ -601,8 +601,8 @@ class SqlSnippetManagement extends HTMLElement {
         const sqlFileInput = this.shadowRoot.querySelector('#sqlFileInput');
         const overlay = this.shadowRoot.querySelector('#modalOverlay');
 
-        if (closeBtn) closeBtn.addEventListener('click', () => this.hide());
-        if (cancelBtn) cancelBtn.addEventListener('click', () => this.hide());
+        if (closeBtn) closeBtn.addEventListener('click', () => this.closeModal());
+        if (cancelBtn) cancelBtn.addEventListener('click', () => this.closeModal());
         if (submitBtn) submitBtn.addEventListener('click', () => this.handleSubmit());
         if (addSqlBtn) addSqlBtn.addEventListener('click', () => this.addSql());
         if (uploadSqlBtn) uploadSqlBtn.addEventListener('click', () => sqlFileInput.click());
@@ -610,7 +610,7 @@ class SqlSnippetManagement extends HTMLElement {
 
         if (overlay) {
             overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) this.hide();
+                if (e.target === overlay) this.closeModal();
             });
         }
     }
@@ -624,6 +624,10 @@ class SqlSnippetManagement extends HTMLElement {
     hide() {
         this.style.display = 'none';
         this.removeAttribute('show');
+        this.closeModal();
+    }
+
+    closeModal() {
         const overlay = this.shadowRoot.querySelector('#modalOverlay');
         if (overlay) overlay.classList.remove('show');
         this.datasetData = null;
@@ -672,15 +676,15 @@ class SqlSnippetManagement extends HTMLElement {
                 sqlCount = 0;
             }
             return `
-                <tr data-id="${snippet.id}">
+                <tr data-id="${snippet.id || snippet.createTime}">
                     <td><strong>${this.escapeHtml(snippet.name || '')}</strong></td>
                     <td>${this.escapeHtml(snippet.description || '-')}</td>
                     <td><span style="background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500;">${sqlCount} 条</span></td>
                     <td>${this.escapeHtml(snippet.operator || snippet.owner || '-')}</td>
                     <td>${this.formatTime(snippet.createTime)}</td>
                     <td>
-                        <button class="action-btn edit" data-id="${snippet.id}">编辑</button>
-                        <button class="action-btn delete" data-id="${snippet.id}">删除</button>
+                        <button class="action-btn edit" data-id="${snippet.id || snippet.createTime}">编辑</button>
+                        <button class="action-btn delete" data-id="${snippet.id || snippet.createTime}">删除</button>
                     </td>
                 </tr>
             `;
@@ -976,15 +980,15 @@ class SqlSnippetManagement extends HTMLElement {
             description,
             sqlList: validSqlList
         };
-        if (this.datasetData && this.datasetData.id) {
-            request.id = this.datasetData.id;
+        if (this.datasetData && (this.datasetData.id || this.datasetData.createTime)) {
+            request.id = this.datasetData.id || this.datasetData.createTime;
         }
 
         try {
             const result = await window.AppConfig.post('sqlSnippet', 'save', request);
             if (result.code === 200 || result.success) {
                 this.showMessage(this.mode === 'create' ? 'SQL脚本创建成功!' : 'SQL脚本保存成功!', 'success');
-                this.hide();
+                this.closeModal();
                 await this.loadSnippets();
             } else {
                 this.showResult(result.message || '保存失败', 'error');
@@ -999,11 +1003,24 @@ class SqlSnippetManagement extends HTMLElement {
     }
 
     async deleteSnippet(id) {
-        const snippet = this.snippets.find(s => s.id === id);
+        const snippet = this.snippets.find(s => (s.id || s.createTime) === id);
         if (!snippet) return;
 
-        if (!window.confirm(`确定要删除SQL脚本「${snippet.name}」吗？`)) return;
+        if (window.showConfirmDialog) {
+            window.showConfirmDialog(
+                `确定要删除SQL脚本「${snippet.name}」吗？`,
+                '删除后无法恢复，请谨慎操作。',
+                async () => {
+                    await this.doDeleteSnippet(id);
+                }
+            );
+        } else {
+            if (!window.confirm(`确定要删除SQL脚本「${snippet.name}」吗？`)) return;
+            await this.doDeleteSnippet(id);
+        }
+    }
 
+    async doDeleteSnippet(id) {
         try {
             const result = await window.AppConfig.delete('sqlSnippet', 'delete', { id });
             if (result.code === 200 || result.success) {

@@ -44,6 +44,8 @@ class DatasetHistory extends HTMLElement {
                 .SOURCE { background:#dbeafe; color:#1d4ed8; }
                 .SQL_QUERY, .SELECT, .SELECT_UDF { background:#cffafe; color:#0e7490; }
                 .TRANSFORM, .TRANSFORM_SQL { background:#ede9fe; color:#6d28d9; }
+                .badge.deleted { background:#fef2f2; color:#dc2626; }
+                .badge.active-status { background:#f0fdf4; color:#16a34a; }
                 .graph { width:100%; min-height:380px; overflow:auto; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; }
                 .node { cursor:pointer; } .node circle { stroke:#fff; stroke-width:3; } .node.focus circle { stroke:#111827; stroke-width:4; }
                 .node text { font-size:11px; fill:#374151; text-anchor:middle; }
@@ -149,11 +151,12 @@ class DatasetHistory extends HTMLElement {
             container.innerHTML = '<div class="empty">暂无变化记录</div>';
             return;
         }
-        container.innerHTML = `<table><thead><tr><th>版本</th><th>产出方式</th><th>存储路径</th><th>上游版本</th><th>变化配置</th><th>操作人</th><th>时间</th><th>备注</th></tr></thead><tbody>${this.changes.map(row => {
+        container.innerHTML = `<table><thead><tr><th>版本</th><th>产出方式</th><th>存储路径</th><th>上游版本</th><th>变化配置</th><th>操作人</th><th>时间</th><th>备注</th><th>状态</th></tr></thead><tbody>${this.changes.map(row => {
             const upstreams = (row.upstreams || []).map(u => `${u.datasetName || ''}/${u.versionNo || u.versionId}`).join(', ') || '-';
             const recipe = this.recipeSummary(row.derivationConfig);
             const activeVid = this.versionIdOf(this.version);
-            return `<tr data-version-id="${row.versionId}" class="${row.versionId === activeVid ? 'active' : ''}"><td>${this.escape(row.versionNo)}</td><td><span class="badge ${row.provenanceType}">${this.escape(row.provenanceLabel || row.provenanceType)}</span></td><td><code>${this.escape(row.storagePath || '-')}</code></td><td>${this.escape(upstreams)}</td><td title="${this.escape(JSON.stringify(row.derivationConfig || {}))}">${this.escape(recipe)}</td><td>${this.escape(row.operator || '-')}</td><td>${this.escape(this.formatTime(row.createTime))}</td><td>${this.escape(row.remark || '-')}</td></tr>`;
+            const statusBadge = row.deleted ? '<span class="badge deleted">已删除</span>' : '<span class="badge active-status">正常</span>';
+            return `<tr data-version-id="${row.versionId}" class="${row.versionId === activeVid ? 'active' : ''}"><td>${this.escape(row.versionNo)}</td><td><span class="badge ${row.provenanceType}">${this.escape(row.provenanceLabel || row.provenanceType)}</span></td><td><code>${this.escape(row.storagePath || '-')}</code></td><td>${this.escape(upstreams)}</td><td title="${this.escape(JSON.stringify(row.derivationConfig || {}))}">${this.escape(recipe)}</td><td>${this.escape(row.operator || '-')}</td><td>${this.escape(this.formatTime(row.createTime))}</td><td>${this.escape(row.remark || '-')}</td><td>${statusBadge}</td></tr>`;
         }).join('')}</tbody></table>`;
         container.querySelectorAll('tbody tr').forEach(row => row.addEventListener('click', () => this.highlight(Number(row.dataset.versionId))));
     }
