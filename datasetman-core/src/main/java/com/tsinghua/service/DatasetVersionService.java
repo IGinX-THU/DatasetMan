@@ -236,7 +236,9 @@ public class DatasetVersionService {
                 .sorted(Comparator.comparing(DatasetVersionEntity::getDatasetName, Comparator.nullsLast(Comparator.naturalOrder()))
                         .thenComparing(DatasetVersionEntity::getCreateTime, Comparator.nullsLast(Comparator.naturalOrder())))
                 .forEach(v -> {
-                    DatasetTreeDTO dataset = groups.computeIfAbsent(v.getDatasetId(), id -> {
+                    // datasetId 可能为 null（IginX timestamp 字段读回为 null），用 createTime 兜底
+                    Long did = v.getDatasetId() != null ? v.getDatasetId() : v.getCreateTime();
+                    DatasetTreeDTO dataset = groups.computeIfAbsent(did, id -> {
                         DatasetTreeDTO dto = new DatasetTreeDTO();
                         dto.setDatasetId(id);
                         dto.setDatasetName(v.getDatasetName());

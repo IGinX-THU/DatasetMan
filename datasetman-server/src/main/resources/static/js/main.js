@@ -982,6 +982,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const datasetHistory = document.getElementById('datasetHistory');
                 if (datasetHistory) {
                     clearWorkspace();
+                    // 隐藏创建弹窗，显示详情页
+                    datasetDialog.hide();
                     datasetHistory.show({
                         versionId: savedData.id,
                         datasetId: savedData.datasetId,
@@ -2043,14 +2045,8 @@ function showVisualAnalysis() {
             return;
         }
         
-        // 过滤掉 datasets 开头的数据源（这些数据源会移动到右侧数据集库显示）
-        const filteredDataSources = dataSources.filter(item => {
-            const path = typeof item === 'string' ? item : item.path;
-            return !path || !path.startsWith('datasets');
-        });
-        
-        // 将过滤后的字符串数组转换为树结构
-        const treeData = buildTreeFromStringArray(filteredDataSources);
+        // 将全部数据源转换为树结构
+        const treeData = buildTreeFromStringArray(dataSources);
         
         // 渲染树HTML
         const treeHTML = renderTreeNodes(treeData);

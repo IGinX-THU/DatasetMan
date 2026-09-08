@@ -61,10 +61,8 @@ public class DataSourceService {
         dataPermissionService.saveTablePrefix(tablePrefix);
         log.info("成功注册数据源: {}", request);
 
-        // 系统内部注册的作业输出目录不保存为用户可见的数据档案
-        if (!(SchemaPrefix.FILE_SYSTEM + "." + SchemaPrefix.SYS_DIR_PREFIX).equals(tablePrefix)) {
-            saveDataSourceArchive(request, tablePrefix);
-        }
+        // 保存数据源档案（系统内部注册的作业输出目录也保存，由查询接口过滤）
+        saveDataSourceArchive(request, tablePrefix);
 
         return true;
     }
@@ -128,7 +126,12 @@ public class DataSourceService {
      * 查询全部已注册数据源档案（type=datasource），供创建数据集弹窗下拉选取。
      */
     public List<DataArchiveEntity> dataSourceArchives() {
-        return dataArchiveService.queryArchives(null, "datasource", null, null, null, null);
+        List<DataArchiveEntity> archives = dataArchiveService.queryArchives(null, "datasource", null, null, null, null);
+        // 排除系统内部注册的作业输出目录（file_system.sys_data 及其子路径）
+        String internalPrefix = SchemaPrefix.FILE_SYSTEM + "." + SchemaPrefix.SYS_DIR_PREFIX;
+        return archives.stream()
+                .filter(a -> a.getName() == null || !a.getName().startsWith(internalPrefix))
+                .collect(Collectors.toList());
     }
 
     public List<ColumnDto> dataSourceTree() throws Exception {
