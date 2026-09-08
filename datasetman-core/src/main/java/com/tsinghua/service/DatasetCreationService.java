@@ -133,7 +133,7 @@ public class DatasetCreationService {
             long rowOffset = rowCount;
             for (int rowIndex = 0; rowIndex < records.size(); rowIndex++) {
                 for (Map.Entry<String, Object> entry : records.get(rowIndex).entrySet()) {
-                    String field = "q" + queryIndex + "." + normalizePath(entry.getKey());
+                    String field = normalizePath(entry.getKey());
                     Point point = ConvertUtil.createFieldPoint(storagePath, field, entry.getValue(), keyBase + rowOffset + rowIndex);
                     if (point != null) {
                         points.add(point);

@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'userManagement',
             'permissionManagement',
             'datasetHistory',
+            'datasetDialog',
             'transformJob',
             'transformCompare',
             'transformManagement',
