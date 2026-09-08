@@ -967,30 +967,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (datasetDialog) {
-        // 监听保存成功事件
-        datasetDialog.addEventListener('dataset-saved', async function(e) {
-            console.log('数据集保存成功:', e.detail);
-            showToast(e.detail.mode === 'create' ? '数据集创建成功' : '数据集保存成功', 'success');
+        // 监听创建成功事件（三步向导）
+        datasetDialog.addEventListener('dataset-created', async function(e) {
+            console.log('数据集创建成功:', e.detail);
+            const savedData = e.detail?.data || e.detail;
             // 同步刷新左侧数据资源库和右侧数据集库
-            if (window.loadDataSourceTree) {
-                await window.loadDataSourceTree();
-            }
-            if (window.loadDatasetTree) {
-                await window.loadDatasetTree();
-            }
-            const savedData = e.detail.data?.data || e.detail.data;
-            if (savedData?.id) {
-                const datasetHistory = document.getElementById('datasetHistory');
-                if (datasetHistory) {
-                    clearWorkspace();
-                    // 隐藏创建弹窗，显示详情页
-                    datasetDialog.hide();
-                    datasetHistory.show({
-                        versionId: savedData.id,
-                        datasetId: savedData.datasetId,
-                        storagePath: savedData.storagePath
-                    });
-                }
+            if (window.loadDataSourceTree) await window.loadDataSourceTree();
+            if (window.loadDatasetTree) await window.loadDatasetTree();
+            const datasetHistory = document.getElementById('datasetHistory');
+            const newVersionId = savedData?.id || savedData?.createTime;
+            if (datasetHistory && newVersionId) {
+                datasetDialog.hide();
+                showComponent('datasetHistory', {
+                    versionId: newVersionId,
+                    datasetId: savedData?.datasetId,
+                    storagePath: savedData?.storagePath
+                });
             }
         });
     }
@@ -1732,7 +1724,7 @@ function showVisualAnalysis() {
         console.log(`显示组件: ${componentId}`, args);
 
         // 弹窗组件不需要清空工作区，但需要隐藏其他弹窗
-        const modalComponents = ['registerEmbedded', 'importData', 'modelUpload', 'modelDownload', 'modelEdit'];
+        const modalComponents = ['registerEmbedded', 'importData', 'modelUpload', 'modelDownload', 'modelEdit', 'datasetDialog'];
         if (modalComponents.includes(componentId)) {
             // 隐藏其他弹窗组件
             modalComponents.forEach(modalId => {

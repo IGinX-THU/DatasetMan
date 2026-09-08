@@ -1,44 +1,138 @@
-<div class="dataset-dialog">
+<div class="dialog-container">
     <div class="dialog-header">
-        <h3 class="dialog-title" id="dialogTitle">创建数据集</h3>
+        <h3 class="dialog-title">创建数据集</h3>
         <button class="close-btn" id="closeBtn">&times;</button>
     </div>
-    
-    <form id="datasetForm">
-        <div class="form-group">
-            <label class="form-label required">数据集名称</label>
-            <input type="text" class="form-control" id="datasetName" placeholder="请输入数据集名称" maxlength="50" required>
-            <div class="error-message" id="datasetNameError">请输入数据集名称</div>
+
+    <div class="dialog-body">
+        <div class="error-box" id="errorBox"></div>
+
+        <!-- 步骤指示器 -->
+        <div class="steps" id="stepsBar">
+            <div class="step active" data-step="1"><span class="step-num">1</span>选择创建模式</div>
+            <div class="step" data-step="2"><span class="step-num">2</span>选择资源与信息</div>
+            <div class="step" data-step="3"><span class="step-num">3</span>确认</div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label required">SQL定义</label>
-            <textarea class="form-control sql-textarea" id="datasetSql" placeholder="请输入SQL查询语句" required></textarea>
-            <div class="error-message" id="datasetSqlError">请输入SQL定义</div>
-            <div class="form-hint">支持标准SQL语法，可引用多个数据源</div>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">数据源</label>
-            <div class="datasource-tags" id="datasourceTags">
-                <!-- 数据源标签将动态生成 -->
+        <!-- 步骤1：选择创建模式 -->
+        <div class="step-panel active" id="step1Panel">
+            <div class="form-section">
+                <div class="section-title">选择创建模式</div>
+                <div class="mode-cards">
+                    <div class="mode-card active" data-mode="new">
+                        <strong>新建数据集</strong>
+                        <span>从已注册的异构数据源直接挂载，创建一个全新的数据集。适用于直接引用外部数据源的场景。</span>
+                    </div>
+                    <div class="mode-card" data-mode="existing">
+                        <strong>基于已有版本创建新版本</strong>
+                        <span>在已有数据集版本的基础上，通过 SQL 查询/转换或 Transform 作业产出新版本。适用于数据加工与变换的场景。</span>
+                    </div>
+                </div>
             </div>
-            <button type="button" class="btn-add-source" id="addDatasourceBtn">+ 添加数据源</button>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">描述</label>
-            <textarea class="form-control desc-textarea" id="datasetDesc" placeholder="请输入数据集描述（可选）"></textarea>
+        <!-- 步骤2：选择资源与信息 -->
+        <div class="step-panel" id="step2Panel">
+            <!-- 新建模式：选数据源 -->
+            <div class="form-section" id="newModeSection" style="display:none;">
+                <div class="section-title">选取数据源</div>
+                <div class="form-group">
+                    <label class="required">选取已注册数据源</label>
+                    <select class="form-control" id="sourcePath">
+                        <option value="">请选择数据源...</option>
+                    </select>
+                    <div class="hint">如需接入新引擎，请通过顶部菜单「数据源 → <a href="#" class="hint-link" id="link-register-source">注册异构数据源</a>」完成接入。</div>
+                    <div class="storage-path-box" id="sourcePathBox" style="display:none;">
+                        <span class="label">存储路径：</span><span class="value" id="sourcePathValue"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 已有版本模式：选父级版本 + 产出方式 -->
+            <div class="form-section" id="existingModeSection" style="display:none;">
+                <div class="section-title">选取父级版本与产出方式</div>
+                <div class="form-group">
+                    <label class="required">父级数据集版本</label>
+                    <select class="form-control" id="upstreamVersion">
+                        <option value="">请选择父级版本...</option>
+                    </select>
+                </div>
+                <div class="type-cards" id="typeCardsExisting">
+                    <div class="type-card" data-type="SQL_QUERY">
+                        <strong>SQL 查询/转换</strong>
+                        <span>选取「SQL脚本托管」中已编排好的脚本执行并物化为新版本。</span>
+                    </div>
+                    <div class="type-card" data-type="TRANSFORM">
+                        <strong>Transform 作业</strong>
+                        <span>选取已编排的 Transform 作业，提交执行并物化输出为新版本。</span>
+                    </div>
+                </div>
+                <div class="type-panel" id="panel-SQL_QUERY">
+                    <div class="form-group">
+                        <label class="required">选取已托管 SQL 脚本</label>
+                        <select class="form-control" id="sqlSnippet">
+                            <option value="">请选择 SQL 脚本...</option>
+                        </select>
+                        <div class="hint">脚本在「<a href="#" class="hint-link" id="link-sql-snippet">SQL脚本管理</a>」菜单中编排与上传，此处仅选取引用。</div>
+                    </div>
+                </div>
+                <div class="type-panel" id="panel-TRANSFORM">
+                    <div class="form-group">
+                        <label class="required">选取已编排的 Transform 作业</label>
+                        <select class="form-control" id="transformJob">
+                            <option value="">请选择 Transform 作业...</option>
+                        </select>
+                        <div class="hint">作业在「<a href="#" class="hint-link" id="link-transform-compare">Transform编排</a>」菜单中编排，提交创建时将自动执行并物化输出。</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 基本信息（公共） -->
+            <div class="form-section">
+                <div class="section-title">基本信息</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="required">数据集名称</label>
+                        <input type="text" class="form-control" id="datasetName" placeholder="例如：vehicle_speed_stats" maxlength="50">
+                    </div>
+                    <div class="form-group">
+                        <label class="required">数据类型</label>
+                        <select class="form-control" id="dataModality">
+                            <option value="relational">关系型 (Relational)</option>
+                            <option value="time_series">时序数据 (Time Series)</option>
+                            <option value="key_value">键值 (Key-Value)</option>
+                            <option value="semi_structured">半结构化/文档 (Document)</option>
+                            <option value="file_system">文件系统 (FileSystem)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>备注信息</label>
+                    <input type="text" class="form-control" id="remark" placeholder="创建备注（可选）">
+                </div>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">备注</label>
-            <textarea class="form-control desc-textarea" id="datasetRemark" placeholder="请输入备注信息（可选）"></textarea>
+        <!-- 步骤3：确认 -->
+        <div class="step-panel" id="step3Panel">
+            <div class="form-section">
+                <div class="section-title">确认信息</div>
+                <div class="summary" id="summaryBox"></div>
+                <div class="storage-path-box" style="margin-top:12px;">
+                    <span class="label">存储路径预览：</span><span class="value" id="confirmPathValue"></span>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div class="form-actions">
-            <button type="button" class="btn-cancel" id="cancelBtn">取消</button>
-            <button type="submit" class="btn-submit" id="submitBtn">保存</button>
+    <div class="dialog-footer">
+        <div class="footer-left">
+            <button type="button" class="btn btn-cancel" id="cancelBtn">取消</button>
         </div>
-    </form>
+        <div class="footer-right">
+            <button type="button" class="btn btn-secondary" id="prevBtn" style="display:none;">上一步</button>
+            <button type="button" class="btn btn-primary" id="nextBtn">下一步</button>
+            <button type="button" class="btn btn-primary" id="submitBtn" style="display:none;">创建数据集</button>
+        </div>
+    </div>
 </div>
