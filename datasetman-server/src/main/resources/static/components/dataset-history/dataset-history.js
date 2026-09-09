@@ -71,7 +71,7 @@ class DatasetHistory extends HTMLElement {
                 </div>
                 <div class="card">
                     <div class="header"><h3>血缘图谱</h3></div>
-                    <div class="toolbar"><label class="switch"><input type="checkbox" id="sideLineage" checked> 显示旁系血缘</label><button id="focus">聚焦当前版本</button></div>
+                    <div class="toolbar"><label class="switch"><input type="checkbox" id="sideLineage" checked> 显示旁系血缘</label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button></div>
                     <div class="graph" id="graph"></div>
                 </div>
             </div>
@@ -83,7 +83,10 @@ class DatasetHistory extends HTMLElement {
             this.sideLineage = e.target.checked;
             this.loadGraph();
         });
-        this.shadowRoot.querySelector('#focus').addEventListener('click', () => this.highlight(this.version?.id));
+        this.shadowRoot.querySelector('#focus').addEventListener('click', () => this.focusNode());
+        this.shadowRoot.querySelector('#zoomIn').addEventListener('click', () => this.zoomBy(1.25));
+        this.shadowRoot.querySelector('#zoomOut').addEventListener('click', () => this.zoomBy(0.8));
+        this.shadowRoot.querySelector('#resetView').addEventListener('click', () => this.resetView());
         this.shadowRoot.querySelector('#newVersion').addEventListener('click', () => {
             this.dispatchEvent(new CustomEvent('edit-dataset', { bubbles:true, composed:true, detail:this.version }));
         });
@@ -204,8 +207,6 @@ class DatasetHistory extends HTMLElement {
             TRANSFORM_SQL: '#8b5cf6'
         };
 
-        // 构建节点和边
-        // 节点类型：version（数据集版本，圆形）、operation（SQL/Transform操作，矩形）
         const echartsNodes = [];
         const echartsLinks = [];
         const versionKeyMap = new Map(); // versionId -> echarts node id
@@ -218,24 +219,26 @@ class DatasetHistory extends HTMLElement {
             versionKeyMap.set(n.versionId, nodeId);
 
             const color = colors[n.provenanceType] || '#64748b';
+            const deleted = !!n.deleted;
             echartsNodes.push({
                 id: nodeId,
-                name: `${n.datasetName}\n${n.versionNo}`,
+                name: `${n.datasetName || ''}\n${n.versionNo || ''}`,
                 symbol: 'circle',
-                symbolSize: n.focus ? 60 : 45,
+                symbolSize: n.focus ? 64 : 48,
                 itemStyle: {
-                    color: color,
-                    borderColor: n.focus ? '#111827' : '#fff',
+                    color: deleted ? '#cbd5e1' : color,
+                    borderColor: n.focus ? '#111827' : (deleted ? '#94a3b8' : '#fff'),
                     borderWidth: n.focus ? 4 : 2,
-                    shadowBlur: n.focus ? 10 : 0,
-                    shadowColor: color
+                    shadowBlur: n.focus ? 12 : 0,
+                    shadowColor: color,
+                    opacity: deleted ? 0.55 : 1
                 },
                 label: {
                     show: true,
                     position: 'bottom',
                     fontSize: 11,
-                    color: '#374151',
-                    formatter: () => `${n.datasetName}\n${n.versionNo}`
+                    color: deleted ? '#94a3b8' : '#374151',
+                    formatter: () => `${n.datasetName || ''}\n${n.versionNo || ''}`
                 },
                 nodeType: 'version',
                 versionData: n
@@ -243,8 +246,8 @@ class DatasetHistory extends HTMLElement {
         });
 
         // 2. 添加操作节点和边
-        // 对于每条边 from->to，如果 to 节点的 provenanceType 是 SQL_QUERY 或 TRANSFORM，
-        // 则在 from 和 to 之间插入一个操作节点
+        //    对于每条 from->to 边，若 to 节点 provenanceType 为 SQL_QUERY/TRANSFORM 等，
+        //    在 from 与 to 之间插入一个操作节点，承载 SQL/Transform/UDF 等元数据。
         const operationNodeSet = new Set();
         const edges = this.graph.edges || [];
         const nodeMap = new Map();
@@ -259,46 +262,46 @@ class DatasetHistory extends HTMLElement {
 
             if (!fromNodeId || !toNodeId) return;
 
-            // 如果目标节点是 SQL_QUERY 或 TRANSFORM，插入操作节点
-            if (toNode && (toNode.provenanceType === 'SQL_QUERY' || toNode.provenanceType === 'TRANSFORM'
-                    || toNode.provenanceType === 'SELECT' || toNode.provenanceType === 'SELECT_UDF'
-                    || toNode.provenanceType === 'TRANSFORM_SQL')) {
+            const derivType = toNode ? toNode.provenanceType : null;
+            const isOperationTarget = derivType === 'SQL_QUERY' || derivType === 'TRANSFORM'
+                || derivType === 'SELECT' || derivType === 'SELECT_UDF'
+                || derivType === 'TRANSFORM_SQL';
+
+            if (isOperationTarget) {
                 const opNodeId = `op_${fromVid}_${toVid}`;
                 if (!operationNodeSet.has(opNodeId)) {
                     operationNodeSet.add(opNodeId);
 
                     // 从 derivationConfig 提取操作信息
-                    const config = toNode.derivationConfig || {};
-                    let opLabel = toNode.provenanceLabel || toNode.provenanceType;
-                    let opDetail = '';
-                    if (config.sqlSnippet && config.sqlSnippet.name) {
-                        opLabel = 'SQL';
-                        opDetail = config.sqlSnippet.name;
-                    } else if (config.transformCompare && config.transformCompare.name) {
-                        opLabel = 'Transform';
-                        opDetail = config.transformCompare.name;
-                    }
+                    const cfg = (toNode && toNode.derivationConfig) || {};
+                    const opInfo = this.extractOperationInfo(toNode, cfg);
+                    const opLabel = opInfo.type;
+                    const opDetail = opInfo.detail;
+                    const opFull = opInfo.full;
 
                     echartsNodes.push({
                         id: opNodeId,
                         name: opDetail ? `${opLabel}\n${opDetail}` : opLabel,
                         symbol: 'roundRect',
-                        symbolSize: [100, 40],
+                        symbolSize: [120, 44],
                         itemStyle: {
-                            color: '#fef3c7',
-                            borderColor: '#f59e0b',
+                            color: opInfo.color,
+                            borderColor: opInfo.borderColor,
                             borderWidth: 2,
-                            borderRadius: 6
+                            borderRadius: 8
                         },
                         label: {
                             show: true,
                             fontSize: 10,
-                            color: '#92400e',
+                            color: opInfo.textColor,
                             formatter: () => opDetail ? `${opLabel}\n${opDetail}` : opLabel
                         },
                         nodeType: 'operation',
                         operationType: opLabel,
-                        operationDetail: opDetail
+                        operationDetail: opDetail,
+                        operationFull: opFull,
+                        fromVersionId: fromVid,
+                        toVersionId: toVid
                     });
 
                     // 边：from -> operation
@@ -321,7 +324,7 @@ class DatasetHistory extends HTMLElement {
                             type: e.primary ? 'solid' : 'dashed'
                         },
                         label: {
-                            show: true,
+                            show: !!e.relationType,
                             formatter: e.relationType || '',
                             fontSize: 9,
                             color: '#64748b'
@@ -339,7 +342,7 @@ class DatasetHistory extends HTMLElement {
                         type: e.primary ? 'solid' : 'dashed'
                     },
                     label: {
-                        show: true,
+                        show: !!e.relationType,
                         formatter: e.relationType || '',
                         fontSize: 9,
                         color: '#64748b'
@@ -353,30 +356,27 @@ class DatasetHistory extends HTMLElement {
         const option = {
             tooltip: {
                 trigger: 'item',
+                enterable: true,
+                confine: true,
                 formatter: (params) => {
                     if (params.dataType === 'node') {
                         const d = params.data;
                         if (d.nodeType === 'version') {
-                            const v = d.versionData;
-                            return `<b>${v.datasetName} / ${v.versionNo}</b><br/>` +
-                                `产出方式: ${v.provenanceLabel || v.provenanceType}<br/>` +
-                                `存储路径: ${v.storagePath || '-'}<br/>` +
-                                `创建者: ${v.operator || '-'}<br/>` +
-                                `创建时间: ${this.formatTime(v.createTime)}`;
+                            return this.versionTooltip(d.versionData);
                         } else if (d.nodeType === 'operation') {
-                            return `<b>${d.operationType}</b>${d.operationDetail ? '<br/>' + d.operationDetail : ''}`;
+                            return this.operationTooltip(d);
                         }
                     }
-                    return params.name;
+                    return this.escape(params.name);
                 }
             },
             series: [{
                 type: 'graph',
                 layout: 'force',
                 force: {
-                    repulsion: 400,
-                    edgeLength: [150, 250],
-                    gravity: 0.08,
+                    repulsion: 600,
+                    edgeLength: [180, 320],
+                    gravity: 0.05,
                     layoutAnimation: true
                 },
                 roam: true,
@@ -415,10 +415,143 @@ class DatasetHistory extends HTMLElement {
         });
 
         // Resize
+        if (container._resizeObserver) container._resizeObserver.disconnect();
         const resizeObserver = new ResizeObserver(() => chart.resize());
         resizeObserver.observe(container);
         container._chart = chart;
         container._resizeObserver = resizeObserver;
+    }
+
+    /** 从 derivationConfig 中提取操作节点的展示信息 */
+    extractOperationInfo(versionNode, cfg) {
+        const provenance = versionNode ? versionNode.provenanceType : null;
+        const sql = cfg.sqlSnippet || cfg.sql || null;
+        const cmp = cfg.transformCompare || cfg.transformJob || null;
+        const archive = cfg.dataArchive || null;
+        const udf = cfg.udfFunction || cfg.udf || cfg.functions || null;
+
+        let type = '操作';
+        let detail = '';
+        let color = '#fef3c7';
+        let borderColor = '#f59e0b';
+        let textColor = '#92400e';
+
+        if (provenance === 'SQL_QUERY' || provenance === 'SELECT' || provenance === 'SELECT_UDF') {
+            type = 'SQL';
+            color = '#cffafe'; borderColor = '#06b6d4'; textColor = '#0e7490';
+            if (sql && typeof sql === 'object') {
+                detail = sql.name || sql.scriptName || '';
+            } else if (typeof sql === 'string') {
+                detail = 'SQL片段';
+            }
+            if (udf) {
+                type = 'SQL+UDF';
+                color = '#ffedd5'; borderColor = '#f97316'; textColor = '#9a3412';
+            }
+        } else if (provenance === 'TRANSFORM' || provenance === 'TRANSFORM_SQL') {
+            type = 'Transform';
+            color = '#ede9fe'; borderColor = '#8b5cf6'; textColor = '#6d28d9';
+            if (cmp && typeof cmp === 'object') {
+                detail = cmp.name || cmp.jobName || cmp.transformName || '';
+            }
+        }
+
+        const full = {
+            type,
+            sqlSnippet: sql,
+            transformCompare: cmp,
+            dataArchive: archive,
+            udfFunction: udf,
+            operator: versionNode ? versionNode.operator : null,
+            operateTime: versionNode ? this.formatTime(versionNode.createTime) : null,
+            operateIp: versionNode ? versionNode.clientIp : null,
+            remark: versionNode ? versionNode.remark : null,
+            changeProcess: cfg.changeProcess || cfg.description || null,
+            description: cfg.description || (versionNode ? versionNode.remark : null),
+            potentialUsers: cfg.potentialUsers || null
+        };
+        return { type, detail, color, borderColor, textColor, full };
+    }
+
+    /** 版本节点 tooltip：还原旧实现的丰富字段 */
+    versionTooltip(v) {
+        if (!v) return '';
+        const cfg = v.derivationConfig || {};
+        const rows = [];
+        rows.push(`<b>${this.escape(v.datasetName)} / ${this.escape(v.versionNo)}</b>`);
+        rows.push(`产出方式: ${this.escape(v.provenanceLabel || v.provenanceType)}`);
+        rows.push(`存储路径: <code>${this.escape(v.storagePath || '-')}</code>`);
+        rows.push(`操作人: ${this.escape(v.operator || '-')}`);
+        rows.push(`操作时间: ${this.formatTime(v.createTime)}`);
+        rows.push(`客户端IP: ${this.escape(v.clientIp || '-')}`);
+        rows.push(`状态: ${v.deleted ? '<span style="color:#dc2626">已删除</span>' : '<span style="color:#16a34a">正常</span>'}`);
+        if (v.remark) rows.push(`备注: ${this.escape(v.remark)}`);
+        const desc = cfg.description || cfg.background;
+        if (desc) rows.push(`背景信息: ${this.escape(desc)}`);
+        const change = cfg.changeProcess || cfg.change;
+        if (change) rows.push(`变化过程: ${this.escape(change)}`);
+        const users = cfg.potentialUsers;
+        if (users) rows.push(`潜在用户: ${this.escape(typeof users === 'string' ? users : JSON.stringify(users))}`);
+        const sql = cfg.sqlSnippet || cfg.sql;
+        if (sql) rows.push(`SQL脚本: <pre style="margin:4px 0;max-width:380px;white-space:pre-wrap">${this.escape(typeof sql === 'string' ? sql : JSON.stringify(sql, null, 2))}</pre>`);
+        const udf = cfg.udfFunction || cfg.udf || cfg.functions;
+        if (udf) rows.push(`UDF函数: ${this.escape(typeof udf === 'string' ? udf : JSON.stringify(udf))}`);
+        const cmp = cfg.transformCompare || cfg.transformJob;
+        if (cmp) rows.push(`Transform作业: ${this.escape(typeof cmp === 'string' ? cmp : JSON.stringify(cmp, null, 2))}`);
+        return rows.join('<br/>');
+    }
+
+    /** 操作节点 tooltip */
+    operationTooltip(d) {
+        const f = d.operationFull || {};
+        const rows = [];
+        rows.push(`<b>${this.escape(d.operationType || '操作')}</b>`);
+        if (d.operationDetail) rows.push(`名称: ${this.escape(d.operationDetail)}`);
+        if (f.operator) rows.push(`操作人: ${this.escape(f.operator)}`);
+        if (f.operateTime) rows.push(`操作时间: ${this.escape(f.operateTime)}`);
+        if (f.operateIp) rows.push(`客户端IP: ${this.escape(f.operateIp)}`);
+        if (f.remark) rows.push(`备注: ${this.escape(f.remark)}`);
+        if (f.changeProcess) rows.push(`变化过程: ${this.escape(f.changeProcess)}`);
+        if (f.description) rows.push(`背景信息: ${this.escape(f.description)}`);
+        if (f.potentialUsers) rows.push(`潜在用户: ${this.escape(typeof f.potentialUsers === 'string' ? f.potentialUsers : JSON.stringify(f.potentialUsers))}`);
+        if (f.sqlSnippet) rows.push(`SQL脚本: <pre style="margin:4px 0;max-width:380px;white-space:pre-wrap">${this.escape(typeof f.sqlSnippet === 'string' ? f.sqlSnippet : JSON.stringify(f.sqlSnippet, null, 2))}</pre>`);
+        if (f.udfFunction) rows.push(`UDF函数: ${this.escape(typeof f.udfFunction === 'string' ? f.udfFunction : JSON.stringify(f.udfFunction))}`);
+        if (f.transformCompare) rows.push(`Transform配置: <pre style="margin:4px 0;max-width:380px;white-space:pre-wrap">${this.escape(typeof f.transformCompare === 'string' ? f.transformCompare : JSON.stringify(f.transformCompare, null, 2))}</pre>`);
+        if (f.dataArchive) rows.push(`数据归档: ${this.escape(typeof f.dataArchive === 'string' ? f.dataArchive : JSON.stringify(f.dataArchive))}`);
+        return rows.join('<br/>');
+    }
+
+    /** 聚焦当前版本节点：放大并居中 */
+    focusNode() {
+        const container = this.shadowRoot.querySelector('#graph');
+        const chart = container._chart;
+        if (!chart || !this.version) return;
+        const vid = this.versionIdOf(this.version);
+        if (vid == null) return;
+        const nodeId = `v_${vid}`;
+        chart.dispatchAction({ type: 'focusNode', seriesIndex: 0, nodeId });
+        chart.dispatchAction({ type: 'highlight', seriesIndex: 0, nodeId });
+        this.highlight(vid);
+    }
+
+    zoomBy(factor) {
+        const container = this.shadowRoot.querySelector('#graph');
+        const chart = container._chart;
+        if (!chart) return;
+        const option = chart.getOption();
+        const series = option.series[0] || {};
+        const curZoom = series.zoom || 1;
+        // ECharts graph roam 通过 setOption 改 zoom 不直接生效，使用 dispatchAction 平移缩放
+        // 这里使用 dataZoom 思路不可行，改用 setOption + force 重新布局的方式不可取，
+        // 因此使用 ECharts 内部 zoom 行为：通过 setOption 修改 series.zoom
+        chart.setOption({ series: [{ zoom: curZoom * factor }] });
+    }
+
+    resetView() {
+        const container = this.shadowRoot.querySelector('#graph');
+        const chart = container._chart;
+        if (!chart) return;
+        chart.setOption({ series: [{ zoom: 1, center: null }] });
     }
 
     highlight(versionId) {

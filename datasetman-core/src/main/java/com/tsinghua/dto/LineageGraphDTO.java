@@ -27,6 +27,7 @@ public class LineageGraphDTO {
         private String provenanceLabel;
         private String storagePath;
         private String operator;
+        private String clientIp;
         private Long createTime;
         private String remark;
         private boolean deleted;

@@ -560,8 +560,8 @@ class TransformCompare extends HTMLElement {
                     this.showToast('请选择Transform函数', 'error');
                     return;
                 }
-                if (task.taskType === 0 && !task.dataset && !task.sqlSnippetId) {
-                    this.showToast('请选择SQL片段或数据集', 'error');
+                if (task.taskType === 0 && !task.sqlSnippetId) {
+                    this.showToast('请选择SQL片段', 'error');
                     return;
                 }
             }
@@ -864,8 +864,8 @@ class TransformCompare extends HTMLElement {
                             this.showToast('请选择Transform函数', 'error');
                             return;
                         }
-                        if (task.taskType === 0 && !task.dataset && !task.sqlSnippetId) {
-                            this.showToast('请选择SQL片段或数据集', 'error');
+                        if (task.taskType === 0 && !task.sqlSnippetId) {
+                            this.showToast('请选择SQL片段', 'error');
                             return;
                         }
                     }
@@ -1290,13 +1290,13 @@ class TransformCompare extends HTMLElement {
                         ${taskType === 'iginx' ? 'SQL片段 <span style="color: #ef4444;">*</span>' : taskType === 'python' ? 'Transform函数 <span style="color: #ef4444;">*</span>' : '配置'}
                     </label>
                     <div class="config-content iginx-config" style="display: ${taskType === 'iginx' ? 'block' : 'none'};">
-                        ${configHTML}
+                        ${taskType === 'iginx' ? configHTML : ''}
                     </div>
                     <div class="config-content python-config" style="display: ${taskType === 'python' ? 'block' : 'none'};">
-                        ${configHTML}
+                        ${taskType === 'python' ? configHTML : ''}
                     </div>
                     <div class="config-content default-config" style="display: ${!taskType ? 'block' : 'none'};">
-                        ${configHTML}
+                        ${!taskType ? configHTML : ''}
                     </div>
                 </div>
             </div>
@@ -1808,7 +1808,7 @@ class TransformCompare extends HTMLElement {
         if (!list) return [];
 
         const tasks = [];
-        Array.from(list.children).forEach(row => {
+        Array.from(list.children).forEach((row, idx) => {
             const taskType = row.querySelector('.task-type')?.value;
             const dataFlowType = row.querySelector('.data-flow-type')?.value;
             const timeout = row.querySelector('.timeout')?.value;
@@ -1838,12 +1838,12 @@ class TransformCompare extends HTMLElement {
                         task.pyTaskName = pyTaskName;
                     }
                 } else if (taskType === 'iginx') {
-                    // 优先使用SQL片段（新方式）
+                    // 优先使用SQL片段（当前方式）
                     const sqlSnippetId = sqlSnippetSelect?.value;
                     if (sqlSnippetId) {
                         task.sqlSnippetId = parseInt(sqlSnippetId);
                     } else if (datasetSelect && versionSelect) {
-                        // 兼容旧方式：通过数据集storagePath引用SQL
+                        // 兼容旧方式：通过数据集storagePath引用SQL（仅用于已保存的旧作业回显）
                         const dataset = datasetSelect?.value;
                         const version = versionSelect?.value;
                         if (dataset && version) {
@@ -1852,6 +1852,7 @@ class TransformCompare extends HTMLElement {
                     }
                 }
 
+                console.log(`collectTasks: 任务${idx + 1} taskType=${taskType}, sqlSnippetId=${task.sqlSnippetId}, dataset=${task.dataset}, pyTaskName=${task.pyTaskName}`);
                 tasks.push(task);
             }
         });

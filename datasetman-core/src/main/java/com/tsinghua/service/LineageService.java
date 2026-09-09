@@ -69,13 +69,14 @@ public class LineageService {
         }
 
         // 2. 补充：从版本的 upstreamVersionIds 补全血缘边（兼容边表缺失或 IginX 读回异常的情况）
-        for (Long id : new ArrayList<>(visited)) {
+        //    新发现的上游会继续入队，递归向上追溯，避免只处理一层快照。
+        while (!queue.isEmpty()) {
+            Long id = queue.poll();
             DatasetVersionEntity v = datasetVersionService.queryVersion(id);
             if (v == null) continue;
             List<Long> upstreamIds = datasetVersionService.parseUpstreamIds(v);
             for (Long uid : upstreamIds) {
                 if (uid == null) continue;
-                // 构造补充边
                 boolean alreadyExists = edges.stream().anyMatch(e ->
                         uid.equals(e.getFromVersionId()) && id.equals(e.getToVersionId()));
                 if (!alreadyExists) {
@@ -163,6 +164,7 @@ public class LineageService {
         node.setProvenanceLabel(label(v.getProvenanceType()));
         node.setStoragePath(v.getStoragePath());
         node.setOperator(v.getOperator());
+        node.setClientIp(v.getClientIp());
         node.setCreateTime(v.getCreateTime());
         node.setRemark(v.getRemark());
         node.setDeleted(v.isDeleted());
