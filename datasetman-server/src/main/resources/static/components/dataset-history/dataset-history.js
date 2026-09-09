@@ -180,12 +180,21 @@ class DatasetHistory extends HTMLElement {
             container.innerHTML = '<div class="empty">暂无血缘数据</div>';
             return;
         }
-        const ordered = [...nodes].sort((a,b) => a.createTime - b.createTime);
-        const datasetRows = [...new Set(ordered.map(n => n.datasetId))];
-        const width = Math.max(760, ordered.length * 170 + 100);
-        const height = Math.max(360, datasetRows.length * 130 + 100);
-        const position = new Map();
-        ordered.forEach((n,i) => position.set(n.versionId, { x:80 + i * 160, y:80 + datasetRows.indexOf(n.datasetId) * 120 }));
+
+        // 确保 echarts 已加载
+        if (!window.echarts) {
+            const script = document.createElement('script');
+            script.src = './lib/echarts/echarts.min.js';
+            script.onload = () => this.renderGraph();
+            document.head.appendChild(script);
+            container.innerHTML = '<div class="empty">正在加载图表组件...</div>';
+            return;
+        }
+
+        // 销毁旧图表
+        const existing = window.echarts.getInstanceByDom(container);
+        if (existing) existing.dispose();
+
         const colors = {
             SOURCE: '#3b82f6',
             SQL_QUERY: '#06b6d4',
@@ -194,16 +203,229 @@ class DatasetHistory extends HTMLElement {
             TRANSFORM: '#8b5cf6',
             TRANSFORM_SQL: '#8b5cf6'
         };
-        container.innerHTML = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8"></path></marker></defs>${(this.graph.edges || []).map(e => {
-            const from=position.get(e.from), to=position.get(e.to); if(!from||!to)return '';
-            return `<line x1="${from.x+24}" y1="${from.y}" x2="${to.x-24}" y2="${to.y}" stroke="#94a3b8" stroke-width="2" stroke-dasharray="${e.primary ? '' : '6 5'}" marker-end="url(#arrow)"></line><text x="${(from.x+to.x)/2}" y="${(from.y+to.y)/2-7}" font-size="10" fill="#64748b" text-anchor="middle">${this.escape(e.relationType)}</text>`;
-        }).join('')}${ordered.map(n => { const p=position.get(n.versionId); return `<g class="node ${n.focus?'focus':''}" data-version-id="${n.versionId}" transform="translate(${p.x},${p.y})"><circle r="24" fill="${colors[n.provenanceType] || '#64748b'}"></circle><text y="42">${this.escape(n.datasetName)}</text><text y="57">${this.escape(n.versionNo)}</text></g>`; }).join('')}</svg>`;
-        container.querySelectorAll('.node').forEach(node => node.addEventListener('click', () => this.highlight(Number(node.dataset.versionId))));
+
+        // 构建节点和边
+        // 节点类型：version（数据集版本，圆形）、operation（SQL/Transform操作，矩形）
+        const echartsNodes = [];
+        const echartsLinks = [];
+        const versionKeyMap = new Map(); // versionId -> echarts node id
+
+        // 1. 添加版本节点
+        nodes.forEach(n => {
+            const vid = n.versionId || n.createTime;
+            const nodeId = `v_${vid}`;
+            versionKeyMap.set(vid, nodeId);
+            versionKeyMap.set(n.versionId, nodeId);
+
+            const color = colors[n.provenanceType] || '#64748b';
+            echartsNodes.push({
+                id: nodeId,
+                name: `${n.datasetName}\n${n.versionNo}`,
+                symbol: 'circle',
+                symbolSize: n.focus ? 60 : 45,
+                itemStyle: {
+                    color: color,
+                    borderColor: n.focus ? '#111827' : '#fff',
+                    borderWidth: n.focus ? 4 : 2,
+                    shadowBlur: n.focus ? 10 : 0,
+                    shadowColor: color
+                },
+                label: {
+                    show: true,
+                    position: 'bottom',
+                    fontSize: 11,
+                    color: '#374151',
+                    formatter: () => `${n.datasetName}\n${n.versionNo}`
+                },
+                nodeType: 'version',
+                versionData: n
+            });
+        });
+
+        // 2. 添加操作节点和边
+        // 对于每条边 from->to，如果 to 节点的 provenanceType 是 SQL_QUERY 或 TRANSFORM，
+        // 则在 from 和 to 之间插入一个操作节点
+        const operationNodeSet = new Set();
+        const edges = this.graph.edges || [];
+        const nodeMap = new Map();
+        nodes.forEach(n => { nodeMap.set(n.versionId || n.createTime, n); });
+
+        edges.forEach((e, idx) => {
+            const fromVid = e.from;
+            const toVid = e.to;
+            const toNode = nodeMap.get(toVid);
+            const fromNodeId = versionKeyMap.get(fromVid);
+            const toNodeId = versionKeyMap.get(toVid);
+
+            if (!fromNodeId || !toNodeId) return;
+
+            // 如果目标节点是 SQL_QUERY 或 TRANSFORM，插入操作节点
+            if (toNode && (toNode.provenanceType === 'SQL_QUERY' || toNode.provenanceType === 'TRANSFORM'
+                    || toNode.provenanceType === 'SELECT' || toNode.provenanceType === 'SELECT_UDF'
+                    || toNode.provenanceType === 'TRANSFORM_SQL')) {
+                const opNodeId = `op_${fromVid}_${toVid}`;
+                if (!operationNodeSet.has(opNodeId)) {
+                    operationNodeSet.add(opNodeId);
+
+                    // 从 derivationConfig 提取操作信息
+                    const config = toNode.derivationConfig || {};
+                    let opLabel = toNode.provenanceLabel || toNode.provenanceType;
+                    let opDetail = '';
+                    if (config.sqlSnippet && config.sqlSnippet.name) {
+                        opLabel = 'SQL';
+                        opDetail = config.sqlSnippet.name;
+                    } else if (config.transformCompare && config.transformCompare.name) {
+                        opLabel = 'Transform';
+                        opDetail = config.transformCompare.name;
+                    }
+
+                    echartsNodes.push({
+                        id: opNodeId,
+                        name: opDetail ? `${opLabel}\n${opDetail}` : opLabel,
+                        symbol: 'roundRect',
+                        symbolSize: [100, 40],
+                        itemStyle: {
+                            color: '#fef3c7',
+                            borderColor: '#f59e0b',
+                            borderWidth: 2,
+                            borderRadius: 6
+                        },
+                        label: {
+                            show: true,
+                            fontSize: 10,
+                            color: '#92400e',
+                            formatter: () => opDetail ? `${opLabel}\n${opDetail}` : opLabel
+                        },
+                        nodeType: 'operation',
+                        operationType: opLabel,
+                        operationDetail: opDetail
+                    });
+
+                    // 边：from -> operation
+                    echartsLinks.push({
+                        source: fromNodeId,
+                        target: opNodeId,
+                        lineStyle: {
+                            color: e.primary ? '#94a3b8' : '#cbd5e1',
+                            width: 2,
+                            type: e.primary ? 'solid' : 'dashed'
+                        }
+                    });
+                    // 边：operation -> to
+                    echartsLinks.push({
+                        source: opNodeId,
+                        target: toNodeId,
+                        lineStyle: {
+                            color: e.primary ? '#94a3b8' : '#cbd5e1',
+                            width: 2,
+                            type: e.primary ? 'solid' : 'dashed'
+                        },
+                        label: {
+                            show: true,
+                            formatter: e.relationType || '',
+                            fontSize: 9,
+                            color: '#64748b'
+                        }
+                    });
+                }
+            } else {
+                // 直接连接 from -> to
+                echartsLinks.push({
+                    source: fromNodeId,
+                    target: toNodeId,
+                    lineStyle: {
+                        color: e.primary ? '#94a3b8' : '#cbd5e1',
+                        width: 2,
+                        type: e.primary ? 'solid' : 'dashed'
+                    },
+                    label: {
+                        show: true,
+                        formatter: e.relationType || '',
+                        fontSize: 9,
+                        color: '#64748b'
+                    }
+                });
+            }
+        });
+
+        // 3. 初始化 ECharts
+        const chart = window.echarts.init(container);
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: (params) => {
+                    if (params.dataType === 'node') {
+                        const d = params.data;
+                        if (d.nodeType === 'version') {
+                            const v = d.versionData;
+                            return `<b>${v.datasetName} / ${v.versionNo}</b><br/>` +
+                                `产出方式: ${v.provenanceLabel || v.provenanceType}<br/>` +
+                                `存储路径: ${v.storagePath || '-'}<br/>` +
+                                `创建者: ${v.operator || '-'}<br/>` +
+                                `创建时间: ${this.formatTime(v.createTime)}`;
+                        } else if (d.nodeType === 'operation') {
+                            return `<b>${d.operationType}</b>${d.operationDetail ? '<br/>' + d.operationDetail : ''}`;
+                        }
+                    }
+                    return params.name;
+                }
+            },
+            series: [{
+                type: 'graph',
+                layout: 'force',
+                force: {
+                    repulsion: 400,
+                    edgeLength: [150, 250],
+                    gravity: 0.08,
+                    layoutAnimation: true
+                },
+                roam: true,
+                draggable: true,
+                symbol: 'circle',
+                edgeSymbol: ['none', 'arrow'],
+                edgeSymbolSize: [0, 12],
+                lineStyle: {
+                    color: '#94a3b8',
+                    width: 2,
+                    curveness: 0.15,
+                    opacity: 0.8
+                },
+                label: {
+                    show: true,
+                    fontSize: 11,
+                    color: '#374151'
+                },
+                emphasis: {
+                    focus: 'adjacency',
+                    lineStyle: { width: 3 }
+                },
+                data: echartsNodes,
+                links: echartsLinks
+            }]
+        };
+        chart.setOption(option);
+
+        // 点击版本节点 -> 高亮对应行
+        chart.on('click', (params) => {
+            if (params.dataType === 'node' && params.data.nodeType === 'version') {
+                const v = params.data.versionData;
+                const vid = v.versionId || v.createTime;
+                this.highlight(vid);
+            }
+        });
+
+        // Resize
+        const resizeObserver = new ResizeObserver(() => chart.resize());
+        resizeObserver.observe(container);
+        container._chart = chart;
+        container._resizeObserver = resizeObserver;
     }
 
     highlight(versionId) {
-        this.shadowRoot.querySelectorAll('#changeTable tbody tr').forEach(row => row.classList.toggle('active', Number(row.dataset.versionId) === versionId));
-        this.shadowRoot.querySelectorAll('.node').forEach(node => node.classList.toggle('focus', Number(node.dataset.versionId) === versionId));
+        this.shadowRoot.querySelectorAll('#changeTable tbody tr').forEach(row => {
+            const rowVid = Number(row.dataset.versionId);
+            row.classList.toggle('active', rowVid === versionId || rowVid === Number(versionId));
+        });
         const row = this.shadowRoot.querySelector(`#changeTable tr[data-version-id="${versionId}"]`);
         if (row) row.scrollIntoView({ behavior:'smooth', block:'nearest' });
     }

@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 血缘图谱：节点 = 数据集版本，边 = 派生关系
@@ -31,6 +32,8 @@ public class LineageGraphDTO {
         private boolean deleted;
         /** 是否为聚焦节点 */
         private boolean focus;
+        /** 变换配方（JSON）：含 sqlSnippet / transformCompare / dataArchive 等快照 */
+        private Map<String, Object> derivationConfig;
     }
 
     @Data

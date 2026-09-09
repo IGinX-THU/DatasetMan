@@ -154,7 +154,8 @@ public class LineageService {
 
     private LineageGraphDTO.Node toNode(DatasetVersionEntity v, boolean focus) {
         LineageGraphDTO.Node node = new LineageGraphDTO.Node();
-        node.setVersionId(v.getId());
+        // id 是 timestamp 字段，IginX 读回可能为 null，用 createTime 兜底
+        node.setVersionId(v.getId() != null ? v.getId() : v.getCreateTime());
         node.setDatasetId(v.getDatasetId());
         node.setDatasetName(v.getDatasetName());
         node.setVersionNo(v.getVersionNo());
@@ -166,6 +167,7 @@ public class LineageService {
         node.setRemark(v.getRemark());
         node.setDeleted(v.isDeleted());
         node.setFocus(focus);
+        node.setDerivationConfig(parseConfig(v.getDerivationConfig()));
         return node;
     }
 
