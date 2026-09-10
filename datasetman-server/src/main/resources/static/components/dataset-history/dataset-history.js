@@ -435,13 +435,28 @@ class DatasetHistory extends HTMLElement {
         });
 
         // 3. 初始化 ECharts
-        // 根据节点数量动态调整画布大小，确保图能完全展开且四周留有距离
-        const totalNodes = echartsNodes.length;
-        // 每个节点约需 120x120 空间，四周额外预留 200px 边距
-        const minSide = 1000;
-        const estimatedSide = Math.max(minSide, Math.ceil(Math.sqrt(totalNodes) * 240) + 400);
-        const graphHeight = Math.max(minSide, estimatedSide);
+        // 按箭头方向从上往下分层，力导向分支排斥不重叠
+        const layout = this.computeLayeredLayout(echartsNodes, echartsLinks);
+        const positions = layout.positions;
+        echartsNodes.forEach(n => {
+            const pos = positions.get(n.id);
+            if (pos) {
+                n.x = pos.x;
+                n.y = pos.y;
+            }
+        });
+
+        // 画布大小根据层数和每层节点数计算
+        const layers = layout.layers;
+        const numLayers = Object.keys(layers).length;
+        const maxNodesInLayer = Math.max(...Object.values(layers).map(arr => arr.length));
+        const colWidth = 200;
+        const rowHeight = 160;
+        const padding = 300;
+        const graphHeight = Math.max(800, numLayers * rowHeight + padding);
+        const graphWidth = Math.max(1000, maxNodesInLayer * colWidth + padding);
         container.style.height = graphHeight + 'px';
+        container.style.minWidth = graphWidth + 'px';
 
         const chart = window.echarts.init(container);
         const option = {
@@ -452,11 +467,12 @@ class DatasetHistory extends HTMLElement {
                 type: 'graph',
                 layout: 'force',
                 force: {
-                    repulsion: 800,
-                    edgeLength: [220, 400],
-                    gravity: 0.04,
-                    layoutAnimation: true,
-                    friction: 0.6
+                    initLayout: 'none',
+                    repulsion: 400,
+                    edgeLength: [100, 200],
+                    gravity: 0.02,
+                    friction: 0.8,
+                    layoutAnimation: true
                 },
                 roam: true,
                 draggable: true,
@@ -466,7 +482,7 @@ class DatasetHistory extends HTMLElement {
                 lineStyle: {
                     color: '#94a3b8',
                     width: 2,
-                    curveness: 0.15,
+                    curveness: 0.05,
                     opacity: 0.8
                 },
                 label: {
@@ -509,6 +525,95 @@ class DatasetHistory extends HTMLElement {
         setTimeout(() => {
             chart.resize();
         }, 300);
+    }
+
+    /**
+     * 分层布局：按有向边 from→to 分层，从上往下排列。
+     * y 按层（depth），x 在层内均匀分布，力导向从初始位置微调避免重叠。
+     * 返回 { positions: Map<nodeId, {x, y, layer}>, layers: {layer: [nodeId, ...]} }
+     */
+    computeLayeredLayout(echartsNodes, echartsLinks) {
+        const nodeIds = echartsNodes.map(n => n.id);
+        const idSet = new Set(nodeIds);
+
+        // 构建有向邻接表
+        const outgoing = new Map();
+        const incoming = new Map();
+        nodeIds.forEach(id => { outgoing.set(id, new Set()); incoming.set(id, new Set()); });
+        echartsLinks.forEach(l => {
+            if (idSet.has(l.source) && idSet.has(l.target)) {
+                outgoing.get(l.source).add(l.target);
+                incoming.get(l.target).add(l.source);
+            }
+        });
+
+        // 找 focus 节点作为根
+        const focusNode = echartsNodes.find(n => n.nodeType === 'version' && n.versionData && n.versionData.focus);
+        const rootId = focusNode ? focusNode.id : nodeIds[0];
+
+        // 从 focus 节点出发，向下游 BFS（layer 递增，往下），向上游 BFS（layer 递减，往上）
+        const layerMap = new Map();
+        layerMap.set(rootId, 0);
+
+        const downQueue = [rootId];
+        while (downQueue.length) {
+            const cur = downQueue.shift();
+            const curLayer = layerMap.get(cur);
+            outgoing.get(cur).forEach(nb => {
+                if (!layerMap.has(nb)) {
+                    layerMap.set(nb, curLayer + 1);
+                    downQueue.push(nb);
+                }
+            });
+        }
+
+        const upQueue = [rootId];
+        while (upQueue.length) {
+            const cur = upQueue.shift();
+            const curLayer = layerMap.get(cur);
+            incoming.get(cur).forEach(nb => {
+                if (!layerMap.has(nb)) {
+                    layerMap.set(nb, curLayer - 1);
+                    upQueue.push(nb);
+                }
+            });
+        }
+
+        // 未被 BFS 到的孤立节点
+        const maxLayer = Math.max(0, ...layerMap.values());
+        const minLayer = Math.min(0, ...layerMap.values());
+        nodeIds.forEach(id => {
+            if (!layerMap.has(id)) layerMap.set(id, maxLayer + 1);
+        });
+
+        // 按层分组
+        const layers = {};
+        layerMap.forEach((layer, id) => {
+            if (!layers[layer]) layers[layer] = [];
+            layers[layer].push(id);
+        });
+
+        // 计算坐标：y 按层（从上到下），x 在层内均匀分布
+        const positions = new Map();
+        const rowHeight = 160;  // 层间距（垂直）
+        const colWidth = 200;   // 同层节点间距（水平）
+        const sortedLayers = Object.keys(layers).map(Number).sort((a, b) => a - b);
+        const maxCount = Math.max(...Object.values(layers).map(arr => arr.length));
+        const centerX = Math.max(500, maxCount * colWidth / 2 + 200);
+
+        sortedLayers.forEach(layer => {
+            const ids = layers[layer];
+            const count = ids.length;
+            ids.forEach((id, idx) => {
+                // x: 层内均匀分布，居中
+                const x = (idx - (count - 1) / 2) * colWidth + centerX;
+                // y: 按层从上到下
+                const y = (layer - minLayer) * rowHeight + 150;
+                positions.set(id, { x, y, layer });
+            });
+        });
+
+        return { positions, layers };
     }
 
     /** 从 derivationConfig 中提取操作节点的展示信息 */
