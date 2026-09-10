@@ -72,6 +72,8 @@ struct TimeRangeRequest {
 // 数据导入请求 - 匹配 DataImportRequest
 struct DataImportRequest {
     1: string targetPath,
+    2: optional string key,
+    3: optional string description,
 }
 
 // ========== 数据集相关 ==========
@@ -94,6 +96,120 @@ struct DatasetEntity {
     9: string clientIp,
     10: string remark,
     11: bool deleted,
+}
+
+// 数据集版本实体 - 匹配 DatasetVersionEntity
+struct DatasetVersionEntity {
+    1: i64 id,
+    2: i64 datasetId,
+    3: string datasetName,
+    4: string versionNo,
+    5: string provenanceType,
+    6: string storagePath,
+    7: optional string upstreamVersionIds,
+    8: optional string derivationConfig,
+    9: optional string schemaJson,
+    10: optional i64 rowCount,
+    11: optional i64 sizeBytes,
+    12: i64 createTime,
+    13: optional string operator,
+    14: optional string clientIp,
+    15: optional string remark,
+    16: bool deleted,
+    17: optional i32 jobState,
+}
+
+// 向导式创建数据集版本请求 - 匹配 DatasetCreateRequest
+struct DatasetCreateRequest {
+    1: string datasetName,
+    2: string provenanceType,
+    3: optional string sourcePath,
+    4: optional string importFileName,
+    5: optional string importFileBase64,
+    6: optional string importKeyColumn,
+    7: optional i64 sqlSnippetId,
+    8: optional list<i64> upstreamVersionIds,
+    9: optional list<string> udfNames,
+    10: optional i64 transformCompareCreateTime,
+    11: optional string description,
+    12: optional string dataModality,
+    13: optional string project,
+    14: optional string remark,
+}
+
+// 数据集树 - 匹配 DatasetTreeDTO
+struct DatasetTreeVersion {
+    1: i64 versionId,
+    2: string versionNo,
+    3: optional string storagePath,
+    4: optional string provenanceType,
+    5: i64 createTime,
+    6: bool deleted,
+    7: optional i32 jobState,
+}
+
+struct DatasetTreeDTO {
+    1: i64 datasetId,
+    2: string datasetName,
+    3: list<DatasetTreeVersion> versions,
+}
+
+// 数据集变化过程 - 匹配 DatasetChangeProcessDTO
+struct UpstreamRef {
+    1: i64 versionId,
+    2: optional string datasetName,
+    3: optional string versionNo,
+    4: bool primary,
+}
+
+struct DatasetChangeProcessDTO {
+    1: i64 versionId,
+    2: string versionNo,
+    3: optional string provenanceType,
+    4: optional string provenanceLabel,
+    5: optional string storagePath,
+    6: optional list<UpstreamRef> upstreams,
+    7: optional string derivationConfig,
+    8: optional string operator,
+    9: optional string clientIp,
+    10: i64 createTime,
+    11: optional string remark,
+    12: optional i64 rowCount,
+    13: optional i64 sizeBytes,
+    14: bool deleted,
+    15: optional i32 jobState,
+}
+
+// 血缘图谱 - 匹配 LineageGraphDTO
+struct LineageNode {
+    1: i64 versionId,
+    2: optional i64 datasetId,
+    3: string datasetName,
+    4: string versionNo,
+    5: optional string provenanceType,
+    6: optional string provenanceLabel,
+    7: optional string storagePath,
+    8: optional string operator,
+    9: optional string clientIp,
+    10: i64 createTime,
+    11: optional string remark,
+    12: bool deleted,
+    13: optional i32 jobState,
+    14: bool focus,
+    15: optional string derivationConfig,
+}
+
+struct LineageEdge {
+    1: i64 fromVersion,
+    2: i64 toVersion,
+    3: optional string relationType,
+    4: bool primary,
+}
+
+struct LineageGraphDTO {
+    1: list<LineageNode> nodes,
+    2: list<LineageEdge> edges,
+    3: optional i64 focusVersionId,
 }
 
 struct DatasetVersionTreeDTO {
@@ -124,9 +240,11 @@ struct RegisterTaskInfoDto {
 struct TaskInfoDto {
     1: i32 taskType,
     2: i32 dataFlowType,
-    3: i64 timeout,
+    3: optional i64 timeout,
     4: optional string dataset,
-    5: optional string pyTaskName,
+    5: optional i64 sqlSnippetId,
+    6: optional string sqlSnippetName,
+    7: optional string pyTaskName,
 }
 
 struct TransformJobRequest {
@@ -359,8 +477,23 @@ service ApiService {
     // DELETE /api/dataset/delete -> deleteDataset(String path)
     Result deleteDataset(1: string path),
     
-    // GET /api/dataset/history -> getVersionHistory(String datasetName)
-    Result getVersionHistory(1: string datasetName),
+    // POST /api/dataset/create -> create(DatasetCreateRequest)
+    Result createDataset(1: DatasetCreateRequest request),
+    
+    // GET /api/dataset/tree -> tree()
+    Result getDatasetTree(),
+    
+    // GET /api/dataset/version/metas -> versionMeta(versionId)
+    Result getDatasetVersionMeta(1: i64 versionId),
+    
+    // GET /api/dataset/changes -> changes(datasetId)
+    Result getDatasetChanges(1: i64 datasetId),
+    
+    // GET /api/dataset/lineage -> lineage(versionId, sideLineage)
+    Result getDatasetLineage(1: i64 versionId, 2: bool sideLineage),
+    
+    // DELETE /api/dataset/version/delete -> deleteVersion(versionId)
+    Result deleteDatasetVersion(1: i64 versionId),
 
     // ========== 函数接口 - 匹配FunctionController ==========
     // POST /api/function/register/transform -> registerTransform(MultipartFile, name, className)

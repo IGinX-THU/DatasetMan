@@ -41,7 +41,12 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('  Result saveDataset(DatasetRequest request)')
     print('  Result queryMeta(string path)')
     print('  Result deleteDataset(string path)')
-    print('  Result getVersionHistory(string datasetName)')
+    print('  Result createDataset(DatasetCreateRequest request)')
+    print('  Result getDatasetTree()')
+    print('  Result getDatasetVersionMeta(i64 versionId)')
+    print('  Result getDatasetChanges(i64 datasetId)')
+    print('  Result getDatasetLineage(i64 versionId, bool sideLineage)')
+    print('  Result deleteDatasetVersion(i64 versionId)')
     print('  Result registerTransform(string file, string name, string className)')
     print('  Result deleteFunction(string name)')
     print('  Result listFunctions(string type)')
@@ -277,11 +282,41 @@ elif cmd == 'deleteDataset':
         sys.exit(1)
     pp.pprint(client.deleteDataset(args[0],))
 
-elif cmd == 'getVersionHistory':
+elif cmd == 'createDataset':
     if len(args) != 1:
-        print('getVersionHistory requires 1 args')
+        print('createDataset requires 1 args')
         sys.exit(1)
-    pp.pprint(client.getVersionHistory(args[0],))
+    pp.pprint(client.createDataset(eval(args[0]),))
+
+elif cmd == 'getDatasetTree':
+    if len(args) != 0:
+        print('getDatasetTree requires 0 args')
+        sys.exit(1)
+    pp.pprint(client.getDatasetTree())
+
+elif cmd == 'getDatasetVersionMeta':
+    if len(args) != 1:
+        print('getDatasetVersionMeta requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.getDatasetVersionMeta(eval(args[0]),))
+
+elif cmd == 'getDatasetChanges':
+    if len(args) != 1:
+        print('getDatasetChanges requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.getDatasetChanges(eval(args[0]),))
+
+elif cmd == 'getDatasetLineage':
+    if len(args) != 2:
+        print('getDatasetLineage requires 2 args')
+        sys.exit(1)
+    pp.pprint(client.getDatasetLineage(eval(args[0]), eval(args[1]),))
+
+elif cmd == 'deleteDatasetVersion':
+    if len(args) != 1:
+        print('deleteDatasetVersion requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.deleteDatasetVersion(eval(args[0]),))
 
 elif cmd == 'registerTransform':
     if len(args) != 3:

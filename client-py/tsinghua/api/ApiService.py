@@ -147,10 +147,46 @@ class Iface(object):
         """
         pass
 
-    def getVersionHistory(self, datasetName):
+    def createDataset(self, request):
         """
         Parameters:
-         - datasetName
+         - request
+
+        """
+        pass
+
+    def getDatasetTree(self):
+        pass
+
+    def getDatasetVersionMeta(self, versionId):
+        """
+        Parameters:
+         - versionId
+
+        """
+        pass
+
+    def getDatasetChanges(self, datasetId):
+        """
+        Parameters:
+         - datasetId
+
+        """
+        pass
+
+    def getDatasetLineage(self, versionId, sideLineage):
+        """
+        Parameters:
+         - versionId
+         - sideLineage
+
+        """
+        pass
+
+    def deleteDatasetVersion(self, versionId):
+        """
+        Parameters:
+         - versionId
 
         """
         pass
@@ -1061,24 +1097,24 @@ class Client(Iface):
             return result.success
         raise TApplicationException(TApplicationException.MISSING_RESULT, "deleteDataset failed: unknown result")
 
-    def getVersionHistory(self, datasetName):
+    def createDataset(self, request):
         """
         Parameters:
-         - datasetName
+         - request
 
         """
-        self.send_getVersionHistory(datasetName)
-        return self.recv_getVersionHistory()
+        self.send_createDataset(request)
+        return self.recv_createDataset()
 
-    def send_getVersionHistory(self, datasetName):
-        self._oprot.writeMessageBegin('getVersionHistory', TMessageType.CALL, self._seqid)
-        args = getVersionHistory_args()
-        args.datasetName = datasetName
+    def send_createDataset(self, request):
+        self._oprot.writeMessageBegin('createDataset', TMessageType.CALL, self._seqid)
+        args = createDataset_args()
+        args.request = request
         args.write(self._oprot)
         self._oprot.writeMessageEnd()
         self._oprot.trans.flush()
 
-    def recv_getVersionHistory(self):
+    def recv_createDataset(self):
         iprot = self._iprot
         (fname, mtype, rseqid) = iprot.readMessageBegin()
         if mtype == TMessageType.EXCEPTION:
@@ -1086,12 +1122,168 @@ class Client(Iface):
             x.read(iprot)
             iprot.readMessageEnd()
             raise x
-        result = getVersionHistory_result()
+        result = createDataset_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.success is not None:
             return result.success
-        raise TApplicationException(TApplicationException.MISSING_RESULT, "getVersionHistory failed: unknown result")
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "createDataset failed: unknown result")
+
+    def getDatasetTree(self):
+        self.send_getDatasetTree()
+        return self.recv_getDatasetTree()
+
+    def send_getDatasetTree(self):
+        self._oprot.writeMessageBegin('getDatasetTree', TMessageType.CALL, self._seqid)
+        args = getDatasetTree_args()
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_getDatasetTree(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = getDatasetTree_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "getDatasetTree failed: unknown result")
+
+    def getDatasetVersionMeta(self, versionId):
+        """
+        Parameters:
+         - versionId
+
+        """
+        self.send_getDatasetVersionMeta(versionId)
+        return self.recv_getDatasetVersionMeta()
+
+    def send_getDatasetVersionMeta(self, versionId):
+        self._oprot.writeMessageBegin('getDatasetVersionMeta', TMessageType.CALL, self._seqid)
+        args = getDatasetVersionMeta_args()
+        args.versionId = versionId
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_getDatasetVersionMeta(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = getDatasetVersionMeta_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "getDatasetVersionMeta failed: unknown result")
+
+    def getDatasetChanges(self, datasetId):
+        """
+        Parameters:
+         - datasetId
+
+        """
+        self.send_getDatasetChanges(datasetId)
+        return self.recv_getDatasetChanges()
+
+    def send_getDatasetChanges(self, datasetId):
+        self._oprot.writeMessageBegin('getDatasetChanges', TMessageType.CALL, self._seqid)
+        args = getDatasetChanges_args()
+        args.datasetId = datasetId
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_getDatasetChanges(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = getDatasetChanges_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "getDatasetChanges failed: unknown result")
+
+    def getDatasetLineage(self, versionId, sideLineage):
+        """
+        Parameters:
+         - versionId
+         - sideLineage
+
+        """
+        self.send_getDatasetLineage(versionId, sideLineage)
+        return self.recv_getDatasetLineage()
+
+    def send_getDatasetLineage(self, versionId, sideLineage):
+        self._oprot.writeMessageBegin('getDatasetLineage', TMessageType.CALL, self._seqid)
+        args = getDatasetLineage_args()
+        args.versionId = versionId
+        args.sideLineage = sideLineage
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_getDatasetLineage(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = getDatasetLineage_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "getDatasetLineage failed: unknown result")
+
+    def deleteDatasetVersion(self, versionId):
+        """
+        Parameters:
+         - versionId
+
+        """
+        self.send_deleteDatasetVersion(versionId)
+        return self.recv_deleteDatasetVersion()
+
+    def send_deleteDatasetVersion(self, versionId):
+        self._oprot.writeMessageBegin('deleteDatasetVersion', TMessageType.CALL, self._seqid)
+        args = deleteDatasetVersion_args()
+        args.versionId = versionId
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_deleteDatasetVersion(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = deleteDatasetVersion_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "deleteDatasetVersion failed: unknown result")
 
     def registerTransform(self, file, name, className):
         """
@@ -2767,7 +2959,12 @@ class Processor(Iface, TProcessor):
         self._processMap["saveDataset"] = Processor.process_saveDataset
         self._processMap["queryMeta"] = Processor.process_queryMeta
         self._processMap["deleteDataset"] = Processor.process_deleteDataset
-        self._processMap["getVersionHistory"] = Processor.process_getVersionHistory
+        self._processMap["createDataset"] = Processor.process_createDataset
+        self._processMap["getDatasetTree"] = Processor.process_getDatasetTree
+        self._processMap["getDatasetVersionMeta"] = Processor.process_getDatasetVersionMeta
+        self._processMap["getDatasetChanges"] = Processor.process_getDatasetChanges
+        self._processMap["getDatasetLineage"] = Processor.process_getDatasetLineage
+        self._processMap["deleteDatasetVersion"] = Processor.process_deleteDatasetVersion
         self._processMap["registerTransform"] = Processor.process_registerTransform
         self._processMap["deleteFunction"] = Processor.process_deleteFunction
         self._processMap["listFunctions"] = Processor.process_listFunctions
@@ -3235,13 +3432,13 @@ class Processor(Iface, TProcessor):
         oprot.writeMessageEnd()
         oprot.trans.flush()
 
-    def process_getVersionHistory(self, seqid, iprot, oprot):
-        args = getVersionHistory_args()
+    def process_createDataset(self, seqid, iprot, oprot):
+        args = createDataset_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = getVersionHistory_result()
+        result = createDataset_result()
         try:
-            result.success = self._handler.getVersionHistory(args.datasetName)
+            result.success = self._handler.createDataset(args.request)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -3253,7 +3450,122 @@ class Processor(Iface, TProcessor):
             logging.exception('Unexpected exception in handler')
             msg_type = TMessageType.EXCEPTION
             result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
-        oprot.writeMessageBegin("getVersionHistory", msg_type, seqid)
+        oprot.writeMessageBegin("createDataset", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_getDatasetTree(self, seqid, iprot, oprot):
+        args = getDatasetTree_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = getDatasetTree_result()
+        try:
+            result.success = self._handler.getDatasetTree()
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("getDatasetTree", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_getDatasetVersionMeta(self, seqid, iprot, oprot):
+        args = getDatasetVersionMeta_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = getDatasetVersionMeta_result()
+        try:
+            result.success = self._handler.getDatasetVersionMeta(args.versionId)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("getDatasetVersionMeta", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_getDatasetChanges(self, seqid, iprot, oprot):
+        args = getDatasetChanges_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = getDatasetChanges_result()
+        try:
+            result.success = self._handler.getDatasetChanges(args.datasetId)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("getDatasetChanges", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_getDatasetLineage(self, seqid, iprot, oprot):
+        args = getDatasetLineage_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = getDatasetLineage_result()
+        try:
+            result.success = self._handler.getDatasetLineage(args.versionId, args.sideLineage)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("getDatasetLineage", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_deleteDatasetVersion(self, seqid, iprot, oprot):
+        args = deleteDatasetVersion_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = deleteDatasetVersion_result()
+        try:
+            result.success = self._handler.deleteDatasetVersion(args.versionId)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("deleteDatasetVersion", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
         oprot.trans.flush()
@@ -6662,17 +6974,17 @@ deleteDataset_result.thrift_spec = (
 )
 
 
-class getVersionHistory_args(object):
+class createDataset_args(object):
     """
     Attributes:
-     - datasetName
+     - request
 
     """
     thrift_spec = None
 
 
-    def __init__(self, datasetName = None,):
-        self.datasetName = datasetName
+    def __init__(self, request = None,):
+        self.request = request
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -6684,8 +6996,9 @@ class getVersionHistory_args(object):
             if ftype == TType.STOP:
                 break
             if fid == 1:
-                if ftype == TType.STRING:
-                    self.datasetName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                if ftype == TType.STRUCT:
+                    self.request = DatasetCreateRequest()
+                    self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
             else:
@@ -6698,10 +7011,10 @@ class getVersionHistory_args(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('getVersionHistory_args')
-        if self.datasetName is not None:
-            oprot.writeFieldBegin('datasetName', TType.STRING, 1)
-            oprot.writeString(self.datasetName.encode('utf-8') if sys.version_info[0] == 2 else self.datasetName)
+        oprot.writeStructBegin('createDataset_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 1)
+            self.request.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -6719,14 +7032,14 @@ class getVersionHistory_args(object):
 
     def __ne__(self, other):
         return not (self == other)
-all_structs.append(getVersionHistory_args)
-getVersionHistory_args.thrift_spec = (
+all_structs.append(createDataset_args)
+createDataset_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRING, 'datasetName', 'UTF8', None, ),  # 1
+    (1, TType.STRUCT, 'request', [DatasetCreateRequest, None], None, ),  # 1
 )
 
 
-class getVersionHistory_result(object):
+class createDataset_result(object):
     """
     Attributes:
      - success
@@ -6763,7 +7076,7 @@ class getVersionHistory_result(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('getVersionHistory_result')
+        oprot.writeStructBegin('createDataset_result')
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.STRUCT, 0)
             self.success.write(oprot)
@@ -6784,8 +7097,641 @@ class getVersionHistory_result(object):
 
     def __ne__(self, other):
         return not (self == other)
-all_structs.append(getVersionHistory_result)
-getVersionHistory_result.thrift_spec = (
+all_structs.append(createDataset_result)
+createDataset_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class getDatasetTree_args(object):
+    thrift_spec = None
+
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('getDatasetTree_args')
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(getDatasetTree_args)
+getDatasetTree_args.thrift_spec = (
+)
+
+
+class getDatasetTree_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('getDatasetTree_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(getDatasetTree_result)
+getDatasetTree_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class getDatasetVersionMeta_args(object):
+    """
+    Attributes:
+     - versionId
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, versionId = None,):
+        self.versionId = versionId
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.versionId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('getDatasetVersionMeta_args')
+        if self.versionId is not None:
+            oprot.writeFieldBegin('versionId', TType.I64, 1)
+            oprot.writeI64(self.versionId)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(getDatasetVersionMeta_args)
+getDatasetVersionMeta_args.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'versionId', None, None, ),  # 1
+)
+
+
+class getDatasetVersionMeta_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('getDatasetVersionMeta_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(getDatasetVersionMeta_result)
+getDatasetVersionMeta_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class getDatasetChanges_args(object):
+    """
+    Attributes:
+     - datasetId
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, datasetId = None,):
+        self.datasetId = datasetId
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.datasetId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('getDatasetChanges_args')
+        if self.datasetId is not None:
+            oprot.writeFieldBegin('datasetId', TType.I64, 1)
+            oprot.writeI64(self.datasetId)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(getDatasetChanges_args)
+getDatasetChanges_args.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'datasetId', None, None, ),  # 1
+)
+
+
+class getDatasetChanges_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('getDatasetChanges_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(getDatasetChanges_result)
+getDatasetChanges_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class getDatasetLineage_args(object):
+    """
+    Attributes:
+     - versionId
+     - sideLineage
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, versionId = None, sideLineage = None,):
+        self.versionId = versionId
+        self.sideLineage = sideLineage
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.versionId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.BOOL:
+                    self.sideLineage = iprot.readBool()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('getDatasetLineage_args')
+        if self.versionId is not None:
+            oprot.writeFieldBegin('versionId', TType.I64, 1)
+            oprot.writeI64(self.versionId)
+            oprot.writeFieldEnd()
+        if self.sideLineage is not None:
+            oprot.writeFieldBegin('sideLineage', TType.BOOL, 2)
+            oprot.writeBool(self.sideLineage)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(getDatasetLineage_args)
+getDatasetLineage_args.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'versionId', None, None, ),  # 1
+    (2, TType.BOOL, 'sideLineage', None, None, ),  # 2
+)
+
+
+class getDatasetLineage_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('getDatasetLineage_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(getDatasetLineage_result)
+getDatasetLineage_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class deleteDatasetVersion_args(object):
+    """
+    Attributes:
+     - versionId
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, versionId = None,):
+        self.versionId = versionId
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.versionId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('deleteDatasetVersion_args')
+        if self.versionId is not None:
+            oprot.writeFieldBegin('versionId', TType.I64, 1)
+            oprot.writeI64(self.versionId)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(deleteDatasetVersion_args)
+deleteDatasetVersion_args.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'versionId', None, None, ),  # 1
+)
+
+
+class deleteDatasetVersion_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('deleteDatasetVersion_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(deleteDatasetVersion_result)
+deleteDatasetVersion_result.thrift_spec = (
     (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
 )
 
