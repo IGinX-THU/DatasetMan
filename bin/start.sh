@@ -50,7 +50,7 @@ else
 fi
 
 # Set Java options
-JAVA_OPTS="-Xmx2g -Xms1g -XX:+UseG1GC -XX:+UseStringDeduplication -Djava.library.path=jdk-linux/lib"
+JAVA_OPTS="-Dfile.encoding=UTF-8 -Xmx2g -Xms1g -XX:+UseG1GC -XX:+UseStringDeduplication -Djava.library.path=jdk-linux/lib"
 
 # Check for config directory
 if [ -f "config/application.yml" ]; then

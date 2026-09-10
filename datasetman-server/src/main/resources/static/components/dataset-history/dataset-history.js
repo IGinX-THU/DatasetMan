@@ -916,21 +916,54 @@ class DatasetHistory extends HTMLElement {
     }
 
     async deleteCurrent() {
-        if (!this.version || !window.confirm(`确定删除 ${this.version.datasetName}/${this.version.versionNo} 吗？`)) return;
+        if (!this.version) return;
         const vid = this.versionIdOf(this.version);
         if (vid == null) {
             if (window.CommonUtils?.showToast) window.CommonUtils.showToast('版本ID缺失，无法删除', 'error'); else alert('版本ID缺失，无法删除');
             return;
         }
-        try {
-            const result = await window.AppConfig.delete('dataset', 'versionDelete', { versionId:vid });
-            if (!(result.success || result.code === 200)) throw new Error(result.message || '删除失败');
-            this.dispatchEvent(new CustomEvent('dataset-deleted', { bubbles:true, composed:true, detail:this.version }));
-            if (window.loadDataSourceTree) await window.loadDataSourceTree();
-            if (window.loadDatasetTree) await window.loadDatasetTree();
-        } catch (error) {
-            if (window.CommonUtils?.showToast) window.CommonUtils.showToast(error.message, 'error'); else alert(error.message);
-        }
+        const datasetName = this.version.datasetName || '未命名';
+        const versionNo = this.version.versionNo || '-';
+
+        // 使用与删除数据集一致的确认弹窗
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+        overlay.innerHTML = `
+            <div style="background:#fff;border-radius:8px;padding:24px;min-width:400px;max-width:500px;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+                <div style="font-size:18px;font-weight:600;margin-bottom:16px;color:#1f2937;">确认删除版本</div>
+                <div style="margin-bottom:24px;color:#595959;line-height:1.6;">
+                    确定要删除数据集 <span style="color:#ff4d4f;font-weight:600;">${datasetName}</span> 的版本 <span style="color:#ff4d4f;font-weight:600;">${versionNo}</span> 吗？<br><br>
+                    <strong>此操作仅逻辑删除该版本档案，不会删除对应数据源和数据。</strong>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:12px;">
+                    <button class="btn-cancel" style="padding:8px 16px;border-radius:4px;border:none;cursor:pointer;font-size:14px;background:#f0f0f0;color:#595959;">取消</button>
+                    <button class="btn-confirm-delete" style="padding:8px 16px;border-radius:4px;border:none;cursor:pointer;font-size:14px;background:#ff4d4f;color:#fff;">确认删除</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        const cancelBtn = overlay.querySelector('.btn-cancel');
+        const confirmBtn = overlay.querySelector('.btn-confirm-delete');
+        cancelBtn.addEventListener('click', () => { if (overlay.parentNode) document.body.removeChild(overlay); });
+        overlay.addEventListener('click', (e) => { if (e.target === overlay && overlay.parentNode) document.body.removeChild(overlay); });
+
+        confirmBtn.addEventListener('click', async () => {
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = '删除中...';
+            try {
+                const result = await window.AppConfig.delete('dataset', 'versionDelete', { versionId: vid });
+                if (!(result.success || result.code === 200)) throw new Error(result.message || '删除失败');
+                if (window.CommonUtils?.showToast) window.CommonUtils.showToast('版本删除成功', 'success');
+                this.dispatchEvent(new CustomEvent('dataset-deleted', { bubbles: true, composed: true, detail: this.version }));
+                if (window.loadDataSourceTree) await window.loadDataSourceTree();
+                if (window.loadDatasetTree) await window.loadDatasetTree();
+            } catch (error) {
+                if (window.CommonUtils?.showToast) window.CommonUtils.showToast(error.message, 'error'); else alert(error.message);
+            } finally {
+                if (overlay.parentNode) document.body.removeChild(overlay);
+            }
+        });
     }
 
     recipeSummary(config) {

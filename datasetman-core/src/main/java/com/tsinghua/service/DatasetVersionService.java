@@ -5,9 +5,6 @@ import cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult;
 import cn.edu.tsinghua.iginx.session_v2.IginXClient;
 import cn.edu.tsinghua.iginx.session_v2.WriteClient;
 import cn.edu.tsinghua.iginx.session_v2.DeleteClient;
-import cn.edu.tsinghua.iginx.thrift.RemovedStorageEngineInfo;
-import cn.edu.tsinghua.iginx.session.ClusterInfo;
-import cn.edu.tsinghua.iginx.thrift.StorageEngineInfo;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tsinghua.auth.aspect.OperationLogAspect;
@@ -372,60 +369,11 @@ public class DatasetVersionService {
             throw new RuntimeException("版本不存在: " + versionId);
         }
 
-        String provenanceType = version.getProvenanceType();
-        String storagePath = version.getStoragePath();
-
-        // 1. 根据数据源/生成方式分流执行底层存储资源卸载或删除
-        if (ProvenanceType.SOURCE.name().equals(provenanceType)) {
-            // SOURCE 类型：卸载底层挂载的外部存储引擎
-            try {
-                ClusterInfo clusterInfo = iginxSession.getClusterInfo();
-                List<StorageEngineInfo> engines = clusterInfo.getStorageEngineInfos();
-                if (!CollectionUtils.isEmpty(engines)) {
-                    List<RemovedStorageEngineInfo> toRemove = engines.stream()
-                            .filter(e -> {
-                                String prefix = StringUtils.hasText(e.dataPrefix) ?
-                                        e.schemaPrefix + "." + e.dataPrefix : e.schemaPrefix;
-                                return storagePath.equals(prefix);
-                            })
-                            .map(e -> new RemovedStorageEngineInfo(e.ip, e.port, e.schemaPrefix, e.dataPrefix))
-                            .collect(Collectors.toList());
-                    if (!toRemove.isEmpty()) {
-                        iginxSession.removeStorageEngine(toRemove);
-                        log.info("已成功卸载 SOURCE 数据源存储引擎: {}", storagePath);
-                    }
-                }
-            } catch (Exception e) {
-                log.error("卸载数据源存储引擎失败: {}", storagePath, e);
-                throw new RuntimeException("卸载数据源存储引擎失败: " + e.getMessage(), e);
-            }
-        } else {
-            // SELECT / SELECT_UDF / TRANSFORM_SQL 等生成/导入类型：执行 DELETE COLUMNS 语句清理左侧树对应节点与物化数据
-            try {
-                if (StringUtils.hasText(storagePath)) {
-                    String deleteSql = "DELETE COLUMNS " + storagePath + ".*;";
-                    log.info("执行清理物化数据/序列SQL: {}", deleteSql);
-                    iginxSession.executeSql(deleteSql);
-                }
-            } catch (Exception e) {
-                log.warn("执行 DELETE COLUMNS 清理物化数据异常（尝试通配路径）: {}, err: {}", storagePath, e.getMessage());
-                try {
-                    String fallbackSql = "DELETE COLUMNS " + storagePath + ";";
-                    iginxSession.executeSql(fallbackSql);
-                } catch (Exception ex) {
-                    log.warn("DELETE COLUMNS 回退执行亦失败: {}", storagePath, ex);
-                }
-            }
-        }
-
-        // 2. 清除权限前缀
-        dataPermissionService.deleteByTablePrefix(storagePath);
-
-        // 3. 软删除版本元数据
+        // 仅做数据集档案的逻辑删除，不删除对应数据源和数据
         version.setDeleted(true);
         version.setId(version.getCreateTime());
         iginxClient.getWriteClient().writeMeasurement(version);
-        log.info("数据集版本已软删除。id={}, type={}, storagePath={}", versionId, provenanceType, storagePath);
+        log.info("数据集版本已软删除。id={}, type={}, storagePath={}", versionId, version.getProvenanceType(), version.getStoragePath());
     }
 
     /** 软删除逻辑数据集：要求其所有版本均已删除 */
