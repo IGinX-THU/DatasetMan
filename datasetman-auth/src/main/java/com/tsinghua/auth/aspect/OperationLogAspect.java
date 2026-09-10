@@ -25,7 +25,7 @@ import java.util.Map;
 
 /**
  * 操作日志记录切面
- * 记录所有Controller接口的操作日志，包含：操作人、IP、时间、接口传参
+ * 只记录带有 @OperationLog 注解的方法（增删改等操作），不记录查询类接口
  */
 @Slf4j
 @Aspect
@@ -50,9 +50,9 @@ public class OperationLogAspect {
     }
 
     /**
-     * 环绕通知：记录操作日志
+     * 环绕通知：只记录带 @OperationLog 注解的操作日志
      */
-    @Around("controllerPointcut()")
+    @Around("operationLogPointcut()")
     public Object logOperation(ProceedingJoinPoint joinPoint) throws Throwable {
         long startTime = System.currentTimeMillis();
         
@@ -72,7 +72,7 @@ public class OperationLogAspect {
         String operator = getCurrentUser();
         
         // 获取IP地址
-        String clientIp = getClientIp();
+        String clientIp = getClientIp(request);
         
         // 获取请求参数
         Map<String, Object> params = getMethodParameters(joinPoint, signature);
@@ -153,14 +153,18 @@ public class OperationLogAspect {
     }
 
     /**
-     * 获取客户端IP地址
+     * 获取客户端IP地址（供外部调用，自行获取请求）
      */
     public static String getClientIp() {
-
-        // 获取请求信息
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         HttpServletRequest request = attributes != null ? attributes.getRequest() : null;
+        return getClientIp(request);
+    }
 
+    /**
+     * 获取客户端IP地址
+     */
+    private static String getClientIp(HttpServletRequest request) {
         if (request == null) {
             return "未知";
         }
