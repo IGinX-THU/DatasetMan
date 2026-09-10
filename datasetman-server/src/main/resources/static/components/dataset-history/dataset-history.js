@@ -656,12 +656,8 @@ class DatasetHistory extends HTMLElement {
             transformCompare: cmp,
             dataArchive: archive,
             udfFunction: udf,
-            operator: versionNode ? versionNode.operator : null,
-            operateTime: versionNode ? this.formatTime(versionNode.createTime) : null,
-            operateIp: versionNode ? versionNode.clientIp : null,
-            remark: versionNode ? versionNode.remark : null,
-            changeProcess: cfg.changeProcess || cfg.description || null,
-            description: cfg.description || (versionNode ? versionNode.remark : null),
+            changeProcess: cfg.changeProcess || null,
+            description: cfg.description || null,
             potentialUsers: cfg.potentialUsers || null
         };
         return { type, detail, color, borderColor, textColor, full };
@@ -749,14 +745,11 @@ class DatasetHistory extends HTMLElement {
         const f = d.operationFull || {};
         const html = [];
         html.push(`<div class="field"><b>${this.escape(d.operationType || '操作')}</b></div>`);
-        if (d.operationDetail) html.push(`<div class="field"><span class="field-label">名称:</span> ${this.escape(d.operationDetail)}</div>`);
-        if (f.operator) html.push(`<div class="field"><span class="field-label">操作人:</span> ${this.escape(f.operator)}</div>`);
-        if (f.operateTime) html.push(`<div class="field"><span class="field-label">操作时间:</span> ${this.escape(f.operateTime)}</div>`);
-        if (f.operateIp) html.push(`<div class="field"><span class="field-label">客户端IP:</span> ${this.escape(f.operateIp)}</div>`);
-        if (f.remark) html.push(`<div class="field"><span class="field-label">备注:</span> ${this.escape(f.remark)}</div>`);
+        // 操作节点只显示操作相关的元数据（来自 derivationConfig）
         if (f.changeProcess) html.push(`<div class="field"><span class="field-label">变化过程:</span> ${this.escape(f.changeProcess)}</div>`);
         if (f.description) html.push(`<div class="field"><span class="field-label">背景信息:</span> ${this.escape(f.description)}</div>`);
         if (f.potentialUsers) html.push(`<div class="field"><span class="field-label">潜在用户:</span> ${this.escape(typeof f.potentialUsers === 'string' ? f.potentialUsers : JSON.stringify(f.potentialUsers))}</div>`);
+        // 操作实体详情
         if (f.sqlSnippet) html.push(this.formatSqlSnippetHtml(f.sqlSnippet));
         if (f.udfFunction) html.push(`<div class="field"><span class="field-label">UDF函数:</span> ${this.escape(typeof f.udfFunction === 'string' ? f.udfFunction : JSON.stringify(f.udfFunction))}</div>`);
         if (f.transformCompare) html.push(this.formatTransformCompareHtml(f.transformCompare));
@@ -814,7 +807,8 @@ class DatasetHistory extends HTMLElement {
                 const typeLabel = t.taskType === 0 ? 'IGinX' : (t.taskType === 1 ? 'Python' : '未知');
                 const flowLabel = t.dataFlowType === 0 ? 'batch' : (t.dataFlowType === 1 ? 'stream' : '-');
                 let detail = '';
-                if (t.sqlSnippetId) detail = `SQL脚本#${t.sqlSnippetId}`;
+                if (t.sqlSnippetName) detail = `SQL脚本: ${t.sqlSnippetName}`;
+                else if (t.sqlSnippetId) detail = `SQL脚本#${t.sqlSnippetId}`;
                 else if (t.dataset) detail = t.dataset;
                 else if (t.pyTaskName) detail = t.pyTaskName;
                 parts.push(`<pre>-- 任务 ${i + 1}: ${typeLabel} / ${flowLabel} / 超时${t.timeout || '-'}ms\n${this.escape(detail)}</pre>`);

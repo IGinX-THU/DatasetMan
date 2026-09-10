@@ -136,17 +136,27 @@ public class DataTableService {
      * @return 导入结果
      */
     public Long importCsvFile(Path csvFilePath, String targetPath, String uploadedFileName, String owner) throws Exception {
+        return importCsvFile(csvFilePath, targetPath, uploadedFileName, owner, null);
+    }
+
+    /**
+     * 公用CSV导入方法（支持指定 key 列）
+     * @param keyColumn CSV 中作为 key 的列名，null 表示使用 CSV 第一列或自动生成
+     */
+    public Long importCsvFile(Path csvFilePath, String targetPath, String uploadedFileName, String owner, String keyColumn) throws Exception {
 
         // 1. 解析命令并获取服务端准备的状态/路径（如果需要）
-        // 根据源码，此处可能会返回一个服务端期望的路径，但uploadFileChunk似乎更直接。
-        // 实际流程可能需要先调用一个接口获取上传令牌或路径。这里假设直接上传。
-        log.info("开始导入csv文件，csvFilePath：{}, targetPath:{}, uploadedFileName:{}", csvFilePath, targetPath, uploadedFileName);
+        log.info("开始导入csv文件，csvFilePath：{}, targetPath:{}, uploadedFileName:{}, keyColumn:{}", csvFilePath, targetPath, uploadedFileName, keyColumn);
 
         // 2. 构建LOAD DATA SQL语句
-        // 注意：此处的路径是一个“约定”或“任务标识”，最终文件通过uploadFileChunk上传
-        String sql = String.format("LOAD DATA FROM INFILE '%s' AS CSV INTO %s;",
-                uploadedFileName, // 使用一个约定的文件名
-                targetPath);
+        String sql;
+        if (keyColumn != null && !keyColumn.trim().isEmpty()) {
+            sql = String.format("LOAD DATA FROM INFILE '%s' AS CSV INTO %s set key '%s';",
+                    uploadedFileName, targetPath, keyColumn.trim());
+        } else {
+            sql = String.format("LOAD DATA FROM INFILE '%s' AS CSV INTO %s;",
+                    uploadedFileName, targetPath);
+        }
 
         // 3. 分块读取临时文件并上传
         try (RandomAccessFile raf = new RandomAccessFile(csvFilePath.toFile(), "r")) {

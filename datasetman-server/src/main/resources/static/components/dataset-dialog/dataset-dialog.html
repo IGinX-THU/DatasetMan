@@ -33,17 +33,50 @@
 
         <!-- 步骤2：选择资源与信息 -->
         <div class="step-panel" id="step2Panel">
-            <!-- 新建模式：选数据源 -->
+            <!-- 新建模式：选数据源 / 导入数据 -->
             <div class="form-section" id="newModeSection" style="display:none;">
-                <div class="section-title">选取数据源</div>
-                <div class="form-group">
-                    <label class="required">选取已注册数据源</label>
-                    <select class="form-control" id="sourcePath">
-                        <option value="">请选择数据源...</option>
-                    </select>
-                    <div class="hint">如需接入新引擎，请通过顶部菜单「数据源 → <a href="#" class="hint-link" id="link-register-source">注册异构数据源</a>」完成接入。</div>
-                    <div class="storage-path-box" id="sourcePathBox" style="display:none;">
-                        <span class="label">存储路径：</span><span class="value" id="sourcePathValue"></span>
+                <div class="section-title">选取数据来源</div>
+                <div class="type-cards" id="typeCardsNew">
+                    <div class="type-card active" data-type="SOURCE">
+                        <strong>数据源挂载</strong>
+                        <span>从已注册的异构数据源直接挂载，不复制数据。适用于直接引用外部数据源的场景。</span>
+                    </div>
+                    <div class="type-card" data-type="IMPORT">
+                        <strong>导入数据</strong>
+                        <span>上传 CSV 文件，导入到 IginX 并物化为新数据集。适用于将本地文件数据纳入管理的场景。</span>
+                    </div>
+                </div>
+                <div class="type-panel active" id="panel-new-SOURCE">
+                    <div class="form-group">
+                        <label class="required">选取已注册数据源</label>
+                        <select class="form-control" id="sourcePath">
+                            <option value="">请选择数据源...</option>
+                        </select>
+                        <div class="hint">如需接入新引擎，请通过顶部菜单「数据源 → <a href="#" class="hint-link" id="link-register-source">注册异构数据源</a>」完成接入。</div>
+                        <div class="field-error" id="sourcePathError"></div>
+                        <div class="storage-path-box" id="sourcePathBox" style="display:none;">
+                            <span class="label">存储路径：</span><span class="value" id="sourcePathValue"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="type-panel" id="panel-new-IMPORT">
+                    <div class="form-group">
+                        <label class="required">上传 CSV 文件</label>
+                        <div class="file-upload-wrapper">
+                            <label class="file-upload-label" id="importFileLabel" for="importFile">
+                                <div style="font-size: 48px; margin-bottom: 12px;">📁</div>
+                                <div style="font-weight: 500; margin-bottom: 8px;">点击选择 CSV 文件或拖拽文件到此处</div>
+                                <div class="hint">要求第一列必须是 KEY（long 类型），没有可手动指定列名作为 key，不指定则从 0 开始自动生成。</div>
+                                <input type="file" class="file-input" id="importFile" accept=".csv">
+                            </label>
+                        </div>
+                        <div class="error-message" id="importFileError" style="display:none;color:#dc2626;font-size:12px;margin-top:6px;"></div>
+                        <div class="field-error" id="importFileFieldError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>指定 Key 列（可选）</label>
+                        <input type="text" class="form-control" id="importKeyColumn" placeholder="从 CSV 中选出列名作为 key 列，留空则自动从 0 开始生成">
+                        <div class="hint">如果 CSV 没有 key 列，可指定一个 long 类型列作为 key。</div>
                     </div>
                 </div>
             </div>
@@ -56,6 +89,7 @@
                     <select class="form-control" id="upstreamVersion">
                         <option value="">请选择父级版本...</option>
                     </select>
+                    <div class="field-error" id="upstreamVersionError"></div>
                 </div>
                 <div class="type-cards" id="typeCardsExisting">
                     <div class="type-card" data-type="SQL_QUERY">
@@ -74,6 +108,7 @@
                             <option value="">请选择 SQL 脚本...</option>
                         </select>
                         <div class="hint">脚本在「<a href="#" class="hint-link" id="link-sql-snippet">SQL脚本管理</a>」菜单中编排与上传，此处仅选取引用。</div>
+                        <div class="field-error" id="sqlSnippetError"></div>
                     </div>
                     <div class="sql-preview-area" id="sqlPreviewArea" style="display:none;">
                         <div class="sql-preview-header">
@@ -89,6 +124,7 @@
                             <option value="">请选择 Transform 作业...</option>
                         </select>
                         <div class="hint">作业在「<a href="#" class="hint-link" id="link-transform-compare">Transform编排</a>」菜单中编排，提交创建时将自动执行并物化输出。</div>
+                        <div class="field-error" id="transformJobError"></div>
                     </div>
                 </div>
             </div>
@@ -100,6 +136,7 @@
                     <div class="form-group">
                         <label class="required">数据集名称</label>
                         <input type="text" class="form-control" id="datasetName" placeholder="例如：vehicle_speed_stats" maxlength="50">
+                        <div class="field-error" id="datasetNameError"></div>
                     </div>
                     <div class="form-group">
                         <label class="required">数据类型</label>

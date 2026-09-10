@@ -15,6 +15,11 @@ public class DatasetCreateRequest {
     // 1. SOURCE 对应参数
     private String sourcePath;
 
+    // 1b. IMPORT 对应参数（CSV 文件上传）
+    private String importFileName;  // 上传后的文件名
+    private String importFileBase64; // Base64 编码的文件内容
+    private String importKeyColumn;  // 指定 CSV 中的 key 列名（可选）
+
     // 2. SQL_QUERY 对应参数
     private Long sqlSnippetId;
     private List<Long> upstreamVersionIds;

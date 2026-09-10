@@ -6,6 +6,8 @@ package com.tsinghua.enums;
 public enum ProvenanceType {
     /** 直接挂载已注册数据源（不复制数据，storagePath 指向源库前缀） */
     SOURCE("数据源挂载", "source"),
+    /** 导入 CSV 等文件数据到 IginX，物化为新数据集 */
+    IMPORT("导入数据", "import"),
     /** 选取 SQL 脚本或直接执行 SQL 语句（可包含 UDF 转换）物化为新数据集 */
     SQL_QUERY("SQL查询/转换", "sql"),
     /** Transform 作业产出后物化 */

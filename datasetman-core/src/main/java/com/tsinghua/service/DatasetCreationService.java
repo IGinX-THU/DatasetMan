@@ -6,6 +6,7 @@ import cn.edu.tsinghua.iginx.session_v2.IginXClient;
 import cn.edu.tsinghua.iginx.session_v2.write.Point;
 import com.tsinghua.dto.DatasetCreateRequest;
 import com.tsinghua.dto.DatasetVersionRegisterRequest;
+import com.tsinghua.dto.DataImportRequest;
 import com.tsinghua.entity.DataArchiveEntity;
 import com.tsinghua.entity.DatasetVersionEntity;
 import com.tsinghua.entity.SqlSnippetEntity;
@@ -20,6 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @Service
 public class DatasetCreationService {
@@ -45,6 +48,9 @@ public class DatasetCreationService {
     @Autowired
     private DataArchiveService dataArchiveService;
 
+    @Autowired
+    private DataTableService dataTableService;
+
     public DatasetVersionEntity create(DatasetCreateRequest request) throws Exception {
         ProvenanceType type = ProvenanceType.of(request.getProvenanceType());
         DatasetVersionRegisterRequest registration = new DatasetVersionRegisterRequest();
@@ -67,6 +73,29 @@ public class DatasetCreationService {
             DataArchiveEntity archive = dataArchiveService.findByName(request.getSourcePath());
             if (archive != null) {
                 config.put("dataArchive", com.alibaba.fastjson2.JSONObject.from(archive));
+            }
+        } else if (type == ProvenanceType.IMPORT) {
+            // 导入 CSV 文件数据为数据集
+            if (!StringUtils.hasText(request.getImportFileBase64())) {
+                throw new IllegalArgumentException("请上传导入文件");
+            }
+            storagePath = nextStoragePath(request.getDatasetName());
+            // 解码 Base64 文件内容，写入临时文件，调用 DataTableService.importCsvFile
+            byte[] fileBytes = Base64.getDecoder().decode(request.getImportFileBase64());
+            Path tempFile = Files.createTempFile("dataset_import_", ".csv");
+            try {
+                Files.write(tempFile, fileBytes);
+                String uploadedFileName = System.currentTimeMillis() + ".csv";
+                Long rowCount = dataTableService.importCsvFile(tempFile, storagePath, uploadedFileName,
+                        com.tsinghua.auth.util.AuthUtil.getCurrentUsername(), request.getImportKeyColumn());
+                registration.setRowCount(rowCount);
+                config.put("importFileName", request.getImportFileName() != null ? request.getImportFileName() : uploadedFileName);
+                config.put("importRowCount", rowCount);
+                if (request.getImportKeyColumn() != null && !request.getImportKeyColumn().trim().isEmpty()) {
+                    config.put("importKeyColumn", request.getImportKeyColumn());
+                }
+            } finally {
+                Files.deleteIfExists(tempFile);
             }
         } else if (type == ProvenanceType.SQL_QUERY) {
             if (request.getSqlSnippetId() == null) {

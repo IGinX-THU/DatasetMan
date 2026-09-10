@@ -69,6 +69,19 @@ class DatasetDialog extends HTMLElement {
             });
         });
 
+        // 步骤2：新建模式数据来源卡片（SOURCE / IMPORT）
+        this.shadowRoot.querySelectorAll('#typeCardsNew .type-card').forEach(card => {
+            card.addEventListener('click', () => {
+                this.shadowRoot.querySelectorAll('#typeCardsNew .type-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                this.selectedType = card.dataset.type;
+                this.shadowRoot.querySelectorAll('#newModeSection .type-panel').forEach(p => p.classList.remove('active'));
+                const panel = this.shadowRoot.querySelector(`#panel-new-${this.selectedType}`);
+                if (panel) panel.classList.add('active');
+                this.updateConfirmPreview();
+            });
+        });
+
         // 数据源选取后同步数据类型
         $('sourcePath')?.addEventListener('change', (e) => {
             const selected = e.target.selectedOptions[0];
@@ -108,6 +121,10 @@ class DatasetDialog extends HTMLElement {
             }
         });
 
+        // 导入文件选择 & 拖拽
+        $('importFile')?.addEventListener('change', (e) => this.handleImportFileSelect(e));
+        this.setupImportDragDrop();
+
         // 数据集名称输入后刷新预览
         $('datasetName')?.addEventListener('input', () => this.updateConfirmPreview());
 
@@ -139,6 +156,16 @@ class DatasetDialog extends HTMLElement {
         this.upstreamVersionId = null;
         this.upstreamDatasetId = null;
         this.hideSqlPreview();
+        // 重置导入文件上传区域
+        this.resetImportFileArea();
+        // 重置新建模式卡片为 SOURCE
+        const newCards = this.shadowRoot.querySelectorAll('#typeCardsNew .type-card');
+        newCards.forEach(c => c.classList.remove('active'));
+        const sourceCard = this.shadowRoot.querySelector('#typeCardsNew .type-card[data-type="SOURCE"]');
+        if (sourceCard) sourceCard.classList.add('active');
+        this.shadowRoot.querySelectorAll('#newModeSection .type-panel').forEach(p => p.classList.remove('active'));
+        const sourcePanel = this.shadowRoot.querySelector('#panel-new-SOURCE');
+        if (sourcePanel) sourcePanel.classList.add('active');
 
         // 加载选项数据后填充下拉
         this.loadOptions().then(() => {
@@ -280,7 +307,10 @@ class DatasetDialog extends HTMLElement {
             const $ = (id) => this.shadowRoot.getElementById(id);
             const nameInput = $('datasetName');
             if (this.createMode === 'new') {
-                this.selectedType = 'SOURCE';
+                // 新建模式：默认选 SOURCE，显示新建模式卡片
+                const sourceCard = this.shadowRoot.querySelector('#typeCardsNew .type-card[data-type="SOURCE"]');
+                if (sourceCard) sourceCard.click();
+                else this.selectedType = 'SOURCE';
                 $('newModeSection').style.display = 'block';
                 $('existingModeSection').style.display = 'none';
                 // 新建模式：名称可编辑，清空父级选择
@@ -292,7 +322,7 @@ class DatasetDialog extends HTMLElement {
                 $('existingModeSection').style.display = 'block';
                 // 已有版本模式：名称由父级版本选择决定，先清空禁用
                 if (nameInput) { nameInput.disabled = true; nameInput.value = ''; }
-                if (!this.selectedType) {
+                if (!this.selectedType || this.selectedType === 'SOURCE' || this.selectedType === 'IMPORT') {
                     const sqlCard = this.shadowRoot.querySelector('#typeCardsExisting .type-card[data-type="SQL_QUERY"]');
                     if (sqlCard) sqlCard.click();
                 }
@@ -312,23 +342,31 @@ class DatasetDialog extends HTMLElement {
     validateStep2() {
         const $ = (id) => this.shadowRoot.getElementById(id);
         const datasetName = $('datasetName').value.trim();
-        if (!datasetName) return this.fail('请输入数据集名称');
+        if (!datasetName) return this.fail('请输入数据集名称', 'datasetNameError');
         if (this.createMode === 'new') {
-            const sourcePath = $('sourcePath').value;
-            if (!sourcePath) return this.fail('请选择数据源');
+            // 新建模式：SOURCE 或 IMPORT
+            if (this.selectedType === 'SOURCE') {
+                const sourcePath = $('sourcePath').value;
+                if (!sourcePath) return this.fail('请选择数据源', 'sourcePathError');
+            } else if (this.selectedType === 'IMPORT') {
+                const importFile = $('importFile');
+                if (!importFile || !importFile.files || !importFile.files.length) {
+                    return this.fail('请上传 CSV 文件', 'importFileFieldError');
+                }
+            }
             // 新建数据集时校验名称不能与已有数据集重名
             const exists = (this.options.datasets || []).some(d => d.datasetName === datasetName);
-            if (exists) return this.fail('数据集名称已存在，请更换名称或选择"基于已有版本创建新版本"');
+            if (exists) return this.fail('数据集名称已存在，请更换名称或选择"基于已有版本创建新版本"', 'datasetNameError');
         } else {
             const upstream = $('upstreamVersion').value;
-            if (!upstream && !this.upstreamVersionId) return this.fail('请选择父级数据集版本');
+            if (!upstream && !this.upstreamVersionId) return this.fail('请选择父级数据集版本', 'upstreamVersionError');
             if (!this.selectedType) return this.fail('请选择产出方式');
             if (this.selectedType === 'SQL_QUERY') {
                 const snippetId = $('sqlSnippet').value;
-                if (!snippetId) return this.fail('请选择 SQL 脚本');
+                if (!snippetId) return this.fail('请选择 SQL 脚本', 'sqlSnippetError');
             } else if (this.selectedType === 'TRANSFORM') {
                 const createTime = $('transformJob').value;
-                if (!createTime) return this.fail('请选择 Transform 作业');
+                if (!createTime) return this.fail('请选择 Transform 作业', 'transformJobError');
             }
         }
         return true;
@@ -343,6 +381,89 @@ class DatasetDialog extends HTMLElement {
             if (box) box.style.display = 'block';
         } else {
             if (box) box.style.display = 'none';
+        }
+    }
+
+    /** 导入文件拖拽上传 */
+    setupImportDragDrop() {
+        const label = this.shadowRoot.getElementById('importFileLabel');
+        if (!label) return;
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
+            label.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+        });
+        ['dragenter', 'dragover'].forEach(ev => {
+            label.addEventListener(ev, () => label.classList.add('dragover'), false);
+        });
+        ['dragleave', 'drop'].forEach(ev => {
+            label.addEventListener(ev, () => label.classList.remove('dragover'), false);
+        });
+        label.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const fileInput = this.shadowRoot.getElementById('importFile');
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(files[0]);
+                fileInput.files = dataTransfer.files;
+                this.handleImportFileSelect({ target: { files: [files[0]] } });
+            }
+        }, false);
+    }
+
+    /** 导入文件选择处理：校验格式和大小，更新上传区域显示 */
+    handleImportFileSelect(event) {
+        const file = event.target.files && event.target.files[0];
+        const errorEl = this.shadowRoot.getElementById('importFileError');
+        const label = this.shadowRoot.getElementById('importFileLabel');
+        if (!file) return;
+        if (errorEl) errorEl.style.display = 'none';
+        // 校验格式
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            if (errorEl) { errorEl.textContent = '仅支持 CSV 格式文件'; errorEl.style.display = 'block'; }
+            return;
+        }
+        // 校验大小（1GB）
+        if (file.size > 1024 * 1024 * 1024) {
+            if (errorEl) { errorEl.textContent = '文件大小不能超过 1GB'; errorEl.style.display = 'block'; }
+            return;
+        }
+        // 更新上传区域显示
+        if (label) {
+            const existingInput = label.querySelector('.file-input');
+            label.innerHTML = `
+                <div style="font-size: 48px; margin-bottom: 12px;">📄</div>
+                <div style="font-weight: 500; margin-bottom: 8px;">已选择文件: ${this.escape(file.name)}</div>
+                <div class="hint">文件大小: ${this.formatFileSize(file.size)}，点击重新选择</div>
+            `;
+            if (existingInput) label.appendChild(existingInput);
+        }
+        this.updateConfirmPreview();
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    /** 重置导入文件上传区域 */
+    resetImportFileArea() {
+        const label = this.shadowRoot.getElementById('importFileLabel');
+        const errorEl = this.shadowRoot.getElementById('importFileError');
+        const fileInput = this.shadowRoot.getElementById('importFile');
+        const keyInput = this.shadowRoot.getElementById('importKeyColumn');
+        if (fileInput) fileInput.value = '';
+        if (keyInput) keyInput.value = '';
+        if (errorEl) errorEl.style.display = 'none';
+        if (label) {
+            const existingInput = label.querySelector('.file-input');
+            label.innerHTML = `
+                <div style="font-size: 48px; margin-bottom: 12px;">📁</div>
+                <div style="font-weight: 500; margin-bottom: 8px;">点击选择 CSV 文件或拖拽文件到此处</div>
+                <div class="hint">要求第一列必须是 KEY（long 类型），没有可手动指定列名作为 key，不指定则从 0 开始自动生成。</div>
+            `;
+            if (existingInput) label.appendChild(existingInput);
         }
     }
 
@@ -371,8 +492,10 @@ class DatasetDialog extends HTMLElement {
     }
 
     getStoragePathPreview() {
-        if (this.createMode === 'new' || this.selectedType === 'SOURCE') {
+        if (this.selectedType === 'SOURCE' && this.createMode === 'new') {
             return this.shadowRoot.getElementById('sourcePath').value || '<请选择数据源>';
+        } else if (this.selectedType === 'IMPORT') {
+            return this.previewSqlStoragePath();
         } else if (this.selectedType === 'SQL_QUERY') {
             return this.previewSqlStoragePath();
         } else if (this.selectedType === 'TRANSFORM') {
@@ -404,8 +527,14 @@ class DatasetDialog extends HTMLElement {
         let modeLabel, typeLabel, resourceLabel;
         if (this.createMode === 'new') {
             modeLabel = '新建数据集';
-            typeLabel = '数据源挂载 (SOURCE)';
-            resourceLabel = $('sourcePath').value || '-';
+            if (this.selectedType === 'IMPORT') {
+                typeLabel = '导入数据 (IMPORT)';
+                const importFile = $('importFile');
+                resourceLabel = (importFile && importFile.files && importFile.files.length) ? importFile.files[0].name : '<未选择>';
+            } else {
+                typeLabel = '数据源挂载 (SOURCE)';
+                resourceLabel = $('sourcePath').value || '-';
+            }
         } else {
             modeLabel = '基于已有版本创建新版本';
             const upstreamSelect = $('upstreamVersion');
@@ -436,34 +565,55 @@ class DatasetDialog extends HTMLElement {
     async handleSubmit() {
         this.hideError();
         const $ = (id) => this.shadowRoot.getElementById(id);
+        const submitBtn = $('submitBtn');
         const datasetName = $('datasetName').value.trim();
         const dataModality = $('dataModality').value;
         const remark = $('remark').value.trim();
-        if (!datasetName) return this.fail('请输入数据集名称');
+        if (!datasetName) return this.fail('请输入数据集名称', 'datasetNameError');
 
         const request = { datasetName, dataModality, remark, provenanceType: this.selectedType };
 
-        if (this.createMode === 'new' || this.selectedType === 'SOURCE') {
+        if (this.selectedType === 'SOURCE' && this.createMode === 'new') {
             request.provenanceType = 'SOURCE';
             const sourcePath = $('sourcePath').value;
-            if (!sourcePath) return this.fail('请选择数据源');
+            if (!sourcePath) return this.fail('请选择数据源', 'sourcePathError');
             request.sourcePath = sourcePath;
+        } else if (this.selectedType === 'IMPORT' && this.createMode === 'new') {
+            request.provenanceType = 'IMPORT';
+            const importFile = $('importFile');
+            if (!importFile || !importFile.files || !importFile.files.length) {
+                return this.fail('请上传 CSV 文件', 'importFileFieldError');
+            }
+            const file = importFile.files[0];
+            const keyColumn = $('importKeyColumn')?.value.trim() || '';
+            // 读取文件为 Base64
+            submitBtn.disabled = true;
+            submitBtn.textContent = '上传文件中...';
+            try {
+                const base64 = await this.readFileAsBase64(file);
+                request.importFileName = file.name;
+                request.importFileBase64 = base64;
+                if (keyColumn) request.importKeyColumn = keyColumn;
+            } catch (err) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '创建数据集';
+                return this.fail('文件读取失败: ' + err.message, 'importFileFieldError');
+            }
         } else {
             const upstream = this.upstreamVersionId || $('upstreamVersion').value;
-            if (!upstream) return this.fail('请选择父级数据集版本');
+            if (!upstream) return this.fail('请选择父级数据集版本', 'upstreamVersionError');
             request.upstreamVersionIds = [Number(upstream)];
             if (this.selectedType === 'SQL_QUERY') {
                 const snippetId = $('sqlSnippet').value;
-                if (!snippetId) return this.fail('请选择 SQL 脚本');
+                if (!snippetId) return this.fail('请选择 SQL 脚本', 'sqlSnippetError');
                 request.sqlSnippetId = Number(snippetId);
             } else if (this.selectedType === 'TRANSFORM') {
                 const createTime = $('transformJob').value;
-                if (!createTime) return this.fail('请选择 Transform 作业');
+                if (!createTime) return this.fail('请选择 Transform 作业', 'transformJobError');
                 request.transformCompareCreateTime = Number(createTime);
             }
         }
 
-        const submitBtn = $('submitBtn');
         submitBtn.disabled = true;
         submitBtn.textContent = '创建中...';
 
@@ -484,14 +634,45 @@ class DatasetDialog extends HTMLElement {
         }
     }
 
-    fail(msg) {
-        const errorBox = this.shadowRoot.getElementById('errorBox');
-        if (errorBox) { errorBox.textContent = msg; errorBox.style.display = 'block'; }
+    fail(msg, fieldId) {
+        // 优先在对应输入框下方显示内联错误
+        if (fieldId) {
+            const errEl = this.shadowRoot.getElementById(fieldId);
+            if (errEl) {
+                errEl.textContent = msg;
+                errEl.classList.add('show');
+                return;
+            }
+        }
+        // 无对应字段时使用全局 toast
+        if (window.CommonUtils && window.CommonUtils.showToast) {
+            window.CommonUtils.showToast(msg, 'error');
+        } else {
+            const errorBox = this.shadowRoot.getElementById('errorBox');
+            if (errorBox) { errorBox.textContent = msg; errorBox.style.display = 'block'; }
+        }
+    }
+
+    /** 读取文件为 Base64 字符串（去掉 data: 前缀） */
+    readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const result = reader.result;
+                // FileReader.readAsDataURL 返回 "data:...;base64,XXXX" 格式，去掉前缀
+                const base64 = String(result).split(',')[1] || '';
+                resolve(base64);
+            };
+            reader.onerror = () => reject(reader.error || new Error('读取失败'));
+            reader.readAsDataURL(file);
+        });
     }
 
     hideError() {
         const errorBox = this.shadowRoot.getElementById('errorBox');
         if (errorBox) errorBox.style.display = 'none';
+        // 清除所有内联字段错误
+        this.shadowRoot.querySelectorAll('.field-error').forEach(el => el.classList.remove('show'));
     }
 
     async loadSqlPreview(snippetId) {

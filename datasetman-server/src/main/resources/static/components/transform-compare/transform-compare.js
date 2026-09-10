@@ -1874,6 +1874,8 @@ class TransformCompare extends HTMLElement {
                     const sqlSnippetId = sqlSnippetSelect?.value;
                     if (sqlSnippetId) {
                         task.sqlSnippetId = parseInt(sqlSnippetId);
+                        const selectedOpt = sqlSnippetSelect.selectedOptions[0];
+                        if (selectedOpt) task.sqlSnippetName = selectedOpt.textContent.trim();
                     } else if (datasetSelect && versionSelect) {
                         // 兼容旧方式：通过数据集storagePath引用SQL（仅用于已保存的旧作业回显）
                         const dataset = datasetSelect?.value;
