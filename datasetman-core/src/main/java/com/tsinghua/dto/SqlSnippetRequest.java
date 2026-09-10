@@ -8,13 +8,13 @@ import javax.validation.constraints.NotEmpty;
 import java.util.List;
 
 /**
- * SQL片段创建/编辑请求
+ * SQL脚本创建/编辑请求
  */
 @Data
 public class SqlSnippetRequest {
 
-    @ApiModelProperty(value = "SQL片段名称", required = true)
-    @NotBlank(message = "SQL片段名称不能为空")
+    @ApiModelProperty(value = "SQL脚本名称", required = true)
+    @NotBlank(message = "SQL脚本名称不能为空")
     private String name;
 
     @ApiModelProperty(value = "SQL列表", required = true)

@@ -17,10 +17,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * SQL片段管理
+ * SQL脚本管理
  * 独立管理的可复用SQL列表资源，供transform编排和数据集版本生产引用。
  */
-@Api(tags = "SQL片段管理")
+@Api(tags = "SQL脚本管理")
 @Slf4j
 @RestController
 @RequestMapping("/api/sql-snippet")
@@ -29,36 +29,36 @@ public class SqlSnippetController {
     @Autowired
     private SqlSnippetService sqlSnippetService;
 
-    @ApiOperation("保存SQL片段（新建或编辑）")
+    @ApiOperation("保存SQL脚本（新建或编辑）")
     @PostMapping("/save")
     @RequirePermission(Permission.CREATE)
-    @OperationLog(value = "保存SQL片段", type = OperationLog.OperationType.CREATE)
+    @OperationLog(value = "保存SQL脚本", type = OperationLog.OperationType.CREATE)
     public Result<SqlSnippetEntity> saveSnippet(@Validated @RequestBody SqlSnippetRequest request) {
         return Result.success(sqlSnippetService.saveSnippet(request));
     }
 
-    @ApiOperation("SQL片段列表（支持名称模糊查询）")
+    @ApiOperation("SQL脚本列表（支持名称模糊查询）")
     @GetMapping("/list")
     @RequirePermission(Permission.READ)
-    @OperationLog(value = "查询SQL片段列表", type = OperationLog.OperationType.QUERY, recordResult = false)
+    @OperationLog(value = "查询SQL脚本列表", type = OperationLog.OperationType.QUERY, recordResult = false)
     public Result<List<SqlSnippetEntity>> listSnippets(
             @RequestParam(value = "name", required = false) String name) {
         return Result.success(sqlSnippetService.listSnippets(name));
     }
 
-    @ApiOperation("SQL片段详情")
+    @ApiOperation("SQL脚本详情")
     @GetMapping("/metas")
     @RequirePermission(Permission.READ)
-    @OperationLog(value = "查询SQL片段详情", type = OperationLog.OperationType.QUERY, recordResult = false)
+    @OperationLog(value = "查询SQL脚本详情", type = OperationLog.OperationType.QUERY, recordResult = false)
     public Result<SqlSnippetEntity> queryById(@RequestParam("id") Long id) {
         SqlSnippetEntity entity = sqlSnippetService.queryById(id);
         return Result.success(entity);
     }
 
-    @ApiOperation("删除SQL片段")
+    @ApiOperation("删除SQL脚本")
     @DeleteMapping("/delete")
     @RequirePermission(Permission.DELETE)
-    @OperationLog(value = "删除SQL片段", type = OperationLog.OperationType.DELETE)
+    @OperationLog(value = "删除SQL脚本", type = OperationLog.OperationType.DELETE)
     public Result<Void> deleteSnippet(@RequestParam("id") Long id) {
         sqlSnippetService.deleteSnippet(id);
         return Result.success("删除成功");

@@ -50,6 +50,54 @@ class DatasetHistory extends HTMLElement {
                 .node { cursor:pointer; } .node circle { stroke:#fff; stroke-width:3; } .node.focus circle { stroke:#111827; stroke-width:4; }
                 .node text { font-size:11px; fill:#374151; text-anchor:middle; }
                 .empty { padding:40px; color:#9ca3af; text-align:center; }
+
+                /* 血缘图谱节点详情弹窗 */
+                .lineage-popup-mask {
+                    display:none; position:fixed; inset:0; background:rgba(15,23,42,0.35);
+                    z-index:3000; align-items:center; justify-content:center;
+                }
+                .lineage-popup-mask.show { display:flex; }
+                .lineage-popup {
+                    background:#fff; border-radius:8px; width:520px; max-width:90vw; max-height:80vh;
+                    overflow:hidden; box-shadow:0 12px 32px rgba(15,23,42,0.2);
+                    display:flex; flex-direction:column;
+                }
+                .lineage-popup-header {
+                    display:flex; justify-content:space-between; align-items:center;
+                    padding:12px 16px; border-bottom:1px solid #e5e7eb; background:#f8fafc;
+                }
+                .lineage-popup-title { font-size:14px; font-weight:600; color:#1f2937; }
+                .lineage-popup-close {
+                    border:none; background:transparent; font-size:18px; cursor:pointer;
+                    color:#6b7280; width:28px; height:28px; display:flex; align-items:center;
+                    justify-content:center; border-radius:4px;
+                }
+                .lineage-popup-close:hover { background:#f3f4f6; color:#374151; }
+                .lineage-popup-body {
+                    padding:16px; overflow-y:auto; font-size:13px; line-height:1.8; color:#374151;
+                    user-select:text; -webkit-user-select:text; cursor:text;
+                }
+                .lineage-popup-body .field { margin-bottom:6px; }
+                .lineage-popup-body .field-label { color:#6b7280; font-size:12px; margin-right:4px; }
+                .lineage-popup-body pre {
+                    margin:4px 0; padding:10px; background:#1e293b; color:#e2e8f0;
+                    border-radius:5px; white-space:pre-wrap; word-break:break-all;
+                    font-size:12px; font-family:'Consolas','Monaco',monospace;
+                    max-height:200px; overflow:auto; user-select:text; -webkit-user-select:text;
+                }
+                .lineage-popup-footer {
+                    display:flex; justify-content:flex-end; gap:8px;
+                    padding:10px 16px; border-top:1px solid #e5e7eb; background:#f8fafc;
+                }
+                .lineage-popup-btn {
+                    padding:6px 16px; border-radius:5px; cursor:pointer; font-size:13px;
+                    border:1px solid #d1d5db; background:#fff; color:#374151;
+                }
+                .lineage-popup-btn:hover { border-color:#2563eb; color:#2563eb; }
+                .lineage-popup-btn.copy {
+                    border-color:#2563eb; color:#2563eb;
+                }
+                .lineage-popup-btn.copy:hover { background:#2563eb; color:#fff; }
             </style>
             <div class="page">
                 <div class="card">
@@ -73,6 +121,21 @@ class DatasetHistory extends HTMLElement {
                     <div class="header"><h3>血缘图谱</h3></div>
                     <div class="toolbar"><label class="switch"><input type="checkbox" id="sideLineage" checked> 显示旁系血缘</label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button></div>
                     <div class="graph" id="graph"></div>
+                </div>
+            </div>
+
+            <!-- 血缘图谱节点详情弹窗 -->
+            <div class="lineage-popup-mask" id="lineagePopupMask">
+                <div class="lineage-popup" id="lineagePopup">
+                    <div class="lineage-popup-header">
+                        <span class="lineage-popup-title" id="lineagePopupTitle">节点详情</span>
+                        <button class="lineage-popup-close" id="lineagePopupClose">&times;</button>
+                    </div>
+                    <div class="lineage-popup-body" id="lineagePopupBody"></div>
+                    <div class="lineage-popup-footer">
+                        <button class="lineage-popup-btn copy" id="lineagePopupCopy">复制全部</button>
+                        <button class="lineage-popup-btn" id="lineagePopupCloseBtn">关闭</button>
+                    </div>
                 </div>
             </div>
         `;
@@ -355,20 +418,7 @@ class DatasetHistory extends HTMLElement {
         const chart = window.echarts.init(container);
         const option = {
             tooltip: {
-                trigger: 'item',
-                enterable: true,
-                confine: true,
-                formatter: (params) => {
-                    if (params.dataType === 'node') {
-                        const d = params.data;
-                        if (d.nodeType === 'version') {
-                            return this.versionTooltip(d.versionData);
-                        } else if (d.nodeType === 'operation') {
-                            return this.operationTooltip(d);
-                        }
-                    }
-                    return this.escape(params.name);
-                }
+                show: false
             },
             series: [{
                 type: 'graph',
@@ -405,12 +455,17 @@ class DatasetHistory extends HTMLElement {
         };
         chart.setOption(option);
 
-        // 点击版本节点 -> 高亮对应行
+        // 点击节点 -> 弹出详情弹窗（版本节点同时高亮对应行）
         chart.on('click', (params) => {
-            if (params.dataType === 'node' && params.data.nodeType === 'version') {
-                const v = params.data.versionData;
+            if (params.dataType !== 'node') return;
+            const d = params.data;
+            if (d.nodeType === 'version') {
+                const v = d.versionData;
                 const vid = v.versionId || v.createTime;
                 this.highlight(vid);
+                this.showLineagePopup('版本详情', this.versionPopupContent(v));
+            } else if (d.nodeType === 'operation') {
+                this.showLineagePopup('操作详情', this.operationPopupContent(d));
             }
         });
 
@@ -442,7 +497,7 @@ class DatasetHistory extends HTMLElement {
             if (sql && typeof sql === 'object') {
                 detail = sql.name || sql.scriptName || '';
             } else if (typeof sql === 'string') {
-                detail = 'SQL片段';
+                detail = 'SQL脚本';
             }
             if (udf) {
                 type = 'SQL+UDF';
@@ -519,6 +574,158 @@ class DatasetHistory extends HTMLElement {
         if (f.transformCompare) rows.push(`Transform配置: <pre style="margin:4px 0;max-width:380px;white-space:pre-wrap">${this.escape(typeof f.transformCompare === 'string' ? f.transformCompare : JSON.stringify(f.transformCompare, null, 2))}</pre>`);
         if (f.dataArchive) rows.push(`数据归档: ${this.escape(typeof f.dataArchive === 'string' ? f.dataArchive : JSON.stringify(f.dataArchive))}`);
         return rows.join('<br/>');
+    }
+
+    /** 版本节点弹窗内容：只显示数据集版本本身的元数据，不显示生成过程（SQL/Transform等由操作节点展示） */
+    versionPopupContent(v) {
+        if (!v) return '<div class="field">无数据</div>';
+        const html = [];
+        html.push(`<div class="field"><span class="field-label">数据集 / 版本:</span> <b>${this.escape(v.datasetName)} / ${this.escape(v.versionNo)}</b></div>`);
+        html.push(`<div class="field"><span class="field-label">产出方式:</span> ${this.escape(v.provenanceLabel || v.provenanceType)}</div>`);
+        html.push(`<div class="field"><span class="field-label">存储路径:</span> <code>${this.escape(v.storagePath || '-')}</code></div>`);
+        html.push(`<div class="field"><span class="field-label">操作人:</span> ${this.escape(v.operator || '-')}</div>`);
+        html.push(`<div class="field"><span class="field-label">操作时间:</span> ${this.formatTime(v.createTime)}</div>`);
+        html.push(`<div class="field"><span class="field-label">客户端IP:</span> ${this.escape(v.clientIp || '-')}</div>`);
+        html.push(`<div class="field"><span class="field-label">状态:</span> ${v.deleted ? '<span style="color:#dc2626">已删除</span>' : '<span style="color:#16a34a">正常</span>'}</div>`);
+        if (v.remark) html.push(`<div class="field"><span class="field-label">备注:</span> ${this.escape(v.remark)}</div>`);
+        return html.join('');
+    }
+
+    /** 操作节点弹窗内容（结构化、可复制） */
+    operationPopupContent(d) {
+        const f = d.operationFull || {};
+        const html = [];
+        html.push(`<div class="field"><b>${this.escape(d.operationType || '操作')}</b></div>`);
+        if (d.operationDetail) html.push(`<div class="field"><span class="field-label">名称:</span> ${this.escape(d.operationDetail)}</div>`);
+        if (f.operator) html.push(`<div class="field"><span class="field-label">操作人:</span> ${this.escape(f.operator)}</div>`);
+        if (f.operateTime) html.push(`<div class="field"><span class="field-label">操作时间:</span> ${this.escape(f.operateTime)}</div>`);
+        if (f.operateIp) html.push(`<div class="field"><span class="field-label">客户端IP:</span> ${this.escape(f.operateIp)}</div>`);
+        if (f.remark) html.push(`<div class="field"><span class="field-label">备注:</span> ${this.escape(f.remark)}</div>`);
+        if (f.changeProcess) html.push(`<div class="field"><span class="field-label">变化过程:</span> ${this.escape(f.changeProcess)}</div>`);
+        if (f.description) html.push(`<div class="field"><span class="field-label">背景信息:</span> ${this.escape(f.description)}</div>`);
+        if (f.potentialUsers) html.push(`<div class="field"><span class="field-label">潜在用户:</span> ${this.escape(typeof f.potentialUsers === 'string' ? f.potentialUsers : JSON.stringify(f.potentialUsers))}</div>`);
+        if (f.sqlSnippet) html.push(this.formatSqlSnippetHtml(f.sqlSnippet));
+        if (f.udfFunction) html.push(`<div class="field"><span class="field-label">UDF函数:</span> ${this.escape(typeof f.udfFunction === 'string' ? f.udfFunction : JSON.stringify(f.udfFunction))}</div>`);
+        if (f.transformCompare) html.push(this.formatTransformCompareHtml(f.transformCompare));
+        if (f.dataArchive) html.push(`<div class="field"><span class="field-label">数据归档:</span> ${this.escape(typeof f.dataArchive === 'string' ? f.dataArchive : JSON.stringify(f.dataArchive))}</div>`);
+        return html.join('');
+    }
+
+    /** 格式化SQL脚本为可读HTML：显示名称、描述，解析sqlList逐条展示SQL语句 */
+    formatSqlSnippetHtml(sql) {
+        if (!sql) return '';
+        const parts = [];
+        if (typeof sql === 'string') {
+            parts.push(`<div class="field"><span class="field-label">SQL脚本:</span></div><pre>${this.escape(sql)}</pre>`);
+            return parts.join('');
+        }
+        // 对象：提取 name / description / sqlList
+        if (sql.name) parts.push(`<div class="field"><span class="field-label">SQL脚本名称:</span> ${this.escape(sql.name)}</div>`);
+        if (sql.description) parts.push(`<div class="field"><span class="field-label">描述:</span> ${this.escape(sql.description)}</div>`);
+        let sqlList = [];
+        try {
+            sqlList = typeof sql.sqlList === 'string' ? JSON.parse(sql.sqlList) : (Array.isArray(sql.sqlList) ? sql.sqlList : []);
+        } catch (e) {
+            sqlList = [];
+        }
+        if (sqlList.length > 0) {
+            parts.push(`<div class="field"><span class="field-label">SQL语句:</span></div>`);
+            sqlList.forEach(s => {
+                parts.push(`<pre>- ${this.escape(s)}</pre>`);
+            });
+        }
+        return parts.join('');
+    }
+
+    /** 格式化Transform作业为可读HTML：显示名称、任务列表等关键字段 */
+    formatTransformCompareHtml(cmp) {
+        if (!cmp) return '';
+        const parts = [];
+        if (typeof cmp === 'string') {
+            parts.push(`<div class="field"><span class="field-label">Transform作业:</span></div><pre>${this.escape(cmp)}</pre>`);
+            return parts.join('');
+        }
+        if (cmp.name) parts.push(`<div class="field"><span class="field-label">作业名称:</span> ${this.escape(cmp.name)}</div>`);
+        if (cmp.exportFile || cmp.exportFiletName) parts.push(`<div class="field"><span class="field-label">输出文件:</span> ${this.escape(cmp.exportFile || cmp.exportFiletName)}</div>`);
+        if (cmp.schedule) parts.push(`<div class="field"><span class="field-label">调度策略:</span> ${this.escape(cmp.schedule)}</div>`);
+        // 任务列表
+        let taskList = [];
+        try {
+            taskList = typeof cmp.taskList === 'string' ? JSON.parse(cmp.taskList) : (Array.isArray(cmp.taskList) ? cmp.taskList : []);
+        } catch (e) {
+            taskList = [];
+        }
+        if (taskList.length > 0) {
+            parts.push(`<div class="field"><span class="field-label">任务列表:</span></div>`);
+            taskList.forEach((t, i) => {
+                const typeLabel = t.taskType === 0 ? 'IGinX' : (t.taskType === 1 ? 'Python' : '未知');
+                const flowLabel = t.dataFlowType === 0 ? 'batch' : (t.dataFlowType === 1 ? 'stream' : '-');
+                let detail = '';
+                if (t.sqlSnippetId) detail = `SQL脚本#${t.sqlSnippetId}`;
+                else if (t.dataset) detail = t.dataset;
+                else if (t.pyTaskName) detail = t.pyTaskName;
+                parts.push(`<pre>-- 任务 ${i + 1}: ${typeLabel} / ${flowLabel} / 超时${t.timeout || '-'}ms\n${this.escape(detail)}</pre>`);
+            });
+        }
+        return parts.join('');
+    }
+
+    /** 显示血缘节点详情弹窗 */
+    showLineagePopup(title, contentHtml) {
+        const mask = this.shadowRoot.querySelector('#lineagePopupMask');
+        const popupTitle = this.shadowRoot.querySelector('#lineagePopupTitle');
+        const popupBody = this.shadowRoot.querySelector('#lineagePopupBody');
+        if (!mask || !popupBody) return;
+        popupTitle.textContent = title;
+        popupBody.innerHTML = contentHtml;
+        mask.classList.add('show');
+        // 绑定关闭和复制按钮（每次重新绑定）
+        const closeBtn = this.shadowRoot.querySelector('#lineagePopupClose');
+        const closeBtn2 = this.shadowRoot.querySelector('#lineagePopupCloseBtn');
+        const copyBtn = this.shadowRoot.querySelector('#lineagePopupCopy');
+        const popup = this.shadowRoot.querySelector('#lineagePopup');
+        const hide = () => mask.classList.remove('show');
+        if (closeBtn) closeBtn.onclick = hide;
+        if (closeBtn2) closeBtn2.onclick = hide;
+        // 点击遮罩关闭，但点击弹窗内容不关闭
+        mask.onclick = (e) => { if (e.target === mask) hide(); };
+        if (popup) popup.onclick = (e) => e.stopPropagation();
+        if (copyBtn) copyBtn.onclick = () => this.copyLineagePopup(popupBody);
+    }
+
+    /** 复制弹窗内容到剪贴板 */
+    copyLineagePopup(popupBody) {
+        if (!popupBody) return;
+        const text = popupBody.innerText;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.showToast('已复制到剪贴板');
+            }).catch(() => {
+                this.fallbackCopy(text);
+            });
+        } else {
+            this.fallbackCopy(text);
+        }
+    }
+
+    fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); this.showToast('已复制到剪贴板'); }
+        catch (e) { this.showToast('复制失败，请手动选择复制', 'error'); }
+        document.body.removeChild(ta);
+    }
+
+    showToast(msg, type = 'success') {
+        if (window.CommonUtils && window.CommonUtils.showToast) {
+            window.CommonUtils.showToast(msg, type);
+        } else {
+            console.log(`${type}: ${msg}`);
+        }
     }
 
     /** 聚焦当前版本节点：放大并居中 */

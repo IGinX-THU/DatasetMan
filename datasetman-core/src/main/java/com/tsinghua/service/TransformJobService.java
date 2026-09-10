@@ -10,13 +10,11 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tsinghua.auth.aspect.OperationLogAspect;
 import com.tsinghua.auth.util.AuthUtil;
-import com.tsinghua.dto.DatasetVersionRegisterRequest;
 import com.tsinghua.dto.TaskInfoBo;
 import com.tsinghua.dto.TaskInfoDto;
 import com.tsinghua.dto.TransformJobQueryRequest;
 import com.tsinghua.dto.request.FilesystemStorageRequest;
 import com.tsinghua.entity.DatasetEntity;
-import com.tsinghua.entity.DatasetVersionEntity;
 import com.tsinghua.entity.SqlSnippetEntity;
 import com.tsinghua.entity.TransformCompareEntity;
 import com.tsinghua.entity.TransformJobEntity;
@@ -59,9 +57,6 @@ public class TransformJobService {
 
     @Autowired
     private SqlSnippetService sqlSnippetService;
-
-    @Autowired
-    private DatasetVersionService datasetVersionService;
 
     @Value("${iginx.ip}")
     private String ip;
@@ -310,11 +305,11 @@ public class TransformJobService {
 
             if (taskType == TaskType.IGINX) {
                 List<String> sqlList;
-                // 优先使用sqlSnippetId引用SQL片段（新方式）
+                // 优先使用sqlSnippetId引用SQL脚本（新方式）
                 if (taskInfoDto.getSqlSnippetId() != null) {
                     SqlSnippetEntity sqlSnippetEntity = sqlSnippetService.queryById(taskInfoDto.getSqlSnippetId());
                     if (sqlSnippetEntity == null) {
-                        throw new RuntimeException("SQL片段不存在: id=" + taskInfoDto.getSqlSnippetId());
+                        throw new RuntimeException("SQL脚本不存在: id=" + taskInfoDto.getSqlSnippetId());
                     }
                     taskInfoBo.setSqlSnippet(sqlSnippetEntity);
                     sqlList = JSONArray.parseArray(sqlSnippetEntity.getSqlList(), String.class);
@@ -382,10 +377,6 @@ public class TransformJobService {
         transformJobEntity.setOperator(operator);
         transformJobEntity.setClientIp(clientIp);
         transformJobEntity.setOwner(transformCompare.getOwner());
-        transformJobEntity.setRegisterDatasetVersion(transformCompare.isRegisterDatasetVersion());
-        transformJobEntity.setTargetDatasetName(transformCompare.getTargetDatasetName());
-        transformJobEntity.setUpstreamVersionIds(transformCompare.getUpstreamVersionIds());
-        transformJobEntity.setTransformOutputPath(transformCompare.getTransformOutputPath());
         transformJobEntity.setJobState(0);
         transformJobEntity.setJobId(jobId);
 
@@ -410,24 +401,6 @@ public class TransformJobService {
         transformJob.setJobState(jobState.getValue());
         transformJob.setId(transformJob.getCreateTime());
 
-        if (jobState == JobState.JOB_FINISHED
-                && transformJob.isRegisterDatasetVersion()
-                && transformJob.getDatasetVersionId() == null) {
-            DatasetVersionRegisterRequest request = new DatasetVersionRegisterRequest();
-            request.setDatasetName(transformJob.getTargetDatasetName());
-            request.setProvenanceType("TRANSFORM_SQL");
-            request.setStoragePath(resolveDatasetOutputPath(transformJob));
-            request.setUpstreamVersionIds(JSONArray.parseArray(transformJob.getUpstreamVersionIds(), Long.class));
-            Map<String, Object> config = new LinkedHashMap<>();
-            config.put("transformJobId", transformJob.getJobId());
-            config.put("transformJobName", transformJob.getName());
-            config.put("exportType", transformJob.getExportType());
-            config.put("exportFile", transformJob.getExportFiletName());
-            request.setDerivationConfig(config);
-            DatasetVersionEntity version = datasetVersionService.registerVersion(request);
-            transformJob.setDatasetVersionId(version.getId());
-        }
-
         WriteClient writeClient = iginxClient.getWriteClient();
         writeClient.writeMeasurement(transformJob);
         return transformJob;
@@ -451,18 +424,6 @@ public class TransformJobService {
             transformJob.setJobState(JobState.JOB_UNKNOWN.getValue());
         }
         return saveTransform(transformJob);
-    }
-
-    private String resolveDatasetOutputPath(TransformJobEntity job) {
-        if (StringUtils.hasText(job.getTransformOutputPath())) {
-            return job.getTransformOutputPath();
-        }
-        if (job.getExportType() == 1 && StringUtils.hasText(job.getExportFiletName())) {
-            String file = job.getExportFiletName().replace('\\', '/');
-            file = file.substring(file.lastIndexOf('/') + 1);
-            return "file_system.sys_data.job." + file;
-        }
-        throw new IllegalStateException("Transform任务缺少可登记的数据输出路径");
     }
 
     public List<TransformJobEntity> queryAllJobs(String datasetPath, Integer jobState, Boolean sideLineage) {

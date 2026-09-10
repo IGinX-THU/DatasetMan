@@ -20,7 +20,7 @@ public class TaskInfoDto {
      */
     private String dataset;
     /**
-     * 新字段：通过SQL片段id引用SQL列表（推荐）
+     * 新字段：通过SQL脚本id引用SQL列表（推荐）
      */
     private Long sqlSnippetId;
     private String pyTaskName;

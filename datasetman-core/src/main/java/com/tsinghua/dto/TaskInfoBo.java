@@ -22,7 +22,7 @@ public class TaskInfoBo {
      */
     private DatasetEntity dataset;
     /**
-     * 新字段：通过SQL片段引用SQL列表（推荐）
+     * 新字段：通过SQL脚本引用SQL列表（推荐）
      */
     private SqlSnippetEntity sqlSnippet;
     private String pyTaskName;

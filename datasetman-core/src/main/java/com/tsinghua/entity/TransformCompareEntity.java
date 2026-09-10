@@ -47,16 +47,4 @@ public class TransformCompareEntity {
     @Field(name = "owner")
     private String owner;
 
-    @Field(name = "registerDatasetVersion")
-    private boolean registerDatasetVersion;
-
-    @Field(name = "targetDatasetName")
-    private String targetDatasetName;
-
-    @Field(name = "upstreamVersionIds")
-    private String upstreamVersionIds;
-
-    @Field(name = "transformOutputPath")
-    private String transformOutputPath;
-
 }

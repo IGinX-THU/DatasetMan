@@ -152,7 +152,7 @@ window.AppConfig = {
             query: '/api/function/query/{type}',
             download: '/api/function/download/udf/{fileName}'
         },
-        // SQL片段相关
+        // SQL脚本相关
         sqlSnippet: {
             save: '/api/sql-snippet/save',
             list: '/api/sql-snippet/list',

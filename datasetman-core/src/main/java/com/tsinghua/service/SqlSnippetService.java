@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * SQL片段管理服务
+ * SQL脚本管理服务
  * 独立管理的可复用SQL列表资源，供transform编排和数据集版本生产引用。
  */
 @Slf4j
@@ -40,7 +40,7 @@ public class SqlSnippetService {
     private IginXClient iginxClient;
 
     /**
-     * 保存SQL片段（新建或编辑）
+     * 保存SQL脚本（新建或编辑）
      */
     public SqlSnippetEntity saveSnippet(SqlSnippetRequest request) {
         request.getSqlList().forEach(CommonUtil::validateSql);
@@ -71,12 +71,12 @@ public class SqlSnippetService {
         WriteClient writeClient = iginxClient.getWriteClient();
         writeClient.writeMeasurement(entity);
 
-        log.info("SQL片段已保存。名称: {}, id: {}", request.getName(), timestamp);
+        log.info("SQL脚本已保存。名称: {}, id: {}", request.getName(), timestamp);
         return entity;
     }
 
     /**
-     * 按id查询SQL片段
+     * 按id查询SQL脚本
      */
     public SqlSnippetEntity queryById(Long id) {
         try {
@@ -99,13 +99,13 @@ public class SqlSnippetService {
             }
             return mapToEntity(records.get(0));
         } catch (Exception e) {
-            log.error("查询SQL片段失败, id={}", id, e);
+            log.error("查询SQL脚本失败, id={}", id, e);
             return null;
         }
     }
 
     /**
-     * 按名称查询SQL片段（用于transform编排按名引用）
+     * 按名称查询SQL脚本（用于transform编排按名引用）
      */
     public SqlSnippetEntity queryByName(String name) {
         try {
@@ -127,13 +127,13 @@ public class SqlSnippetService {
             }
             return mapToEntity(records.get(0));
         } catch (Exception e) {
-            log.error("按名称查询SQL片段失败, name={}", name, e);
+            log.error("按名称查询SQL脚本失败, name={}", name, e);
             return null;
         }
     }
 
     /**
-     * 查询SQL片段列表（支持名称模糊查询）
+     * 查询SQL脚本列表（支持名称模糊查询）
      */
     public List<SqlSnippetEntity> listSnippets(String name) {
         try {
@@ -165,24 +165,24 @@ public class SqlSnippetService {
 
             return result;
         } catch (Exception e) {
-            log.error("查询SQL片段列表失败", e);
+            log.error("查询SQL脚本列表失败", e);
             return new ArrayList<>();
         }
     }
 
     /**
-     * 软删除SQL片段
+     * 软删除SQL脚本
      */
     public void deleteSnippet(Long id) {
         SqlSnippetEntity entity = queryById(id);
         if (entity == null) {
-            throw new RuntimeException("SQL片段不存在或无权删除");
+            throw new RuntimeException("SQL脚本不存在或无权删除");
         }
         entity.setDeleted(true);
         entity.setId(entity.getCreateTime());
         WriteClient writeClient = iginxClient.getWriteClient();
         writeClient.writeMeasurement(entity);
-        log.info("已软删除SQL片段: id={}, name={}", id, entity.getName());
+        log.info("已软删除SQL脚本: id={}, name={}", id, entity.getName());
     }
 
     /**
@@ -191,7 +191,7 @@ public class SqlSnippetService {
     public List<String> getSqlListById(Long id) {
         SqlSnippetEntity entity = queryById(id);
         if (entity == null) {
-            throw new RuntimeException("SQL片段不存在: id=" + id);
+            throw new RuntimeException("SQL脚本不存在: id=" + id);
         }
         return JSONArray.parseArray(entity.getSqlList(), String.class);
     }
@@ -202,7 +202,7 @@ public class SqlSnippetService {
     public List<String> getSqlListByName(String name) {
         SqlSnippetEntity entity = queryByName(name);
         if (entity == null) {
-            throw new RuntimeException("SQL片段不存在: name=" + name);
+            throw new RuntimeException("SQL脚本不存在: name=" + name);
         }
         return JSONArray.parseArray(entity.getSqlList(), String.class);
     }
@@ -217,6 +217,10 @@ public class SqlSnippetService {
             String fieldName = k.replace(META_PREFIX + ".", "");
             ConvertUtil.setEntityField(entity, META_PREFIX, fieldName, v);
         });
+        // id 是 IGinX timestamp 列，SELECT * 不返回该列，用 createTime 补齐
+        if (entity.getId() == null && entity.getCreateTime() != null) {
+            entity.setId(entity.getCreateTime());
+        }
         return entity;
     }
 }

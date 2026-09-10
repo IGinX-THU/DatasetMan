@@ -81,6 +81,16 @@ class DatasetDialog extends HTMLElement {
             this.updateSourcePathDisplay();
         });
 
+        // SQL脚本选取后加载预览
+        $('sqlSnippet')?.addEventListener('change', (e) => {
+            const snippetId = e.target.value;
+            if (snippetId) {
+                this.loadSqlPreview(snippetId);
+            } else {
+                this.hideSqlPreview();
+            }
+        });
+
         // 数据集名称输入后刷新预览
         $('datasetName')?.addEventListener('input', () => this.updateConfirmPreview());
 
@@ -111,6 +121,7 @@ class DatasetDialog extends HTMLElement {
         this.selectedType = null;
         this.upstreamVersionId = null;
         this.upstreamDatasetId = null;
+        this.hideSqlPreview();
 
         // 加载选项数据后填充下拉
         this.loadOptions().then(() => {
@@ -454,6 +465,42 @@ class DatasetDialog extends HTMLElement {
     hideError() {
         const errorBox = this.shadowRoot.getElementById('errorBox');
         if (errorBox) errorBox.style.display = 'none';
+    }
+
+    async loadSqlPreview(snippetId) {
+        const area = this.shadowRoot.getElementById('sqlPreviewArea');
+        const content = this.shadowRoot.getElementById('sqlPreviewContent');
+        if (!area || !content) return;
+        area.style.display = 'block';
+        content.textContent = '加载中...';
+        try {
+            const result = await window.AppConfig.get('sqlSnippet', 'metas', { id: snippetId });
+            if (result.code === 200 && result.data) {
+                let sqlList = [];
+                try {
+                    sqlList = JSON.parse(result.data.sqlList || '[]');
+                } catch (e) {
+                    sqlList = [];
+                }
+                if (sqlList.length === 0) {
+                    content.textContent = '该SQL脚本暂无SQL语句';
+                } else {
+                    content.textContent = sqlList.map(s => '- ' + s).join('\n');
+                }
+            } else {
+                content.textContent = '加载失败: ' + (result.message || '未知错误');
+            }
+        } catch (error) {
+            console.error('加载SQL脚本详情失败:', error);
+            content.textContent = '加载失败: ' + error.message;
+        }
+    }
+
+    hideSqlPreview() {
+        const area = this.shadowRoot.getElementById('sqlPreviewArea');
+        const content = this.shadowRoot.getElementById('sqlPreviewContent');
+        if (area) area.style.display = 'none';
+        if (content) content.textContent = '';
     }
 
     escape(val) {

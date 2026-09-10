@@ -175,12 +175,14 @@ public class DatasetCreationService {
     }
 
     private String resolveTransformOutputPath(TransformJobEntity job) {
-        if (job.getExportType() == 1 && StringUtils.hasText(job.getExportFiletName())) {
+        // exportType: 0=none, 1=file, 2=IGinX
+        if (job.getExportType() != null && job.getExportType() == 1 && StringUtils.hasText(job.getExportFiletName())) {
             String file = job.getExportFiletName().replace('\\', '/');
             file = file.substring(file.lastIndexOf('/') + 1);
             return "file_system.sys_data.job." + file;
         }
-        throw new IllegalArgumentException("该Transform任务没有可识别的物化输出路径，请填写输出路径");
+        // IGinX 输出固定写入 transform 路径
+        return "transform";
     }
 
     private String normalizePath(String path) {

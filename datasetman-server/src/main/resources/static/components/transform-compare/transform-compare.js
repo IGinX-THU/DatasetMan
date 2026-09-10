@@ -438,7 +438,6 @@ class TransformCompare extends HTMLElement {
         const confirmBtn = dialog.querySelector('.confirm-btn');
         const closeBtn = dialog.querySelector('.dialog-close-btn');
         const form = dialog.querySelector('#jobForm');
-        this.bindDatasetRegistration(form);
         const addTaskBtn = dialog.querySelector('#addTask');
         const tasksList = dialog.querySelector('#tasksList');
 
@@ -525,7 +524,6 @@ class TransformCompare extends HTMLElement {
             const exportFile = form.querySelector('#exportFile')?.value;
             const schedule = form.querySelector('#schedule')?.value.trim();
             const taskList = this.collectTasks(tasksList);
-            const datasetRegistration = this.collectDatasetRegistration(form);
 
             if (!jobName || isNaN(exportType)) {
                 this.showToast('请填写完整作业配置', 'error');
@@ -539,11 +537,6 @@ class TransformCompare extends HTMLElement {
 
             if (taskList.length === 0) {
                 this.showToast('请至少添加一个任务', 'error');
-                return;
-            }
-            if (datasetRegistration.registerDatasetVersion
-                    && (!datasetRegistration.targetDatasetName || datasetRegistration.upstreamVersionIds.length === 0)) {
-                this.showToast('请填写目标数据集名称并选择主上游版本', 'error');
                 return;
             }
 
@@ -561,7 +554,7 @@ class TransformCompare extends HTMLElement {
                     return;
                 }
                 if (task.taskType === 0 && !task.sqlSnippetId) {
-                    this.showToast('请选择SQL片段', 'error');
+                    this.showToast('请选择SQL脚本', 'error');
                     return;
                 }
             }
@@ -580,8 +573,7 @@ class TransformCompare extends HTMLElement {
                 exportType: exportType,
                 exportFile: exportType === 1 ? exportFile : null,
                 schedule,
-                taskList,
-                ...datasetRegistration
+                taskList
             };
 
             console.log('Job data to save:', jobData);
@@ -630,11 +622,7 @@ class TransformCompare extends HTMLElement {
                     exportFile: job.exportFile,
                     schedule: job.schedule,
                     taskList: taskList,
-                    owner: job.owner,
-                    registerDatasetVersion: job.registerDatasetVersion,
-                    targetDatasetName: job.targetDatasetName,
-                    upstreamVersionIds: job.upstreamVersionIds,
-                    transformOutputPath: job.transformOutputPath
+                    owner: job.owner
                 };
                 
                 const dialogHtml = `
@@ -750,7 +738,6 @@ class TransformCompare extends HTMLElement {
                 const confirmBtn = dialog.querySelector('.confirm-btn');
                 const closeBtn = dialog.querySelector('.dialog-close-btn');
                 const form = dialog.querySelector('#jobForm');
-                this.bindDatasetRegistration(form);
                 const addTaskBtn = dialog.querySelector('#addTask');
                 const tasksList = dialog.querySelector('#tasksList');
 
@@ -829,7 +816,6 @@ class TransformCompare extends HTMLElement {
                     const exportFile = form.querySelector('#exportFile')?.value;
                     const schedule = form.querySelector('#schedule')?.value.trim();
                     const taskList = this.collectTasks(tasksList);
-                    const datasetRegistration = this.collectDatasetRegistration(form);
 
                     if (!jobName || isNaN(exportType)) {
                         this.showToast('请填写完整作业配置', 'error');
@@ -843,11 +829,6 @@ class TransformCompare extends HTMLElement {
 
                     if (taskList.length === 0) {
                         this.showToast('请至少添加一个任务', 'error');
-                        return;
-                    }
-                    if (datasetRegistration.registerDatasetVersion
-                            && (!datasetRegistration.targetDatasetName || datasetRegistration.upstreamVersionIds.length === 0)) {
-                        this.showToast('请填写目标数据集名称并选择主上游版本', 'error');
                         return;
                     }
 
@@ -865,7 +846,7 @@ class TransformCompare extends HTMLElement {
                             return;
                         }
                         if (task.taskType === 0 && !task.sqlSnippetId) {
-                            this.showToast('请选择SQL片段', 'error');
+                            this.showToast('请选择SQL脚本', 'error');
                             return;
                         }
                     }
@@ -886,8 +867,7 @@ class TransformCompare extends HTMLElement {
                         exportFile: exportType === 1 ? exportFile : null,
                         schedule,
                         taskList,
-                        owner: job.owner,
-                        ...datasetRegistration
+                        owner: job.owner
                     };
 
                     console.log('Job data to update:', jobData);
@@ -1118,16 +1098,13 @@ class TransformCompare extends HTMLElement {
     getJobFormHTML(job = null) {
         const isEdit = job !== null;
         const isAdmin = window.MenuPermission?.getCurrentRole() === 'ADMIN';
-        let upstreamVersionId = '';
-        try {
-            upstreamVersionId = JSON.parse(job?.upstreamVersionIds || '[]')[0] || '';
-        } catch (e) {
-            upstreamVersionId = '';
-        }
-        
-        // 导出类型选项：none / IGinX / file
+
+        // 导出类型选项：none（仅管理员）/ IGinX / file
+        const noneOption = isAdmin
+            ? `<option value="0" ${job?.exportType === 0 ? 'selected' : ''}>none</option>`
+            : '';
         let exportTypeOptions = `
-            <option value="0" ${job?.exportType === 0 ? 'selected' : ''}>none</option>
+            ${noneOption}
             <option value="2" ${job?.exportType === 2 ? 'selected' : ''}>IGinX</option>
             <option value="1" ${job?.exportType === 1 || job?.exportType === undefined || job?.exportType === null ? 'selected' : ''}>file</option>
         `;
@@ -1174,18 +1151,6 @@ class TransformCompare extends HTMLElement {
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="registerDatasetVersion" ${job?.registerDatasetVersion ? 'checked' : ''} style="width:auto;"> 作业完成后登记为数据集新版本</label>
-                        </div>
-                    </div>
-                    <div id="datasetRegistration" style="display:${job?.registerDatasetVersion ? 'block' : 'none'};padding:16px;background:#f8fafc;border-radius:8px;margin-bottom:16px;">
-                        <div class="form-row">
-                            <div class="form-group"><label>目标数据集名称 <span class="required">*</span></label><input type="text" id="targetDatasetName" value="${job?.targetDatasetName || ''}" placeholder="已有名称将追加版本"></div>
-                            <div class="form-group"><label>主上游版本 <span class="required">*</span></label><select id="datasetUpstreamVersion" data-selected="${upstreamVersionId}"><option value="">请选择</option></select></div>
-                        </div>
-                        <div class="form-row"><div class="form-group"><label>物化输出路径</label><input type="text" id="transformOutputPath" value="${job?.transformOutputPath || ''}" placeholder="文件输出可留空；IGinX输出请填写"></div></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
                             <label for="schedule">调度策略</label>
                             <input type="text" id="schedule" name="schedule" placeholder="请输入调度策略" value="${job?.schedule || ''}" style="margin-bottom: 12px;">
                             <schedule-editor id="scheduleEditor"></schedule-editor>
@@ -1221,13 +1186,13 @@ class TransformCompare extends HTMLElement {
 
         let configHTML = '';
         if (taskType === 'iginx') {
-            // 优先使用SQL片段（新方式）；若有旧dataset值则兼容回显
+            // 优先使用SQL脚本（新方式）；若有旧dataset值则兼容回显
             const hasLegacyDataset = !!datasetName;
             configHTML = `
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <select class="sql-snippet-select" data-selected="${sqlSnippetId}" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
-                        <option value="">请选择SQL片段</option>
-                        ${sqlSnippetId ? `<option value="${sqlSnippetId}" selected>SQL片段#${sqlSnippetId}</option>` : ''}
+                        <option value="">请选择SQL脚本</option>
+                        ${sqlSnippetId ? `<option value="${sqlSnippetId}" selected>SQL脚本#${sqlSnippetId}</option>` : ''}
                     </select>
                     ${hasLegacyDataset ? `
                         <span style="color: #9ca3af; font-size: 12px; white-space: nowrap;">或旧数据集:</span>
@@ -1240,6 +1205,15 @@ class TransformCompare extends HTMLElement {
                             <option value="${version}" selected>${version}</option>
                         </select>
                     ` : ''}
+                </div>
+                <div class="sql-preview-area" style="margin-top: 12px; display: ${sqlSnippetId ? 'block' : 'none'};">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 13px; font-weight: 500; color: #475569;">SQL 语句列表</span>
+                        <button type="button" class="copy-sql-btn" style="padding: 4px 12px; border: 1px solid #e5e7eb; border-radius: 4px; background: white; cursor: pointer; font-size: 12px; color: #4c89ff; transition: all 0.2s;">复制SQL</button>
+                    </div>
+                    <div class="sql-preview-content" style="background: #1e293b; color: #e2e8f0; border-radius: 6px; padding: 16px; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; line-height: 1.6; max-height: 240px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">
+                        ${sqlSnippetId ? '加载中...' : '请先选择SQL脚本'}
+                    </div>
                 </div>
             `;
         } else if (taskType === 'python') {
@@ -1287,7 +1261,7 @@ class TransformCompare extends HTMLElement {
                 </div>
                 <div class="task-config" style="padding-top: 16px; border-top: 1px solid #e5e7eb;">
                     <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #475569;">
-                        ${taskType === 'iginx' ? 'SQL片段 <span style="color: #ef4444;">*</span>' : taskType === 'python' ? 'Transform函数 <span style="color: #ef4444;">*</span>' : '配置'}
+                        ${taskType === 'iginx' ? 'SQL脚本 <span style="color: #ef4444;">*</span>' : taskType === 'python' ? 'Transform函数 <span style="color: #ef4444;">*</span>' : '配置'}
                     </label>
                     <div class="config-content iginx-config" style="display: ${taskType === 'iginx' ? 'block' : 'none'};">
                         ${taskType === 'iginx' ? configHTML : ''}
@@ -1303,67 +1277,11 @@ class TransformCompare extends HTMLElement {
         `;
     }
 
-    async bindDatasetRegistration(form) {
-        if (!form) return;
-        const checkbox = form.querySelector('#registerDatasetVersion');
-        const panel = form.querySelector('#datasetRegistration');
-        const select = form.querySelector('#datasetUpstreamVersion');
-        if (checkbox && panel) {
-            checkbox.addEventListener('change', () => {
-                panel.style.display = checkbox.checked ? 'block' : 'none';
-            });
-        }
-        if (select) await this.loadDatasetVersionOptions(select);
-    }
-
-    async loadDatasetVersionOptions(select) {
-        try {
-            const selected = select.dataset.selected || '';
-            const result = await window.AppConfig.get('dataset', 'tree');
-            if (!(result.success || result.code === 200) || !Array.isArray(result.data)) return;
-            select.innerHTML = '<option value="">请选择</option>';
-            result.data.forEach(dataset => (dataset.versions || []).forEach(version => {
-                const option = document.createElement('option');
-                option.value = version.versionId;
-                option.textContent = `${dataset.datasetName} / ${version.versionNo}`;
-                option.selected = String(version.versionId) === String(selected);
-                select.appendChild(option);
-            }));
-        } catch (error) {
-            console.error('加载数据集版本失败:', error);
-        }
-    }
-
-    collectDatasetRegistration(form) {
-        const registerDatasetVersion = !!form.querySelector('#registerDatasetVersion')?.checked;
-        const targetDatasetName = form.querySelector('#targetDatasetName')?.value.trim() || '';
-        const upstream = form.querySelector('#datasetUpstreamVersion')?.value;
-        const transformOutputPath = form.querySelector('#transformOutputPath')?.value.trim() || '';
-        return {
-            registerDatasetVersion,
-            targetDatasetName,
-            upstreamVersionIds: upstream ? [Number(upstream)] : [],
-            transformOutputPath
-        };
-    }
-
     bindFormEvents() {
         const form = this.querySelector('#jobForm');
         const addTaskBtn = this.querySelector('#addTask');
         const tasksList = this.querySelector('#tasksList');
         const modalFooter = this.querySelector('#modalFooter');
-        const registerDatasetVersion = this.querySelector('#registerDatasetVersion');
-        const datasetRegistration = this.querySelector('#datasetRegistration');
-        const datasetUpstreamVersion = this.querySelector('#datasetUpstreamVersion');
-
-        if (registerDatasetVersion && datasetRegistration) {
-            registerDatasetVersion.addEventListener('change', () => {
-                datasetRegistration.style.display = registerDatasetVersion.checked ? 'block' : 'none';
-            });
-        }
-        if (datasetUpstreamVersion) {
-            this.loadDatasetVersionOptions(datasetUpstreamVersion);
-        }
 
         if (addTaskBtn) {
             addTaskBtn.addEventListener('click', () => {
@@ -1456,13 +1374,36 @@ class TransformCompare extends HTMLElement {
                         iginxConfig.innerHTML = `
                             <div style="display: flex; gap: 8px; align-items: center;">
                                 <select class="sql-snippet-select" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
-                                    <option value="">请选择SQL片段</option>
+                                    <option value="">请选择SQL脚本</option>
                                 </select>
+                            </div>
+                            <div class="sql-preview-area" style="margin-top: 12px; display: none;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-size: 13px; font-weight: 500; color: #475569;">SQL 语句列表</span>
+                                    <button type="button" class="copy-sql-btn" style="padding: 4px 12px; border: 1px solid #e5e7eb; border-radius: 4px; background: white; cursor: pointer; font-size: 12px; color: #4c89ff; transition: all 0.2s;">复制SQL</button>
+                                </div>
+                                <div class="sql-preview-content" style="background: #1e293b; color: #e2e8f0; border-radius: 6px; padding: 16px; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; line-height: 1.6; max-height: 240px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">
+                                    请先选择SQL脚本
+                                </div>
                             </div>
                         `;
                         const newSqlSnippetSelect = iginxConfig.querySelector('.sql-snippet-select');
                         if (newSqlSnippetSelect) {
                             this.loadSqlSnippets(newSqlSnippetSelect);
+                            newSqlSnippetSelect.addEventListener('change', (e) => {
+                                const snippetId = e.target.value;
+                                if (snippetId) {
+                                    this.loadSqlSnippetDetail(row, snippetId);
+                                } else {
+                                    this.hideSqlPreview(row);
+                                }
+                            });
+                        }
+                        const newCopyBtn = iginxConfig.querySelector('.copy-sql-btn');
+                        if (newCopyBtn) {
+                            newCopyBtn.addEventListener('click', () => {
+                                this.copySqlFromPreview(row);
+                            });
                         }
                     } else if (taskType === 'python') {
                         pythonConfig.innerHTML = `
@@ -1479,7 +1420,7 @@ class TransformCompare extends HTMLElement {
 
                 if (configLabel) {
                     if (taskType === 'iginx') {
-                        configLabel.innerHTML = 'SQL片段 <span style="color: #ef4444;">*</span>';
+                        configLabel.innerHTML = 'SQL脚本 <span style="color: #ef4444;">*</span>';
                     } else if (taskType === 'python') {
                         configLabel.innerHTML = 'Transform函数 <span style="color: #ef4444;">*</span>';
                     } else {
@@ -1505,14 +1446,31 @@ class TransformCompare extends HTMLElement {
             }
         }
 
-        // 加载SQL片段列表（新方式）
+        // 加载SQL脚本列表（新方式）
         if (sqlSnippetSelect && taskTypeSelect?.value === 'iginx') {
             const currentSqlSnippetId = sqlSnippetSelect.getAttribute('data-selected') || sqlSnippetSelect.value;
             this.loadSqlSnippets(sqlSnippetSelect, () => {
                 if (currentSqlSnippetId) {
                     sqlSnippetSelect.value = currentSqlSnippetId;
+                    this.loadSqlSnippetDetail(row, currentSqlSnippetId);
                 }
             });
+            // 选择SQL脚本时加载详情并预览
+            sqlSnippetSelect.addEventListener('change', (e) => {
+                const snippetId = e.target.value;
+                if (snippetId) {
+                    this.loadSqlSnippetDetail(row, snippetId);
+                } else {
+                    this.hideSqlPreview(row);
+                }
+            });
+            // 复制SQL按钮
+            const copyBtn = row.querySelector('.copy-sql-btn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    this.copySqlFromPreview(row);
+                });
+            }
         }
 
         if (pyTaskNameSelect && taskTypeSelect?.value === 'python') {
@@ -1552,22 +1510,96 @@ class TransformCompare extends HTMLElement {
 
     async loadSqlSnippets(selectElement, callback) {
         try {
-            selectElement.innerHTML = '<option value="">请选择SQL片段</option>';
+            selectElement.innerHTML = '<option value="">请选择SQL脚本</option>';
             const result = await this.getSqlSnippets();
             if (result.code === 200 && result.data) {
                 result.data.forEach(snippet => {
                     const option = document.createElement('option');
-                    option.value = snippet.id;
+                    option.value = snippet.createTime;
                     option.textContent = snippet.name;
                     selectElement.appendChild(option);
                 });
                 if (callback) callback();
             } else {
-                console.error('获取SQL片段列表失败:', result.message);
+                console.error('获取SQL脚本列表失败:', result.message);
             }
         } catch (error) {
-            console.error('加载SQL片段异常:', error);
+            console.error('加载SQL脚本异常:', error);
         }
+    }
+
+    async loadSqlSnippetDetail(row, snippetId) {
+        const previewArea = row.querySelector('.sql-preview-area');
+        const previewContent = row.querySelector('.sql-preview-content');
+        if (!previewArea || !previewContent) return;
+
+        previewArea.style.display = 'block';
+        previewContent.textContent = '加载中...';
+
+        try {
+            const result = await window.AppConfig.get('sqlSnippet', 'metas', { id: snippetId });
+            if (result.code === 200 && result.data) {
+                const snippet = result.data;
+                let sqlList = [];
+                try {
+                    sqlList = JSON.parse(snippet.sqlList || '[]');
+                } catch (e) {
+                    sqlList = [];
+                }
+                if (sqlList.length === 0) {
+                    previewContent.textContent = '该SQL脚本暂无SQL语句';
+                } else {
+                    previewContent.textContent = sqlList.map(s => '- ' + s).join('\n');
+                }
+            } else {
+                previewContent.textContent = '加载失败: ' + (result.message || '未知错误');
+            }
+        } catch (error) {
+            console.error('加载SQL脚本详情失败:', error);
+            previewContent.textContent = '加载失败: ' + error.message;
+        }
+    }
+
+    hideSqlPreview(row) {
+        const previewArea = row.querySelector('.sql-preview-area');
+        const previewContent = row.querySelector('.sql-preview-content');
+        if (previewArea) previewArea.style.display = 'none';
+        if (previewContent) previewContent.textContent = '请先选择SQL脚本';
+    }
+
+    copySqlFromPreview(row) {
+        const previewContent = row.querySelector('.sql-preview-content');
+        if (!previewContent) return;
+        const sqlText = previewContent.textContent;
+        if (!sqlText || sqlText === '请先选择SQL脚本' || sqlText === '加载中...') {
+            this.showToast('暂无可复制的SQL内容', 'error');
+            return;
+        }
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(sqlText).then(() => {
+                this.showToast('SQL已复制到剪贴板');
+            }).catch(() => {
+                this.fallbackCopy(sqlText);
+            });
+        } else {
+            this.fallbackCopy(sqlText);
+        }
+    }
+
+    fallbackCopy(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            this.showToast('SQL已复制到剪贴板');
+        } catch (e) {
+            this.showToast('复制失败，请手动选择复制', 'error');
+        }
+        document.body.removeChild(textarea);
     }
 
     async loadDatasets(selectElement, callback) {
@@ -1838,7 +1870,7 @@ class TransformCompare extends HTMLElement {
                         task.pyTaskName = pyTaskName;
                     }
                 } else if (taskType === 'iginx') {
-                    // 优先使用SQL片段（当前方式）
+                    // 优先使用SQL脚本（当前方式）
                     const sqlSnippetId = sqlSnippetSelect?.value;
                     if (sqlSnippetId) {
                         task.sqlSnippetId = parseInt(sqlSnippetId);

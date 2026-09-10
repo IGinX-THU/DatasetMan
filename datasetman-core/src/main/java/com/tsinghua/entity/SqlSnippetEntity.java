@@ -5,7 +5,7 @@ import cn.edu.tsinghua.iginx.session_v2.annotations.Measurement;
 import lombok.Data;
 
 /**
- * SQL片段实体
+ * SQL脚本实体
  * 独立管理的可复用SQL列表资源，供transform编排和数据集版本生产引用。
  * 对标函数管理，是命名、可执行、可复用的资源。
  */
