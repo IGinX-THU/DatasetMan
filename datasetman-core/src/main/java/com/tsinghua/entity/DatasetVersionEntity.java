@@ -67,4 +67,12 @@ public class DatasetVersionEntity {
 
     @Field(name = "deleted")
     private boolean deleted;
+
+    /**
+     * 关联 Transform 作业状态（仅 TRANSFORM 类型有值）：
+     * -1=无关联任务  0=UNKNOWN 1=FINISHED 2=CREATED 3=IDLE 4=RUNNING
+     * 5=PARTIALLY_FAILING 6=PARTIALLY_FAILED 7=FAILING 8=FAILED 9=CLOSING 10=CLOSED
+     */
+    @Field(name = "jobState")
+    private Integer jobState;
 }

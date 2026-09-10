@@ -106,6 +106,7 @@ public class DatasetCreationService {
             TransformJobEntity job = transformJobService.commitJob(request.getTransformCompareCreateTime());
             storagePath = resolveTransformOutputPath(job);
             config.put("transformJob", com.alibaba.fastjson2.JSONObject.from(job));
+            registration.setJobState(job.getJobState());
         }
 
         registration.setStoragePath(storagePath);
@@ -179,6 +180,8 @@ public class DatasetCreationService {
         if (job.getExportType() != null && job.getExportType() == 1 && StringUtils.hasText(job.getExportFiletName())) {
             String file = job.getExportFiletName().replace('\\', '/');
             file = file.substring(file.lastIndexOf('/') + 1);
+            // 文件名中的 '.' 在 IGinX schema 路径中是层级分隔符，需转义为 '\'
+            file = file.replace(".", "\\");
             return "file_system.sys_data.job." + file;
         }
         // IGinX 输出固定写入 transform 路径

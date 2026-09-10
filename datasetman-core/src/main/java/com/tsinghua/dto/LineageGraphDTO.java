@@ -31,6 +31,7 @@ public class LineageGraphDTO {
         private Long createTime;
         private String remark;
         private boolean deleted;
+        private Integer jobState;
         /** 是否为聚焦节点 */
         private boolean focus;
         /** 变换配方（JSON）：含 sqlSnippet / transformCompare / dataArchive 等快照 */

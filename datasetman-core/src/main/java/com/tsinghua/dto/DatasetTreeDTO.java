@@ -22,5 +22,6 @@ public class DatasetTreeDTO {
         private String provenanceType;
         private Long createTime;
         private boolean deleted;
+        private Integer jobState;
     }
 }

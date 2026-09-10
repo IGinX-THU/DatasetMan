@@ -52,4 +52,7 @@ public class DatasetVersionRegisterRequest {
 
     @ApiModelProperty(value = "数据模态：relational / time_series / key_value / semi_structured / file_system")
     private String dataModality;
+
+    @ApiModelProperty(value = "关联 Transform 作业状态（仅 TRANSFORM 类型）")
+    private Integer jobState;
 }

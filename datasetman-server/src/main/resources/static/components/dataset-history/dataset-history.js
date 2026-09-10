@@ -46,7 +46,7 @@ class DatasetHistory extends HTMLElement {
                 .TRANSFORM, .TRANSFORM_SQL { background:#ede9fe; color:#6d28d9; }
                 .badge.deleted { background:#fef2f2; color:#dc2626; }
                 .badge.active-status { background:#f0fdf4; color:#16a34a; }
-                .graph { width:100%; min-height:380px; overflow:auto; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; }
+                .graph { width:100%; min-height:1000px; overflow:auto; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; box-sizing:border-box; }
                 .node { cursor:pointer; } .node circle { stroke:#fff; stroke-width:3; } .node.focus circle { stroke:#111827; stroke-width:4; }
                 .node text { font-size:11px; fill:#374151; text-anchor:middle; }
                 .empty { padding:40px; color:#9ca3af; text-align:center; }
@@ -211,6 +211,26 @@ class DatasetHistory extends HTMLElement {
         this.setText('#recipe', recipe);
     }
 
+    jobStateLabel(jobState) {
+        const labels = {
+            0: '任务未知', 1: '任务完成', 2: '任务已创建', 3: '任务等待中',
+            4: '任务运行中', 5: '任务部分失败中', 6: '任务部分失败',
+            7: '任务失败中', 8: '任务失败', 9: '任务取消中', 10: '任务已取消'
+        };
+        return labels[jobState] || null;
+    }
+
+    statusBadge(row) {
+        if (row.deleted) return '<span class="badge deleted">已删除</span>';
+        const jobLabel = this.jobStateLabel(row.jobState);
+        if (jobLabel) {
+            const failStates = [5, 6, 7, 8, 9, 10];
+            const cls = failStates.includes(row.jobState) ? 'deleted' : 'active-status';
+            return `<span class="badge ${cls}">${jobLabel}</span>`;
+        }
+        return '<span class="badge active-status">正常</span>';
+    }
+
     renderChangeTable() {
         const container = this.shadowRoot.querySelector('#changeTable');
         if (!this.changes.length) {
@@ -221,7 +241,7 @@ class DatasetHistory extends HTMLElement {
             const upstreams = (row.upstreams || []).map(u => `${u.datasetName || ''}/${u.versionNo || u.versionId}`).join(', ') || '-';
             const recipe = this.recipeSummary(row.derivationConfig);
             const activeVid = this.versionIdOf(this.version);
-            const statusBadge = row.deleted ? '<span class="badge deleted">已删除</span>' : '<span class="badge active-status">正常</span>';
+            const statusBadge = this.statusBadge(row);
             return `<tr data-version-id="${row.versionId}" class="${row.versionId === activeVid ? 'active' : ''}"><td>${this.escape(row.versionNo)}</td><td><span class="badge ${row.provenanceType}">${this.escape(row.provenanceLabel || row.provenanceType)}</span></td><td><code>${this.escape(row.storagePath || '-')}</code></td><td>${this.escape(upstreams)}</td><td title="${this.escape(JSON.stringify(row.derivationConfig || {}))}">${this.escape(recipe)}</td><td>${this.escape(row.operator || '-')}</td><td>${this.escape(this.formatTime(row.createTime))}</td><td>${this.escape(row.remark || '-')}</td><td>${statusBadge}</td></tr>`;
         }).join('')}</tbody></table>`;
         container.querySelectorAll('tbody tr').forEach(row => row.addEventListener('click', () => this.highlight(Number(row.dataset.versionId))));
@@ -415,6 +435,14 @@ class DatasetHistory extends HTMLElement {
         });
 
         // 3. 初始化 ECharts
+        // 根据节点数量动态调整画布大小，确保图能完全展开且四周留有距离
+        const totalNodes = echartsNodes.length;
+        // 每个节点约需 120x120 空间，四周额外预留 200px 边距
+        const minSide = 1000;
+        const estimatedSide = Math.max(minSide, Math.ceil(Math.sqrt(totalNodes) * 240) + 400);
+        const graphHeight = Math.max(minSide, estimatedSide);
+        container.style.height = graphHeight + 'px';
+
         const chart = window.echarts.init(container);
         const option = {
             tooltip: {
@@ -424,10 +452,11 @@ class DatasetHistory extends HTMLElement {
                 type: 'graph',
                 layout: 'force',
                 force: {
-                    repulsion: 600,
-                    edgeLength: [180, 320],
-                    gravity: 0.05,
-                    layoutAnimation: true
+                    repulsion: 800,
+                    edgeLength: [220, 400],
+                    gravity: 0.04,
+                    layoutAnimation: true,
+                    friction: 0.6
                 },
                 roam: true,
                 draggable: true,
@@ -475,6 +504,11 @@ class DatasetHistory extends HTMLElement {
         resizeObserver.observe(container);
         container._chart = chart;
         container._resizeObserver = resizeObserver;
+
+        // 等力导向布局稳定后，自适应缩放到合适大小
+        setTimeout(() => {
+            chart.resize();
+        }, 300);
     }
 
     /** 从 derivationConfig 中提取操作节点的展示信息 */
@@ -539,7 +573,14 @@ class DatasetHistory extends HTMLElement {
         rows.push(`操作人: ${this.escape(v.operator || '-')}`);
         rows.push(`操作时间: ${this.formatTime(v.createTime)}`);
         rows.push(`客户端IP: ${this.escape(v.clientIp || '-')}`);
-        rows.push(`状态: ${v.deleted ? '<span style="color:#dc2626">已删除</span>' : '<span style="color:#16a34a">正常</span>'}`);
+        const jobLabel = this.jobStateLabel(v.jobState);
+        if (jobLabel) {
+            const failStates = [5, 6, 7, 8, 9, 10];
+            const color = failStates.includes(v.jobState) ? '#dc2626' : '#16a34a';
+            rows.push(`状态: ${v.deleted ? '<span style="color:#dc2626">已删除</span>' : '<span style="color:#16a34a">正常</span>'} / <span style="color:${color}">${jobLabel}</span>`);
+        } else {
+            rows.push(`状态: ${v.deleted ? '<span style="color:#dc2626">已删除</span>' : '<span style="color:#16a34a">正常</span>'}`);
+        }
         if (v.remark) rows.push(`备注: ${this.escape(v.remark)}`);
         const desc = cfg.description || cfg.background;
         if (desc) rows.push(`背景信息: ${this.escape(desc)}`);
@@ -586,7 +627,14 @@ class DatasetHistory extends HTMLElement {
         html.push(`<div class="field"><span class="field-label">操作人:</span> ${this.escape(v.operator || '-')}</div>`);
         html.push(`<div class="field"><span class="field-label">操作时间:</span> ${this.formatTime(v.createTime)}</div>`);
         html.push(`<div class="field"><span class="field-label">客户端IP:</span> ${this.escape(v.clientIp || '-')}</div>`);
-        html.push(`<div class="field"><span class="field-label">状态:</span> ${v.deleted ? '<span style="color:#dc2626">已删除</span>' : '<span style="color:#16a34a">正常</span>'}</div>`);
+        const jobLabel = this.jobStateLabel(v.jobState);
+        if (jobLabel) {
+            const failStates = [5, 6, 7, 8, 9, 10];
+            const color = failStates.includes(v.jobState) ? '#dc2626' : '#16a34a';
+            html.push(`<div class="field"><span class="field-label">状态:</span> ${v.deleted ? '<span style="color:#dc2626">已删除</span>' : '<span style="color:#16a34a">正常</span>'} / <span style="color:${color}">${jobLabel}</span></div>`);
+        } else {
+            html.push(`<div class="field"><span class="field-label">状态:</span> ${v.deleted ? '<span style="color:#dc2626">已删除</span>' : '<span style="color:#16a34a">正常</span>'}</div>`);
+        }
         if (v.remark) html.push(`<div class="field"><span class="field-label">备注:</span> ${this.escape(v.remark)}</div>`);
         return html.join('');
     }
@@ -745,12 +793,10 @@ class DatasetHistory extends HTMLElement {
         const container = this.shadowRoot.querySelector('#graph');
         const chart = container._chart;
         if (!chart) return;
+        // 使用 ECharts graph 的 zoom 属性，配合 roam 实现缩放
         const option = chart.getOption();
         const series = option.series[0] || {};
         const curZoom = series.zoom || 1;
-        // ECharts graph roam 通过 setOption 改 zoom 不直接生效，使用 dispatchAction 平移缩放
-        // 这里使用 dataZoom 思路不可行，改用 setOption + force 重新布局的方式不可取，
-        // 因此使用 ECharts 内部 zoom 行为：通过 setOption 修改 series.zoom
         chart.setOption({ series: [{ zoom: curZoom * factor }] });
     }
 

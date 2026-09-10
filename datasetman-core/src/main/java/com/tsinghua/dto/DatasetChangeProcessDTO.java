@@ -26,6 +26,7 @@ public class DatasetChangeProcessDTO {
     private Long rowCount;
     private Long sizeBytes;
     private boolean deleted;
+    private Integer jobState;
 
     @Data
     public static class UpstreamRef {

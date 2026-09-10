@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.restoreUserSettings = restoreUserSettings;
 
-    // 2.5. 右侧数据集库树形节点点击委托处理（仅处理父节点折叠/展开，叶子节点由 loadDatasetTree 中的直接绑定处理）
+    // 2.5. 右侧数据集树形节点点击委托处理（仅处理父节点折叠/展开，叶子节点由 loadDatasetTree 中的直接绑定处理）
     const rightSidebarTree = document.getElementById('datasetTree');
     if (rightSidebarTree) {
         rightSidebarTree.addEventListener('click', function(e) {
@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('选中的数据集节点名称:', nodeName);
         
         // 排除路径节点
-        if (nodeName === '数据集库' || nodeName === 'filesystem') {
+        if (nodeName === '数据集' || nodeName === 'filesystem') {
             console.log('选中的是路径节点，不是有效的数据集节点');
             return null;
         }
@@ -762,7 +762,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (result.success || result.code === 200) {
                     showToast('数据集删除成功', 'success');
 
-                    // 重新请求接口全量刷新左侧数据资源库和右侧数据集库
+                    // 重新请求接口全量刷新左侧数据资源库和右侧数据集
                     if (window.loadDataSourceTree) {
                         await window.loadDataSourceTree();
                     }
@@ -954,7 +954,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 监听删除事件
         datasetHistory.addEventListener('dataset-deleted', async function(e) {
             console.log('详情页删除按钮被点击，数据集已删除:', e.detail);
-            // 重新请求接口全量刷新左侧数据资源库和右侧数据集库
+            // 重新请求接口全量刷新左侧数据资源库和右侧数据集
             if (window.loadDataSourceTree) {
                 await window.loadDataSourceTree();
             }
@@ -971,7 +971,7 @@ document.addEventListener('DOMContentLoaded', function() {
         datasetDialog.addEventListener('dataset-created', async function(e) {
             console.log('数据集创建成功:', e.detail);
             const savedData = e.detail?.data || e.detail;
-            // 同步刷新左侧数据资源库和右侧数据集库
+            // 同步刷新左侧数据资源库和右侧数据集
             if (window.loadDataSourceTree) await window.loadDataSourceTree();
             if (window.loadDatasetTree) await window.loadDatasetTree();
             const datasetHistory = document.getElementById('datasetHistory');
@@ -2178,7 +2178,7 @@ function showVisualAnalysis() {
         }
     }
     
-    // 同步filesystem数据到右侧数据集库
+    // 同步filesystem数据到右侧数据集
     async function loadDatasetTree() {
         const rightSidebarTree = document.getElementById('datasetTree');
         if (!rightSidebarTree) return;

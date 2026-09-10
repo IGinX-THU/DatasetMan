@@ -18,6 +18,7 @@ import com.tsinghua.dto.DatasetVersionRegisterRequest;
 import com.tsinghua.entity.DatasetInfoEntity;
 import com.tsinghua.entity.DatasetLineageEntity;
 import com.tsinghua.entity.DatasetVersionEntity;
+import com.tsinghua.entity.TransformJobEntity;
 import com.tsinghua.enums.ProvenanceType;
 import com.tsinghua.util.CommonUtil;
 import com.tsinghua.util.ConvertUtil;
@@ -53,6 +54,9 @@ public class DatasetVersionService {
 
     @Autowired
     private DataPermissionService dataPermissionService;
+
+    @Autowired
+    private TransformJobService transformJobService;
 
     // ====================================================================
     // 登记
@@ -103,6 +107,7 @@ public class DatasetVersionService {
         version.setClientIp(clientIp);
         version.setRemark(nvl(request.getRemark()));
         version.setDeleted(false);
+        version.setJobState(request.getJobState() != null ? request.getJobState() : -1);
 
         WriteClient writeClient = iginxClient.getWriteClient();
         writeClient.writeMeasurement(version);
@@ -151,6 +156,49 @@ public class DatasetVersionService {
     // ====================================================================
     // 查询：逻辑数据集
     // ====================================================================
+
+    /** 最终状态：FINISHED(1), PARTIALLY_FAILED(6), FAILED(8), CLOSED(10) */
+    private static boolean isFinalJobState(Integer jobState) {
+        if (jobState == null || jobState < 0) return true;
+        return jobState == 1 || jobState == 6 || jobState == 8 || jobState == 10;
+    }
+
+    /**
+     * 刷新 TRANSFORM 类型版本关联的 Transform 作业状态。
+     * 对未到最终状态的版本，调用 statusJob 刷新并回写 jobState。
+     */
+    public void refreshTransformJobStates(List<DatasetVersionEntity> versions) {
+        if (versions == null || versions.isEmpty()) return;
+        for (DatasetVersionEntity v : versions) {
+            if (!ProvenanceType.TRANSFORM.name().equals(v.getProvenanceType())) continue;
+            if (isFinalJobState(v.getJobState())) continue;
+            try {
+                String jobId = extractTransformJobId(v);
+                if (jobId == null) continue;
+                TransformJobEntity job = transformJobService.statusJob(jobId);
+                if (job != null && job.getJobState() != v.getJobState()) {
+                    v.setJobState(job.getJobState());
+                    v.setId(v.getCreateTime());
+                    iginxClient.getWriteClient().writeMeasurement(v);
+                    log.info("已刷新版本 {} 的 Transform 作业状态为 {}", v.getId(), job.getJobState());
+                }
+            } catch (Exception e) {
+                log.warn("刷新版本 {} 的 Transform 作业状态失败: {}", v.getId(), e.getMessage());
+            }
+        }
+    }
+
+    private String extractTransformJobId(DatasetVersionEntity version) {
+        if (version.getDerivationConfig() == null) return null;
+        try {
+            JSONObject config = JSONObject.parse(version.getDerivationConfig());
+            JSONObject job = config.getJSONObject("transformJob");
+            if (job != null) return job.getString("jobId");
+        } catch (Exception e) {
+            log.warn("解析 derivationConfig 获取 jobId 失败: {}", e.getMessage());
+        }
+        return null;
+    }
 
     public DatasetInfoEntity findDatasetByName(String name) {
         String sql = String.format("select * from %s where name = '%s';", DATASET_PREFIX, escape(name));
@@ -202,7 +250,9 @@ public class DatasetVersionService {
             // datasetId 无效时返回空
             return new ArrayList<>();
         }
-        return query(sql, DatasetVersionEntity::new, VERSION_PREFIX).stream()
+        List<DatasetVersionEntity> versions = query(sql, DatasetVersionEntity::new, VERSION_PREFIX);
+        refreshTransformJobStates(versions);
+        return versions.stream()
                 .filter(v -> includeDeleted || !v.isDeleted())
                 .sorted(Comparator.comparing(DatasetVersionEntity::getCreateTime).reversed())
                 .collect(Collectors.toList());
@@ -219,6 +269,7 @@ public class DatasetVersionService {
         List<DatasetVersionEntity> all = query(sql, DatasetVersionEntity::new, VERSION_PREFIX).stream()
                 .filter(v -> !v.isDeleted())
                 .collect(Collectors.toList());
+        refreshTransformJobStates(all);
         if (AuthUtil.isAdmin()) {
             return all;
         }
@@ -252,6 +303,7 @@ public class DatasetVersionService {
                     version.setProvenanceType(v.getProvenanceType());
                     version.setCreateTime(v.getCreateTime());
                     version.setDeleted(v.isDeleted());
+                    version.setJobState(v.getJobState());
                     dataset.getVersions().add(version);
                 });
         return new ArrayList<>(groups.values());

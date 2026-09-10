@@ -131,6 +131,7 @@ public class LineageService {
             row.setRowCount(v.getRowCount());
             row.setSizeBytes(v.getSizeBytes());
             row.setDeleted(v.isDeleted());
+            row.setJobState(v.getJobState());
             row.setDerivationConfig(parseConfig(v.getDerivationConfig()));
 
             List<Long> upstreamIds = datasetVersionService.parseUpstreamIds(v);
@@ -168,6 +169,7 @@ public class LineageService {
         node.setCreateTime(v.getCreateTime());
         node.setRemark(v.getRemark());
         node.setDeleted(v.isDeleted());
+        node.setJobState(v.getJobState());
         node.setFocus(focus);
         node.setDerivationConfig(parseConfig(v.getDerivationConfig()));
         return node;
