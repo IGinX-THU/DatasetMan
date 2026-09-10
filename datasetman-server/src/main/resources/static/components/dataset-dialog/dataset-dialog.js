@@ -81,6 +81,23 @@ class DatasetDialog extends HTMLElement {
             this.updateSourcePathDisplay();
         });
 
+        // 父级版本选取后自动填充数据集名称并设为只读
+        $('upstreamVersion')?.addEventListener('change', (e) => {
+            const selected = e.target.selectedOptions[0];
+            const datasetName = selected ? selected.textContent.split(' / ')[0] : '';
+            const nameInput = $('datasetName');
+            if (nameInput) {
+                if (datasetName) {
+                    nameInput.value = datasetName;
+                    nameInput.disabled = true;
+                } else {
+                    nameInput.value = '';
+                    nameInput.disabled = false;
+                }
+                this.updateConfirmPreview();
+            }
+        });
+
         // SQL脚本选取后加载预览
         $('sqlSnippet')?.addEventListener('change', (e) => {
             const snippetId = e.target.value;
@@ -261,13 +278,20 @@ class DatasetDialog extends HTMLElement {
         if (this.currentStep === 1) {
             if (!this.createMode) return this.fail('请选择创建模式');
             const $ = (id) => this.shadowRoot.getElementById(id);
+            const nameInput = $('datasetName');
             if (this.createMode === 'new') {
                 this.selectedType = 'SOURCE';
                 $('newModeSection').style.display = 'block';
                 $('existingModeSection').style.display = 'none';
+                // 新建模式：名称可编辑，清空父级选择
+                if (nameInput) { nameInput.disabled = false; nameInput.value = ''; }
+                const upstreamSelect = $('upstreamVersion');
+                if (upstreamSelect) { upstreamSelect.disabled = false; upstreamSelect.value = ''; }
             } else {
                 $('newModeSection').style.display = 'none';
                 $('existingModeSection').style.display = 'block';
+                // 已有版本模式：名称由父级版本选择决定，先清空禁用
+                if (nameInput) { nameInput.disabled = true; nameInput.value = ''; }
                 if (!this.selectedType) {
                     const sqlCard = this.shadowRoot.querySelector('#typeCardsExisting .type-card[data-type="SQL_QUERY"]');
                     if (sqlCard) sqlCard.click();
@@ -292,6 +316,9 @@ class DatasetDialog extends HTMLElement {
         if (this.createMode === 'new') {
             const sourcePath = $('sourcePath').value;
             if (!sourcePath) return this.fail('请选择数据源');
+            // 新建数据集时校验名称不能与已有数据集重名
+            const exists = (this.options.datasets || []).some(d => d.datasetName === datasetName);
+            if (exists) return this.fail('数据集名称已存在，请更换名称或选择"基于已有版本创建新版本"');
         } else {
             const upstream = $('upstreamVersion').value;
             if (!upstream && !this.upstreamVersionId) return this.fail('请选择父级数据集版本');
