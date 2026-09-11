@@ -473,6 +473,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('Transform任务管理菜单被点击');
                         showComponent('transformJob');
                         break;
+                    case 'showSqlSnippetManagement':
+                        console.log('SQL脚本管理菜单被点击');
+                        showComponent('sqlSnippetManagement');
+                        break;
                     case 'showEvaluationCriteria':
                         console.log('评价准则菜单被点击');
                         showComponent('evaluationCriteria');
@@ -900,6 +904,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         break;
                     case 'showTransformJobManagement':
                         showComponent('transformJob');
+                        break;
+                    case 'showSqlSnippetManagement':
+                        showComponent('sqlSnippetManagement');
                         break;
                     case 'showTransformManagement':
                         showComponent('transformManagement');

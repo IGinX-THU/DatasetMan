@@ -131,6 +131,11 @@
     <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM7 17H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V7h2v2zm12 8H9v-2h10v2zm0-4H9v-2h10v2zm0-4H9V7h10v2z" fill="none" stroke="#1976D2" stroke-width="0.5"/>
   </symbol>
 
+  <!-- SQL脚本图标 -->
+  <symbol id="icon-sql" viewBox="0 0 24 24">
+    <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z" fill="#00bcd4"/>
+  </symbol>
+
   <!-- 测评图标 - Material Design Star/Assessment -->
   <symbol id="icon-assessment" viewBox="0 0 24 24">
     <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill="#FFC107"/>
@@ -142,19 +147,18 @@
 <header class="top-nav">
     <div class="nav-tabs">
         <span class="tab dropdown active" id="menu-home">主页</span>
-        <span class="tab dropdown" id="dataSourceDropdown">
-                <span class="dropdown-trigger">数据源</span>
-                <ul class="dropdown-menu">
-                    <li id="menu-data-source-management">数据源管理</li>
-                    <li id="menu-register-heterogeneous-data-source">注册异构数据源</li>
-                </ul>
-            </span>
         <span class="tab dropdown" id="datasetDropdown">
                 <span class="dropdown-trigger">数据集</span>
                 <ul class="dropdown-menu">
                     <li id="menu-dataset-create">创建数据集</li>
                     <li id="menu-dataset-delete">删除数据集</li>
-                    <li id="menu-dataset-edit">编辑数据集</li>
+                </ul>
+            </span>
+        <span class="tab dropdown" id="dataSourceDropdown">
+                <span class="dropdown-trigger">数据源</span>
+                <ul class="dropdown-menu">
+                    <li id="menu-data-source-management">数据源管理</li>
+                    <li id="menu-register-heterogeneous-data-source">注册异构数据源</li>
                 </ul>
             </span>
         <span class="tab dropdown" id="jobDropdown">
@@ -243,11 +247,27 @@
 <div class="func-tab-container">
     <div class="ribbon-bar">
         <div class="ribbon-group">
+            <div class="ribbon-group-title">数据集管理</div>
+            <div class="ribbon-buttons">
+                <button class="ribbon-btn" id="btn-dataset-add">
+                    <svg class="ribbon-btn-icon"><use href="#icon-add"></use></svg>
+                    <span class="ribbon-btn-text">创建</span>
+                </button>
+                <button class="ribbon-btn" id="btn-dataset-delete">
+                    <span class="ribbon-btn-icon" style="color: #f5222d; font-size: 16px; font-weight: bold;">✕</span>
+                    <span class="ribbon-btn-text">删除</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="ribbon-separator"></div>
+
+        <div class="ribbon-group">
             <div class="ribbon-group-title">数据源管理</div>
             <div class="ribbon-buttons">
                 <button class="ribbon-btn" id="btn-add">
                     <svg class="ribbon-btn-icon"><use href="#icon-add"></use></svg>
-                    <span class="ribbon-btn-text">新增</span>
+                    <span class="ribbon-btn-text">注册</span>
                 </button>
                 <button class="ribbon-btn" id="btn-manage">
                     <svg class="ribbon-btn-icon"><use href="#icon-unload"></use></svg>
@@ -259,28 +279,12 @@
         <div class="ribbon-separator"></div>
 
         <div class="ribbon-group">
-            <div class="ribbon-group-title">数据集管理</div>
-            <div class="ribbon-buttons">
-                <button class="ribbon-btn" id="btn-dataset-add">
-                    <svg class="ribbon-btn-icon"><use href="#icon-add"></use></svg>
-                    <span class="ribbon-btn-text">创建</span>
-                </button>
-                <button class="ribbon-btn" id="btn-dataset-delete">
-                    <span class="ribbon-btn-icon" style="color: #f5222d; font-size: 16px; font-weight: bold;">✕</span>
-                    <span class="ribbon-btn-text">删除</span>
-                </button>
-                <button class="ribbon-btn" id="btn-dataset-edit">
-                    <svg class="ribbon-btn-icon"><use href="#icon-edit"></use></svg>
-                    <span class="ribbon-btn-text">编辑</span>
-                </button>
-            </div>
-        </div>
-
-        <div class="ribbon-separator"></div>
-
-        <div class="ribbon-group">
             <div class="ribbon-group-title">作业调度引擎</div>
             <div class="ribbon-buttons">
+                <button class="ribbon-btn" id="btn-sql-snippet">
+                    <svg class="ribbon-btn-icon"><use href="#icon-sql"></use></svg>
+                    <span class="ribbon-btn-text">SQL</span>
+                </button>
                 <button class="ribbon-btn" id="btn-job-orchestrate">
                     <svg class="ribbon-btn-icon"><use href="#icon-orchestrate"></use></svg>
                     <span class="ribbon-btn-text">编排</span>

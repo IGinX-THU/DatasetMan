@@ -10,7 +10,7 @@ const BUTTON_ID_MAP = {
         action: 'showVisualAnalysis'
     },
     'btn-add': {
-        text: '新增',
+        text: '注册',
         action: 'showRegisterEmbedded'
     },
     'btn-upload': {
@@ -53,10 +53,6 @@ const BUTTON_ID_MAP = {
         text: '创建',
         action: 'showDatasetCreate'
     },
-    'btn-dataset-edit': {
-        text: '编辑',
-        action: 'showDatasetEdit'
-    },
     'btn-dataset-delete': {
         text: '删除',
         action: 'handleDeleteDataset'
@@ -68,6 +64,10 @@ const BUTTON_ID_MAP = {
     'btn-job-manage': {
         text: '任务',
         action: 'showTransformJobManagement'
+    },
+    'btn-sql-snippet': {
+        text: 'SQL',
+        action: 'showSqlSnippetManagement'
     },
     'btn-func-transform': {
         text: 'Transform',
@@ -144,10 +144,6 @@ const MENU_ID_MAP = {
     'menu-dataset-create': {
         text: '创建数据集',
         action: 'showDatasetCreate'
-    },
-    'menu-dataset-edit': {
-        text: '编辑数据集',
-        action: 'showDatasetEdit'
     },
     'menu-dataset-delete': {
         text: '删除数据集',
