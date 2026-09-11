@@ -47,6 +47,15 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
     private DatasetService datasetService;
 
     @Autowired
+    private DatasetCreationService datasetCreationService;
+
+    @Autowired
+    private DatasetVersionService datasetVersionService;
+
+    @Autowired
+    private LineageService lineageService;
+
+    @Autowired
     private FunctionService functionService;
 
     @Autowired
@@ -377,17 +386,104 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
     }
 
     @Override
-    public com.tsinghua.thrift.api.Result getVersionHistory(String datasetName) throws TException {
+    public com.tsinghua.thrift.api.Result createDataset(com.tsinghua.thrift.api.DatasetCreateRequest request) throws TException {
         try {
-            log.info("Thrift RPC: Get version history");
-            java.util.List<com.tsinghua.dto.DatasetVersionTreeDTO> history = datasetService.getVersionHistory(datasetName);
-            String jsonData = convertListToJson(history);
+            log.info("Thrift RPC: Create dataset version");
+            com.tsinghua.dto.DatasetCreateRequest dto = new com.tsinghua.dto.DatasetCreateRequest();
+            dto.setDatasetName(request.getDatasetName());
+            dto.setProvenanceType(request.getProvenanceType());
+            if (request.isSetSourcePath()) dto.setSourcePath(request.getSourcePath());
+            if (request.isSetImportFileName()) dto.setImportFileName(request.getImportFileName());
+            if (request.isSetImportFileBase64()) dto.setImportFileBase64(request.getImportFileBase64());
+            if (request.isSetImportKeyColumn()) dto.setImportKeyColumn(request.getImportKeyColumn());
+            if (request.isSetSqlSnippetId()) dto.setSqlSnippetId(request.getSqlSnippetId());
+            if (request.isSetUpstreamVersionIds()) dto.setUpstreamVersionIds(request.getUpstreamVersionIds());
+            if (request.isSetUdfNames()) dto.setUdfNames(request.getUdfNames());
+            if (request.isSetTransformCompareCreateTime()) dto.setTransformCompareCreateTime(request.getTransformCompareCreateTime());
+            if (request.isSetDescription()) dto.setDescription(request.getDescription());
+            if (request.isSetDataModality()) dto.setDataModality(request.getDataModality());
+            if (request.isSetProject()) dto.setProject(request.getProject());
+            if (request.isSetRemark()) dto.setRemark(request.getRemark());
+            com.tsinghua.entity.DatasetVersionEntity entity = datasetCreationService.create(dto);
+            String jsonData = convertEntityToJson(entity);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "创建成功");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Create dataset version failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Create failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result getDatasetTree() throws TException {
+        try {
+            log.info("Thrift RPC: Get dataset tree");
+            java.util.List<com.tsinghua.dto.DatasetTreeDTO> tree = datasetVersionService.getDatasetTree();
+            String jsonData = convertListToJson(tree);
             com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
             result.setData(jsonData);
             return result;
         } catch (Exception e) {
-            log.error("Thrift RPC: Get version history failed", e);
+            log.error("Thrift RPC: Get dataset tree failed", e);
             return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result getDatasetVersionMeta(long versionId) throws TException {
+        try {
+            log.info("Thrift RPC: Get dataset version meta: {}", versionId);
+            com.tsinghua.entity.DatasetVersionEntity entity = datasetVersionService.queryVersion(versionId);
+            String jsonData = convertEntityToJson(entity);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Get dataset version meta failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result getDatasetChanges(long datasetId) throws TException {
+        try {
+            log.info("Thrift RPC: Get dataset changes: {}", datasetId);
+            java.util.List<com.tsinghua.dto.DatasetChangeProcessDTO> changes = lineageService.getChangeProcess(datasetId);
+            String jsonData = convertListToJson(changes);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Get dataset changes failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result getDatasetLineage(long versionId, boolean sideLineage) throws TException {
+        try {
+            log.info("Thrift RPC: Get dataset lineage: {}, {}", versionId, sideLineage);
+            com.tsinghua.dto.LineageGraphDTO graph = lineageService.getLineageGraph(versionId, sideLineage);
+            String jsonData = convertEntityToJson(graph);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Get dataset lineage failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result deleteDatasetVersion(long versionId) throws TException {
+        try {
+            log.info("Thrift RPC: Delete dataset version: {}", versionId);
+            datasetVersionService.softDeleteVersion(versionId);
+            return new com.tsinghua.thrift.api.Result(true, "删除成功");
+        } catch (Exception e) {
+            log.error("Thrift RPC: Delete dataset version failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Delete failed: " + e.getMessage());
         }
     }
 

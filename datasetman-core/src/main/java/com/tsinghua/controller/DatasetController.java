@@ -122,4 +122,15 @@ public class DatasetController {
         return Result.success("删除成功");
     }
 
+    @ApiOperation("更新数据集版本档案")
+    @PutMapping("/version/update")
+    @RequirePermission(Permission.UPDATE)
+    @OperationLog(value = "编辑数据集档案", type = OperationLog.OperationType.UPDATE)
+    public Result<Void> updateVersion(@RequestBody java.util.Map<String, Object> body) {
+        Long versionId = Long.valueOf(body.get("versionId").toString());
+        String remark = body.get("remark") != null ? body.get("remark").toString() : null;
+        datasetVersionService.updateVersion(versionId, remark);
+        return Result.success("更新成功");
+    }
+
 }

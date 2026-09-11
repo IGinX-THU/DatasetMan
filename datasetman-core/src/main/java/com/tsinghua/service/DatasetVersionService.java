@@ -363,7 +363,6 @@ public class DatasetVersionService {
     }
 
     public void softDeleteVersion(Long versionId) {
-        assertVersionDeletable(versionId);
         DatasetVersionEntity version = queryVersion(versionId);
         if (version == null) {
             throw new RuntimeException("版本不存在: " + versionId);
@@ -388,6 +387,18 @@ public class DatasetVersionService {
         dataset.setDeleted(true);
         dataset.setId(dataset.getCreateTime());
         iginxClient.getWriteClient().writeMeasurement(dataset);
+    }
+
+    /** 更新数据集版本档案（目前仅备注可编辑，后续可扩展） */
+    public void updateVersion(Long versionId, String remark) {
+        DatasetVersionEntity version = queryVersion(versionId);
+        if (version == null) {
+            throw new RuntimeException("版本不存在: " + versionId);
+        }
+        if (remark != null) version.setRemark(remark);
+        version.setId(version.getCreateTime());
+        iginxClient.getWriteClient().writeMeasurement(version);
+        log.info("数据集版本档案已更新。id={}", versionId);
     }
 
     // ====================================================================

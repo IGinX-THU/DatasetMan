@@ -5,7 +5,7 @@ class DatasetHistory extends HTMLElement {
         this.version = null;
         this.changes = [];
         this.graph = { nodes: [], edges: [] };
-        this.sideLineage = true;
+        this.sideLineage = true; // 始终显示旁系血缘
         this.attachShadow({ mode: 'open' });
     }
 
@@ -101,7 +101,7 @@ class DatasetHistory extends HTMLElement {
             </style>
             <div class="page">
                 <div class="card">
-                    <div class="header"><h3>数据集档案</h3><div class="actions"><button class="primary" id="newVersion">创建新版本</button><button class="danger" id="deleteVersion">删除当前版本</button></div></div>
+                    <div class="header"><h3>数据集档案</h3><div class="actions"><button class="primary" id="newVersion">创建新版本</button><button class="primary" id="editVersion" style="display:none;">编辑</button><button class="danger" id="deleteVersion">删除当前版本</button></div></div>
                     <div class="info">
                         <div class="item"><label>数据集名称</label><span id="name">-</span></div>
                         <div class="item"><label>版本号</label><span id="versionNo">-</span></div>
@@ -109,7 +109,7 @@ class DatasetHistory extends HTMLElement {
                         <div class="item"><label>存储路径</label><span id="path">-</span></div>
                         <div class="item"><label>创建者</label><span id="operator">-</span></div>
                         <div class="item"><label>创建时间</label><span id="time">-</span></div>
-                        <div class="item wide"><label>版本备注</label><span id="remark">-</span></div>
+                        <div class="item wide"><label>版本备注</label><span id="remark">-</span><textarea id="remarkEdit" style="display:none;width:100%;min-height:60px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea></div>
                         <div class="item wide"><label>变化配置</label><pre id="recipe">-</pre></div>
                     </div>
                 </div>
@@ -119,7 +119,7 @@ class DatasetHistory extends HTMLElement {
                 </div>
                 <div class="card">
                     <div class="header"><h3>血缘图谱</h3></div>
-                    <div class="toolbar"><label class="switch"><input type="checkbox" id="sideLineage" checked> 显示旁系血缘</label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button></div>
+                    <div class="toolbar"><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button></div>
                     <div class="graph" id="graph"></div>
                 </div>
             </div>
@@ -142,10 +142,6 @@ class DatasetHistory extends HTMLElement {
     }
 
     bindEvents() {
-        this.shadowRoot.querySelector('#sideLineage').addEventListener('change', e => {
-            this.sideLineage = e.target.checked;
-            this.loadGraph();
-        });
         this.shadowRoot.querySelector('#focus').addEventListener('click', () => this.focusNode());
         this.shadowRoot.querySelector('#zoomIn').addEventListener('click', () => this.zoomBy(1.25));
         this.shadowRoot.querySelector('#zoomOut').addEventListener('click', () => this.zoomBy(0.8));
@@ -154,6 +150,7 @@ class DatasetHistory extends HTMLElement {
             this.dispatchEvent(new CustomEvent('edit-dataset', { bubbles:true, composed:true, detail:this.version }));
         });
         this.shadowRoot.querySelector('#deleteVersion').addEventListener('click', () => this.deleteCurrent());
+        this.shadowRoot.querySelector('#editVersion').addEventListener('click', () => this.toggleEditMode());
     }
 
     async show(selection) {
@@ -206,6 +203,11 @@ class DatasetHistory extends HTMLElement {
         this.setText('#operator', v.operator || '-');
         this.setText('#time', this.formatTime(v.createTime));
         this.setText('#remark', v.remark || '-');
+        // 显示编辑按钮
+        const editBtn = this.shadowRoot.querySelector('#editVersion');
+        if (editBtn) editBtn.style.display = '';
+        // 退出编辑模式
+        this.exitEditMode();
         let recipe = v.derivationConfig || '{}';
         try { recipe = JSON.stringify(JSON.parse(recipe), null, 2); } catch (e) {}
         this.setText('#recipe', recipe);
@@ -254,7 +256,7 @@ class DatasetHistory extends HTMLElement {
             this.renderGraph();
             return;
         }
-        const result = await window.AppConfig.get('dataset', 'lineage', { versionId:vid, sideLineage:this.sideLineage });
+        const result = await window.AppConfig.get('dataset', 'lineage', { versionId:vid, sideLineage:true });
         this.graph = ((result.success || result.code === 200) && result.data) ? result.data : { nodes:[], edges:[] };
         this.renderGraph();
     }
@@ -964,6 +966,61 @@ class DatasetHistory extends HTMLElement {
                 if (overlay.parentNode) document.body.removeChild(overlay);
             }
         });
+    }
+
+    toggleEditMode() {
+        const editBtn = this.shadowRoot.querySelector('#editVersion');
+        if (editBtn.textContent === '编辑') {
+            this.enterEditMode();
+        } else {
+            this.saveEdit();
+        }
+    }
+
+    enterEditMode() {
+        const remarkSpan = this.shadowRoot.querySelector('#remark');
+        const remarkEdit = this.shadowRoot.querySelector('#remarkEdit');
+        if (remarkSpan && remarkEdit) {
+            remarkEdit.value = this.version.remark || '';
+            remarkSpan.style.display = 'none';
+            remarkEdit.style.display = '';
+            remarkEdit.focus();
+        }
+        const editBtn = this.shadowRoot.querySelector('#editVersion');
+        if (editBtn) { editBtn.textContent = '保存'; editBtn.style.background = '#16a34a'; editBtn.style.color = '#fff'; }
+    }
+
+    exitEditMode() {
+        const remarkSpan = this.shadowRoot.querySelector('#remark');
+        const remarkEdit = this.shadowRoot.querySelector('#remarkEdit');
+        if (remarkSpan && remarkEdit) {
+            remarkSpan.style.display = '';
+            remarkEdit.style.display = 'none';
+        }
+        const editBtn = this.shadowRoot.querySelector('#editVersion');
+        if (editBtn) { editBtn.textContent = '编辑'; editBtn.style.background = ''; editBtn.style.color = ''; }
+    }
+
+    async saveEdit() {
+        const vid = this.versionIdOf(this.version);
+        if (vid == null) return;
+        const remarkEdit = this.shadowRoot.querySelector('#remarkEdit');
+        const newRemark = remarkEdit ? remarkEdit.value.trim() : (this.version.remark || '');
+        const editBtn = this.shadowRoot.querySelector('#editVersion');
+        if (editBtn) { editBtn.disabled = true; editBtn.textContent = '保存中...'; }
+        try {
+            const result = await window.AppConfig.put('dataset', 'versionUpdate', { versionId: vid, remark: newRemark });
+            if (!(result.success || result.code === 200)) throw new Error(result.message || '更新失败');
+            this.version.remark = newRemark;
+            this.setText('#remark', newRemark || '-');
+            this.exitEditMode();
+            if (window.CommonUtils?.showToast) window.CommonUtils.showToast('档案更新成功', 'success');
+        } catch (error) {
+            if (window.CommonUtils?.showToast) window.CommonUtils.showToast(error.message, 'error'); else alert(error.message);
+            this.exitEditMode();
+        } finally {
+            if (editBtn) editBtn.disabled = false;
+        }
     }
 
     recipeSummary(config) {

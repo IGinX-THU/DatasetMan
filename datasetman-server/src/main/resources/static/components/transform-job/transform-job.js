@@ -380,16 +380,29 @@ class TransformJob extends HTMLElement {
         const links = [];
         let nodeId = 0;
 
-        // Add output file node with job data
+        // Add output node with job data, label depends on exportType
+        // exportType: 0=none, 1=file, 2=IGinX
+        const exportType = job.exportType != null ? Number(job.exportType) : 1;
+        let outputLabel = '结果集: 文件';
+        let outputName = '文件';
+        if (exportType === 0) {
+            outputLabel = '结果集: 日志(log)';
+            outputName = '日志(log)';
+        } else if (exportType === 2) {
+            outputLabel = '结果集: IGinX(transform.*)';
+            outputName = 'IGinX(transform.*)';
+        } else if (exportType === 1 && job.exportFiletName) {
+            outputLabel = `结果集: 文件(${job.exportFiletName})`;
+            outputName = `文件(${job.exportFiletName})`;
+        }
         const outputNodeId = nodeId++;
-        const label = `结果集: ${job.exportFiletName || '导出文件'}`;
-        const lines = label.split('\n');
+        const lines = outputLabel.split('\n');
         const maxLineLength = Math.max(...lines.map(line => line.length));
         const width = maxLineLength * 9 + 40;
         const height = lines.length * 18 + 30;
         nodes.push({
             id: outputNodeId,
-            name: job.exportFiletName || '导出文件',
+            name: outputName,
             type: 'output',
             datasetType: '结果集',
             itemStyle: { color: '#F44336', borderColor: '#F44336' },
@@ -501,7 +514,10 @@ class TransformJob extends HTMLElement {
                                 return `数据集: ${dataset.datasetName}\n版本: ${dataset.version}\n任务类型: ${taskType}\n数据流类型: ${flowType}`;
                             } else if (params.data.type === 'output') {
                                 const job = params.data.jobData;
-                                return `结果集: ${job.exportFiletName || '导出文件'}`;
+                                const exportType = job.exportType != null ? Number(job.exportType) : 1;
+                                if (exportType === 0) return '结果集: 日志(log)';
+                                if (exportType === 2) return '结果集: IGinX(transform.*)';
+                                return `结果集: 文件(${job.exportFiletName || ''})`;
                             } else if (params.data.type === 'task') {
                                 const task = params.data.taskData;
                                 const taskType = task.taskType === 1 || task.taskType === 'PYTHON' ? 'PYTHON' : 'IGINX';
@@ -596,7 +612,9 @@ class TransformJob extends HTMLElement {
             9: '取消中',
             10: '取消'
         };
-        
+        const exportTypeMap = { 0: 'none', 1: 'file', 2: 'IGinX' };
+        const exportType = job.exportType != null ? Number(job.exportType) : 1;
+
         popup.innerHTML = `
             <div class="popup-header" style="
                 padding: 10px 15px;
@@ -619,6 +637,10 @@ class TransformJob extends HTMLElement {
                 <div class="popup-field" style="margin-bottom:12px;">
                     <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">作业状态：</label>
                     <span class="field-value">${statusMap[job.jobState] || '未知'}</span>
+                </div>
+                <div class="popup-field" style="margin-bottom:12px;">
+                    <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">输出目标：</label>
+                    <span class="field-value">${exportTypeMap[exportType] || '-'}</span>
                 </div>
                 <div class="popup-field" style="margin-bottom:12px;">
                     <label class="field-label" style="display:inline-block;width:100px;color:#666;font-weight:600;">调度策略：</label>
