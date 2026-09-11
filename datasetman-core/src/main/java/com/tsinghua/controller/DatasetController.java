@@ -101,8 +101,8 @@ public class DatasetController {
     @ApiOperation("数据集变化过程表格")
     @GetMapping("/changes")
     @RequirePermission(Permission.READ)
-    public Result<List<DatasetChangeProcessDTO>> changes(@RequestParam("datasetId") Long datasetId) {
-        return Result.success(lineageService.getChangeProcess(datasetId));
+    public Result<List<DatasetChangeProcessDTO>> changes(@RequestParam("datasetName") String datasetName) {
+        return Result.success(lineageService.getChangeProcess(datasetName));
     }
 
     @ApiOperation("数据集血缘图谱")
@@ -139,7 +139,8 @@ public class DatasetController {
     public Result<Void> updateVersion(@RequestBody java.util.Map<String, Object> body) {
         Long versionId = Long.valueOf(body.get("versionId").toString());
         String remark = body.get("remark") != null ? body.get("remark").toString() : null;
-        datasetVersionService.updateVersion(versionId, remark);
+        String dataModality = body.get("dataType") != null ? body.get("dataType").toString() : null;
+        datasetVersionService.updateVersion(versionId, remark, dataModality);
         return Result.success("更新成功");
     }
 

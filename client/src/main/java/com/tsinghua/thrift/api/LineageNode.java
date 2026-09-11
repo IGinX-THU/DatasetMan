@@ -12,26 +12,24 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("LineageNode");
 
   private static final org.apache.thrift.protocol.TField VERSION_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("versionId", org.apache.thrift.protocol.TType.I64, (short)1);
-  private static final org.apache.thrift.protocol.TField DATASET_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("datasetId", org.apache.thrift.protocol.TType.I64, (short)2);
-  private static final org.apache.thrift.protocol.TField DATASET_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("datasetName", org.apache.thrift.protocol.TType.STRING, (short)3);
-  private static final org.apache.thrift.protocol.TField VERSION_NO_FIELD_DESC = new org.apache.thrift.protocol.TField("versionNo", org.apache.thrift.protocol.TType.STRING, (short)4);
-  private static final org.apache.thrift.protocol.TField PROVENANCE_TYPE_FIELD_DESC = new org.apache.thrift.protocol.TField("provenanceType", org.apache.thrift.protocol.TType.STRING, (short)5);
-  private static final org.apache.thrift.protocol.TField PROVENANCE_LABEL_FIELD_DESC = new org.apache.thrift.protocol.TField("provenanceLabel", org.apache.thrift.protocol.TType.STRING, (short)6);
-  private static final org.apache.thrift.protocol.TField STORAGE_PATH_FIELD_DESC = new org.apache.thrift.protocol.TField("storagePath", org.apache.thrift.protocol.TType.STRING, (short)7);
-  private static final org.apache.thrift.protocol.TField OPERATOR_FIELD_DESC = new org.apache.thrift.protocol.TField("operator", org.apache.thrift.protocol.TType.STRING, (short)8);
-  private static final org.apache.thrift.protocol.TField CLIENT_IP_FIELD_DESC = new org.apache.thrift.protocol.TField("clientIp", org.apache.thrift.protocol.TType.STRING, (short)9);
-  private static final org.apache.thrift.protocol.TField CREATE_TIME_FIELD_DESC = new org.apache.thrift.protocol.TField("createTime", org.apache.thrift.protocol.TType.I64, (short)10);
-  private static final org.apache.thrift.protocol.TField REMARK_FIELD_DESC = new org.apache.thrift.protocol.TField("remark", org.apache.thrift.protocol.TType.STRING, (short)11);
-  private static final org.apache.thrift.protocol.TField DELETED_FIELD_DESC = new org.apache.thrift.protocol.TField("deleted", org.apache.thrift.protocol.TType.BOOL, (short)12);
-  private static final org.apache.thrift.protocol.TField JOB_STATE_FIELD_DESC = new org.apache.thrift.protocol.TField("jobState", org.apache.thrift.protocol.TType.I32, (short)13);
-  private static final org.apache.thrift.protocol.TField FOCUS_FIELD_DESC = new org.apache.thrift.protocol.TField("focus", org.apache.thrift.protocol.TType.BOOL, (short)14);
-  private static final org.apache.thrift.protocol.TField DERIVATION_CONFIG_FIELD_DESC = new org.apache.thrift.protocol.TField("derivationConfig", org.apache.thrift.protocol.TType.STRING, (short)15);
+  private static final org.apache.thrift.protocol.TField DATASET_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("datasetName", org.apache.thrift.protocol.TType.STRING, (short)2);
+  private static final org.apache.thrift.protocol.TField VERSION_NO_FIELD_DESC = new org.apache.thrift.protocol.TField("versionNo", org.apache.thrift.protocol.TType.STRING, (short)3);
+  private static final org.apache.thrift.protocol.TField PROVENANCE_TYPE_FIELD_DESC = new org.apache.thrift.protocol.TField("provenanceType", org.apache.thrift.protocol.TType.STRING, (short)4);
+  private static final org.apache.thrift.protocol.TField PROVENANCE_LABEL_FIELD_DESC = new org.apache.thrift.protocol.TField("provenanceLabel", org.apache.thrift.protocol.TType.STRING, (short)5);
+  private static final org.apache.thrift.protocol.TField STORAGE_PATH_FIELD_DESC = new org.apache.thrift.protocol.TField("storagePath", org.apache.thrift.protocol.TType.STRING, (short)6);
+  private static final org.apache.thrift.protocol.TField OPERATOR_FIELD_DESC = new org.apache.thrift.protocol.TField("operator", org.apache.thrift.protocol.TType.STRING, (short)7);
+  private static final org.apache.thrift.protocol.TField CLIENT_IP_FIELD_DESC = new org.apache.thrift.protocol.TField("clientIp", org.apache.thrift.protocol.TType.STRING, (short)8);
+  private static final org.apache.thrift.protocol.TField CREATE_TIME_FIELD_DESC = new org.apache.thrift.protocol.TField("createTime", org.apache.thrift.protocol.TType.I64, (short)9);
+  private static final org.apache.thrift.protocol.TField REMARK_FIELD_DESC = new org.apache.thrift.protocol.TField("remark", org.apache.thrift.protocol.TType.STRING, (short)10);
+  private static final org.apache.thrift.protocol.TField DELETED_FIELD_DESC = new org.apache.thrift.protocol.TField("deleted", org.apache.thrift.protocol.TType.BOOL, (short)11);
+  private static final org.apache.thrift.protocol.TField JOB_STATE_FIELD_DESC = new org.apache.thrift.protocol.TField("jobState", org.apache.thrift.protocol.TType.I32, (short)12);
+  private static final org.apache.thrift.protocol.TField FOCUS_FIELD_DESC = new org.apache.thrift.protocol.TField("focus", org.apache.thrift.protocol.TType.BOOL, (short)13);
+  private static final org.apache.thrift.protocol.TField DERIVATION_CONFIG_FIELD_DESC = new org.apache.thrift.protocol.TField("derivationConfig", org.apache.thrift.protocol.TType.STRING, (short)14);
 
   private static final org.apache.thrift.scheme.SchemeFactory STANDARD_SCHEME_FACTORY = new LineageNodeStandardSchemeFactory();
   private static final org.apache.thrift.scheme.SchemeFactory TUPLE_SCHEME_FACTORY = new LineageNodeTupleSchemeFactory();
 
   public long versionId; // required
-  public long datasetId; // optional
   public @org.apache.thrift.annotation.Nullable java.lang.String datasetName; // required
   public @org.apache.thrift.annotation.Nullable java.lang.String versionNo; // required
   public @org.apache.thrift.annotation.Nullable java.lang.String provenanceType; // optional
@@ -49,20 +47,19 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     VERSION_ID((short)1, "versionId"),
-    DATASET_ID((short)2, "datasetId"),
-    DATASET_NAME((short)3, "datasetName"),
-    VERSION_NO((short)4, "versionNo"),
-    PROVENANCE_TYPE((short)5, "provenanceType"),
-    PROVENANCE_LABEL((short)6, "provenanceLabel"),
-    STORAGE_PATH((short)7, "storagePath"),
-    OPERATOR((short)8, "operator"),
-    CLIENT_IP((short)9, "clientIp"),
-    CREATE_TIME((short)10, "createTime"),
-    REMARK((short)11, "remark"),
-    DELETED((short)12, "deleted"),
-    JOB_STATE((short)13, "jobState"),
-    FOCUS((short)14, "focus"),
-    DERIVATION_CONFIG((short)15, "derivationConfig");
+    DATASET_NAME((short)2, "datasetName"),
+    VERSION_NO((short)3, "versionNo"),
+    PROVENANCE_TYPE((short)4, "provenanceType"),
+    PROVENANCE_LABEL((short)5, "provenanceLabel"),
+    STORAGE_PATH((short)6, "storagePath"),
+    OPERATOR((short)7, "operator"),
+    CLIENT_IP((short)8, "clientIp"),
+    CREATE_TIME((short)9, "createTime"),
+    REMARK((short)10, "remark"),
+    DELETED((short)11, "deleted"),
+    JOB_STATE((short)12, "jobState"),
+    FOCUS((short)13, "focus"),
+    DERIVATION_CONFIG((short)14, "derivationConfig");
 
     private static final java.util.Map<java.lang.String, _Fields> byName = new java.util.HashMap<java.lang.String, _Fields>();
 
@@ -80,33 +77,31 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
       switch(fieldId) {
         case 1: // VERSION_ID
           return VERSION_ID;
-        case 2: // DATASET_ID
-          return DATASET_ID;
-        case 3: // DATASET_NAME
+        case 2: // DATASET_NAME
           return DATASET_NAME;
-        case 4: // VERSION_NO
+        case 3: // VERSION_NO
           return VERSION_NO;
-        case 5: // PROVENANCE_TYPE
+        case 4: // PROVENANCE_TYPE
           return PROVENANCE_TYPE;
-        case 6: // PROVENANCE_LABEL
+        case 5: // PROVENANCE_LABEL
           return PROVENANCE_LABEL;
-        case 7: // STORAGE_PATH
+        case 6: // STORAGE_PATH
           return STORAGE_PATH;
-        case 8: // OPERATOR
+        case 7: // OPERATOR
           return OPERATOR;
-        case 9: // CLIENT_IP
+        case 8: // CLIENT_IP
           return CLIENT_IP;
-        case 10: // CREATE_TIME
+        case 9: // CREATE_TIME
           return CREATE_TIME;
-        case 11: // REMARK
+        case 10: // REMARK
           return REMARK;
-        case 12: // DELETED
+        case 11: // DELETED
           return DELETED;
-        case 13: // JOB_STATE
+        case 12: // JOB_STATE
           return JOB_STATE;
-        case 14: // FOCUS
+        case 13: // FOCUS
           return FOCUS;
-        case 15: // DERIVATION_CONFIG
+        case 14: // DERIVATION_CONFIG
           return DERIVATION_CONFIG;
         default:
           return null;
@@ -152,19 +147,16 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
 
   // isset id assignments
   private static final int __VERSIONID_ISSET_ID = 0;
-  private static final int __DATASETID_ISSET_ID = 1;
-  private static final int __CREATETIME_ISSET_ID = 2;
-  private static final int __DELETED_ISSET_ID = 3;
-  private static final int __JOBSTATE_ISSET_ID = 4;
-  private static final int __FOCUS_ISSET_ID = 5;
+  private static final int __CREATETIME_ISSET_ID = 1;
+  private static final int __DELETED_ISSET_ID = 2;
+  private static final int __JOBSTATE_ISSET_ID = 3;
+  private static final int __FOCUS_ISSET_ID = 4;
   private byte __isset_bitfield = 0;
-  private static final _Fields[] optionals = {_Fields.DATASET_ID,_Fields.PROVENANCE_TYPE,_Fields.PROVENANCE_LABEL,_Fields.STORAGE_PATH,_Fields.OPERATOR,_Fields.CLIENT_IP,_Fields.REMARK,_Fields.JOB_STATE,_Fields.DERIVATION_CONFIG};
+  private static final _Fields[] optionals = {_Fields.PROVENANCE_TYPE,_Fields.PROVENANCE_LABEL,_Fields.STORAGE_PATH,_Fields.OPERATOR,_Fields.CLIENT_IP,_Fields.REMARK,_Fields.JOB_STATE,_Fields.DERIVATION_CONFIG};
   public static final java.util.Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     java.util.Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new java.util.EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
     tmpMap.put(_Fields.VERSION_ID, new org.apache.thrift.meta_data.FieldMetaData("versionId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
-    tmpMap.put(_Fields.DATASET_ID, new org.apache.thrift.meta_data.FieldMetaData("datasetId", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
     tmpMap.put(_Fields.DATASET_NAME, new org.apache.thrift.meta_data.FieldMetaData("datasetName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
@@ -226,7 +218,6 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
   public LineageNode(LineageNode other) {
     __isset_bitfield = other.__isset_bitfield;
     this.versionId = other.versionId;
-    this.datasetId = other.datasetId;
     if (other.isSetDatasetName()) {
       this.datasetName = other.datasetName;
     }
@@ -269,8 +260,6 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
   public void clear() {
     setVersionIdIsSet(false);
     this.versionId = 0;
-    setDatasetIdIsSet(false);
-    this.datasetId = 0;
     this.datasetName = null;
     this.versionNo = null;
     this.provenanceType = null;
@@ -311,29 +300,6 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
 
   public void setVersionIdIsSet(boolean value) {
     __isset_bitfield = org.apache.thrift.EncodingUtils.setBit(__isset_bitfield, __VERSIONID_ISSET_ID, value);
-  }
-
-  public long getDatasetId() {
-    return this.datasetId;
-  }
-
-  public LineageNode setDatasetId(long datasetId) {
-    this.datasetId = datasetId;
-    setDatasetIdIsSet(true);
-    return this;
-  }
-
-  public void unsetDatasetId() {
-    __isset_bitfield = org.apache.thrift.EncodingUtils.clearBit(__isset_bitfield, __DATASETID_ISSET_ID);
-  }
-
-  /** Returns true if field datasetId is set (has been assigned a value) and false otherwise */
-  public boolean isSetDatasetId() {
-    return org.apache.thrift.EncodingUtils.testBit(__isset_bitfield, __DATASETID_ISSET_ID);
-  }
-
-  public void setDatasetIdIsSet(boolean value) {
-    __isset_bitfield = org.apache.thrift.EncodingUtils.setBit(__isset_bitfield, __DATASETID_ISSET_ID, value);
   }
 
   @org.apache.thrift.annotation.Nullable
@@ -664,14 +630,6 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
       }
       break;
 
-    case DATASET_ID:
-      if (value == null) {
-        unsetDatasetId();
-      } else {
-        setDatasetId((java.lang.Long)value);
-      }
-      break;
-
     case DATASET_NAME:
       if (value == null) {
         unsetDatasetName();
@@ -786,9 +744,6 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
     case VERSION_ID:
       return getVersionId();
 
-    case DATASET_ID:
-      return getDatasetId();
-
     case DATASET_NAME:
       return getDatasetName();
 
@@ -842,8 +797,6 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
     switch (field) {
     case VERSION_ID:
       return isSetVersionId();
-    case DATASET_ID:
-      return isSetDatasetId();
     case DATASET_NAME:
       return isSetDatasetName();
     case VERSION_NO:
@@ -893,15 +846,6 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
       if (!(this_present_versionId && that_present_versionId))
         return false;
       if (this.versionId != that.versionId)
-        return false;
-    }
-
-    boolean this_present_datasetId = true && this.isSetDatasetId();
-    boolean that_present_datasetId = true && that.isSetDatasetId();
-    if (this_present_datasetId || that_present_datasetId) {
-      if (!(this_present_datasetId && that_present_datasetId))
-        return false;
-      if (this.datasetId != that.datasetId)
         return false;
     }
 
@@ -1031,10 +975,6 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
 
     hashCode = hashCode * 8191 + org.apache.thrift.TBaseHelper.hashCode(versionId);
 
-    hashCode = hashCode * 8191 + ((isSetDatasetId()) ? 131071 : 524287);
-    if (isSetDatasetId())
-      hashCode = hashCode * 8191 + org.apache.thrift.TBaseHelper.hashCode(datasetId);
-
     hashCode = hashCode * 8191 + ((isSetDatasetName()) ? 131071 : 524287);
     if (isSetDatasetName())
       hashCode = hashCode * 8191 + datasetName.hashCode();
@@ -1098,16 +1038,6 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
     }
     if (isSetVersionId()) {
       lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.versionId, other.versionId);
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-    }
-    lastComparison = java.lang.Boolean.compare(isSetDatasetId(), other.isSetDatasetId());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    if (isSetDatasetId()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.datasetId, other.datasetId);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -1269,12 +1199,6 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
     sb.append("versionId:");
     sb.append(this.versionId);
     first = false;
-    if (isSetDatasetId()) {
-      if (!first) sb.append(", ");
-      sb.append("datasetId:");
-      sb.append(this.datasetId);
-      first = false;
-    }
     if (!first) sb.append(", ");
     sb.append("datasetName:");
     if (this.datasetName == null) {
@@ -1434,15 +1358,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 2: // DATASET_ID
-            if (schemeField.type == org.apache.thrift.protocol.TType.I64) {
-              struct.datasetId = iprot.readI64();
-              struct.setDatasetIdIsSet(true);
-            } else { 
-              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-            }
-            break;
-          case 3: // DATASET_NAME
+          case 2: // DATASET_NAME
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.datasetName = iprot.readString();
               struct.setDatasetNameIsSet(true);
@@ -1450,7 +1366,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 4: // VERSION_NO
+          case 3: // VERSION_NO
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.versionNo = iprot.readString();
               struct.setVersionNoIsSet(true);
@@ -1458,7 +1374,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 5: // PROVENANCE_TYPE
+          case 4: // PROVENANCE_TYPE
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.provenanceType = iprot.readString();
               struct.setProvenanceTypeIsSet(true);
@@ -1466,7 +1382,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 6: // PROVENANCE_LABEL
+          case 5: // PROVENANCE_LABEL
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.provenanceLabel = iprot.readString();
               struct.setProvenanceLabelIsSet(true);
@@ -1474,7 +1390,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 7: // STORAGE_PATH
+          case 6: // STORAGE_PATH
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.storagePath = iprot.readString();
               struct.setStoragePathIsSet(true);
@@ -1482,7 +1398,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 8: // OPERATOR
+          case 7: // OPERATOR
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.operator = iprot.readString();
               struct.setOperatorIsSet(true);
@@ -1490,7 +1406,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 9: // CLIENT_IP
+          case 8: // CLIENT_IP
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.clientIp = iprot.readString();
               struct.setClientIpIsSet(true);
@@ -1498,7 +1414,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 10: // CREATE_TIME
+          case 9: // CREATE_TIME
             if (schemeField.type == org.apache.thrift.protocol.TType.I64) {
               struct.createTime = iprot.readI64();
               struct.setCreateTimeIsSet(true);
@@ -1506,7 +1422,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 11: // REMARK
+          case 10: // REMARK
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.remark = iprot.readString();
               struct.setRemarkIsSet(true);
@@ -1514,7 +1430,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 12: // DELETED
+          case 11: // DELETED
             if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
               struct.deleted = iprot.readBool();
               struct.setDeletedIsSet(true);
@@ -1522,7 +1438,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 13: // JOB_STATE
+          case 12: // JOB_STATE
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
               struct.jobState = iprot.readI32();
               struct.setJobStateIsSet(true);
@@ -1530,7 +1446,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 14: // FOCUS
+          case 13: // FOCUS
             if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
               struct.focus = iprot.readBool();
               struct.setFocusIsSet(true);
@@ -1538,7 +1454,7 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 15: // DERIVATION_CONFIG
+          case 14: // DERIVATION_CONFIG
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.derivationConfig = iprot.readString();
               struct.setDerivationConfigIsSet(true);
@@ -1565,11 +1481,6 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
       oprot.writeFieldBegin(VERSION_ID_FIELD_DESC);
       oprot.writeI64(struct.versionId);
       oprot.writeFieldEnd();
-      if (struct.isSetDatasetId()) {
-        oprot.writeFieldBegin(DATASET_ID_FIELD_DESC);
-        oprot.writeI64(struct.datasetId);
-        oprot.writeFieldEnd();
-      }
       if (struct.datasetName != null) {
         oprot.writeFieldBegin(DATASET_NAME_FIELD_DESC);
         oprot.writeString(struct.datasetName);
@@ -1665,54 +1576,48 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
       if (struct.isSetVersionId()) {
         optionals.set(0);
       }
-      if (struct.isSetDatasetId()) {
+      if (struct.isSetDatasetName()) {
         optionals.set(1);
       }
-      if (struct.isSetDatasetName()) {
+      if (struct.isSetVersionNo()) {
         optionals.set(2);
       }
-      if (struct.isSetVersionNo()) {
+      if (struct.isSetProvenanceType()) {
         optionals.set(3);
       }
-      if (struct.isSetProvenanceType()) {
+      if (struct.isSetProvenanceLabel()) {
         optionals.set(4);
       }
-      if (struct.isSetProvenanceLabel()) {
+      if (struct.isSetStoragePath()) {
         optionals.set(5);
       }
-      if (struct.isSetStoragePath()) {
+      if (struct.isSetOperator()) {
         optionals.set(6);
       }
-      if (struct.isSetOperator()) {
+      if (struct.isSetClientIp()) {
         optionals.set(7);
       }
-      if (struct.isSetClientIp()) {
+      if (struct.isSetCreateTime()) {
         optionals.set(8);
       }
-      if (struct.isSetCreateTime()) {
+      if (struct.isSetRemark()) {
         optionals.set(9);
       }
-      if (struct.isSetRemark()) {
+      if (struct.isSetDeleted()) {
         optionals.set(10);
       }
-      if (struct.isSetDeleted()) {
+      if (struct.isSetJobState()) {
         optionals.set(11);
       }
-      if (struct.isSetJobState()) {
+      if (struct.isSetFocus()) {
         optionals.set(12);
       }
-      if (struct.isSetFocus()) {
+      if (struct.isSetDerivationConfig()) {
         optionals.set(13);
       }
-      if (struct.isSetDerivationConfig()) {
-        optionals.set(14);
-      }
-      oprot.writeBitSet(optionals, 15);
+      oprot.writeBitSet(optionals, 14);
       if (struct.isSetVersionId()) {
         oprot.writeI64(struct.versionId);
-      }
-      if (struct.isSetDatasetId()) {
-        oprot.writeI64(struct.datasetId);
       }
       if (struct.isSetDatasetName()) {
         oprot.writeString(struct.datasetName);
@@ -1758,64 +1663,60 @@ public class LineageNode implements org.apache.thrift.TBase<LineageNode, Lineage
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, LineageNode struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TTupleProtocol iprot = (org.apache.thrift.protocol.TTupleProtocol) prot;
-      java.util.BitSet incoming = iprot.readBitSet(15);
+      java.util.BitSet incoming = iprot.readBitSet(14);
       if (incoming.get(0)) {
         struct.versionId = iprot.readI64();
         struct.setVersionIdIsSet(true);
       }
       if (incoming.get(1)) {
-        struct.datasetId = iprot.readI64();
-        struct.setDatasetIdIsSet(true);
-      }
-      if (incoming.get(2)) {
         struct.datasetName = iprot.readString();
         struct.setDatasetNameIsSet(true);
       }
-      if (incoming.get(3)) {
+      if (incoming.get(2)) {
         struct.versionNo = iprot.readString();
         struct.setVersionNoIsSet(true);
       }
-      if (incoming.get(4)) {
+      if (incoming.get(3)) {
         struct.provenanceType = iprot.readString();
         struct.setProvenanceTypeIsSet(true);
       }
-      if (incoming.get(5)) {
+      if (incoming.get(4)) {
         struct.provenanceLabel = iprot.readString();
         struct.setProvenanceLabelIsSet(true);
       }
-      if (incoming.get(6)) {
+      if (incoming.get(5)) {
         struct.storagePath = iprot.readString();
         struct.setStoragePathIsSet(true);
       }
-      if (incoming.get(7)) {
+      if (incoming.get(6)) {
         struct.operator = iprot.readString();
         struct.setOperatorIsSet(true);
       }
-      if (incoming.get(8)) {
+      if (incoming.get(7)) {
         struct.clientIp = iprot.readString();
         struct.setClientIpIsSet(true);
       }
-      if (incoming.get(9)) {
+      if (incoming.get(8)) {
         struct.createTime = iprot.readI64();
         struct.setCreateTimeIsSet(true);
       }
-      if (incoming.get(10)) {
+      if (incoming.get(9)) {
         struct.remark = iprot.readString();
         struct.setRemarkIsSet(true);
       }
-      if (incoming.get(11)) {
+      if (incoming.get(10)) {
         struct.deleted = iprot.readBool();
         struct.setDeletedIsSet(true);
       }
-      if (incoming.get(12)) {
+      if (incoming.get(11)) {
         struct.jobState = iprot.readI32();
         struct.setJobStateIsSet(true);
       }
-      if (incoming.get(13)) {
+      if (incoming.get(12)) {
         struct.focus = iprot.readBool();
         struct.setFocusIsSet(true);
       }
-      if (incoming.get(14)) {
+      if (incoming.get(13)) {
         struct.derivationConfig = iprot.readString();
         struct.setDerivationConfigIsSet(true);
       }

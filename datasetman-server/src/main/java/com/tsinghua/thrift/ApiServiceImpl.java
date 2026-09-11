@@ -446,10 +446,10 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
     }
 
     @Override
-    public com.tsinghua.thrift.api.Result getDatasetChanges(long datasetId) throws TException {
+    public com.tsinghua.thrift.api.Result getDatasetChanges(String datasetName) throws TException {
         try {
-            log.info("Thrift RPC: Get dataset changes: {}", datasetId);
-            java.util.List<com.tsinghua.dto.DatasetChangeProcessDTO> changes = lineageService.getChangeProcess(datasetId);
+            log.info("Thrift RPC: Get dataset changes: {}", datasetName);
+            java.util.List<com.tsinghua.dto.DatasetChangeProcessDTO> changes = lineageService.getChangeProcess(datasetName);
             String jsonData = convertListToJson(changes);
             com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
             result.setData(jsonData);

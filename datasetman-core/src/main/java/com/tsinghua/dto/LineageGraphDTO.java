@@ -20,7 +20,6 @@ public class LineageGraphDTO {
     @Data
     public static class Node {
         private Long versionId;
-        private Long datasetId;
         private String datasetName;
         private String versionNo;
         private String provenanceType;

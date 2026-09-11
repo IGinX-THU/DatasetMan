@@ -1192,7 +1192,6 @@ class DatasetVersionEntity(object):
     """
     Attributes:
      - id
-     - datasetId
      - datasetName
      - versionNo
      - provenanceType
@@ -1213,9 +1212,8 @@ class DatasetVersionEntity(object):
     thrift_spec = None
 
 
-    def __init__(self, id = None, datasetId = None, datasetName = None, versionNo = None, provenanceType = None, storagePath = None, upstreamVersionIds = None, derivationConfig = None, schemaJson = None, rowCount = None, sizeBytes = None, createTime = None, operator = None, clientIp = None, remark = None, deleted = None, jobState = None,):
+    def __init__(self, id = None, datasetName = None, versionNo = None, provenanceType = None, storagePath = None, upstreamVersionIds = None, derivationConfig = None, schemaJson = None, rowCount = None, sizeBytes = None, createTime = None, operator = None, clientIp = None, remark = None, deleted = None, jobState = None,):
         self.id = id
-        self.datasetId = datasetId
         self.datasetName = datasetName
         self.versionNo = versionNo
         self.provenanceType = provenanceType
@@ -1247,81 +1245,76 @@ class DatasetVersionEntity(object):
                 else:
                     iprot.skip(ftype)
             elif fid == 2:
-                if ftype == TType.I64:
-                    self.datasetId = iprot.readI64()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 3:
                 if ftype == TType.STRING:
                     self.datasetName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 4:
+            elif fid == 3:
                 if ftype == TType.STRING:
                     self.versionNo = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 5:
+            elif fid == 4:
                 if ftype == TType.STRING:
                     self.provenanceType = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 6:
+            elif fid == 5:
                 if ftype == TType.STRING:
                     self.storagePath = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 7:
+            elif fid == 6:
                 if ftype == TType.STRING:
                     self.upstreamVersionIds = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 8:
+            elif fid == 7:
                 if ftype == TType.STRING:
                     self.derivationConfig = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 9:
+            elif fid == 8:
                 if ftype == TType.STRING:
                     self.schemaJson = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 10:
+            elif fid == 9:
                 if ftype == TType.I64:
                     self.rowCount = iprot.readI64()
                 else:
                     iprot.skip(ftype)
-            elif fid == 11:
+            elif fid == 10:
                 if ftype == TType.I64:
                     self.sizeBytes = iprot.readI64()
                 else:
                     iprot.skip(ftype)
-            elif fid == 12:
+            elif fid == 11:
                 if ftype == TType.I64:
                     self.createTime = iprot.readI64()
                 else:
                     iprot.skip(ftype)
-            elif fid == 13:
+            elif fid == 12:
                 if ftype == TType.STRING:
                     self.operator = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 14:
+            elif fid == 13:
                 if ftype == TType.STRING:
                     self.clientIp = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 15:
+            elif fid == 14:
                 if ftype == TType.STRING:
                     self.remark = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 16:
+            elif fid == 15:
                 if ftype == TType.BOOL:
                     self.deleted = iprot.readBool()
                 else:
                     iprot.skip(ftype)
-            elif fid == 17:
+            elif fid == 16:
                 if ftype == TType.I32:
                     self.jobState = iprot.readI32()
                 else:
@@ -1341,68 +1334,64 @@ class DatasetVersionEntity(object):
             oprot.writeFieldBegin('id', TType.I64, 1)
             oprot.writeI64(self.id)
             oprot.writeFieldEnd()
-        if self.datasetId is not None:
-            oprot.writeFieldBegin('datasetId', TType.I64, 2)
-            oprot.writeI64(self.datasetId)
-            oprot.writeFieldEnd()
         if self.datasetName is not None:
-            oprot.writeFieldBegin('datasetName', TType.STRING, 3)
+            oprot.writeFieldBegin('datasetName', TType.STRING, 2)
             oprot.writeString(self.datasetName.encode('utf-8') if sys.version_info[0] == 2 else self.datasetName)
             oprot.writeFieldEnd()
         if self.versionNo is not None:
-            oprot.writeFieldBegin('versionNo', TType.STRING, 4)
+            oprot.writeFieldBegin('versionNo', TType.STRING, 3)
             oprot.writeString(self.versionNo.encode('utf-8') if sys.version_info[0] == 2 else self.versionNo)
             oprot.writeFieldEnd()
         if self.provenanceType is not None:
-            oprot.writeFieldBegin('provenanceType', TType.STRING, 5)
+            oprot.writeFieldBegin('provenanceType', TType.STRING, 4)
             oprot.writeString(self.provenanceType.encode('utf-8') if sys.version_info[0] == 2 else self.provenanceType)
             oprot.writeFieldEnd()
         if self.storagePath is not None:
-            oprot.writeFieldBegin('storagePath', TType.STRING, 6)
+            oprot.writeFieldBegin('storagePath', TType.STRING, 5)
             oprot.writeString(self.storagePath.encode('utf-8') if sys.version_info[0] == 2 else self.storagePath)
             oprot.writeFieldEnd()
         if self.upstreamVersionIds is not None:
-            oprot.writeFieldBegin('upstreamVersionIds', TType.STRING, 7)
+            oprot.writeFieldBegin('upstreamVersionIds', TType.STRING, 6)
             oprot.writeString(self.upstreamVersionIds.encode('utf-8') if sys.version_info[0] == 2 else self.upstreamVersionIds)
             oprot.writeFieldEnd()
         if self.derivationConfig is not None:
-            oprot.writeFieldBegin('derivationConfig', TType.STRING, 8)
+            oprot.writeFieldBegin('derivationConfig', TType.STRING, 7)
             oprot.writeString(self.derivationConfig.encode('utf-8') if sys.version_info[0] == 2 else self.derivationConfig)
             oprot.writeFieldEnd()
         if self.schemaJson is not None:
-            oprot.writeFieldBegin('schemaJson', TType.STRING, 9)
+            oprot.writeFieldBegin('schemaJson', TType.STRING, 8)
             oprot.writeString(self.schemaJson.encode('utf-8') if sys.version_info[0] == 2 else self.schemaJson)
             oprot.writeFieldEnd()
         if self.rowCount is not None:
-            oprot.writeFieldBegin('rowCount', TType.I64, 10)
+            oprot.writeFieldBegin('rowCount', TType.I64, 9)
             oprot.writeI64(self.rowCount)
             oprot.writeFieldEnd()
         if self.sizeBytes is not None:
-            oprot.writeFieldBegin('sizeBytes', TType.I64, 11)
+            oprot.writeFieldBegin('sizeBytes', TType.I64, 10)
             oprot.writeI64(self.sizeBytes)
             oprot.writeFieldEnd()
         if self.createTime is not None:
-            oprot.writeFieldBegin('createTime', TType.I64, 12)
+            oprot.writeFieldBegin('createTime', TType.I64, 11)
             oprot.writeI64(self.createTime)
             oprot.writeFieldEnd()
         if self.operator is not None:
-            oprot.writeFieldBegin('operator', TType.STRING, 13)
+            oprot.writeFieldBegin('operator', TType.STRING, 12)
             oprot.writeString(self.operator.encode('utf-8') if sys.version_info[0] == 2 else self.operator)
             oprot.writeFieldEnd()
         if self.clientIp is not None:
-            oprot.writeFieldBegin('clientIp', TType.STRING, 14)
+            oprot.writeFieldBegin('clientIp', TType.STRING, 13)
             oprot.writeString(self.clientIp.encode('utf-8') if sys.version_info[0] == 2 else self.clientIp)
             oprot.writeFieldEnd()
         if self.remark is not None:
-            oprot.writeFieldBegin('remark', TType.STRING, 15)
+            oprot.writeFieldBegin('remark', TType.STRING, 14)
             oprot.writeString(self.remark.encode('utf-8') if sys.version_info[0] == 2 else self.remark)
             oprot.writeFieldEnd()
         if self.deleted is not None:
-            oprot.writeFieldBegin('deleted', TType.BOOL, 16)
+            oprot.writeFieldBegin('deleted', TType.BOOL, 15)
             oprot.writeBool(self.deleted)
             oprot.writeFieldEnd()
         if self.jobState is not None:
-            oprot.writeFieldBegin('jobState', TType.I32, 17)
+            oprot.writeFieldBegin('jobState', TType.I32, 16)
             oprot.writeI32(self.jobState)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1769,7 +1758,6 @@ class DatasetTreeVersion(object):
 class DatasetTreeDTO(object):
     """
     Attributes:
-     - datasetId
      - datasetName
      - versions
 
@@ -1777,8 +1765,7 @@ class DatasetTreeDTO(object):
     thrift_spec = None
 
 
-    def __init__(self, datasetId = None, datasetName = None, versions = None,):
-        self.datasetId = datasetId
+    def __init__(self, datasetName = None, versions = None,):
         self.datasetName = datasetName
         self.versions = versions
 
@@ -1792,16 +1779,11 @@ class DatasetTreeDTO(object):
             if ftype == TType.STOP:
                 break
             if fid == 1:
-                if ftype == TType.I64:
-                    self.datasetId = iprot.readI64()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 2:
                 if ftype == TType.STRING:
                     self.datasetName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 3:
+            elif fid == 2:
                 if ftype == TType.LIST:
                     self.versions = []
                     (_etype68, _size65) = iprot.readListBegin()
@@ -1823,16 +1805,12 @@ class DatasetTreeDTO(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('DatasetTreeDTO')
-        if self.datasetId is not None:
-            oprot.writeFieldBegin('datasetId', TType.I64, 1)
-            oprot.writeI64(self.datasetId)
-            oprot.writeFieldEnd()
         if self.datasetName is not None:
-            oprot.writeFieldBegin('datasetName', TType.STRING, 2)
+            oprot.writeFieldBegin('datasetName', TType.STRING, 1)
             oprot.writeString(self.datasetName.encode('utf-8') if sys.version_info[0] == 2 else self.datasetName)
             oprot.writeFieldEnd()
         if self.versions is not None:
-            oprot.writeFieldBegin('versions', TType.LIST, 3)
+            oprot.writeFieldBegin('versions', TType.LIST, 2)
             oprot.writeListBegin(TType.STRUCT, len(self.versions))
             for iter71 in self.versions:
                 iter71.write(oprot)
@@ -2174,7 +2152,6 @@ class LineageNode(object):
     """
     Attributes:
      - versionId
-     - datasetId
      - datasetName
      - versionNo
      - provenanceType
@@ -2193,9 +2170,8 @@ class LineageNode(object):
     thrift_spec = None
 
 
-    def __init__(self, versionId = None, datasetId = None, datasetName = None, versionNo = None, provenanceType = None, provenanceLabel = None, storagePath = None, operator = None, clientIp = None, createTime = None, remark = None, deleted = None, jobState = None, focus = None, derivationConfig = None,):
+    def __init__(self, versionId = None, datasetName = None, versionNo = None, provenanceType = None, provenanceLabel = None, storagePath = None, operator = None, clientIp = None, createTime = None, remark = None, deleted = None, jobState = None, focus = None, derivationConfig = None,):
         self.versionId = versionId
-        self.datasetId = datasetId
         self.datasetName = datasetName
         self.versionNo = versionNo
         self.provenanceType = provenanceType
@@ -2225,71 +2201,66 @@ class LineageNode(object):
                 else:
                     iprot.skip(ftype)
             elif fid == 2:
-                if ftype == TType.I64:
-                    self.datasetId = iprot.readI64()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 3:
                 if ftype == TType.STRING:
                     self.datasetName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 4:
+            elif fid == 3:
                 if ftype == TType.STRING:
                     self.versionNo = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 5:
+            elif fid == 4:
                 if ftype == TType.STRING:
                     self.provenanceType = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 6:
+            elif fid == 5:
                 if ftype == TType.STRING:
                     self.provenanceLabel = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 7:
+            elif fid == 6:
                 if ftype == TType.STRING:
                     self.storagePath = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 8:
+            elif fid == 7:
                 if ftype == TType.STRING:
                     self.operator = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 9:
+            elif fid == 8:
                 if ftype == TType.STRING:
                     self.clientIp = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 10:
+            elif fid == 9:
                 if ftype == TType.I64:
                     self.createTime = iprot.readI64()
                 else:
                     iprot.skip(ftype)
-            elif fid == 11:
+            elif fid == 10:
                 if ftype == TType.STRING:
                     self.remark = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
-            elif fid == 12:
+            elif fid == 11:
                 if ftype == TType.BOOL:
                     self.deleted = iprot.readBool()
                 else:
                     iprot.skip(ftype)
-            elif fid == 13:
+            elif fid == 12:
                 if ftype == TType.I32:
                     self.jobState = iprot.readI32()
                 else:
                     iprot.skip(ftype)
-            elif fid == 14:
+            elif fid == 13:
                 if ftype == TType.BOOL:
                     self.focus = iprot.readBool()
                 else:
                     iprot.skip(ftype)
-            elif fid == 15:
+            elif fid == 14:
                 if ftype == TType.STRING:
                     self.derivationConfig = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
@@ -2309,60 +2280,56 @@ class LineageNode(object):
             oprot.writeFieldBegin('versionId', TType.I64, 1)
             oprot.writeI64(self.versionId)
             oprot.writeFieldEnd()
-        if self.datasetId is not None:
-            oprot.writeFieldBegin('datasetId', TType.I64, 2)
-            oprot.writeI64(self.datasetId)
-            oprot.writeFieldEnd()
         if self.datasetName is not None:
-            oprot.writeFieldBegin('datasetName', TType.STRING, 3)
+            oprot.writeFieldBegin('datasetName', TType.STRING, 2)
             oprot.writeString(self.datasetName.encode('utf-8') if sys.version_info[0] == 2 else self.datasetName)
             oprot.writeFieldEnd()
         if self.versionNo is not None:
-            oprot.writeFieldBegin('versionNo', TType.STRING, 4)
+            oprot.writeFieldBegin('versionNo', TType.STRING, 3)
             oprot.writeString(self.versionNo.encode('utf-8') if sys.version_info[0] == 2 else self.versionNo)
             oprot.writeFieldEnd()
         if self.provenanceType is not None:
-            oprot.writeFieldBegin('provenanceType', TType.STRING, 5)
+            oprot.writeFieldBegin('provenanceType', TType.STRING, 4)
             oprot.writeString(self.provenanceType.encode('utf-8') if sys.version_info[0] == 2 else self.provenanceType)
             oprot.writeFieldEnd()
         if self.provenanceLabel is not None:
-            oprot.writeFieldBegin('provenanceLabel', TType.STRING, 6)
+            oprot.writeFieldBegin('provenanceLabel', TType.STRING, 5)
             oprot.writeString(self.provenanceLabel.encode('utf-8') if sys.version_info[0] == 2 else self.provenanceLabel)
             oprot.writeFieldEnd()
         if self.storagePath is not None:
-            oprot.writeFieldBegin('storagePath', TType.STRING, 7)
+            oprot.writeFieldBegin('storagePath', TType.STRING, 6)
             oprot.writeString(self.storagePath.encode('utf-8') if sys.version_info[0] == 2 else self.storagePath)
             oprot.writeFieldEnd()
         if self.operator is not None:
-            oprot.writeFieldBegin('operator', TType.STRING, 8)
+            oprot.writeFieldBegin('operator', TType.STRING, 7)
             oprot.writeString(self.operator.encode('utf-8') if sys.version_info[0] == 2 else self.operator)
             oprot.writeFieldEnd()
         if self.clientIp is not None:
-            oprot.writeFieldBegin('clientIp', TType.STRING, 9)
+            oprot.writeFieldBegin('clientIp', TType.STRING, 8)
             oprot.writeString(self.clientIp.encode('utf-8') if sys.version_info[0] == 2 else self.clientIp)
             oprot.writeFieldEnd()
         if self.createTime is not None:
-            oprot.writeFieldBegin('createTime', TType.I64, 10)
+            oprot.writeFieldBegin('createTime', TType.I64, 9)
             oprot.writeI64(self.createTime)
             oprot.writeFieldEnd()
         if self.remark is not None:
-            oprot.writeFieldBegin('remark', TType.STRING, 11)
+            oprot.writeFieldBegin('remark', TType.STRING, 10)
             oprot.writeString(self.remark.encode('utf-8') if sys.version_info[0] == 2 else self.remark)
             oprot.writeFieldEnd()
         if self.deleted is not None:
-            oprot.writeFieldBegin('deleted', TType.BOOL, 12)
+            oprot.writeFieldBegin('deleted', TType.BOOL, 11)
             oprot.writeBool(self.deleted)
             oprot.writeFieldEnd()
         if self.jobState is not None:
-            oprot.writeFieldBegin('jobState', TType.I32, 13)
+            oprot.writeFieldBegin('jobState', TType.I32, 12)
             oprot.writeI32(self.jobState)
             oprot.writeFieldEnd()
         if self.focus is not None:
-            oprot.writeFieldBegin('focus', TType.BOOL, 14)
+            oprot.writeFieldBegin('focus', TType.BOOL, 13)
             oprot.writeBool(self.focus)
             oprot.writeFieldEnd()
         if self.derivationConfig is not None:
-            oprot.writeFieldBegin('derivationConfig', TType.STRING, 15)
+            oprot.writeFieldBegin('derivationConfig', TType.STRING, 14)
             oprot.writeString(self.derivationConfig.encode('utf-8') if sys.version_info[0] == 2 else self.derivationConfig)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -5214,22 +5181,21 @@ all_structs.append(DatasetVersionEntity)
 DatasetVersionEntity.thrift_spec = (
     None,  # 0
     (1, TType.I64, 'id', None, None, ),  # 1
-    (2, TType.I64, 'datasetId', None, None, ),  # 2
-    (3, TType.STRING, 'datasetName', 'UTF8', None, ),  # 3
-    (4, TType.STRING, 'versionNo', 'UTF8', None, ),  # 4
-    (5, TType.STRING, 'provenanceType', 'UTF8', None, ),  # 5
-    (6, TType.STRING, 'storagePath', 'UTF8', None, ),  # 6
-    (7, TType.STRING, 'upstreamVersionIds', 'UTF8', None, ),  # 7
-    (8, TType.STRING, 'derivationConfig', 'UTF8', None, ),  # 8
-    (9, TType.STRING, 'schemaJson', 'UTF8', None, ),  # 9
-    (10, TType.I64, 'rowCount', None, None, ),  # 10
-    (11, TType.I64, 'sizeBytes', None, None, ),  # 11
-    (12, TType.I64, 'createTime', None, None, ),  # 12
-    (13, TType.STRING, 'operator', 'UTF8', None, ),  # 13
-    (14, TType.STRING, 'clientIp', 'UTF8', None, ),  # 14
-    (15, TType.STRING, 'remark', 'UTF8', None, ),  # 15
-    (16, TType.BOOL, 'deleted', None, None, ),  # 16
-    (17, TType.I32, 'jobState', None, None, ),  # 17
+    (2, TType.STRING, 'datasetName', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'versionNo', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'provenanceType', 'UTF8', None, ),  # 4
+    (5, TType.STRING, 'storagePath', 'UTF8', None, ),  # 5
+    (6, TType.STRING, 'upstreamVersionIds', 'UTF8', None, ),  # 6
+    (7, TType.STRING, 'derivationConfig', 'UTF8', None, ),  # 7
+    (8, TType.STRING, 'schemaJson', 'UTF8', None, ),  # 8
+    (9, TType.I64, 'rowCount', None, None, ),  # 9
+    (10, TType.I64, 'sizeBytes', None, None, ),  # 10
+    (11, TType.I64, 'createTime', None, None, ),  # 11
+    (12, TType.STRING, 'operator', 'UTF8', None, ),  # 12
+    (13, TType.STRING, 'clientIp', 'UTF8', None, ),  # 13
+    (14, TType.STRING, 'remark', 'UTF8', None, ),  # 14
+    (15, TType.BOOL, 'deleted', None, None, ),  # 15
+    (16, TType.I32, 'jobState', None, None, ),  # 16
 )
 all_structs.append(DatasetCreateRequest)
 DatasetCreateRequest.thrift_spec = (
@@ -5263,9 +5229,8 @@ DatasetTreeVersion.thrift_spec = (
 all_structs.append(DatasetTreeDTO)
 DatasetTreeDTO.thrift_spec = (
     None,  # 0
-    (1, TType.I64, 'datasetId', None, None, ),  # 1
-    (2, TType.STRING, 'datasetName', 'UTF8', None, ),  # 2
-    (3, TType.LIST, 'versions', (TType.STRUCT, [DatasetTreeVersion, None], False), None, ),  # 3
+    (1, TType.STRING, 'datasetName', 'UTF8', None, ),  # 1
+    (2, TType.LIST, 'versions', (TType.STRUCT, [DatasetTreeVersion, None], False), None, ),  # 2
 )
 all_structs.append(UpstreamRef)
 UpstreamRef.thrift_spec = (
@@ -5298,20 +5263,19 @@ all_structs.append(LineageNode)
 LineageNode.thrift_spec = (
     None,  # 0
     (1, TType.I64, 'versionId', None, None, ),  # 1
-    (2, TType.I64, 'datasetId', None, None, ),  # 2
-    (3, TType.STRING, 'datasetName', 'UTF8', None, ),  # 3
-    (4, TType.STRING, 'versionNo', 'UTF8', None, ),  # 4
-    (5, TType.STRING, 'provenanceType', 'UTF8', None, ),  # 5
-    (6, TType.STRING, 'provenanceLabel', 'UTF8', None, ),  # 6
-    (7, TType.STRING, 'storagePath', 'UTF8', None, ),  # 7
-    (8, TType.STRING, 'operator', 'UTF8', None, ),  # 8
-    (9, TType.STRING, 'clientIp', 'UTF8', None, ),  # 9
-    (10, TType.I64, 'createTime', None, None, ),  # 10
-    (11, TType.STRING, 'remark', 'UTF8', None, ),  # 11
-    (12, TType.BOOL, 'deleted', None, None, ),  # 12
-    (13, TType.I32, 'jobState', None, None, ),  # 13
-    (14, TType.BOOL, 'focus', None, None, ),  # 14
-    (15, TType.STRING, 'derivationConfig', 'UTF8', None, ),  # 15
+    (2, TType.STRING, 'datasetName', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'versionNo', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'provenanceType', 'UTF8', None, ),  # 4
+    (5, TType.STRING, 'provenanceLabel', 'UTF8', None, ),  # 5
+    (6, TType.STRING, 'storagePath', 'UTF8', None, ),  # 6
+    (7, TType.STRING, 'operator', 'UTF8', None, ),  # 7
+    (8, TType.STRING, 'clientIp', 'UTF8', None, ),  # 8
+    (9, TType.I64, 'createTime', None, None, ),  # 9
+    (10, TType.STRING, 'remark', 'UTF8', None, ),  # 10
+    (11, TType.BOOL, 'deleted', None, None, ),  # 11
+    (12, TType.I32, 'jobState', None, None, ),  # 12
+    (13, TType.BOOL, 'focus', None, None, ),  # 13
+    (14, TType.STRING, 'derivationConfig', 'UTF8', None, ),  # 14
 )
 all_structs.append(LineageEdge)
 LineageEdge.thrift_spec = (

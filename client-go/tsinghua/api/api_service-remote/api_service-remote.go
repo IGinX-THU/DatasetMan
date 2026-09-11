@@ -42,7 +42,7 @@ func Usage() {
 	fmt.Fprintln(os.Stderr, "  Result createDataset(DatasetCreateRequest request)")
 	fmt.Fprintln(os.Stderr, "  Result getDatasetTree()")
 	fmt.Fprintln(os.Stderr, "  Result getDatasetVersionMeta(i64 versionId)")
-	fmt.Fprintln(os.Stderr, "  Result getDatasetChanges(i64 datasetId)")
+	fmt.Fprintln(os.Stderr, "  Result getDatasetChanges(string datasetName)")
 	fmt.Fprintln(os.Stderr, "  Result getDatasetLineage(i64 versionId, bool sideLineage)")
 	fmt.Fprintln(os.Stderr, "  Result deleteDatasetVersion(i64 versionId)")
 	fmt.Fprintln(os.Stderr, "  Result registerTransform(string file, string name, string className)")
@@ -602,11 +602,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, "GetDatasetChanges requires 1 args")
 			flag.Usage()
 		}
-		argvalue0, err569 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-		if err569 != nil {
-			Usage()
-			return
-		}
+		argvalue0 := flag.Arg(1)
 		value0 := argvalue0
 		fmt.Print(client.GetDatasetChanges(context.Background(), value0))
 		fmt.Print("\n")

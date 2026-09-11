@@ -10,7 +10,6 @@ import java.util.List;
  */
 @Data
 public class DatasetTreeDTO {
-    private Long datasetId;
     private String datasetName;
     private List<Version> versions = new ArrayList<>();
 

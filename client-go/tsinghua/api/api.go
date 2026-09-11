@@ -3689,7 +3689,6 @@ func (p *DatasetEntity) Validate() error {
 
 // Attributes:
 //  - ID
-//  - DatasetId
 //  - DatasetName
 //  - VersionNo
 //  - ProvenanceType
@@ -3708,22 +3707,21 @@ func (p *DatasetEntity) Validate() error {
 // 
 type DatasetVersionEntity struct {
 	ID int64 `thrift:"id,1" db:"id" json:"id"`
-	DatasetId int64 `thrift:"datasetId,2" db:"datasetId" json:"datasetId"`
-	DatasetName string `thrift:"datasetName,3" db:"datasetName" json:"datasetName"`
-	VersionNo string `thrift:"versionNo,4" db:"versionNo" json:"versionNo"`
-	ProvenanceType string `thrift:"provenanceType,5" db:"provenanceType" json:"provenanceType"`
-	StoragePath string `thrift:"storagePath,6" db:"storagePath" json:"storagePath"`
-	UpstreamVersionIds *string `thrift:"upstreamVersionIds,7" db:"upstreamVersionIds" json:"upstreamVersionIds,omitempty"`
-	DerivationConfig *string `thrift:"derivationConfig,8" db:"derivationConfig" json:"derivationConfig,omitempty"`
-	SchemaJson *string `thrift:"schemaJson,9" db:"schemaJson" json:"schemaJson,omitempty"`
-	RowCount *int64 `thrift:"rowCount,10" db:"rowCount" json:"rowCount,omitempty"`
-	SizeBytes *int64 `thrift:"sizeBytes,11" db:"sizeBytes" json:"sizeBytes,omitempty"`
-	CreateTime int64 `thrift:"createTime,12" db:"createTime" json:"createTime"`
-	Operator *string `thrift:"operator,13" db:"operator" json:"operator,omitempty"`
-	ClientIp *string `thrift:"clientIp,14" db:"clientIp" json:"clientIp,omitempty"`
-	Remark *string `thrift:"remark,15" db:"remark" json:"remark,omitempty"`
-	Deleted bool `thrift:"deleted,16" db:"deleted" json:"deleted"`
-	JobState *int32 `thrift:"jobState,17" db:"jobState" json:"jobState,omitempty"`
+	DatasetName string `thrift:"datasetName,2" db:"datasetName" json:"datasetName"`
+	VersionNo string `thrift:"versionNo,3" db:"versionNo" json:"versionNo"`
+	ProvenanceType string `thrift:"provenanceType,4" db:"provenanceType" json:"provenanceType"`
+	StoragePath string `thrift:"storagePath,5" db:"storagePath" json:"storagePath"`
+	UpstreamVersionIds *string `thrift:"upstreamVersionIds,6" db:"upstreamVersionIds" json:"upstreamVersionIds,omitempty"`
+	DerivationConfig *string `thrift:"derivationConfig,7" db:"derivationConfig" json:"derivationConfig,omitempty"`
+	SchemaJson *string `thrift:"schemaJson,8" db:"schemaJson" json:"schemaJson,omitempty"`
+	RowCount *int64 `thrift:"rowCount,9" db:"rowCount" json:"rowCount,omitempty"`
+	SizeBytes *int64 `thrift:"sizeBytes,10" db:"sizeBytes" json:"sizeBytes,omitempty"`
+	CreateTime int64 `thrift:"createTime,11" db:"createTime" json:"createTime"`
+	Operator *string `thrift:"operator,12" db:"operator" json:"operator,omitempty"`
+	ClientIp *string `thrift:"clientIp,13" db:"clientIp" json:"clientIp,omitempty"`
+	Remark *string `thrift:"remark,14" db:"remark" json:"remark,omitempty"`
+	Deleted bool `thrift:"deleted,15" db:"deleted" json:"deleted"`
+	JobState *int32 `thrift:"jobState,16" db:"jobState" json:"jobState,omitempty"`
 }
 
 func NewDatasetVersionEntity() *DatasetVersionEntity {
@@ -3734,12 +3732,6 @@ func NewDatasetVersionEntity() *DatasetVersionEntity {
 
 func (p *DatasetVersionEntity) GetID() int64 {
 	return p.ID
-}
-
-
-
-func (p *DatasetVersionEntity) GetDatasetId() int64 {
-	return p.DatasetId
 }
 
 
@@ -3921,7 +3913,7 @@ func (p *DatasetVersionEntity) Read(ctx context.Context, iprot thrift.TProtocol)
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err := p.ReadField2(ctx, iprot); err != nil {
 					return err
 				}
@@ -3991,7 +3983,7 @@ func (p *DatasetVersionEntity) Read(ctx context.Context, iprot thrift.TProtocol)
 				}
 			}
 		case 9:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.I64 {
 				if err := p.ReadField9(ctx, iprot); err != nil {
 					return err
 				}
@@ -4021,7 +4013,7 @@ func (p *DatasetVersionEntity) Read(ctx context.Context, iprot thrift.TProtocol)
 				}
 			}
 		case 12:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err := p.ReadField12(ctx, iprot); err != nil {
 					return err
 				}
@@ -4051,7 +4043,7 @@ func (p *DatasetVersionEntity) Read(ctx context.Context, iprot thrift.TProtocol)
 				}
 			}
 		case 15:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.BOOL {
 				if err := p.ReadField15(ctx, iprot); err != nil {
 					return err
 				}
@@ -4061,18 +4053,8 @@ func (p *DatasetVersionEntity) Read(ctx context.Context, iprot thrift.TProtocol)
 				}
 			}
 		case 16:
-			if fieldTypeId == thrift.BOOL {
-				if err := p.ReadField16(ctx, iprot); err != nil {
-					return err
-				}
-			} else {
-				if err := iprot.Skip(ctx, fieldTypeId); err != nil {
-					return err
-				}
-			}
-		case 17:
 			if fieldTypeId == thrift.I32 {
-				if err := p.ReadField17(ctx, iprot); err != nil {
+				if err := p.ReadField16(ctx, iprot); err != nil {
 					return err
 				}
 			} else {
@@ -4105,10 +4087,10 @@ func (p *DatasetVersionEntity) ReadField1(ctx context.Context, iprot thrift.TPro
 }
 
 func (p *DatasetVersionEntity) ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadI64(ctx); err != nil {
+	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 2: ", err)
 	} else {
-		p.DatasetId = v
+		p.DatasetName = v
 	}
 	return nil
 }
@@ -4117,7 +4099,7 @@ func (p *DatasetVersionEntity) ReadField3(ctx context.Context, iprot thrift.TPro
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 3: ", err)
 	} else {
-		p.DatasetName = v
+		p.VersionNo = v
 	}
 	return nil
 }
@@ -4126,7 +4108,7 @@ func (p *DatasetVersionEntity) ReadField4(ctx context.Context, iprot thrift.TPro
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 4: ", err)
 	} else {
-		p.VersionNo = v
+		p.ProvenanceType = v
 	}
 	return nil
 }
@@ -4135,7 +4117,7 @@ func (p *DatasetVersionEntity) ReadField5(ctx context.Context, iprot thrift.TPro
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 5: ", err)
 	} else {
-		p.ProvenanceType = v
+		p.StoragePath = v
 	}
 	return nil
 }
@@ -4144,7 +4126,7 @@ func (p *DatasetVersionEntity) ReadField6(ctx context.Context, iprot thrift.TPro
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 6: ", err)
 	} else {
-		p.StoragePath = v
+		p.UpstreamVersionIds = &v
 	}
 	return nil
 }
@@ -4153,7 +4135,7 @@ func (p *DatasetVersionEntity) ReadField7(ctx context.Context, iprot thrift.TPro
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 7: ", err)
 	} else {
-		p.UpstreamVersionIds = &v
+		p.DerivationConfig = &v
 	}
 	return nil
 }
@@ -4162,16 +4144,16 @@ func (p *DatasetVersionEntity) ReadField8(ctx context.Context, iprot thrift.TPro
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 8: ", err)
 	} else {
-		p.DerivationConfig = &v
+		p.SchemaJson = &v
 	}
 	return nil
 }
 
 func (p *DatasetVersionEntity) ReadField9(ctx context.Context, iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(ctx); err != nil {
+	if v, err := iprot.ReadI64(ctx); err != nil {
 		return thrift.PrependError("error reading field 9: ", err)
 	} else {
-		p.SchemaJson = &v
+		p.RowCount = &v
 	}
 	return nil
 }
@@ -4180,7 +4162,7 @@ func (p *DatasetVersionEntity) ReadField10(ctx context.Context, iprot thrift.TPr
 	if v, err := iprot.ReadI64(ctx); err != nil {
 		return thrift.PrependError("error reading field 10: ", err)
 	} else {
-		p.RowCount = &v
+		p.SizeBytes = &v
 	}
 	return nil
 }
@@ -4189,16 +4171,16 @@ func (p *DatasetVersionEntity) ReadField11(ctx context.Context, iprot thrift.TPr
 	if v, err := iprot.ReadI64(ctx); err != nil {
 		return thrift.PrependError("error reading field 11: ", err)
 	} else {
-		p.SizeBytes = &v
+		p.CreateTime = v
 	}
 	return nil
 }
 
 func (p *DatasetVersionEntity) ReadField12(ctx context.Context, iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadI64(ctx); err != nil {
+	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 12: ", err)
 	} else {
-		p.CreateTime = v
+		p.Operator = &v
 	}
 	return nil
 }
@@ -4207,7 +4189,7 @@ func (p *DatasetVersionEntity) ReadField13(ctx context.Context, iprot thrift.TPr
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 13: ", err)
 	} else {
-		p.Operator = &v
+		p.ClientIp = &v
 	}
 	return nil
 }
@@ -4216,32 +4198,23 @@ func (p *DatasetVersionEntity) ReadField14(ctx context.Context, iprot thrift.TPr
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 14: ", err)
 	} else {
-		p.ClientIp = &v
-	}
-	return nil
-}
-
-func (p *DatasetVersionEntity) ReadField15(ctx context.Context, iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(ctx); err != nil {
-		return thrift.PrependError("error reading field 15: ", err)
-	} else {
 		p.Remark = &v
 	}
 	return nil
 }
 
-func (p *DatasetVersionEntity) ReadField16(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *DatasetVersionEntity) ReadField15(ctx context.Context, iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBool(ctx); err != nil {
-		return thrift.PrependError("error reading field 16: ", err)
+		return thrift.PrependError("error reading field 15: ", err)
 	} else {
 		p.Deleted = v
 	}
 	return nil
 }
 
-func (p *DatasetVersionEntity) ReadField17(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *DatasetVersionEntity) ReadField16(ctx context.Context, iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI32(ctx); err != nil {
-		return thrift.PrependError("error reading field 17: ", err)
+		return thrift.PrependError("error reading field 16: ", err)
 	} else {
 		p.JobState = &v
 	}
@@ -4269,7 +4242,6 @@ func (p *DatasetVersionEntity) Write(ctx context.Context, oprot thrift.TProtocol
 		if err := p.writeField14(ctx, oprot); err != nil { return err }
 		if err := p.writeField15(ctx, oprot); err != nil { return err }
 		if err := p.writeField16(ctx, oprot); err != nil { return err }
-		if err := p.writeField17(ctx, oprot); err != nil { return err }
 	}
 	if err := oprot.WriteFieldStop(ctx); err != nil {
 		return thrift.PrependError("write field stop error: ", err)
@@ -4294,226 +4266,213 @@ func (p *DatasetVersionEntity) writeField1(ctx context.Context, oprot thrift.TPr
 }
 
 func (p *DatasetVersionEntity) writeField2(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "datasetId", thrift.I64, 2); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:datasetId: ", p), err)
+	if err := oprot.WriteFieldBegin(ctx, "datasetName", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:datasetName: ", p), err)
 	}
-	if err := oprot.WriteI64(ctx, int64(p.DatasetId)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.datasetId (2) field write error: ", p), err)
+	if err := oprot.WriteString(ctx, string(p.DatasetName)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.datasetName (2) field write error: ", p), err)
 	}
 	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:datasetId: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:datasetName: ", p), err)
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField3(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "datasetName", thrift.STRING, 3); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:datasetName: ", p), err)
+	if err := oprot.WriteFieldBegin(ctx, "versionNo", thrift.STRING, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:versionNo: ", p), err)
 	}
-	if err := oprot.WriteString(ctx, string(p.DatasetName)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.datasetName (3) field write error: ", p), err)
+	if err := oprot.WriteString(ctx, string(p.VersionNo)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.versionNo (3) field write error: ", p), err)
 	}
 	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:datasetName: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:versionNo: ", p), err)
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField4(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "versionNo", thrift.STRING, 4); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:versionNo: ", p), err)
+	if err := oprot.WriteFieldBegin(ctx, "provenanceType", thrift.STRING, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:provenanceType: ", p), err)
 	}
-	if err := oprot.WriteString(ctx, string(p.VersionNo)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.versionNo (4) field write error: ", p), err)
+	if err := oprot.WriteString(ctx, string(p.ProvenanceType)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.provenanceType (4) field write error: ", p), err)
 	}
 	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:versionNo: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:provenanceType: ", p), err)
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField5(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "provenanceType", thrift.STRING, 5); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:provenanceType: ", p), err)
+	if err := oprot.WriteFieldBegin(ctx, "storagePath", thrift.STRING, 5); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:storagePath: ", p), err)
 	}
-	if err := oprot.WriteString(ctx, string(p.ProvenanceType)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.provenanceType (5) field write error: ", p), err)
+	if err := oprot.WriteString(ctx, string(p.StoragePath)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.storagePath (5) field write error: ", p), err)
 	}
 	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 5:provenanceType: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 5:storagePath: ", p), err)
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField6(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "storagePath", thrift.STRING, 6); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:storagePath: ", p), err)
-	}
-	if err := oprot.WriteString(ctx, string(p.StoragePath)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.storagePath (6) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 6:storagePath: ", p), err)
+	if p.IsSetUpstreamVersionIds() {
+		if err := oprot.WriteFieldBegin(ctx, "upstreamVersionIds", thrift.STRING, 6); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:upstreamVersionIds: ", p), err)
+		}
+		if err := oprot.WriteString(ctx, string(*p.UpstreamVersionIds)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.upstreamVersionIds (6) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(ctx); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 6:upstreamVersionIds: ", p), err)
+		}
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField7(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetUpstreamVersionIds() {
-		if err := oprot.WriteFieldBegin(ctx, "upstreamVersionIds", thrift.STRING, 7); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:upstreamVersionIds: ", p), err)
+	if p.IsSetDerivationConfig() {
+		if err := oprot.WriteFieldBegin(ctx, "derivationConfig", thrift.STRING, 7); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:derivationConfig: ", p), err)
 		}
-		if err := oprot.WriteString(ctx, string(*p.UpstreamVersionIds)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.upstreamVersionIds (7) field write error: ", p), err)
+		if err := oprot.WriteString(ctx, string(*p.DerivationConfig)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.derivationConfig (7) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:upstreamVersionIds: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:derivationConfig: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField8(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetDerivationConfig() {
-		if err := oprot.WriteFieldBegin(ctx, "derivationConfig", thrift.STRING, 8); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:derivationConfig: ", p), err)
+	if p.IsSetSchemaJson() {
+		if err := oprot.WriteFieldBegin(ctx, "schemaJson", thrift.STRING, 8); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:schemaJson: ", p), err)
 		}
-		if err := oprot.WriteString(ctx, string(*p.DerivationConfig)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.derivationConfig (8) field write error: ", p), err)
+		if err := oprot.WriteString(ctx, string(*p.SchemaJson)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.schemaJson (8) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:derivationConfig: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:schemaJson: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField9(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetSchemaJson() {
-		if err := oprot.WriteFieldBegin(ctx, "schemaJson", thrift.STRING, 9); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:schemaJson: ", p), err)
+	if p.IsSetRowCount() {
+		if err := oprot.WriteFieldBegin(ctx, "rowCount", thrift.I64, 9); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:rowCount: ", p), err)
 		}
-		if err := oprot.WriteString(ctx, string(*p.SchemaJson)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.schemaJson (9) field write error: ", p), err)
+		if err := oprot.WriteI64(ctx, int64(*p.RowCount)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.rowCount (9) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:schemaJson: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:rowCount: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField10(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetRowCount() {
-		if err := oprot.WriteFieldBegin(ctx, "rowCount", thrift.I64, 10); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:rowCount: ", p), err)
+	if p.IsSetSizeBytes() {
+		if err := oprot.WriteFieldBegin(ctx, "sizeBytes", thrift.I64, 10); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:sizeBytes: ", p), err)
 		}
-		if err := oprot.WriteI64(ctx, int64(*p.RowCount)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.rowCount (10) field write error: ", p), err)
+		if err := oprot.WriteI64(ctx, int64(*p.SizeBytes)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.sizeBytes (10) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:rowCount: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:sizeBytes: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField11(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetSizeBytes() {
-		if err := oprot.WriteFieldBegin(ctx, "sizeBytes", thrift.I64, 11); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 11:sizeBytes: ", p), err)
-		}
-		if err := oprot.WriteI64(ctx, int64(*p.SizeBytes)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.sizeBytes (11) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 11:sizeBytes: ", p), err)
-		}
+	if err := oprot.WriteFieldBegin(ctx, "createTime", thrift.I64, 11); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 11:createTime: ", p), err)
+	}
+	if err := oprot.WriteI64(ctx, int64(p.CreateTime)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.createTime (11) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 11:createTime: ", p), err)
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField12(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "createTime", thrift.I64, 12); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 12:createTime: ", p), err)
-	}
-	if err := oprot.WriteI64(ctx, int64(p.CreateTime)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.createTime (12) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 12:createTime: ", p), err)
+	if p.IsSetOperator() {
+		if err := oprot.WriteFieldBegin(ctx, "operator", thrift.STRING, 12); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 12:operator: ", p), err)
+		}
+		if err := oprot.WriteString(ctx, string(*p.Operator)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.operator (12) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(ctx); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 12:operator: ", p), err)
+		}
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField13(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetOperator() {
-		if err := oprot.WriteFieldBegin(ctx, "operator", thrift.STRING, 13); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 13:operator: ", p), err)
+	if p.IsSetClientIp() {
+		if err := oprot.WriteFieldBegin(ctx, "clientIp", thrift.STRING, 13); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 13:clientIp: ", p), err)
 		}
-		if err := oprot.WriteString(ctx, string(*p.Operator)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.operator (13) field write error: ", p), err)
+		if err := oprot.WriteString(ctx, string(*p.ClientIp)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.clientIp (13) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 13:operator: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 13:clientIp: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField14(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetClientIp() {
-		if err := oprot.WriteFieldBegin(ctx, "clientIp", thrift.STRING, 14); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 14:clientIp: ", p), err)
+	if p.IsSetRemark() {
+		if err := oprot.WriteFieldBegin(ctx, "remark", thrift.STRING, 14); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 14:remark: ", p), err)
 		}
-		if err := oprot.WriteString(ctx, string(*p.ClientIp)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.clientIp (14) field write error: ", p), err)
+		if err := oprot.WriteString(ctx, string(*p.Remark)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.remark (14) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 14:clientIp: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 14:remark: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField15(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetRemark() {
-		if err := oprot.WriteFieldBegin(ctx, "remark", thrift.STRING, 15); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 15:remark: ", p), err)
-		}
-		if err := oprot.WriteString(ctx, string(*p.Remark)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.remark (15) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 15:remark: ", p), err)
-		}
+	if err := oprot.WriteFieldBegin(ctx, "deleted", thrift.BOOL, 15); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 15:deleted: ", p), err)
+	}
+	if err := oprot.WriteBool(ctx, bool(p.Deleted)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.deleted (15) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 15:deleted: ", p), err)
 	}
 	return err
 }
 
 func (p *DatasetVersionEntity) writeField16(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "deleted", thrift.BOOL, 16); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 16:deleted: ", p), err)
-	}
-	if err := oprot.WriteBool(ctx, bool(p.Deleted)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.deleted (16) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 16:deleted: ", p), err)
-	}
-	return err
-}
-
-func (p *DatasetVersionEntity) writeField17(ctx context.Context, oprot thrift.TProtocol) (err error) {
 	if p.IsSetJobState() {
-		if err := oprot.WriteFieldBegin(ctx, "jobState", thrift.I32, 17); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 17:jobState: ", p), err)
+		if err := oprot.WriteFieldBegin(ctx, "jobState", thrift.I32, 16); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 16:jobState: ", p), err)
 		}
 		if err := oprot.WriteI32(ctx, int32(*p.JobState)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.jobState (17) field write error: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T.jobState (16) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 17:jobState: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 16:jobState: ", p), err)
 		}
 	}
 	return err
@@ -4526,7 +4485,6 @@ func (p *DatasetVersionEntity) Equals(other *DatasetVersionEntity) bool {
 		return false
 	}
 	if p.ID != other.ID { return false }
-	if p.DatasetId != other.DatasetId { return false }
 	if p.DatasetName != other.DatasetName { return false }
 	if p.VersionNo != other.VersionNo { return false }
 	if p.ProvenanceType != other.ProvenanceType { return false }
@@ -5917,24 +5875,16 @@ func (p *DatasetTreeVersion) Validate() error {
 }
 
 // Attributes:
-//  - DatasetId
 //  - DatasetName
 //  - Versions
 // 
 type DatasetTreeDTO struct {
-	DatasetId int64 `thrift:"datasetId,1" db:"datasetId" json:"datasetId"`
-	DatasetName string `thrift:"datasetName,2" db:"datasetName" json:"datasetName"`
-	Versions []*DatasetTreeVersion `thrift:"versions,3" db:"versions" json:"versions"`
+	DatasetName string `thrift:"datasetName,1" db:"datasetName" json:"datasetName"`
+	Versions []*DatasetTreeVersion `thrift:"versions,2" db:"versions" json:"versions"`
 }
 
 func NewDatasetTreeDTO() *DatasetTreeDTO {
 	return &DatasetTreeDTO{}
-}
-
-
-
-func (p *DatasetTreeDTO) GetDatasetId() int64 {
-	return p.DatasetId
 }
 
 
@@ -5965,7 +5915,7 @@ func (p *DatasetTreeDTO) Read(ctx context.Context, iprot thrift.TProtocol) error
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err := p.ReadField1(ctx, iprot); err != nil {
 					return err
 				}
@@ -5975,18 +5925,8 @@ func (p *DatasetTreeDTO) Read(ctx context.Context, iprot thrift.TProtocol) error
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.STRING {
-				if err := p.ReadField2(ctx, iprot); err != nil {
-					return err
-				}
-			} else {
-				if err := iprot.Skip(ctx, fieldTypeId); err != nil {
-					return err
-				}
-			}
-		case 3:
 			if fieldTypeId == thrift.LIST {
-				if err := p.ReadField3(ctx, iprot); err != nil {
+				if err := p.ReadField2(ctx, iprot); err != nil {
 					return err
 				}
 			} else {
@@ -6010,24 +5950,15 @@ func (p *DatasetTreeDTO) Read(ctx context.Context, iprot thrift.TProtocol) error
 }
 
 func (p *DatasetTreeDTO) ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadI64(ctx); err != nil {
-		return thrift.PrependError("error reading field 1: ", err)
-	} else {
-		p.DatasetId = v
-	}
-	return nil
-}
-
-func (p *DatasetTreeDTO) ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(ctx); err != nil {
-		return thrift.PrependError("error reading field 2: ", err)
+		return thrift.PrependError("error reading field 1: ", err)
 	} else {
 		p.DatasetName = v
 	}
 	return nil
 }
 
-func (p *DatasetTreeDTO) ReadField3(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *DatasetTreeDTO) ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin(ctx)
 	if err != nil {
 		return thrift.PrependError("error reading list begin: ", err)
@@ -6054,7 +5985,6 @@ func (p *DatasetTreeDTO) Write(ctx context.Context, oprot thrift.TProtocol) erro
 	if p != nil {
 		if err := p.writeField1(ctx, oprot); err != nil { return err }
 		if err := p.writeField2(ctx, oprot); err != nil { return err }
-		if err := p.writeField3(ctx, oprot); err != nil { return err }
 	}
 	if err := oprot.WriteFieldStop(ctx); err != nil {
 		return thrift.PrependError("write field stop error: ", err)
@@ -6066,34 +5996,21 @@ func (p *DatasetTreeDTO) Write(ctx context.Context, oprot thrift.TProtocol) erro
 }
 
 func (p *DatasetTreeDTO) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "datasetId", thrift.I64, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:datasetId: ", p), err)
+	if err := oprot.WriteFieldBegin(ctx, "datasetName", thrift.STRING, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:datasetName: ", p), err)
 	}
-	if err := oprot.WriteI64(ctx, int64(p.DatasetId)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.datasetId (1) field write error: ", p), err)
+	if err := oprot.WriteString(ctx, string(p.DatasetName)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.datasetName (1) field write error: ", p), err)
 	}
 	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:datasetId: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:datasetName: ", p), err)
 	}
 	return err
 }
 
 func (p *DatasetTreeDTO) writeField2(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "datasetName", thrift.STRING, 2); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:datasetName: ", p), err)
-	}
-	if err := oprot.WriteString(ctx, string(p.DatasetName)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.datasetName (2) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:datasetName: ", p), err)
-	}
-	return err
-}
-
-func (p *DatasetTreeDTO) writeField3(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "versions", thrift.LIST, 3); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:versions: ", p), err)
+	if err := oprot.WriteFieldBegin(ctx, "versions", thrift.LIST, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:versions: ", p), err)
 	}
 	if err := oprot.WriteListBegin(ctx, thrift.STRUCT, len(p.Versions)); err != nil {
 		return thrift.PrependError("error writing list begin: ", err)
@@ -6107,7 +6024,7 @@ func (p *DatasetTreeDTO) writeField3(ctx context.Context, oprot thrift.TProtocol
 		return thrift.PrependError("error writing list end: ", err)
 	}
 	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:versions: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:versions: ", p), err)
 	}
 	return err
 }
@@ -6118,7 +6035,6 @@ func (p *DatasetTreeDTO) Equals(other *DatasetTreeDTO) bool {
 	} else if p == nil || other == nil {
 		return false
 	}
-	if p.DatasetId != other.DatasetId { return false }
 	if p.DatasetName != other.DatasetName { return false }
 	if len(p.Versions) != len(other.Versions) { return false }
 	for i, _tgt := range p.Versions {
@@ -7324,7 +7240,6 @@ func (p *DatasetChangeProcessDTO) Validate() error {
 
 // Attributes:
 //  - VersionId
-//  - DatasetId
 //  - DatasetName
 //  - VersionNo
 //  - ProvenanceType
@@ -7341,20 +7256,19 @@ func (p *DatasetChangeProcessDTO) Validate() error {
 // 
 type LineageNode struct {
 	VersionId int64 `thrift:"versionId,1" db:"versionId" json:"versionId"`
-	DatasetId *int64 `thrift:"datasetId,2" db:"datasetId" json:"datasetId,omitempty"`
-	DatasetName string `thrift:"datasetName,3" db:"datasetName" json:"datasetName"`
-	VersionNo string `thrift:"versionNo,4" db:"versionNo" json:"versionNo"`
-	ProvenanceType *string `thrift:"provenanceType,5" db:"provenanceType" json:"provenanceType,omitempty"`
-	ProvenanceLabel *string `thrift:"provenanceLabel,6" db:"provenanceLabel" json:"provenanceLabel,omitempty"`
-	StoragePath *string `thrift:"storagePath,7" db:"storagePath" json:"storagePath,omitempty"`
-	Operator *string `thrift:"operator,8" db:"operator" json:"operator,omitempty"`
-	ClientIp *string `thrift:"clientIp,9" db:"clientIp" json:"clientIp,omitempty"`
-	CreateTime int64 `thrift:"createTime,10" db:"createTime" json:"createTime"`
-	Remark *string `thrift:"remark,11" db:"remark" json:"remark,omitempty"`
-	Deleted bool `thrift:"deleted,12" db:"deleted" json:"deleted"`
-	JobState *int32 `thrift:"jobState,13" db:"jobState" json:"jobState,omitempty"`
-	Focus bool `thrift:"focus,14" db:"focus" json:"focus"`
-	DerivationConfig *string `thrift:"derivationConfig,15" db:"derivationConfig" json:"derivationConfig,omitempty"`
+	DatasetName string `thrift:"datasetName,2" db:"datasetName" json:"datasetName"`
+	VersionNo string `thrift:"versionNo,3" db:"versionNo" json:"versionNo"`
+	ProvenanceType *string `thrift:"provenanceType,4" db:"provenanceType" json:"provenanceType,omitempty"`
+	ProvenanceLabel *string `thrift:"provenanceLabel,5" db:"provenanceLabel" json:"provenanceLabel,omitempty"`
+	StoragePath *string `thrift:"storagePath,6" db:"storagePath" json:"storagePath,omitempty"`
+	Operator *string `thrift:"operator,7" db:"operator" json:"operator,omitempty"`
+	ClientIp *string `thrift:"clientIp,8" db:"clientIp" json:"clientIp,omitempty"`
+	CreateTime int64 `thrift:"createTime,9" db:"createTime" json:"createTime"`
+	Remark *string `thrift:"remark,10" db:"remark" json:"remark,omitempty"`
+	Deleted bool `thrift:"deleted,11" db:"deleted" json:"deleted"`
+	JobState *int32 `thrift:"jobState,12" db:"jobState" json:"jobState,omitempty"`
+	Focus bool `thrift:"focus,13" db:"focus" json:"focus"`
+	DerivationConfig *string `thrift:"derivationConfig,14" db:"derivationConfig" json:"derivationConfig,omitempty"`
 }
 
 func NewLineageNode() *LineageNode {
@@ -7365,15 +7279,6 @@ func NewLineageNode() *LineageNode {
 
 func (p *LineageNode) GetVersionId() int64 {
 	return p.VersionId
-}
-
-var LineageNode_DatasetId_DEFAULT int64
-
-func (p *LineageNode) GetDatasetId() int64 {
-	if !p.IsSetDatasetId() {
-		return LineageNode_DatasetId_DEFAULT
-	}
-	return *p.DatasetId
 }
 
 
@@ -7478,10 +7383,6 @@ func (p *LineageNode) GetDerivationConfig() string {
 	return *p.DerivationConfig
 }
 
-func (p *LineageNode) IsSetDatasetId() bool {
-	return p.DatasetId != nil
-}
-
 func (p *LineageNode) IsSetProvenanceType() bool {
 	return p.ProvenanceType != nil
 }
@@ -7540,7 +7441,7 @@ func (p *LineageNode) Read(ctx context.Context, iprot thrift.TProtocol) error {
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err := p.ReadField2(ctx, iprot); err != nil {
 					return err
 				}
@@ -7610,7 +7511,7 @@ func (p *LineageNode) Read(ctx context.Context, iprot thrift.TProtocol) error {
 				}
 			}
 		case 9:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.I64 {
 				if err := p.ReadField9(ctx, iprot); err != nil {
 					return err
 				}
@@ -7620,7 +7521,7 @@ func (p *LineageNode) Read(ctx context.Context, iprot thrift.TProtocol) error {
 				}
 			}
 		case 10:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err := p.ReadField10(ctx, iprot); err != nil {
 					return err
 				}
@@ -7630,7 +7531,7 @@ func (p *LineageNode) Read(ctx context.Context, iprot thrift.TProtocol) error {
 				}
 			}
 		case 11:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.BOOL {
 				if err := p.ReadField11(ctx, iprot); err != nil {
 					return err
 				}
@@ -7640,7 +7541,7 @@ func (p *LineageNode) Read(ctx context.Context, iprot thrift.TProtocol) error {
 				}
 			}
 		case 12:
-			if fieldTypeId == thrift.BOOL {
+			if fieldTypeId == thrift.I32 {
 				if err := p.ReadField12(ctx, iprot); err != nil {
 					return err
 				}
@@ -7650,7 +7551,7 @@ func (p *LineageNode) Read(ctx context.Context, iprot thrift.TProtocol) error {
 				}
 			}
 		case 13:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.BOOL {
 				if err := p.ReadField13(ctx, iprot); err != nil {
 					return err
 				}
@@ -7660,18 +7561,8 @@ func (p *LineageNode) Read(ctx context.Context, iprot thrift.TProtocol) error {
 				}
 			}
 		case 14:
-			if fieldTypeId == thrift.BOOL {
-				if err := p.ReadField14(ctx, iprot); err != nil {
-					return err
-				}
-			} else {
-				if err := iprot.Skip(ctx, fieldTypeId); err != nil {
-					return err
-				}
-			}
-		case 15:
 			if fieldTypeId == thrift.STRING {
-				if err := p.ReadField15(ctx, iprot); err != nil {
+				if err := p.ReadField14(ctx, iprot); err != nil {
 					return err
 				}
 			} else {
@@ -7704,10 +7595,10 @@ func (p *LineageNode) ReadField1(ctx context.Context, iprot thrift.TProtocol) er
 }
 
 func (p *LineageNode) ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadI64(ctx); err != nil {
+	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 2: ", err)
 	} else {
-		p.DatasetId = &v
+		p.DatasetName = v
 	}
 	return nil
 }
@@ -7716,7 +7607,7 @@ func (p *LineageNode) ReadField3(ctx context.Context, iprot thrift.TProtocol) er
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 3: ", err)
 	} else {
-		p.DatasetName = v
+		p.VersionNo = v
 	}
 	return nil
 }
@@ -7725,7 +7616,7 @@ func (p *LineageNode) ReadField4(ctx context.Context, iprot thrift.TProtocol) er
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 4: ", err)
 	} else {
-		p.VersionNo = v
+		p.ProvenanceType = &v
 	}
 	return nil
 }
@@ -7734,7 +7625,7 @@ func (p *LineageNode) ReadField5(ctx context.Context, iprot thrift.TProtocol) er
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 5: ", err)
 	} else {
-		p.ProvenanceType = &v
+		p.ProvenanceLabel = &v
 	}
 	return nil
 }
@@ -7743,7 +7634,7 @@ func (p *LineageNode) ReadField6(ctx context.Context, iprot thrift.TProtocol) er
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 6: ", err)
 	} else {
-		p.ProvenanceLabel = &v
+		p.StoragePath = &v
 	}
 	return nil
 }
@@ -7752,7 +7643,7 @@ func (p *LineageNode) ReadField7(ctx context.Context, iprot thrift.TProtocol) er
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 7: ", err)
 	} else {
-		p.StoragePath = &v
+		p.Operator = &v
 	}
 	return nil
 }
@@ -7761,68 +7652,59 @@ func (p *LineageNode) ReadField8(ctx context.Context, iprot thrift.TProtocol) er
 	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 8: ", err)
 	} else {
-		p.Operator = &v
-	}
-	return nil
-}
-
-func (p *LineageNode) ReadField9(ctx context.Context, iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(ctx); err != nil {
-		return thrift.PrependError("error reading field 9: ", err)
-	} else {
 		p.ClientIp = &v
 	}
 	return nil
 }
 
-func (p *LineageNode) ReadField10(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *LineageNode) ReadField9(ctx context.Context, iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI64(ctx); err != nil {
-		return thrift.PrependError("error reading field 10: ", err)
+		return thrift.PrependError("error reading field 9: ", err)
 	} else {
 		p.CreateTime = v
 	}
 	return nil
 }
 
-func (p *LineageNode) ReadField11(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *LineageNode) ReadField10(ctx context.Context, iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(ctx); err != nil {
-		return thrift.PrependError("error reading field 11: ", err)
+		return thrift.PrependError("error reading field 10: ", err)
 	} else {
 		p.Remark = &v
 	}
 	return nil
 }
 
-func (p *LineageNode) ReadField12(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *LineageNode) ReadField11(ctx context.Context, iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBool(ctx); err != nil {
-		return thrift.PrependError("error reading field 12: ", err)
+		return thrift.PrependError("error reading field 11: ", err)
 	} else {
 		p.Deleted = v
 	}
 	return nil
 }
 
-func (p *LineageNode) ReadField13(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *LineageNode) ReadField12(ctx context.Context, iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI32(ctx); err != nil {
-		return thrift.PrependError("error reading field 13: ", err)
+		return thrift.PrependError("error reading field 12: ", err)
 	} else {
 		p.JobState = &v
 	}
 	return nil
 }
 
-func (p *LineageNode) ReadField14(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *LineageNode) ReadField13(ctx context.Context, iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBool(ctx); err != nil {
-		return thrift.PrependError("error reading field 14: ", err)
+		return thrift.PrependError("error reading field 13: ", err)
 	} else {
 		p.Focus = v
 	}
 	return nil
 }
 
-func (p *LineageNode) ReadField15(ctx context.Context, iprot thrift.TProtocol) error {
+func (p *LineageNode) ReadField14(ctx context.Context, iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(ctx); err != nil {
-		return thrift.PrependError("error reading field 15: ", err)
+		return thrift.PrependError("error reading field 14: ", err)
 	} else {
 		p.DerivationConfig = &v
 	}
@@ -7848,7 +7730,6 @@ func (p *LineageNode) Write(ctx context.Context, oprot thrift.TProtocol) error {
 		if err := p.writeField12(ctx, oprot); err != nil { return err }
 		if err := p.writeField13(ctx, oprot); err != nil { return err }
 		if err := p.writeField14(ctx, oprot); err != nil { return err }
-		if err := p.writeField15(ctx, oprot); err != nil { return err }
 	}
 	if err := oprot.WriteFieldStop(ctx); err != nil {
 		return thrift.PrependError("write field stop error: ", err)
@@ -7873,200 +7754,185 @@ func (p *LineageNode) writeField1(ctx context.Context, oprot thrift.TProtocol) (
 }
 
 func (p *LineageNode) writeField2(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetDatasetId() {
-		if err := oprot.WriteFieldBegin(ctx, "datasetId", thrift.I64, 2); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:datasetId: ", p), err)
-		}
-		if err := oprot.WriteI64(ctx, int64(*p.DatasetId)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.datasetId (2) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:datasetId: ", p), err)
-		}
+	if err := oprot.WriteFieldBegin(ctx, "datasetName", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:datasetName: ", p), err)
+	}
+	if err := oprot.WriteString(ctx, string(p.DatasetName)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.datasetName (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:datasetName: ", p), err)
 	}
 	return err
 }
 
 func (p *LineageNode) writeField3(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "datasetName", thrift.STRING, 3); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:datasetName: ", p), err)
+	if err := oprot.WriteFieldBegin(ctx, "versionNo", thrift.STRING, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:versionNo: ", p), err)
 	}
-	if err := oprot.WriteString(ctx, string(p.DatasetName)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.datasetName (3) field write error: ", p), err)
+	if err := oprot.WriteString(ctx, string(p.VersionNo)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.versionNo (3) field write error: ", p), err)
 	}
 	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:datasetName: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:versionNo: ", p), err)
 	}
 	return err
 }
 
 func (p *LineageNode) writeField4(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "versionNo", thrift.STRING, 4); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:versionNo: ", p), err)
-	}
-	if err := oprot.WriteString(ctx, string(p.VersionNo)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.versionNo (4) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:versionNo: ", p), err)
+	if p.IsSetProvenanceType() {
+		if err := oprot.WriteFieldBegin(ctx, "provenanceType", thrift.STRING, 4); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:provenanceType: ", p), err)
+		}
+		if err := oprot.WriteString(ctx, string(*p.ProvenanceType)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.provenanceType (4) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(ctx); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:provenanceType: ", p), err)
+		}
 	}
 	return err
 }
 
 func (p *LineageNode) writeField5(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetProvenanceType() {
-		if err := oprot.WriteFieldBegin(ctx, "provenanceType", thrift.STRING, 5); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:provenanceType: ", p), err)
+	if p.IsSetProvenanceLabel() {
+		if err := oprot.WriteFieldBegin(ctx, "provenanceLabel", thrift.STRING, 5); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:provenanceLabel: ", p), err)
 		}
-		if err := oprot.WriteString(ctx, string(*p.ProvenanceType)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.provenanceType (5) field write error: ", p), err)
+		if err := oprot.WriteString(ctx, string(*p.ProvenanceLabel)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.provenanceLabel (5) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:provenanceType: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:provenanceLabel: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *LineageNode) writeField6(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetProvenanceLabel() {
-		if err := oprot.WriteFieldBegin(ctx, "provenanceLabel", thrift.STRING, 6); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:provenanceLabel: ", p), err)
+	if p.IsSetStoragePath() {
+		if err := oprot.WriteFieldBegin(ctx, "storagePath", thrift.STRING, 6); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:storagePath: ", p), err)
 		}
-		if err := oprot.WriteString(ctx, string(*p.ProvenanceLabel)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.provenanceLabel (6) field write error: ", p), err)
+		if err := oprot.WriteString(ctx, string(*p.StoragePath)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.storagePath (6) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 6:provenanceLabel: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 6:storagePath: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *LineageNode) writeField7(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetStoragePath() {
-		if err := oprot.WriteFieldBegin(ctx, "storagePath", thrift.STRING, 7); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:storagePath: ", p), err)
+	if p.IsSetOperator() {
+		if err := oprot.WriteFieldBegin(ctx, "operator", thrift.STRING, 7); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:operator: ", p), err)
 		}
-		if err := oprot.WriteString(ctx, string(*p.StoragePath)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.storagePath (7) field write error: ", p), err)
+		if err := oprot.WriteString(ctx, string(*p.Operator)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.operator (7) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:storagePath: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:operator: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *LineageNode) writeField8(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetOperator() {
-		if err := oprot.WriteFieldBegin(ctx, "operator", thrift.STRING, 8); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:operator: ", p), err)
+	if p.IsSetClientIp() {
+		if err := oprot.WriteFieldBegin(ctx, "clientIp", thrift.STRING, 8); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:clientIp: ", p), err)
 		}
-		if err := oprot.WriteString(ctx, string(*p.Operator)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.operator (8) field write error: ", p), err)
+		if err := oprot.WriteString(ctx, string(*p.ClientIp)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.clientIp (8) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:operator: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:clientIp: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *LineageNode) writeField9(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetClientIp() {
-		if err := oprot.WriteFieldBegin(ctx, "clientIp", thrift.STRING, 9); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:clientIp: ", p), err)
-		}
-		if err := oprot.WriteString(ctx, string(*p.ClientIp)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.clientIp (9) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:clientIp: ", p), err)
-		}
+	if err := oprot.WriteFieldBegin(ctx, "createTime", thrift.I64, 9); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:createTime: ", p), err)
+	}
+	if err := oprot.WriteI64(ctx, int64(p.CreateTime)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.createTime (9) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 9:createTime: ", p), err)
 	}
 	return err
 }
 
 func (p *LineageNode) writeField10(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "createTime", thrift.I64, 10); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:createTime: ", p), err)
-	}
-	if err := oprot.WriteI64(ctx, int64(p.CreateTime)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.createTime (10) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 10:createTime: ", p), err)
+	if p.IsSetRemark() {
+		if err := oprot.WriteFieldBegin(ctx, "remark", thrift.STRING, 10); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:remark: ", p), err)
+		}
+		if err := oprot.WriteString(ctx, string(*p.Remark)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.remark (10) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(ctx); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:remark: ", p), err)
+		}
 	}
 	return err
 }
 
 func (p *LineageNode) writeField11(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetRemark() {
-		if err := oprot.WriteFieldBegin(ctx, "remark", thrift.STRING, 11); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 11:remark: ", p), err)
-		}
-		if err := oprot.WriteString(ctx, string(*p.Remark)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.remark (11) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 11:remark: ", p), err)
-		}
+	if err := oprot.WriteFieldBegin(ctx, "deleted", thrift.BOOL, 11); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 11:deleted: ", p), err)
+	}
+	if err := oprot.WriteBool(ctx, bool(p.Deleted)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.deleted (11) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 11:deleted: ", p), err)
 	}
 	return err
 }
 
 func (p *LineageNode) writeField12(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "deleted", thrift.BOOL, 12); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 12:deleted: ", p), err)
-	}
-	if err := oprot.WriteBool(ctx, bool(p.Deleted)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.deleted (12) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 12:deleted: ", p), err)
+	if p.IsSetJobState() {
+		if err := oprot.WriteFieldBegin(ctx, "jobState", thrift.I32, 12); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 12:jobState: ", p), err)
+		}
+		if err := oprot.WriteI32(ctx, int32(*p.JobState)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.jobState (12) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(ctx); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 12:jobState: ", p), err)
+		}
 	}
 	return err
 }
 
 func (p *LineageNode) writeField13(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if p.IsSetJobState() {
-		if err := oprot.WriteFieldBegin(ctx, "jobState", thrift.I32, 13); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 13:jobState: ", p), err)
-		}
-		if err := oprot.WriteI32(ctx, int32(*p.JobState)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.jobState (13) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 13:jobState: ", p), err)
-		}
+	if err := oprot.WriteFieldBegin(ctx, "focus", thrift.BOOL, 13); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 13:focus: ", p), err)
+	}
+	if err := oprot.WriteBool(ctx, bool(p.Focus)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.focus (13) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 13:focus: ", p), err)
 	}
 	return err
 }
 
 func (p *LineageNode) writeField14(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "focus", thrift.BOOL, 14); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 14:focus: ", p), err)
-	}
-	if err := oprot.WriteBool(ctx, bool(p.Focus)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.focus (14) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 14:focus: ", p), err)
-	}
-	return err
-}
-
-func (p *LineageNode) writeField15(ctx context.Context, oprot thrift.TProtocol) (err error) {
 	if p.IsSetDerivationConfig() {
-		if err := oprot.WriteFieldBegin(ctx, "derivationConfig", thrift.STRING, 15); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 15:derivationConfig: ", p), err)
+		if err := oprot.WriteFieldBegin(ctx, "derivationConfig", thrift.STRING, 14); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 14:derivationConfig: ", p), err)
 		}
 		if err := oprot.WriteString(ctx, string(*p.DerivationConfig)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.derivationConfig (15) field write error: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T.derivationConfig (14) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(ctx); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 15:derivationConfig: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 14:derivationConfig: ", p), err)
 		}
 	}
 	return err
@@ -8079,12 +7945,6 @@ func (p *LineageNode) Equals(other *LineageNode) bool {
 		return false
 	}
 	if p.VersionId != other.VersionId { return false }
-	if p.DatasetId != other.DatasetId {
-		if p.DatasetId == nil || other.DatasetId == nil {
-			return false
-		}
-		if (*p.DatasetId) != (*other.DatasetId) { return false }
-	}
 	if p.DatasetName != other.DatasetName { return false }
 	if p.VersionNo != other.VersionNo { return false }
 	if p.ProvenanceType != other.ProvenanceType {
@@ -17577,9 +17437,9 @@ type ApiService interface {
 	// 
 	GetDatasetVersionMeta(ctx context.Context, versionId int64) (_r *Result_, _err error)
 	// Parameters:
-	//  - DatasetId
+	//  - DatasetName
 	// 
-	GetDatasetChanges(ctx context.Context, datasetId int64) (_r *Result_, _err error)
+	GetDatasetChanges(ctx context.Context, datasetName string) (_r *Result_, _err error)
 	// Parameters:
 	//  - VersionId
 	//  - SideLineage
@@ -18169,11 +18029,11 @@ func (p *ApiServiceClient) GetDatasetVersionMeta(ctx context.Context, versionId 
 }
 
 // Parameters:
-//  - DatasetId
+//  - DatasetName
 // 
-func (p *ApiServiceClient) GetDatasetChanges(ctx context.Context, datasetId int64) (_r *Result_, _err error) {
+func (p *ApiServiceClient) GetDatasetChanges(ctx context.Context, datasetName string) (_r *Result_, _err error) {
 	var _args109 ApiServiceGetDatasetChangesArgs
-	_args109.DatasetId = datasetId
+	_args109.DatasetName = datasetName
 	var _result111 ApiServiceGetDatasetChangesResult
 	var _meta110 thrift.ResponseMeta
 	_meta110, _err = p.Client_().Call(ctx, "getDatasetChanges", &_args109, &_result111)
@@ -21503,7 +21363,7 @@ func (p *apiServiceProcessorGetDatasetChanges) Process(ctx context.Context, seqI
 	}
 
 	result := ApiServiceGetDatasetChangesResult{}
-	if retval, err2 := p.handler.GetDatasetChanges(ctx, args.DatasetId); err2 != nil {
+	if retval, err2 := p.handler.GetDatasetChanges(ctx, args.DatasetName); err2 != nil {
 		tickerCancel()
 		err = thrift.WrapTException(err2)
 		if errors.Is(err2, thrift.ErrAbandonRequest) {
@@ -32303,10 +32163,10 @@ func (p *ApiServiceGetDatasetVersionMetaResult) LogValue() slog.Value {
 var _ slog.LogValuer = (*ApiServiceGetDatasetVersionMetaResult)(nil)
 
 // Attributes:
-//  - DatasetId
+//  - DatasetName
 // 
 type ApiServiceGetDatasetChangesArgs struct {
-	DatasetId int64 `thrift:"datasetId,1" db:"datasetId" json:"datasetId"`
+	DatasetName string `thrift:"datasetName,1" db:"datasetName" json:"datasetName"`
 }
 
 func NewApiServiceGetDatasetChangesArgs() *ApiServiceGetDatasetChangesArgs {
@@ -32315,8 +32175,8 @@ func NewApiServiceGetDatasetChangesArgs() *ApiServiceGetDatasetChangesArgs {
 
 
 
-func (p *ApiServiceGetDatasetChangesArgs) GetDatasetId() int64 {
-	return p.DatasetId
+func (p *ApiServiceGetDatasetChangesArgs) GetDatasetName() string {
+	return p.DatasetName
 }
 
 func (p *ApiServiceGetDatasetChangesArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
@@ -32335,7 +32195,7 @@ func (p *ApiServiceGetDatasetChangesArgs) Read(ctx context.Context, iprot thrift
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err := p.ReadField1(ctx, iprot); err != nil {
 					return err
 				}
@@ -32360,10 +32220,10 @@ func (p *ApiServiceGetDatasetChangesArgs) Read(ctx context.Context, iprot thrift
 }
 
 func (p *ApiServiceGetDatasetChangesArgs) ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadI64(ctx); err != nil {
+	if v, err := iprot.ReadString(ctx); err != nil {
 		return thrift.PrependError("error reading field 1: ", err)
 	} else {
-		p.DatasetId = v
+		p.DatasetName = v
 	}
 	return nil
 }
@@ -32385,14 +32245,14 @@ func (p *ApiServiceGetDatasetChangesArgs) Write(ctx context.Context, oprot thrif
 }
 
 func (p *ApiServiceGetDatasetChangesArgs) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin(ctx, "datasetId", thrift.I64, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:datasetId: ", p), err)
+	if err := oprot.WriteFieldBegin(ctx, "datasetName", thrift.STRING, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:datasetName: ", p), err)
 	}
-	if err := oprot.WriteI64(ctx, int64(p.DatasetId)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.datasetId (1) field write error: ", p), err)
+	if err := oprot.WriteString(ctx, string(p.DatasetName)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.datasetName (1) field write error: ", p), err)
 	}
 	if err := oprot.WriteFieldEnd(ctx); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:datasetId: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:datasetName: ", p), err)
 	}
 	return err
 }

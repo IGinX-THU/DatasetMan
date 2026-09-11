@@ -7,6 +7,7 @@ import lombok.Data;
 /**
  * 数据集版本 = 一份具体的物化数据
  * 右侧数据集树的叶子节点、血缘图谱的节点都对应这张表的一条记录。
+ * 按 datasetName 分组即为逻辑数据集。
  */
 @Data
 @Measurement(name = "relational_system.dataset_version")
@@ -16,11 +17,7 @@ public class DatasetVersionEntity {
     @Field(timestamp = true)
     private Long id;
 
-    /** 所属逻辑数据集ID（DatasetInfoEntity.id） */
-    @Field(name = "datasetId")
-    private Long datasetId;
-
-    /** 冗余数据集名，便于树展示与查询 */
+    /** 数据集名称，作为分组键 */
     @Field(name = "datasetName")
     private String datasetName;
 
@@ -64,6 +61,22 @@ public class DatasetVersionEntity {
 
     @Field(name = "remark")
     private String remark;
+
+    /** 数据类型：relational / time-series / semi-structured / text / image / audio / video */
+    @Field(name = "dataModality")
+    private String dataModality;
+
+    /** 数据集描述 */
+    @Field(name = "description")
+    private String description;
+
+    /** 所属项目 */
+    @Field(name = "project")
+    private String project;
+
+    /** 所有者 */
+    @Field(name = "owner")
+    private String owner;
 
     @Field(name = "deleted")
     private boolean deleted;

@@ -11,22 +11,19 @@ package com.tsinghua.thrift.api;
 public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, DatasetTreeDTO._Fields>, java.io.Serializable, Cloneable, Comparable<DatasetTreeDTO> {
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("DatasetTreeDTO");
 
-  private static final org.apache.thrift.protocol.TField DATASET_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("datasetId", org.apache.thrift.protocol.TType.I64, (short)1);
-  private static final org.apache.thrift.protocol.TField DATASET_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("datasetName", org.apache.thrift.protocol.TType.STRING, (short)2);
-  private static final org.apache.thrift.protocol.TField VERSIONS_FIELD_DESC = new org.apache.thrift.protocol.TField("versions", org.apache.thrift.protocol.TType.LIST, (short)3);
+  private static final org.apache.thrift.protocol.TField DATASET_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("datasetName", org.apache.thrift.protocol.TType.STRING, (short)1);
+  private static final org.apache.thrift.protocol.TField VERSIONS_FIELD_DESC = new org.apache.thrift.protocol.TField("versions", org.apache.thrift.protocol.TType.LIST, (short)2);
 
   private static final org.apache.thrift.scheme.SchemeFactory STANDARD_SCHEME_FACTORY = new DatasetTreeDTOStandardSchemeFactory();
   private static final org.apache.thrift.scheme.SchemeFactory TUPLE_SCHEME_FACTORY = new DatasetTreeDTOTupleSchemeFactory();
 
-  public long datasetId; // required
   public @org.apache.thrift.annotation.Nullable java.lang.String datasetName; // required
   public @org.apache.thrift.annotation.Nullable java.util.List<DatasetTreeVersion> versions; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    DATASET_ID((short)1, "datasetId"),
-    DATASET_NAME((short)2, "datasetName"),
-    VERSIONS((short)3, "versions");
+    DATASET_NAME((short)1, "datasetName"),
+    VERSIONS((short)2, "versions");
 
     private static final java.util.Map<java.lang.String, _Fields> byName = new java.util.HashMap<java.lang.String, _Fields>();
 
@@ -42,11 +39,9 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
     @org.apache.thrift.annotation.Nullable
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // DATASET_ID
-          return DATASET_ID;
-        case 2: // DATASET_NAME
+        case 1: // DATASET_NAME
           return DATASET_NAME;
-        case 3: // VERSIONS
+        case 2: // VERSIONS
           return VERSIONS;
         default:
           return null;
@@ -91,13 +86,9 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
   }
 
   // isset id assignments
-  private static final int __DATASETID_ISSET_ID = 0;
-  private byte __isset_bitfield = 0;
   public static final java.util.Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     java.util.Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new java.util.EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.DATASET_ID, new org.apache.thrift.meta_data.FieldMetaData("datasetId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
     tmpMap.put(_Fields.DATASET_NAME, new org.apache.thrift.meta_data.FieldMetaData("datasetName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
     tmpMap.put(_Fields.VERSIONS, new org.apache.thrift.meta_data.FieldMetaData("versions", org.apache.thrift.TFieldRequirementType.DEFAULT, 
@@ -111,13 +102,10 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
   }
 
   public DatasetTreeDTO(
-    long datasetId,
     java.lang.String datasetName,
     java.util.List<DatasetTreeVersion> versions)
   {
     this();
-    this.datasetId = datasetId;
-    setDatasetIdIsSet(true);
     this.datasetName = datasetName;
     this.versions = versions;
   }
@@ -126,8 +114,6 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
    * Performs a deep copy on <i>other</i>.
    */
   public DatasetTreeDTO(DatasetTreeDTO other) {
-    __isset_bitfield = other.__isset_bitfield;
-    this.datasetId = other.datasetId;
     if (other.isSetDatasetName()) {
       this.datasetName = other.datasetName;
     }
@@ -147,33 +133,8 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
 
   @Override
   public void clear() {
-    setDatasetIdIsSet(false);
-    this.datasetId = 0;
     this.datasetName = null;
     this.versions = null;
-  }
-
-  public long getDatasetId() {
-    return this.datasetId;
-  }
-
-  public DatasetTreeDTO setDatasetId(long datasetId) {
-    this.datasetId = datasetId;
-    setDatasetIdIsSet(true);
-    return this;
-  }
-
-  public void unsetDatasetId() {
-    __isset_bitfield = org.apache.thrift.EncodingUtils.clearBit(__isset_bitfield, __DATASETID_ISSET_ID);
-  }
-
-  /** Returns true if field datasetId is set (has been assigned a value) and false otherwise */
-  public boolean isSetDatasetId() {
-    return org.apache.thrift.EncodingUtils.testBit(__isset_bitfield, __DATASETID_ISSET_ID);
-  }
-
-  public void setDatasetIdIsSet(boolean value) {
-    __isset_bitfield = org.apache.thrift.EncodingUtils.setBit(__isset_bitfield, __DATASETID_ISSET_ID, value);
   }
 
   @org.apache.thrift.annotation.Nullable
@@ -245,14 +206,6 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
   @Override
   public void setFieldValue(_Fields field, @org.apache.thrift.annotation.Nullable java.lang.Object value) {
     switch (field) {
-    case DATASET_ID:
-      if (value == null) {
-        unsetDatasetId();
-      } else {
-        setDatasetId((java.lang.Long)value);
-      }
-      break;
-
     case DATASET_NAME:
       if (value == null) {
         unsetDatasetName();
@@ -276,9 +229,6 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
   @Override
   public java.lang.Object getFieldValue(_Fields field) {
     switch (field) {
-    case DATASET_ID:
-      return getDatasetId();
-
     case DATASET_NAME:
       return getDatasetName();
 
@@ -297,8 +247,6 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
     }
 
     switch (field) {
-    case DATASET_ID:
-      return isSetDatasetId();
     case DATASET_NAME:
       return isSetDatasetName();
     case VERSIONS:
@@ -319,15 +267,6 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
       return false;
     if (this == that)
       return true;
-
-    boolean this_present_datasetId = true;
-    boolean that_present_datasetId = true;
-    if (this_present_datasetId || that_present_datasetId) {
-      if (!(this_present_datasetId && that_present_datasetId))
-        return false;
-      if (this.datasetId != that.datasetId)
-        return false;
-    }
 
     boolean this_present_datasetName = true && this.isSetDatasetName();
     boolean that_present_datasetName = true && that.isSetDatasetName();
@@ -354,8 +293,6 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
   public int hashCode() {
     int hashCode = 1;
 
-    hashCode = hashCode * 8191 + org.apache.thrift.TBaseHelper.hashCode(datasetId);
-
     hashCode = hashCode * 8191 + ((isSetDatasetName()) ? 131071 : 524287);
     if (isSetDatasetName())
       hashCode = hashCode * 8191 + datasetName.hashCode();
@@ -375,16 +312,6 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
 
     int lastComparison = 0;
 
-    lastComparison = java.lang.Boolean.compare(isSetDatasetId(), other.isSetDatasetId());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    if (isSetDatasetId()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.datasetId, other.datasetId);
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-    }
     lastComparison = java.lang.Boolean.compare(isSetDatasetName(), other.isSetDatasetName());
     if (lastComparison != 0) {
       return lastComparison;
@@ -429,10 +356,6 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
     java.lang.StringBuilder sb = new java.lang.StringBuilder("DatasetTreeDTO(");
     boolean first = true;
 
-    sb.append("datasetId:");
-    sb.append(this.datasetId);
-    first = false;
-    if (!first) sb.append(", ");
     sb.append("datasetName:");
     if (this.datasetName == null) {
       sb.append("null");
@@ -467,8 +390,6 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
 
   private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, java.lang.ClassNotFoundException {
     try {
-      // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-      __isset_bitfield = 0;
       read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
     } catch (org.apache.thrift.TException te) {
       throw new java.io.IOException(te);
@@ -495,15 +416,7 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
           break;
         }
         switch (schemeField.id) {
-          case 1: // DATASET_ID
-            if (schemeField.type == org.apache.thrift.protocol.TType.I64) {
-              struct.datasetId = iprot.readI64();
-              struct.setDatasetIdIsSet(true);
-            } else { 
-              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-            }
-            break;
-          case 2: // DATASET_NAME
+          case 1: // DATASET_NAME
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.datasetName = iprot.readString();
               struct.setDatasetNameIsSet(true);
@@ -511,7 +424,7 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 3: // VERSIONS
+          case 2: // VERSIONS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
                 org.apache.thrift.protocol.TList _list74 = iprot.readListBegin();
@@ -546,9 +459,6 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
-      oprot.writeFieldBegin(DATASET_ID_FIELD_DESC);
-      oprot.writeI64(struct.datasetId);
-      oprot.writeFieldEnd();
       if (struct.datasetName != null) {
         oprot.writeFieldBegin(DATASET_NAME_FIELD_DESC);
         oprot.writeString(struct.datasetName);
@@ -585,19 +495,13 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
     public void write(org.apache.thrift.protocol.TProtocol prot, DatasetTreeDTO struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TTupleProtocol oprot = (org.apache.thrift.protocol.TTupleProtocol) prot;
       java.util.BitSet optionals = new java.util.BitSet();
-      if (struct.isSetDatasetId()) {
+      if (struct.isSetDatasetName()) {
         optionals.set(0);
       }
-      if (struct.isSetDatasetName()) {
+      if (struct.isSetVersions()) {
         optionals.set(1);
       }
-      if (struct.isSetVersions()) {
-        optionals.set(2);
-      }
-      oprot.writeBitSet(optionals, 3);
-      if (struct.isSetDatasetId()) {
-        oprot.writeI64(struct.datasetId);
-      }
+      oprot.writeBitSet(optionals, 2);
       if (struct.isSetDatasetName()) {
         oprot.writeString(struct.datasetName);
       }
@@ -615,16 +519,12 @@ public class DatasetTreeDTO implements org.apache.thrift.TBase<DatasetTreeDTO, D
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, DatasetTreeDTO struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TTupleProtocol iprot = (org.apache.thrift.protocol.TTupleProtocol) prot;
-      java.util.BitSet incoming = iprot.readBitSet(3);
+      java.util.BitSet incoming = iprot.readBitSet(2);
       if (incoming.get(0)) {
-        struct.datasetId = iprot.readI64();
-        struct.setDatasetIdIsSet(true);
-      }
-      if (incoming.get(1)) {
         struct.datasetName = iprot.readString();
         struct.setDatasetNameIsSet(true);
       }
-      if (incoming.get(2)) {
+      if (incoming.get(1)) {
         {
           org.apache.thrift.protocol.TList _list79 = iprot.readListBegin(org.apache.thrift.protocol.TType.STRUCT);
           struct.versions = new java.util.ArrayList<DatasetTreeVersion>(_list79.size);

@@ -10,7 +10,7 @@ class DatasetDialog extends HTMLElement {
         this.createMode = null; // 'new' | 'existing'
         this.selectedType = null; // SOURCE | SQL_QUERY | TRANSFORM
         this.upstreamVersionId = null;
-        this.upstreamDatasetId = null;
+        this.upstreamDatasetName = null;
         this.attachShadow({ mode: 'open' });
     }
 
@@ -154,7 +154,7 @@ class DatasetDialog extends HTMLElement {
         this.createMode = 'new'; // 默认选中新建数据集
         this.selectedType = null;
         this.upstreamVersionId = null;
-        this.upstreamDatasetId = null;
+        this.upstreamDatasetName = null;
         this.hideSqlPreview();
         // 重置导入文件上传区域
         this.resetImportFileArea();
@@ -211,7 +211,7 @@ class DatasetDialog extends HTMLElement {
         const upstreamSelect = $('upstreamVersion');
         if (upstreamSelect) {
             upstreamSelect.innerHTML = '<option value="">请选择父级版本...</option>' +
-                this.options.datasets.map(d => (d.versions || []).map(v => `<option value="${v.versionId || v.createTime}" data-dataset-id="${d.datasetId}" data-storage-path="${this.escape(v.storagePath || '')}">${this.escape(d.datasetName)} / ${this.escape(v.versionNo)}</option>`).join('')).join('');
+                this.options.datasets.map(d => (d.versions || []).map(v => `<option value="${v.versionId || v.createTime}" data-dataset-name="${this.escape(d.datasetName)}" data-storage-path="${this.escape(v.storagePath || '')}">${this.escape(d.datasetName)} / ${this.escape(v.versionNo)}</option>`).join('')).join('');
         }
 
         // SQL 脚本下拉
@@ -236,7 +236,7 @@ class DatasetDialog extends HTMLElement {
         const ctxVersionId = context && (context.versionId || context.id || context.createTime);
         if (context && ctxVersionId) {
             this.upstreamVersionId = ctxVersionId;
-            this.upstreamDatasetId = context.datasetId;
+            this.upstreamDatasetName = context.datasetName;
             this.createMode = 'existing';
 
             // 显示已有版本模式，隐藏新建模式
@@ -354,9 +354,7 @@ class DatasetDialog extends HTMLElement {
                     return this.fail('请上传 CSV 文件', 'importFileFieldError');
                 }
             }
-            // 新建数据集时校验名称不能与已有数据集重名
-            const exists = (this.options.datasets || []).some(d => d.datasetName === datasetName);
-            if (exists) return this.fail('数据集名称已存在，请更换名称或选择"基于已有版本创建新版本"', 'datasetNameError');
+            // 新建数据集时允许使用已存在的数据集名称（全禁用后可创建同名数据集）
         } else {
             const upstream = $('upstreamVersion').value;
             if (!upstream && !this.upstreamVersionId) return this.fail('请选择父级数据集版本', 'upstreamVersionError');

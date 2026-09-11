@@ -27,7 +27,7 @@ public class LineageService {
      * 以某个版本为中心，向上追溯全部上游、向下展开全部下游，构成图谱。
      *
      * @param versionId   聚焦版本
-     * @param sideLineage 是否包含旁系血缘（跨数据集的辅助引用边）；false 时只保留主上游链
+     * @param sideLineage 是否包含旁系血缘：true 时显示同数据集名的所有独立版本树；false 时只显示当前版本连通的树
      */
     public LineageGraphDTO getLineageGraph(Long versionId, boolean sideLineage) {
         LineageGraphDTO graph = new LineageGraphDTO();
@@ -39,9 +39,7 @@ public class LineageService {
         }
 
         // 1. 从血缘边表获取连通的边
-        List<DatasetLineageEntity> allEdges = datasetVersionService.listAllEdges().stream()
-                .filter(e -> sideLineage || e.isPrimary())
-                .collect(Collectors.toList());
+        List<DatasetLineageEntity> allEdges = datasetVersionService.listAllEdges();
 
         Map<Long, List<DatasetLineageEntity>> byFrom = new HashMap<>();
         Map<Long, List<DatasetLineageEntity>> byTo = new HashMap<>();
@@ -91,6 +89,13 @@ public class LineageService {
             }
         }
 
+        // 3. 旁系血缘：把同数据集名的所有版本都加进来（含独立的版本树）
+        if (sideLineage && focus.getDatasetName() != null) {
+            for (DatasetVersionEntity v : datasetVersionService.listVersions(focus.getDatasetName(), true)) {
+                if (v.getId() != null) visited.add(v.getId());
+            }
+        }
+
         for (Long id : visited) {
             DatasetVersionEntity v = datasetVersionService.queryVersion(id);
             if (v != null) {
@@ -111,8 +116,8 @@ public class LineageService {
     /**
      * 某个逻辑数据集的变化过程表格：每一行是一个版本，含上游引用与变换配方。
      */
-    public List<DatasetChangeProcessDTO> getChangeProcess(Long datasetId) {
-        List<DatasetVersionEntity> versions = datasetVersionService.listVersions(datasetId, true);
+    public List<DatasetChangeProcessDTO> getChangeProcess(String datasetName) {
+        List<DatasetVersionEntity> versions = datasetVersionService.listVersions(datasetName, true);
         Map<Long, DatasetVersionEntity> cache = new HashMap<>();
         versions.forEach(v -> cache.put(v.getId(), v));
 
@@ -158,7 +163,6 @@ public class LineageService {
         LineageGraphDTO.Node node = new LineageGraphDTO.Node();
         // id 是 timestamp 字段，IginX 读回可能为 null，用 createTime 兜底
         node.setVersionId(v.getId() != null ? v.getId() : v.getCreateTime());
-        node.setDatasetId(v.getDatasetId());
         node.setDatasetName(v.getDatasetName());
         node.setVersionNo(v.getVersionNo());
         node.setProvenanceType(v.getProvenanceType());

@@ -44,7 +44,7 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('  Result createDataset(DatasetCreateRequest request)')
     print('  Result getDatasetTree()')
     print('  Result getDatasetVersionMeta(i64 versionId)')
-    print('  Result getDatasetChanges(i64 datasetId)')
+    print('  Result getDatasetChanges(string datasetName)')
     print('  Result getDatasetLineage(i64 versionId, bool sideLineage)')
     print('  Result deleteDatasetVersion(i64 versionId)')
     print('  Result registerTransform(string file, string name, string className)')
@@ -304,7 +304,7 @@ elif cmd == 'getDatasetChanges':
     if len(args) != 1:
         print('getDatasetChanges requires 1 args')
         sys.exit(1)
-    pp.pprint(client.getDatasetChanges(eval(args[0]),))
+    pp.pprint(client.getDatasetChanges(args[0],))
 
 elif cmd == 'getDatasetLineage':
     if len(args) != 2:

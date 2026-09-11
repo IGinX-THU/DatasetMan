@@ -685,10 +685,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const datasetNode = activeNode.parentElement?.parentElement;
         return {
             versionId: Number(activeNode.getAttribute('data-version-id')),
-            datasetId: Number(activeNode.getAttribute('data-dataset-id')),
+            datasetName: activeNode.getAttribute('data-dataset-name') || datasetNode?.querySelector(':scope > .tree-node-text')?.textContent.trim() || '',
             storagePath: activeNode.getAttribute('data-full-path'),
-            versionNo: activeNode.querySelector('.tree-node-text')?.textContent.trim() || '',
-            datasetName: datasetNode?.querySelector(':scope > .tree-node-text')?.textContent.trim() || ''
+            versionNo: activeNode.querySelector('.tree-node-text')?.textContent.trim() || ''
         };
     }
 
@@ -825,7 +824,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 showComponent('datasetHistory', {
                     versionId: versionId,
-                    datasetId: dataset.datasetId,
+                    datasetName: dataset.datasetName,
                     storagePath: dataset.storagePath
                 });
                 setTimeout(() => {
@@ -1036,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasetDialog.hide();
                 showComponent('datasetHistory', {
                     versionId: newVersionId,
-                    datasetId: savedData?.datasetId,
+                    datasetName: savedData?.datasetName,
                     storagePath: savedData?.storagePath
                 });
             }
@@ -2250,7 +2249,7 @@ function showVisualAnalysis() {
                 return;
             }
             rightSidebarTree.innerHTML = result.data.map(dataset => `
-                <div class="tree-node expanded" data-dataset-id="${dataset.datasetId}" data-is-leaf="false">
+                <div class="tree-node expanded" data-dataset-name="${escapeHtml(dataset.datasetName)}" data-is-leaf="false">
                     <span class="tree-icon folder-icon"></span>
                     <span class="tree-node-text">${escapeHtml(dataset.datasetName)}</span>
                     <div class="tree-children">
@@ -2258,7 +2257,7 @@ function showVisualAnalysis() {
                             const vId = version.versionId || version.createTime || version.id || '';
                             return `
                             <div class="tree-node" data-is-leaf="true"
-                                 data-dataset-id="${dataset.datasetId}"
+                                 data-dataset-name="${escapeHtml(dataset.datasetName)}"
                                  data-version-id="${vId}"
                                  data-full-path="${escapeHtml(version.storagePath)}">
                                 <span class="tree-icon"></span>
@@ -2285,11 +2284,11 @@ function showVisualAnalysis() {
                     }
                     const rawVersionId = this.getAttribute('data-version-id');
                     const versionId = rawVersionId && !isNaN(Number(rawVersionId)) ? Number(rawVersionId) : null;
-                    const datasetId = Number(this.getAttribute('data-dataset-id'));
+                    const datasetName = this.getAttribute('data-dataset-name');
                     const storagePath = this.getAttribute('data-full-path');
-                    console.log('🌲 直接绑定点击右侧叶子节点:', { versionId, datasetId, storagePath, rawVersionId });
+                    console.log('🌲 直接绑定点击右侧叶子节点:', { versionId, datasetName, storagePath, rawVersionId });
                     if (versionId) {
-                        showComponent('datasetHistory', { versionId, datasetId, storagePath });
+                        showComponent('datasetHistory', { versionId, datasetName, storagePath });
                     } else {
                         console.warn('⚠️ versionId 为空，无法显示数据集历史', { rawVersionId, node: this });
                     }

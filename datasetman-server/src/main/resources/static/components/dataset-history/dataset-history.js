@@ -106,6 +106,15 @@ class DatasetHistory extends HTMLElement {
                         <div class="item"><label>数据集名称</label><span id="name">-</span></div>
                         <div class="item"><label>版本号</label><span id="versionNo">-</span></div>
                         <div class="item"><label>产出方式</label><span id="type">-</span></div>
+                        <div class="item"><label>数据类型</label><span id="dataType">-</span><select id="dataTypeEdit" style="display:none;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;">
+                            <option value="relational">关系型</option>
+                            <option value="time-series">时序</option>
+                            <option value="semi-structured">半结构化</option>
+                            <option value="text">文本</option>
+                            <option value="image">图像</option>
+                            <option value="audio">音频</option>
+                            <option value="video">视频</option>
+                        </select></div>
                         <div class="item"><label>存储路径</label><span id="path">-</span></div>
                         <div class="item"><label>创建者</label><span id="operator">-</span></div>
                         <div class="item"><label>创建时间</label><span id="time">-</span></div>
@@ -119,7 +128,7 @@ class DatasetHistory extends HTMLElement {
                 </div>
                 <div class="card">
                     <div class="header"><h3>血缘图谱</h3></div>
-                    <div class="toolbar"><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button></div>
+                    <div class="toolbar"><label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="checkbox" id="sideLineageToggle" checked>显示旁系血缘</label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button></div>
                     <div class="graph" id="graph"></div>
                 </div>
             </div>
@@ -146,6 +155,7 @@ class DatasetHistory extends HTMLElement {
         this.shadowRoot.querySelector('#zoomIn').addEventListener('click', () => this.zoomBy(1.25));
         this.shadowRoot.querySelector('#zoomOut').addEventListener('click', () => this.zoomBy(0.8));
         this.shadowRoot.querySelector('#resetView').addEventListener('click', () => this.resetView());
+        this.shadowRoot.querySelector('#sideLineageToggle').addEventListener('change', () => this.loadGraph());
         this.shadowRoot.querySelector('#newVersion').addEventListener('click', () => {
             this.dispatchEvent(new CustomEvent('edit-dataset', { bubbles:true, composed:true, detail:this.version }));
         });
@@ -160,12 +170,12 @@ class DatasetHistory extends HTMLElement {
             if (!this.selection.versionId) {
                 throw new Error('缺少数据集版本ID，请刷新右侧数据集树');
             }
-            if (!this.selection.datasetId) {
-                throw new Error('缺少数据集ID，请刷新右侧数据集树');
+            if (!this.selection.datasetName) {
+                throw new Error('缺少数据集名称，请刷新右侧数据集树');
             }
             const [meta, changes] = await Promise.all([
                 window.AppConfig.get('dataset', 'versionMetas', { versionId:this.selection.versionId }),
-                window.AppConfig.get('dataset', 'changes', { datasetId:this.selection.datasetId })
+                window.AppConfig.get('dataset', 'changes', { datasetName:this.selection.datasetName })
             ]);
             if (!(meta.success || meta.code === 200) || !meta.data) throw new Error(meta.message || '版本详情加载失败');
             this.version = meta.data;
@@ -199,6 +209,7 @@ class DatasetHistory extends HTMLElement {
         this.setText('#name', v.datasetName);
         this.setText('#versionNo', v.versionNo);
         this.setText('#type', labels[v.provenanceType] || v.provenanceType);
+        this.setText('#dataType', this.dataTypeLabel(v.dataModality));
         this.setText('#path', v.storagePath);
         this.setText('#operator', v.operator || '-');
         this.setText('#time', this.formatTime(v.createTime));
@@ -211,6 +222,19 @@ class DatasetHistory extends HTMLElement {
         let recipe = v.derivationConfig || '{}';
         try { recipe = JSON.stringify(JSON.parse(recipe), null, 2); } catch (e) {}
         this.setText('#recipe', recipe);
+    }
+
+    dataTypeLabel(dataType) {
+        const labels = {
+            relational: '关系型',
+            'time-series': '时序',
+            'semi-structured': '半结构化',
+            text: '文本',
+            image: '图像',
+            audio: '音频',
+            video: '视频'
+        };
+        return labels[dataType] || dataType || '-';
     }
 
     jobStateLabel(jobState) {
@@ -267,7 +291,7 @@ class DatasetHistory extends HTMLElement {
             // 刷新右侧数据集树
             if (window.loadDatasetTree) await window.loadDatasetTree();
             // 重新加载变化过程和血缘
-            const changes = await window.AppConfig.get('dataset', 'changes', { datasetId: this.selection.datasetId });
+            const changes = await window.AppConfig.get('dataset', 'changes', { datasetName: this.selection.datasetName });
             this.changes = ((changes.success || changes.code === 200) && changes.data) ? changes.data : [];
             this.renderChangeTable();
             await this.loadGraph();
@@ -283,7 +307,8 @@ class DatasetHistory extends HTMLElement {
             this.renderGraph();
             return;
         }
-        const result = await window.AppConfig.get('dataset', 'lineage', { versionId:vid, sideLineage:true });
+        const sideLineage = this.shadowRoot.querySelector('#sideLineageToggle')?.checked ?? true;
+        const result = await window.AppConfig.get('dataset', 'lineage', { versionId:vid, sideLineage });
         this.graph = ((result.success || result.code === 200) && result.data) ? result.data : { nodes:[], edges:[] };
         this.renderGraph();
     }
@@ -1012,6 +1037,13 @@ class DatasetHistory extends HTMLElement {
             remarkEdit.style.display = '';
             remarkEdit.focus();
         }
+        const dataTypeSpan = this.shadowRoot.querySelector('#dataType');
+        const dataTypeEdit = this.shadowRoot.querySelector('#dataTypeEdit');
+        if (dataTypeSpan && dataTypeEdit) {
+            dataTypeEdit.value = this.version.dataModality || 'relational';
+            dataTypeSpan.style.display = 'none';
+            dataTypeEdit.style.display = '';
+        }
         const editBtn = this.shadowRoot.querySelector('#editVersion');
         if (editBtn) { editBtn.textContent = '保存'; editBtn.style.background = '#16a34a'; editBtn.style.color = '#fff'; }
     }
@@ -1023,6 +1055,12 @@ class DatasetHistory extends HTMLElement {
             remarkSpan.style.display = '';
             remarkEdit.style.display = 'none';
         }
+        const dataTypeSpan = this.shadowRoot.querySelector('#dataType');
+        const dataTypeEdit = this.shadowRoot.querySelector('#dataTypeEdit');
+        if (dataTypeSpan && dataTypeEdit) {
+            dataTypeSpan.style.display = '';
+            dataTypeEdit.style.display = 'none';
+        }
         const editBtn = this.shadowRoot.querySelector('#editVersion');
         if (editBtn) { editBtn.textContent = '编辑'; editBtn.style.background = ''; editBtn.style.color = ''; }
     }
@@ -1032,13 +1070,17 @@ class DatasetHistory extends HTMLElement {
         if (vid == null) return;
         const remarkEdit = this.shadowRoot.querySelector('#remarkEdit');
         const newRemark = remarkEdit ? remarkEdit.value.trim() : (this.version.remark || '');
+        const dataTypeEdit = this.shadowRoot.querySelector('#dataTypeEdit');
+        const newDataType = dataTypeEdit ? dataTypeEdit.value : (this.version.dataModality || '');
         const editBtn = this.shadowRoot.querySelector('#editVersion');
         if (editBtn) { editBtn.disabled = true; editBtn.textContent = '保存中...'; }
         try {
-            const result = await window.AppConfig.put('dataset', 'versionUpdate', { versionId: vid, remark: newRemark });
+            const result = await window.AppConfig.put('dataset', 'versionUpdate', { versionId: vid, remark: newRemark, dataType: newDataType });
             if (!(result.success || result.code === 200)) throw new Error(result.message || '更新失败');
             this.version.remark = newRemark;
+            this.version.dataModality = newDataType;
             this.setText('#remark', newRemark || '-');
+            this.setText('#dataType', this.dataTypeLabel(newDataType));
             this.exitEditMode();
             if (window.CommonUtils?.showToast) window.CommonUtils.showToast('档案更新成功', 'success');
         } catch (error) {

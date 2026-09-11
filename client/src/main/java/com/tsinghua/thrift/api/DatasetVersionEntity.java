@@ -12,28 +12,26 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("DatasetVersionEntity");
 
   private static final org.apache.thrift.protocol.TField ID_FIELD_DESC = new org.apache.thrift.protocol.TField("id", org.apache.thrift.protocol.TType.I64, (short)1);
-  private static final org.apache.thrift.protocol.TField DATASET_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("datasetId", org.apache.thrift.protocol.TType.I64, (short)2);
-  private static final org.apache.thrift.protocol.TField DATASET_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("datasetName", org.apache.thrift.protocol.TType.STRING, (short)3);
-  private static final org.apache.thrift.protocol.TField VERSION_NO_FIELD_DESC = new org.apache.thrift.protocol.TField("versionNo", org.apache.thrift.protocol.TType.STRING, (short)4);
-  private static final org.apache.thrift.protocol.TField PROVENANCE_TYPE_FIELD_DESC = new org.apache.thrift.protocol.TField("provenanceType", org.apache.thrift.protocol.TType.STRING, (short)5);
-  private static final org.apache.thrift.protocol.TField STORAGE_PATH_FIELD_DESC = new org.apache.thrift.protocol.TField("storagePath", org.apache.thrift.protocol.TType.STRING, (short)6);
-  private static final org.apache.thrift.protocol.TField UPSTREAM_VERSION_IDS_FIELD_DESC = new org.apache.thrift.protocol.TField("upstreamVersionIds", org.apache.thrift.protocol.TType.STRING, (short)7);
-  private static final org.apache.thrift.protocol.TField DERIVATION_CONFIG_FIELD_DESC = new org.apache.thrift.protocol.TField("derivationConfig", org.apache.thrift.protocol.TType.STRING, (short)8);
-  private static final org.apache.thrift.protocol.TField SCHEMA_JSON_FIELD_DESC = new org.apache.thrift.protocol.TField("schemaJson", org.apache.thrift.protocol.TType.STRING, (short)9);
-  private static final org.apache.thrift.protocol.TField ROW_COUNT_FIELD_DESC = new org.apache.thrift.protocol.TField("rowCount", org.apache.thrift.protocol.TType.I64, (short)10);
-  private static final org.apache.thrift.protocol.TField SIZE_BYTES_FIELD_DESC = new org.apache.thrift.protocol.TField("sizeBytes", org.apache.thrift.protocol.TType.I64, (short)11);
-  private static final org.apache.thrift.protocol.TField CREATE_TIME_FIELD_DESC = new org.apache.thrift.protocol.TField("createTime", org.apache.thrift.protocol.TType.I64, (short)12);
-  private static final org.apache.thrift.protocol.TField OPERATOR_FIELD_DESC = new org.apache.thrift.protocol.TField("operator", org.apache.thrift.protocol.TType.STRING, (short)13);
-  private static final org.apache.thrift.protocol.TField CLIENT_IP_FIELD_DESC = new org.apache.thrift.protocol.TField("clientIp", org.apache.thrift.protocol.TType.STRING, (short)14);
-  private static final org.apache.thrift.protocol.TField REMARK_FIELD_DESC = new org.apache.thrift.protocol.TField("remark", org.apache.thrift.protocol.TType.STRING, (short)15);
-  private static final org.apache.thrift.protocol.TField DELETED_FIELD_DESC = new org.apache.thrift.protocol.TField("deleted", org.apache.thrift.protocol.TType.BOOL, (short)16);
-  private static final org.apache.thrift.protocol.TField JOB_STATE_FIELD_DESC = new org.apache.thrift.protocol.TField("jobState", org.apache.thrift.protocol.TType.I32, (short)17);
+  private static final org.apache.thrift.protocol.TField DATASET_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("datasetName", org.apache.thrift.protocol.TType.STRING, (short)2);
+  private static final org.apache.thrift.protocol.TField VERSION_NO_FIELD_DESC = new org.apache.thrift.protocol.TField("versionNo", org.apache.thrift.protocol.TType.STRING, (short)3);
+  private static final org.apache.thrift.protocol.TField PROVENANCE_TYPE_FIELD_DESC = new org.apache.thrift.protocol.TField("provenanceType", org.apache.thrift.protocol.TType.STRING, (short)4);
+  private static final org.apache.thrift.protocol.TField STORAGE_PATH_FIELD_DESC = new org.apache.thrift.protocol.TField("storagePath", org.apache.thrift.protocol.TType.STRING, (short)5);
+  private static final org.apache.thrift.protocol.TField UPSTREAM_VERSION_IDS_FIELD_DESC = new org.apache.thrift.protocol.TField("upstreamVersionIds", org.apache.thrift.protocol.TType.STRING, (short)6);
+  private static final org.apache.thrift.protocol.TField DERIVATION_CONFIG_FIELD_DESC = new org.apache.thrift.protocol.TField("derivationConfig", org.apache.thrift.protocol.TType.STRING, (short)7);
+  private static final org.apache.thrift.protocol.TField SCHEMA_JSON_FIELD_DESC = new org.apache.thrift.protocol.TField("schemaJson", org.apache.thrift.protocol.TType.STRING, (short)8);
+  private static final org.apache.thrift.protocol.TField ROW_COUNT_FIELD_DESC = new org.apache.thrift.protocol.TField("rowCount", org.apache.thrift.protocol.TType.I64, (short)9);
+  private static final org.apache.thrift.protocol.TField SIZE_BYTES_FIELD_DESC = new org.apache.thrift.protocol.TField("sizeBytes", org.apache.thrift.protocol.TType.I64, (short)10);
+  private static final org.apache.thrift.protocol.TField CREATE_TIME_FIELD_DESC = new org.apache.thrift.protocol.TField("createTime", org.apache.thrift.protocol.TType.I64, (short)11);
+  private static final org.apache.thrift.protocol.TField OPERATOR_FIELD_DESC = new org.apache.thrift.protocol.TField("operator", org.apache.thrift.protocol.TType.STRING, (short)12);
+  private static final org.apache.thrift.protocol.TField CLIENT_IP_FIELD_DESC = new org.apache.thrift.protocol.TField("clientIp", org.apache.thrift.protocol.TType.STRING, (short)13);
+  private static final org.apache.thrift.protocol.TField REMARK_FIELD_DESC = new org.apache.thrift.protocol.TField("remark", org.apache.thrift.protocol.TType.STRING, (short)14);
+  private static final org.apache.thrift.protocol.TField DELETED_FIELD_DESC = new org.apache.thrift.protocol.TField("deleted", org.apache.thrift.protocol.TType.BOOL, (short)15);
+  private static final org.apache.thrift.protocol.TField JOB_STATE_FIELD_DESC = new org.apache.thrift.protocol.TField("jobState", org.apache.thrift.protocol.TType.I32, (short)16);
 
   private static final org.apache.thrift.scheme.SchemeFactory STANDARD_SCHEME_FACTORY = new DatasetVersionEntityStandardSchemeFactory();
   private static final org.apache.thrift.scheme.SchemeFactory TUPLE_SCHEME_FACTORY = new DatasetVersionEntityTupleSchemeFactory();
 
   public long id; // required
-  public long datasetId; // required
   public @org.apache.thrift.annotation.Nullable java.lang.String datasetName; // required
   public @org.apache.thrift.annotation.Nullable java.lang.String versionNo; // required
   public @org.apache.thrift.annotation.Nullable java.lang.String provenanceType; // required
@@ -53,22 +51,21 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     ID((short)1, "id"),
-    DATASET_ID((short)2, "datasetId"),
-    DATASET_NAME((short)3, "datasetName"),
-    VERSION_NO((short)4, "versionNo"),
-    PROVENANCE_TYPE((short)5, "provenanceType"),
-    STORAGE_PATH((short)6, "storagePath"),
-    UPSTREAM_VERSION_IDS((short)7, "upstreamVersionIds"),
-    DERIVATION_CONFIG((short)8, "derivationConfig"),
-    SCHEMA_JSON((short)9, "schemaJson"),
-    ROW_COUNT((short)10, "rowCount"),
-    SIZE_BYTES((short)11, "sizeBytes"),
-    CREATE_TIME((short)12, "createTime"),
-    OPERATOR((short)13, "operator"),
-    CLIENT_IP((short)14, "clientIp"),
-    REMARK((short)15, "remark"),
-    DELETED((short)16, "deleted"),
-    JOB_STATE((short)17, "jobState");
+    DATASET_NAME((short)2, "datasetName"),
+    VERSION_NO((short)3, "versionNo"),
+    PROVENANCE_TYPE((short)4, "provenanceType"),
+    STORAGE_PATH((short)5, "storagePath"),
+    UPSTREAM_VERSION_IDS((short)6, "upstreamVersionIds"),
+    DERIVATION_CONFIG((short)7, "derivationConfig"),
+    SCHEMA_JSON((short)8, "schemaJson"),
+    ROW_COUNT((short)9, "rowCount"),
+    SIZE_BYTES((short)10, "sizeBytes"),
+    CREATE_TIME((short)11, "createTime"),
+    OPERATOR((short)12, "operator"),
+    CLIENT_IP((short)13, "clientIp"),
+    REMARK((short)14, "remark"),
+    DELETED((short)15, "deleted"),
+    JOB_STATE((short)16, "jobState");
 
     private static final java.util.Map<java.lang.String, _Fields> byName = new java.util.HashMap<java.lang.String, _Fields>();
 
@@ -86,37 +83,35 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
       switch(fieldId) {
         case 1: // ID
           return ID;
-        case 2: // DATASET_ID
-          return DATASET_ID;
-        case 3: // DATASET_NAME
+        case 2: // DATASET_NAME
           return DATASET_NAME;
-        case 4: // VERSION_NO
+        case 3: // VERSION_NO
           return VERSION_NO;
-        case 5: // PROVENANCE_TYPE
+        case 4: // PROVENANCE_TYPE
           return PROVENANCE_TYPE;
-        case 6: // STORAGE_PATH
+        case 5: // STORAGE_PATH
           return STORAGE_PATH;
-        case 7: // UPSTREAM_VERSION_IDS
+        case 6: // UPSTREAM_VERSION_IDS
           return UPSTREAM_VERSION_IDS;
-        case 8: // DERIVATION_CONFIG
+        case 7: // DERIVATION_CONFIG
           return DERIVATION_CONFIG;
-        case 9: // SCHEMA_JSON
+        case 8: // SCHEMA_JSON
           return SCHEMA_JSON;
-        case 10: // ROW_COUNT
+        case 9: // ROW_COUNT
           return ROW_COUNT;
-        case 11: // SIZE_BYTES
+        case 10: // SIZE_BYTES
           return SIZE_BYTES;
-        case 12: // CREATE_TIME
+        case 11: // CREATE_TIME
           return CREATE_TIME;
-        case 13: // OPERATOR
+        case 12: // OPERATOR
           return OPERATOR;
-        case 14: // CLIENT_IP
+        case 13: // CLIENT_IP
           return CLIENT_IP;
-        case 15: // REMARK
+        case 14: // REMARK
           return REMARK;
-        case 16: // DELETED
+        case 15: // DELETED
           return DELETED;
-        case 17: // JOB_STATE
+        case 16: // JOB_STATE
           return JOB_STATE;
         default:
           return null;
@@ -162,20 +157,17 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
 
   // isset id assignments
   private static final int __ID_ISSET_ID = 0;
-  private static final int __DATASETID_ISSET_ID = 1;
-  private static final int __ROWCOUNT_ISSET_ID = 2;
-  private static final int __SIZEBYTES_ISSET_ID = 3;
-  private static final int __CREATETIME_ISSET_ID = 4;
-  private static final int __DELETED_ISSET_ID = 5;
-  private static final int __JOBSTATE_ISSET_ID = 6;
+  private static final int __ROWCOUNT_ISSET_ID = 1;
+  private static final int __SIZEBYTES_ISSET_ID = 2;
+  private static final int __CREATETIME_ISSET_ID = 3;
+  private static final int __DELETED_ISSET_ID = 4;
+  private static final int __JOBSTATE_ISSET_ID = 5;
   private byte __isset_bitfield = 0;
   private static final _Fields[] optionals = {_Fields.UPSTREAM_VERSION_IDS,_Fields.DERIVATION_CONFIG,_Fields.SCHEMA_JSON,_Fields.ROW_COUNT,_Fields.SIZE_BYTES,_Fields.OPERATOR,_Fields.CLIENT_IP,_Fields.REMARK,_Fields.JOB_STATE};
   public static final java.util.Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     java.util.Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new java.util.EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
     tmpMap.put(_Fields.ID, new org.apache.thrift.meta_data.FieldMetaData("id", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
-    tmpMap.put(_Fields.DATASET_ID, new org.apache.thrift.meta_data.FieldMetaData("datasetId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
     tmpMap.put(_Fields.DATASET_NAME, new org.apache.thrift.meta_data.FieldMetaData("datasetName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
@@ -216,7 +208,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
 
   public DatasetVersionEntity(
     long id,
-    long datasetId,
     java.lang.String datasetName,
     java.lang.String versionNo,
     java.lang.String provenanceType,
@@ -227,8 +218,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
     this();
     this.id = id;
     setIdIsSet(true);
-    this.datasetId = datasetId;
-    setDatasetIdIsSet(true);
     this.datasetName = datasetName;
     this.versionNo = versionNo;
     this.provenanceType = provenanceType;
@@ -245,7 +234,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
   public DatasetVersionEntity(DatasetVersionEntity other) {
     __isset_bitfield = other.__isset_bitfield;
     this.id = other.id;
-    this.datasetId = other.datasetId;
     if (other.isSetDatasetName()) {
       this.datasetName = other.datasetName;
     }
@@ -292,8 +280,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
   public void clear() {
     setIdIsSet(false);
     this.id = 0;
-    setDatasetIdIsSet(false);
-    this.datasetId = 0;
     this.datasetName = null;
     this.versionNo = null;
     this.provenanceType = null;
@@ -337,29 +323,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
 
   public void setIdIsSet(boolean value) {
     __isset_bitfield = org.apache.thrift.EncodingUtils.setBit(__isset_bitfield, __ID_ISSET_ID, value);
-  }
-
-  public long getDatasetId() {
-    return this.datasetId;
-  }
-
-  public DatasetVersionEntity setDatasetId(long datasetId) {
-    this.datasetId = datasetId;
-    setDatasetIdIsSet(true);
-    return this;
-  }
-
-  public void unsetDatasetId() {
-    __isset_bitfield = org.apache.thrift.EncodingUtils.clearBit(__isset_bitfield, __DATASETID_ISSET_ID);
-  }
-
-  /** Returns true if field datasetId is set (has been assigned a value) and false otherwise */
-  public boolean isSetDatasetId() {
-    return org.apache.thrift.EncodingUtils.testBit(__isset_bitfield, __DATASETID_ISSET_ID);
-  }
-
-  public void setDatasetIdIsSet(boolean value) {
-    __isset_bitfield = org.apache.thrift.EncodingUtils.setBit(__isset_bitfield, __DATASETID_ISSET_ID, value);
   }
 
   @org.apache.thrift.annotation.Nullable
@@ -738,14 +701,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
       }
       break;
 
-    case DATASET_ID:
-      if (value == null) {
-        unsetDatasetId();
-      } else {
-        setDatasetId((java.lang.Long)value);
-      }
-      break;
-
     case DATASET_NAME:
       if (value == null) {
         unsetDatasetName();
@@ -876,9 +831,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
     case ID:
       return getId();
 
-    case DATASET_ID:
-      return getDatasetId();
-
     case DATASET_NAME:
       return getDatasetName();
 
@@ -938,8 +890,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
     switch (field) {
     case ID:
       return isSetId();
-    case DATASET_ID:
-      return isSetDatasetId();
     case DATASET_NAME:
       return isSetDatasetName();
     case VERSION_NO:
@@ -993,15 +943,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
       if (!(this_present_id && that_present_id))
         return false;
       if (this.id != that.id)
-        return false;
-    }
-
-    boolean this_present_datasetId = true;
-    boolean that_present_datasetId = true;
-    if (this_present_datasetId || that_present_datasetId) {
-      if (!(this_present_datasetId && that_present_datasetId))
-        return false;
-      if (this.datasetId != that.datasetId)
         return false;
     }
 
@@ -1149,8 +1090,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
 
     hashCode = hashCode * 8191 + org.apache.thrift.TBaseHelper.hashCode(id);
 
-    hashCode = hashCode * 8191 + org.apache.thrift.TBaseHelper.hashCode(datasetId);
-
     hashCode = hashCode * 8191 + ((isSetDatasetName()) ? 131071 : 524287);
     if (isSetDatasetName())
       hashCode = hashCode * 8191 + datasetName.hashCode();
@@ -1224,16 +1163,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
     }
     if (isSetId()) {
       lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.id, other.id);
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-    }
-    lastComparison = java.lang.Boolean.compare(isSetDatasetId(), other.isSetDatasetId());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    if (isSetDatasetId()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.datasetId, other.datasetId);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -1416,10 +1345,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
     sb.append(this.id);
     first = false;
     if (!first) sb.append(", ");
-    sb.append("datasetId:");
-    sb.append(this.datasetId);
-    first = false;
-    if (!first) sb.append(", ");
     sb.append("datasetName:");
     if (this.datasetName == null) {
       sb.append("null");
@@ -1592,15 +1517,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 2: // DATASET_ID
-            if (schemeField.type == org.apache.thrift.protocol.TType.I64) {
-              struct.datasetId = iprot.readI64();
-              struct.setDatasetIdIsSet(true);
-            } else { 
-              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-            }
-            break;
-          case 3: // DATASET_NAME
+          case 2: // DATASET_NAME
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.datasetName = iprot.readString();
               struct.setDatasetNameIsSet(true);
@@ -1608,7 +1525,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 4: // VERSION_NO
+          case 3: // VERSION_NO
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.versionNo = iprot.readString();
               struct.setVersionNoIsSet(true);
@@ -1616,7 +1533,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 5: // PROVENANCE_TYPE
+          case 4: // PROVENANCE_TYPE
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.provenanceType = iprot.readString();
               struct.setProvenanceTypeIsSet(true);
@@ -1624,7 +1541,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 6: // STORAGE_PATH
+          case 5: // STORAGE_PATH
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.storagePath = iprot.readString();
               struct.setStoragePathIsSet(true);
@@ -1632,7 +1549,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 7: // UPSTREAM_VERSION_IDS
+          case 6: // UPSTREAM_VERSION_IDS
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.upstreamVersionIds = iprot.readString();
               struct.setUpstreamVersionIdsIsSet(true);
@@ -1640,7 +1557,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 8: // DERIVATION_CONFIG
+          case 7: // DERIVATION_CONFIG
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.derivationConfig = iprot.readString();
               struct.setDerivationConfigIsSet(true);
@@ -1648,7 +1565,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 9: // SCHEMA_JSON
+          case 8: // SCHEMA_JSON
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.schemaJson = iprot.readString();
               struct.setSchemaJsonIsSet(true);
@@ -1656,7 +1573,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 10: // ROW_COUNT
+          case 9: // ROW_COUNT
             if (schemeField.type == org.apache.thrift.protocol.TType.I64) {
               struct.rowCount = iprot.readI64();
               struct.setRowCountIsSet(true);
@@ -1664,7 +1581,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 11: // SIZE_BYTES
+          case 10: // SIZE_BYTES
             if (schemeField.type == org.apache.thrift.protocol.TType.I64) {
               struct.sizeBytes = iprot.readI64();
               struct.setSizeBytesIsSet(true);
@@ -1672,7 +1589,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 12: // CREATE_TIME
+          case 11: // CREATE_TIME
             if (schemeField.type == org.apache.thrift.protocol.TType.I64) {
               struct.createTime = iprot.readI64();
               struct.setCreateTimeIsSet(true);
@@ -1680,7 +1597,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 13: // OPERATOR
+          case 12: // OPERATOR
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.operator = iprot.readString();
               struct.setOperatorIsSet(true);
@@ -1688,7 +1605,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 14: // CLIENT_IP
+          case 13: // CLIENT_IP
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.clientIp = iprot.readString();
               struct.setClientIpIsSet(true);
@@ -1696,7 +1613,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 15: // REMARK
+          case 14: // REMARK
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.remark = iprot.readString();
               struct.setRemarkIsSet(true);
@@ -1704,7 +1621,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 16: // DELETED
+          case 15: // DELETED
             if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
               struct.deleted = iprot.readBool();
               struct.setDeletedIsSet(true);
@@ -1712,7 +1629,7 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 17: // JOB_STATE
+          case 16: // JOB_STATE
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
               struct.jobState = iprot.readI32();
               struct.setJobStateIsSet(true);
@@ -1738,9 +1655,6 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
       oprot.writeStructBegin(STRUCT_DESC);
       oprot.writeFieldBegin(ID_FIELD_DESC);
       oprot.writeI64(struct.id);
-      oprot.writeFieldEnd();
-      oprot.writeFieldBegin(DATASET_ID_FIELD_DESC);
-      oprot.writeI64(struct.datasetId);
       oprot.writeFieldEnd();
       if (struct.datasetName != null) {
         oprot.writeFieldBegin(DATASET_NAME_FIELD_DESC);
@@ -1847,60 +1761,54 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
       if (struct.isSetId()) {
         optionals.set(0);
       }
-      if (struct.isSetDatasetId()) {
+      if (struct.isSetDatasetName()) {
         optionals.set(1);
       }
-      if (struct.isSetDatasetName()) {
+      if (struct.isSetVersionNo()) {
         optionals.set(2);
       }
-      if (struct.isSetVersionNo()) {
+      if (struct.isSetProvenanceType()) {
         optionals.set(3);
       }
-      if (struct.isSetProvenanceType()) {
+      if (struct.isSetStoragePath()) {
         optionals.set(4);
       }
-      if (struct.isSetStoragePath()) {
+      if (struct.isSetUpstreamVersionIds()) {
         optionals.set(5);
       }
-      if (struct.isSetUpstreamVersionIds()) {
+      if (struct.isSetDerivationConfig()) {
         optionals.set(6);
       }
-      if (struct.isSetDerivationConfig()) {
+      if (struct.isSetSchemaJson()) {
         optionals.set(7);
       }
-      if (struct.isSetSchemaJson()) {
+      if (struct.isSetRowCount()) {
         optionals.set(8);
       }
-      if (struct.isSetRowCount()) {
+      if (struct.isSetSizeBytes()) {
         optionals.set(9);
       }
-      if (struct.isSetSizeBytes()) {
+      if (struct.isSetCreateTime()) {
         optionals.set(10);
       }
-      if (struct.isSetCreateTime()) {
+      if (struct.isSetOperator()) {
         optionals.set(11);
       }
-      if (struct.isSetOperator()) {
+      if (struct.isSetClientIp()) {
         optionals.set(12);
       }
-      if (struct.isSetClientIp()) {
+      if (struct.isSetRemark()) {
         optionals.set(13);
       }
-      if (struct.isSetRemark()) {
+      if (struct.isSetDeleted()) {
         optionals.set(14);
       }
-      if (struct.isSetDeleted()) {
+      if (struct.isSetJobState()) {
         optionals.set(15);
       }
-      if (struct.isSetJobState()) {
-        optionals.set(16);
-      }
-      oprot.writeBitSet(optionals, 17);
+      oprot.writeBitSet(optionals, 16);
       if (struct.isSetId()) {
         oprot.writeI64(struct.id);
-      }
-      if (struct.isSetDatasetId()) {
-        oprot.writeI64(struct.datasetId);
       }
       if (struct.isSetDatasetName()) {
         oprot.writeString(struct.datasetName);
@@ -1952,72 +1860,68 @@ public class DatasetVersionEntity implements org.apache.thrift.TBase<DatasetVers
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, DatasetVersionEntity struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TTupleProtocol iprot = (org.apache.thrift.protocol.TTupleProtocol) prot;
-      java.util.BitSet incoming = iprot.readBitSet(17);
+      java.util.BitSet incoming = iprot.readBitSet(16);
       if (incoming.get(0)) {
         struct.id = iprot.readI64();
         struct.setIdIsSet(true);
       }
       if (incoming.get(1)) {
-        struct.datasetId = iprot.readI64();
-        struct.setDatasetIdIsSet(true);
-      }
-      if (incoming.get(2)) {
         struct.datasetName = iprot.readString();
         struct.setDatasetNameIsSet(true);
       }
-      if (incoming.get(3)) {
+      if (incoming.get(2)) {
         struct.versionNo = iprot.readString();
         struct.setVersionNoIsSet(true);
       }
-      if (incoming.get(4)) {
+      if (incoming.get(3)) {
         struct.provenanceType = iprot.readString();
         struct.setProvenanceTypeIsSet(true);
       }
-      if (incoming.get(5)) {
+      if (incoming.get(4)) {
         struct.storagePath = iprot.readString();
         struct.setStoragePathIsSet(true);
       }
-      if (incoming.get(6)) {
+      if (incoming.get(5)) {
         struct.upstreamVersionIds = iprot.readString();
         struct.setUpstreamVersionIdsIsSet(true);
       }
-      if (incoming.get(7)) {
+      if (incoming.get(6)) {
         struct.derivationConfig = iprot.readString();
         struct.setDerivationConfigIsSet(true);
       }
-      if (incoming.get(8)) {
+      if (incoming.get(7)) {
         struct.schemaJson = iprot.readString();
         struct.setSchemaJsonIsSet(true);
       }
-      if (incoming.get(9)) {
+      if (incoming.get(8)) {
         struct.rowCount = iprot.readI64();
         struct.setRowCountIsSet(true);
       }
-      if (incoming.get(10)) {
+      if (incoming.get(9)) {
         struct.sizeBytes = iprot.readI64();
         struct.setSizeBytesIsSet(true);
       }
-      if (incoming.get(11)) {
+      if (incoming.get(10)) {
         struct.createTime = iprot.readI64();
         struct.setCreateTimeIsSet(true);
       }
-      if (incoming.get(12)) {
+      if (incoming.get(11)) {
         struct.operator = iprot.readString();
         struct.setOperatorIsSet(true);
       }
-      if (incoming.get(13)) {
+      if (incoming.get(12)) {
         struct.clientIp = iprot.readString();
         struct.setClientIpIsSet(true);
       }
-      if (incoming.get(14)) {
+      if (incoming.get(13)) {
         struct.remark = iprot.readString();
         struct.setRemarkIsSet(true);
       }
-      if (incoming.get(15)) {
+      if (incoming.get(14)) {
         struct.deleted = iprot.readBool();
         struct.setDeletedIsSet(true);
       }
-      if (incoming.get(16)) {
+      if (incoming.get(15)) {
         struct.jobState = iprot.readI32();
         struct.setJobStateIsSet(true);
       }

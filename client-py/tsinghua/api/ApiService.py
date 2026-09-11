@@ -166,10 +166,10 @@ class Iface(object):
         """
         pass
 
-    def getDatasetChanges(self, datasetId):
+    def getDatasetChanges(self, datasetName):
         """
         Parameters:
-         - datasetId
+         - datasetName
 
         """
         pass
@@ -1187,19 +1187,19 @@ class Client(Iface):
             return result.success
         raise TApplicationException(TApplicationException.MISSING_RESULT, "getDatasetVersionMeta failed: unknown result")
 
-    def getDatasetChanges(self, datasetId):
+    def getDatasetChanges(self, datasetName):
         """
         Parameters:
-         - datasetId
+         - datasetName
 
         """
-        self.send_getDatasetChanges(datasetId)
+        self.send_getDatasetChanges(datasetName)
         return self.recv_getDatasetChanges()
 
-    def send_getDatasetChanges(self, datasetId):
+    def send_getDatasetChanges(self, datasetName):
         self._oprot.writeMessageBegin('getDatasetChanges', TMessageType.CALL, self._seqid)
         args = getDatasetChanges_args()
-        args.datasetId = datasetId
+        args.datasetName = datasetName
         args.write(self._oprot)
         self._oprot.writeMessageEnd()
         self._oprot.trans.flush()
@@ -3507,7 +3507,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = getDatasetChanges_result()
         try:
-            result.success = self._handler.getDatasetChanges(args.datasetId)
+            result.success = self._handler.getDatasetChanges(args.datasetName)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -7343,14 +7343,14 @@ getDatasetVersionMeta_result.thrift_spec = (
 class getDatasetChanges_args(object):
     """
     Attributes:
-     - datasetId
+     - datasetName
 
     """
     thrift_spec = None
 
 
-    def __init__(self, datasetId = None,):
-        self.datasetId = datasetId
+    def __init__(self, datasetName = None,):
+        self.datasetName = datasetName
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -7362,8 +7362,8 @@ class getDatasetChanges_args(object):
             if ftype == TType.STOP:
                 break
             if fid == 1:
-                if ftype == TType.I64:
-                    self.datasetId = iprot.readI64()
+                if ftype == TType.STRING:
+                    self.datasetName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
             else:
@@ -7377,9 +7377,9 @@ class getDatasetChanges_args(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('getDatasetChanges_args')
-        if self.datasetId is not None:
-            oprot.writeFieldBegin('datasetId', TType.I64, 1)
-            oprot.writeI64(self.datasetId)
+        if self.datasetName is not None:
+            oprot.writeFieldBegin('datasetName', TType.STRING, 1)
+            oprot.writeString(self.datasetName.encode('utf-8') if sys.version_info[0] == 2 else self.datasetName)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -7400,7 +7400,7 @@ class getDatasetChanges_args(object):
 all_structs.append(getDatasetChanges_args)
 getDatasetChanges_args.thrift_spec = (
     None,  # 0
-    (1, TType.I64, 'datasetId', None, None, ),  # 1
+    (1, TType.STRING, 'datasetName', 'UTF8', None, ),  # 1
 )
 
 

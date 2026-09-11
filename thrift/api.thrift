@@ -101,22 +101,21 @@ struct DatasetEntity {
 // 数据集版本实体 - 匹配 DatasetVersionEntity
 struct DatasetVersionEntity {
     1: i64 id,
-    2: i64 datasetId,
-    3: string datasetName,
-    4: string versionNo,
-    5: string provenanceType,
-    6: string storagePath,
-    7: optional string upstreamVersionIds,
-    8: optional string derivationConfig,
-    9: optional string schemaJson,
-    10: optional i64 rowCount,
-    11: optional i64 sizeBytes,
-    12: i64 createTime,
-    13: optional string operator,
-    14: optional string clientIp,
-    15: optional string remark,
-    16: bool deleted,
-    17: optional i32 jobState,
+    2: string datasetName,
+    3: string versionNo,
+    4: string provenanceType,
+    5: string storagePath,
+    6: optional string upstreamVersionIds,
+    7: optional string derivationConfig,
+    8: optional string schemaJson,
+    9: optional i64 rowCount,
+    10: optional i64 sizeBytes,
+    11: i64 createTime,
+    12: optional string operator,
+    13: optional string clientIp,
+    14: optional string remark,
+    15: bool deleted,
+    16: optional i32 jobState,
 }
 
 // 向导式创建数据集版本请求 - 匹配 DatasetCreateRequest
@@ -149,9 +148,8 @@ struct DatasetTreeVersion {
 }
 
 struct DatasetTreeDTO {
-    1: i64 datasetId,
-    2: string datasetName,
-    3: list<DatasetTreeVersion> versions,
+    1: string datasetName,
+    2: list<DatasetTreeVersion> versions,
 }
 
 // 数据集变化过程 - 匹配 DatasetChangeProcessDTO
@@ -183,20 +181,19 @@ struct DatasetChangeProcessDTO {
 // 血缘图谱 - 匹配 LineageGraphDTO
 struct LineageNode {
     1: i64 versionId,
-    2: optional i64 datasetId,
-    3: string datasetName,
-    4: string versionNo,
-    5: optional string provenanceType,
-    6: optional string provenanceLabel,
-    7: optional string storagePath,
-    8: optional string operator,
-    9: optional string clientIp,
-    10: i64 createTime,
-    11: optional string remark,
-    12: bool deleted,
-    13: optional i32 jobState,
-    14: bool focus,
-    15: optional string derivationConfig,
+    2: string datasetName,
+    3: string versionNo,
+    4: optional string provenanceType,
+    5: optional string provenanceLabel,
+    6: optional string storagePath,
+    7: optional string operator,
+    8: optional string clientIp,
+    9: i64 createTime,
+    10: optional string remark,
+    11: bool deleted,
+    12: optional i32 jobState,
+    13: bool focus,
+    14: optional string derivationConfig,
 }
 
 struct LineageEdge {
@@ -486,8 +483,8 @@ service ApiService {
     // GET /api/dataset/version/metas -> versionMeta(versionId)
     Result getDatasetVersionMeta(1: i64 versionId),
     
-    // GET /api/dataset/changes -> changes(datasetId)
-    Result getDatasetChanges(1: i64 datasetId),
+    // GET /api/dataset/changes -> changes(datasetName)
+    Result getDatasetChanges(1: string datasetName),
     
     // GET /api/dataset/lineage -> lineage(versionId, sideLineage)
     Result getDatasetLineage(1: i64 versionId, 2: bool sideLineage),

@@ -52,7 +52,7 @@ public class ApiService {
 
     public Result getDatasetVersionMeta(long versionId) throws org.apache.thrift.TException;
 
-    public Result getDatasetChanges(long datasetId) throws org.apache.thrift.TException;
+    public Result getDatasetChanges(java.lang.String datasetName) throws org.apache.thrift.TException;
 
     public Result getDatasetLineage(long versionId, boolean sideLineage) throws org.apache.thrift.TException;
 
@@ -210,7 +210,7 @@ public class ApiService {
 
     public void getDatasetVersionMeta(long versionId, org.apache.thrift.async.AsyncMethodCallback<Result> resultHandler) throws org.apache.thrift.TException;
 
-    public void getDatasetChanges(long datasetId, org.apache.thrift.async.AsyncMethodCallback<Result> resultHandler) throws org.apache.thrift.TException;
+    public void getDatasetChanges(java.lang.String datasetName, org.apache.thrift.async.AsyncMethodCallback<Result> resultHandler) throws org.apache.thrift.TException;
 
     public void getDatasetLineage(long versionId, boolean sideLineage, org.apache.thrift.async.AsyncMethodCallback<Result> resultHandler) throws org.apache.thrift.TException;
 
@@ -827,16 +827,16 @@ public class ApiService {
     }
 
     @Override
-    public Result getDatasetChanges(long datasetId) throws org.apache.thrift.TException
+    public Result getDatasetChanges(java.lang.String datasetName) throws org.apache.thrift.TException
     {
-      send_getDatasetChanges(datasetId);
+      send_getDatasetChanges(datasetName);
       return recv_getDatasetChanges();
     }
 
-    public void send_getDatasetChanges(long datasetId) throws org.apache.thrift.TException
+    public void send_getDatasetChanges(java.lang.String datasetName) throws org.apache.thrift.TException
     {
       getDatasetChanges_args args = new getDatasetChanges_args();
-      args.setDatasetId(datasetId);
+      args.setDatasetName(datasetName);
       sendBase("getDatasetChanges", args);
     }
 
@@ -2901,25 +2901,25 @@ public class ApiService {
     }
 
     @Override
-    public void getDatasetChanges(long datasetId, org.apache.thrift.async.AsyncMethodCallback<Result> resultHandler) throws org.apache.thrift.TException {
+    public void getDatasetChanges(java.lang.String datasetName, org.apache.thrift.async.AsyncMethodCallback<Result> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getDatasetChanges_call method_call = new getDatasetChanges_call(datasetId, resultHandler, this, ___protocolFactory, ___transport);
+      getDatasetChanges_call method_call = new getDatasetChanges_call(datasetName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
 
     public static class getDatasetChanges_call extends org.apache.thrift.async.TAsyncMethodCall<Result> {
-      private long datasetId;
-      public getDatasetChanges_call(long datasetId, org.apache.thrift.async.AsyncMethodCallback<Result> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private java.lang.String datasetName;
+      public getDatasetChanges_call(java.lang.String datasetName, org.apache.thrift.async.AsyncMethodCallback<Result> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
-        this.datasetId = datasetId;
+        this.datasetName = datasetName;
       }
 
       @Override
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
         prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("getDatasetChanges", org.apache.thrift.protocol.TMessageType.CALL, 0));
         getDatasetChanges_args args = new getDatasetChanges_args();
-        args.setDatasetId(datasetId);
+        args.setDatasetName(datasetName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -5655,7 +5655,7 @@ public class ApiService {
       @Override
       public getDatasetChanges_result getResult(I iface, getDatasetChanges_args args) throws org.apache.thrift.TException {
         getDatasetChanges_result result = getEmptyResultInstance();
-        result.success = iface.getDatasetChanges(args.datasetId);
+        result.success = iface.getDatasetChanges(args.datasetName);
         return result;
       }
     }
@@ -9109,7 +9109,7 @@ public class ApiService {
 
       @Override
       public void start(I iface, getDatasetChanges_args args, org.apache.thrift.async.AsyncMethodCallback<Result> resultHandler) throws org.apache.thrift.TException {
-        iface.getDatasetChanges(args.datasetId,resultHandler);
+        iface.getDatasetChanges(args.datasetName,resultHandler);
       }
     }
 
@@ -28241,16 +28241,16 @@ public class ApiService {
   public static class getDatasetChanges_args implements org.apache.thrift.TBase<getDatasetChanges_args, getDatasetChanges_args._Fields>, java.io.Serializable, Cloneable, Comparable<getDatasetChanges_args>   {
     private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("getDatasetChanges_args");
 
-    private static final org.apache.thrift.protocol.TField DATASET_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("datasetId", org.apache.thrift.protocol.TType.I64, (short)1);
+    private static final org.apache.thrift.protocol.TField DATASET_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("datasetName", org.apache.thrift.protocol.TType.STRING, (short)1);
 
     private static final org.apache.thrift.scheme.SchemeFactory STANDARD_SCHEME_FACTORY = new getDatasetChanges_argsStandardSchemeFactory();
     private static final org.apache.thrift.scheme.SchemeFactory TUPLE_SCHEME_FACTORY = new getDatasetChanges_argsTupleSchemeFactory();
 
-    public long datasetId; // required
+    public @org.apache.thrift.annotation.Nullable java.lang.String datasetName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-      DATASET_ID((short)1, "datasetId");
+      DATASET_NAME((short)1, "datasetName");
 
       private static final java.util.Map<java.lang.String, _Fields> byName = new java.util.HashMap<java.lang.String, _Fields>();
 
@@ -28266,8 +28266,8 @@ public class ApiService {
       @org.apache.thrift.annotation.Nullable
       public static _Fields findByThriftId(int fieldId) {
         switch(fieldId) {
-          case 1: // DATASET_ID
-            return DATASET_ID;
+          case 1: // DATASET_NAME
+            return DATASET_NAME;
           default:
             return null;
         }
@@ -28311,13 +28311,11 @@ public class ApiService {
     }
 
     // isset id assignments
-    private static final int __DATASETID_ISSET_ID = 0;
-    private byte __isset_bitfield = 0;
     public static final java.util.Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
     static {
       java.util.Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new java.util.EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-      tmpMap.put(_Fields.DATASET_ID, new org.apache.thrift.meta_data.FieldMetaData("datasetId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
+      tmpMap.put(_Fields.DATASET_NAME, new org.apache.thrift.meta_data.FieldMetaData("datasetName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
       metaDataMap = java.util.Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getDatasetChanges_args.class, metaDataMap);
     }
@@ -28326,19 +28324,19 @@ public class ApiService {
     }
 
     public getDatasetChanges_args(
-      long datasetId)
+      java.lang.String datasetName)
     {
       this();
-      this.datasetId = datasetId;
-      setDatasetIdIsSet(true);
+      this.datasetName = datasetName;
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public getDatasetChanges_args(getDatasetChanges_args other) {
-      __isset_bitfield = other.__isset_bitfield;
-      this.datasetId = other.datasetId;
+      if (other.isSetDatasetName()) {
+        this.datasetName = other.datasetName;
+      }
     }
 
     @Override
@@ -28348,41 +28346,42 @@ public class ApiService {
 
     @Override
     public void clear() {
-      setDatasetIdIsSet(false);
-      this.datasetId = 0;
+      this.datasetName = null;
     }
 
-    public long getDatasetId() {
-      return this.datasetId;
+    @org.apache.thrift.annotation.Nullable
+    public java.lang.String getDatasetName() {
+      return this.datasetName;
     }
 
-    public getDatasetChanges_args setDatasetId(long datasetId) {
-      this.datasetId = datasetId;
-      setDatasetIdIsSet(true);
+    public getDatasetChanges_args setDatasetName(@org.apache.thrift.annotation.Nullable java.lang.String datasetName) {
+      this.datasetName = datasetName;
       return this;
     }
 
-    public void unsetDatasetId() {
-      __isset_bitfield = org.apache.thrift.EncodingUtils.clearBit(__isset_bitfield, __DATASETID_ISSET_ID);
+    public void unsetDatasetName() {
+      this.datasetName = null;
     }
 
-    /** Returns true if field datasetId is set (has been assigned a value) and false otherwise */
-    public boolean isSetDatasetId() {
-      return org.apache.thrift.EncodingUtils.testBit(__isset_bitfield, __DATASETID_ISSET_ID);
+    /** Returns true if field datasetName is set (has been assigned a value) and false otherwise */
+    public boolean isSetDatasetName() {
+      return this.datasetName != null;
     }
 
-    public void setDatasetIdIsSet(boolean value) {
-      __isset_bitfield = org.apache.thrift.EncodingUtils.setBit(__isset_bitfield, __DATASETID_ISSET_ID, value);
+    public void setDatasetNameIsSet(boolean value) {
+      if (!value) {
+        this.datasetName = null;
+      }
     }
 
     @Override
     public void setFieldValue(_Fields field, @org.apache.thrift.annotation.Nullable java.lang.Object value) {
       switch (field) {
-      case DATASET_ID:
+      case DATASET_NAME:
         if (value == null) {
-          unsetDatasetId();
+          unsetDatasetName();
         } else {
-          setDatasetId((java.lang.Long)value);
+          setDatasetName((java.lang.String)value);
         }
         break;
 
@@ -28393,8 +28392,8 @@ public class ApiService {
     @Override
     public java.lang.Object getFieldValue(_Fields field) {
       switch (field) {
-      case DATASET_ID:
-        return getDatasetId();
+      case DATASET_NAME:
+        return getDatasetName();
 
       }
       throw new java.lang.IllegalStateException();
@@ -28408,8 +28407,8 @@ public class ApiService {
       }
 
       switch (field) {
-      case DATASET_ID:
-        return isSetDatasetId();
+      case DATASET_NAME:
+        return isSetDatasetName();
       }
       throw new java.lang.IllegalStateException();
     }
@@ -28427,12 +28426,12 @@ public class ApiService {
       if (this == that)
         return true;
 
-      boolean this_present_datasetId = true;
-      boolean that_present_datasetId = true;
-      if (this_present_datasetId || that_present_datasetId) {
-        if (!(this_present_datasetId && that_present_datasetId))
+      boolean this_present_datasetName = true && this.isSetDatasetName();
+      boolean that_present_datasetName = true && that.isSetDatasetName();
+      if (this_present_datasetName || that_present_datasetName) {
+        if (!(this_present_datasetName && that_present_datasetName))
           return false;
-        if (this.datasetId != that.datasetId)
+        if (!this.datasetName.equals(that.datasetName))
           return false;
       }
 
@@ -28443,7 +28442,9 @@ public class ApiService {
     public int hashCode() {
       int hashCode = 1;
 
-      hashCode = hashCode * 8191 + org.apache.thrift.TBaseHelper.hashCode(datasetId);
+      hashCode = hashCode * 8191 + ((isSetDatasetName()) ? 131071 : 524287);
+      if (isSetDatasetName())
+        hashCode = hashCode * 8191 + datasetName.hashCode();
 
       return hashCode;
     }
@@ -28456,12 +28457,12 @@ public class ApiService {
 
       int lastComparison = 0;
 
-      lastComparison = java.lang.Boolean.compare(isSetDatasetId(), other.isSetDatasetId());
+      lastComparison = java.lang.Boolean.compare(isSetDatasetName(), other.isSetDatasetName());
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetDatasetId()) {
-        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.datasetId, other.datasetId);
+      if (isSetDatasetName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.datasetName, other.datasetName);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -28490,8 +28491,12 @@ public class ApiService {
       java.lang.StringBuilder sb = new java.lang.StringBuilder("getDatasetChanges_args(");
       boolean first = true;
 
-      sb.append("datasetId:");
-      sb.append(this.datasetId);
+      sb.append("datasetName:");
+      if (this.datasetName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.datasetName);
+      }
       first = false;
       sb.append(")");
       return sb.toString();
@@ -28512,8 +28517,6 @@ public class ApiService {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, java.lang.ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bitfield = 0;
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -28540,10 +28543,10 @@ public class ApiService {
             break;
           }
           switch (schemeField.id) {
-            case 1: // DATASET_ID
-              if (schemeField.type == org.apache.thrift.protocol.TType.I64) {
-                struct.datasetId = iprot.readI64();
-                struct.setDatasetIdIsSet(true);
+            case 1: // DATASET_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.datasetName = iprot.readString();
+                struct.setDatasetNameIsSet(true);
               } else { 
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
@@ -28564,9 +28567,11 @@ public class ApiService {
         struct.validate();
 
         oprot.writeStructBegin(STRUCT_DESC);
-        oprot.writeFieldBegin(DATASET_ID_FIELD_DESC);
-        oprot.writeI64(struct.datasetId);
-        oprot.writeFieldEnd();
+        if (struct.datasetName != null) {
+          oprot.writeFieldBegin(DATASET_NAME_FIELD_DESC);
+          oprot.writeString(struct.datasetName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -28586,12 +28591,12 @@ public class ApiService {
       public void write(org.apache.thrift.protocol.TProtocol prot, getDatasetChanges_args struct) throws org.apache.thrift.TException {
         org.apache.thrift.protocol.TTupleProtocol oprot = (org.apache.thrift.protocol.TTupleProtocol) prot;
         java.util.BitSet optionals = new java.util.BitSet();
-        if (struct.isSetDatasetId()) {
+        if (struct.isSetDatasetName()) {
           optionals.set(0);
         }
         oprot.writeBitSet(optionals, 1);
-        if (struct.isSetDatasetId()) {
-          oprot.writeI64(struct.datasetId);
+        if (struct.isSetDatasetName()) {
+          oprot.writeString(struct.datasetName);
         }
       }
 
@@ -28600,8 +28605,8 @@ public class ApiService {
         org.apache.thrift.protocol.TTupleProtocol iprot = (org.apache.thrift.protocol.TTupleProtocol) prot;
         java.util.BitSet incoming = iprot.readBitSet(1);
         if (incoming.get(0)) {
-          struct.datasetId = iprot.readI64();
-          struct.setDatasetIdIsSet(true);
+          struct.datasetName = iprot.readString();
+          struct.setDatasetNameIsSet(true);
         }
       }
     }

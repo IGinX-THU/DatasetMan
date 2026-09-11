@@ -12,7 +12,6 @@ import com.tsinghua.auth.service.DataPermissionService;
 import com.tsinghua.auth.util.AuthUtil;
 import com.tsinghua.dto.DatasetTreeDTO;
 import com.tsinghua.dto.DatasetVersionRegisterRequest;
-import com.tsinghua.entity.DatasetInfoEntity;
 import com.tsinghua.entity.DatasetLineageEntity;
 import com.tsinghua.entity.DatasetVersionEntity;
 import com.tsinghua.entity.TransformJobEntity;
@@ -38,7 +37,6 @@ import java.util.stream.Collectors;
 @Service
 public class DatasetVersionService {
 
-    public static final String DATASET_PREFIX = "relational_system.dataset";
     public static final String VERSION_PREFIX = "relational_system.dataset_version";
     public static final String LINEAGE_PREFIX = "relational_system.dataset_lineage";
     private static final AtomicLong ID_SEQUENCE = new AtomicLong(System.currentTimeMillis());
@@ -60,17 +58,10 @@ public class DatasetVersionService {
     // ====================================================================
 
     /**
-     * 登记一个数据集版本：不存在逻辑数据集则创建 → 写版本 → 写血缘边 → 登记数据权限前缀
+     * 登记一个数据集版本：直接写版本 → 写血缘边 → 登记数据权限前缀
      */
     public DatasetVersionEntity registerVersion(DatasetVersionRegisterRequest request) {
         ProvenanceType type = ProvenanceType.of(request.getProvenanceType());
-
-        DatasetInfoEntity dataset = findDatasetByName(request.getDatasetName());
-        if (dataset == null) {
-            dataset = createDataset(request.getDatasetName(), request.getDescription(), request.getDataModality(), request.getProject());
-        }
-        // datasetId 是 DatasetInfoEntity 的 timestamp 字段，从 IginX 读回来可能为 null，用 createTime 兜底
-        Long datasetId = dataset.getId() != null ? dataset.getId() : dataset.getCreateTime();
 
         long timestamp = nextId();
         String operator = OperationLogAspect.getCurrentUser();
@@ -80,7 +71,7 @@ public class DatasetVersionService {
         List<Long> upstreams = request.getUpstreamVersionIds() == null
                 ? new ArrayList<>() : new ArrayList<>(request.getUpstreamVersionIds());
         if (upstreams.isEmpty() && type != ProvenanceType.SOURCE) {
-            DatasetVersionEntity latest = latestVersion(datasetId);
+            DatasetVersionEntity latest = latestVersion(request.getDatasetName());
             if (latest != null) {
                 upstreams.add(latest.getId());
             }
@@ -88,8 +79,7 @@ public class DatasetVersionService {
 
         DatasetVersionEntity version = new DatasetVersionEntity();
         version.setId(timestamp);
-        version.setDatasetId(datasetId);
-        version.setDatasetName(dataset.getName());
+        version.setDatasetName(request.getDatasetName());
         version.setVersionNo(CommonUtil.generateVersion(timestamp));
         version.setProvenanceType(type.name());
         version.setStoragePath(request.getStoragePath());
@@ -103,6 +93,10 @@ public class DatasetVersionService {
         version.setOperator(operator);
         version.setClientIp(clientIp);
         version.setRemark(nvl(request.getRemark()));
+        version.setDataModality(request.getDataModality() != null ? request.getDataModality() : "relational");
+        version.setDescription(nvl(request.getDescription()));
+        version.setProject(StringUtils.hasText(request.getProject()) ? request.getProject() : "default");
+        version.setOwner(AuthUtil.getCurrentUsername());
         version.setDeleted(false);
         version.setJobState(request.getJobState() != null ? request.getJobState() : -1);
 
@@ -128,30 +122,12 @@ public class DatasetVersionService {
         }
 
         log.info("数据集版本已登记。dataset={}, version={}, type={}, storagePath={}",
-                dataset.getName(), version.getVersionNo(), type, request.getStoragePath());
+                request.getDatasetName(), version.getVersionNo(), type, request.getStoragePath());
         return version;
     }
 
-    public DatasetInfoEntity createDataset(String name, String description, String dataModality, String project) {
-        long timestamp = nextId();
-        DatasetInfoEntity dataset = new DatasetInfoEntity();
-        dataset.setId(timestamp);
-        dataset.setName(name);
-        dataset.setDescription(nvl(description));
-        dataset.setDataModality(StringUtils.hasText(dataModality) ? dataModality : "relational");
-        dataset.setProject(StringUtils.hasText(project) ? project : "default");
-        dataset.setOwner(AuthUtil.getCurrentUsername());
-        dataset.setCreateTime(timestamp);
-        dataset.setOperator(OperationLogAspect.getCurrentUser());
-        dataset.setClientIp(OperationLogAspect.getClientIp());
-        dataset.setDeleted(false);
-        iginxClient.getWriteClient().writeMeasurement(dataset);
-        log.info("逻辑数据集已创建。name={}, modality={}, id={}", name, dataModality, timestamp);
-        return dataset;
-    }
-
     // ====================================================================
-    // 查询：逻辑数据集
+    // 查询：版本
     // ====================================================================
 
     /** 最终状态：FINISHED(1), PARTIALLY_FAILED(6), FAILED(8), CLOSED(10) */
@@ -197,29 +173,6 @@ public class DatasetVersionService {
         return null;
     }
 
-    public DatasetInfoEntity findDatasetByName(String name) {
-        String sql = String.format("select * from %s where name = '%s';", DATASET_PREFIX, escape(name));
-        return query(sql, DatasetInfoEntity::new, DATASET_PREFIX).stream()
-                .filter(d -> !d.isDeleted())
-                .max(Comparator.comparing(DatasetInfoEntity::getCreateTime))
-                .orElse(null);
-    }
-
-    public DatasetInfoEntity findDatasetById(Long datasetId) {
-        String sql = String.format("select * from %s where createTime = %d;", DATASET_PREFIX, datasetId);
-        return query(sql, DatasetInfoEntity::new, DATASET_PREFIX).stream()
-                .max(Comparator.comparing(DatasetInfoEntity::getCreateTime))
-                .orElse(null);
-    }
-
-    public List<DatasetInfoEntity> listDatasets() {
-        String sql = String.format("select * from %s;", DATASET_PREFIX);
-        return query(sql, DatasetInfoEntity::new, DATASET_PREFIX).stream()
-                .filter(d -> !d.isDeleted())
-                .sorted(Comparator.comparing(DatasetInfoEntity::getCreateTime).reversed())
-                .collect(Collectors.toList());
-    }
-
     // ====================================================================
     // 查询：版本
     // ====================================================================
@@ -239,12 +192,11 @@ public class DatasetVersionService {
     }
 
     /** 某数据集的全部版本（含已软删，按时间倒序），供变化过程表格使用 */
-    public List<DatasetVersionEntity> listVersions(Long datasetId, boolean includeDeleted) {
+    public List<DatasetVersionEntity> listVersions(String datasetName, boolean includeDeleted) {
         String sql;
-        if (datasetId != null && datasetId > 0) {
-            sql = String.format("select * from %s where datasetId = %d;", VERSION_PREFIX, datasetId);
+        if (StringUtils.hasText(datasetName)) {
+            sql = String.format("select * from %s where datasetName = '%s';", VERSION_PREFIX, escape(datasetName));
         } else {
-            // datasetId 无效时返回空
             return new ArrayList<>();
         }
         List<DatasetVersionEntity> versions = query(sql, DatasetVersionEntity::new, VERSION_PREFIX);
@@ -255,8 +207,8 @@ public class DatasetVersionService {
                 .collect(Collectors.toList());
     }
 
-    public DatasetVersionEntity latestVersion(Long datasetId) {
-        List<DatasetVersionEntity> versions = listVersions(datasetId, false);
+    public DatasetVersionEntity latestVersion(String datasetName) {
+        List<DatasetVersionEntity> versions = listVersions(datasetName, false);
         return versions.isEmpty() ? null : versions.get(0);
     }
 
@@ -279,17 +231,14 @@ public class DatasetVersionService {
     }
 
     public List<DatasetTreeDTO> getDatasetTree() {
-        Map<Long, DatasetTreeDTO> groups = new LinkedHashMap<>();
+        Map<String, DatasetTreeDTO> groups = new LinkedHashMap<>();
         listAllAccessibleVersions().stream()
                 .sorted(Comparator.comparing(DatasetVersionEntity::getDatasetName, Comparator.nullsLast(Comparator.naturalOrder()))
                         .thenComparing(DatasetVersionEntity::getCreateTime, Comparator.nullsLast(Comparator.naturalOrder())))
                 .forEach(v -> {
-                    // datasetId 可能为 null（IginX timestamp 字段读回为 null），用 createTime 兜底
-                    Long did = v.getDatasetId() != null ? v.getDatasetId() : v.getCreateTime();
-                    DatasetTreeDTO dataset = groups.computeIfAbsent(did, id -> {
+                    DatasetTreeDTO dataset = groups.computeIfAbsent(v.getDatasetName(), name -> {
                         DatasetTreeDTO dto = new DatasetTreeDTO();
-                        dto.setDatasetId(id);
-                        dto.setDatasetName(v.getDatasetName());
+                        dto.setDatasetName(name);
                         return dto;
                     });
                     DatasetTreeDTO.Version version = new DatasetTreeDTO.Version();
@@ -389,27 +338,14 @@ public class DatasetVersionService {
         return newState;
     }
 
-    /** 软删除逻辑数据集：要求其所有版本均已删除 */
-    public void softDeleteDataset(Long datasetId) {
-        DatasetInfoEntity dataset = findDatasetById(datasetId);
-        if (dataset == null) {
-            throw new RuntimeException("数据集不存在: " + datasetId);
-        }
-        if (!listVersions(datasetId, false).isEmpty()) {
-            throw new RuntimeException("数据集仍有未删除的版本，无法删除");
-        }
-        dataset.setDeleted(true);
-        dataset.setId(dataset.getCreateTime());
-        iginxClient.getWriteClient().writeMeasurement(dataset);
-    }
-
-    /** 更新数据集版本档案（目前仅备注可编辑，后续可扩展） */
-    public void updateVersion(Long versionId, String remark) {
+    /** 更新数据集版本档案（备注、数据类型可编辑） */
+    public void updateVersion(Long versionId, String remark, String dataModality) {
         DatasetVersionEntity version = queryVersion(versionId);
         if (version == null) {
             throw new RuntimeException("版本不存在: " + versionId);
         }
         if (remark != null) version.setRemark(remark);
+        if (dataModality != null) version.setDataModality(dataModality);
         version.setId(version.getCreateTime());
         iginxClient.getWriteClient().writeMeasurement(version);
         log.info("数据集版本档案已更新。id={}", versionId);
