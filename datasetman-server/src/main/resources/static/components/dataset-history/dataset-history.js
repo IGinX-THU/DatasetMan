@@ -119,7 +119,7 @@ class DatasetHistory extends HTMLElement {
                         <div class="item"><label>创建者</label><span id="operator">-</span></div>
                         <div class="item"><label>创建时间</label><span id="time">-</span></div>
                         <div class="item wide"><label>版本备注</label><span id="remark">-</span><textarea id="remarkEdit" style="display:none;width:100%;min-height:60px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea></div>
-                        <div class="item wide"><label>变化配置</label><pre id="recipe">-</pre></div>
+                        <div class="item wide"><label>版本配置</label><pre id="recipe">-</pre></div>
                     </div>
                 </div>
                 <div class="card">
@@ -263,7 +263,7 @@ class DatasetHistory extends HTMLElement {
             container.innerHTML = '<div class="empty">暂无变化记录</div>';
             return;
         }
-        container.innerHTML = `<table><thead><tr><th>版本</th><th>产出方式</th><th>存储路径</th><th>上游版本</th><th>变化配置</th><th>操作人</th><th>时间</th><th>备注</th><th>状态</th><th>操作</th></tr></thead><tbody>${this.changes.map(row => {
+        container.innerHTML = `<table><thead><tr><th>版本</th><th>产出方式</th><th>存储路径</th><th>上游版本</th><th>版本配置</th><th>操作人</th><th>时间</th><th>备注</th><th>状态</th><th>操作</th></tr></thead><tbody>${this.changes.map(row => {
             const upstreams = (row.upstreams || []).map(u => `${u.datasetName || ''}/${u.versionNo || u.versionId}`).join(', ') || '-';
             const recipe = this.recipeSummary(row.derivationConfig);
             const activeVid = this.versionIdOf(this.version);
