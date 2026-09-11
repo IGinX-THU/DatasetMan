@@ -54,8 +54,8 @@ const BUTTON_ID_MAP = {
         action: 'showDatasetCreate'
     },
     'btn-dataset-delete': {
-        text: '删除',
-        action: 'handleDeleteDataset'
+        text: '禁用',
+        action: 'handleToggleDataset'
     },
     'btn-job-orchestrate': {
         text: '编排',
@@ -146,8 +146,8 @@ const MENU_ID_MAP = {
         action: 'showDatasetCreate'
     },
     'menu-dataset-delete': {
-        text: '删除数据集',
-        action: 'handleDeleteDataset'
+        text: '禁用数据集',
+        action: 'handleToggleDataset'
     },
     'menu-job-orchestration': {
         text: '编排Transform作业',

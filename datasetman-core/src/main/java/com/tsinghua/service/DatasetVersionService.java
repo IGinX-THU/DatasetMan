@@ -375,6 +375,20 @@ public class DatasetVersionService {
         log.info("数据集版本已软删除。id={}, type={}, storagePath={}", versionId, version.getProvenanceType(), version.getStoragePath());
     }
 
+    /** 启用/禁用版本（仅切换 deleted 标记，不删除权限） */
+    public boolean toggleVersion(Long versionId) {
+        DatasetVersionEntity version = queryVersion(versionId);
+        if (version == null) {
+            throw new RuntimeException("版本不存在: " + versionId);
+        }
+        boolean newState = !version.isDeleted();
+        version.setDeleted(newState);
+        version.setId(version.getCreateTime());
+        iginxClient.getWriteClient().writeMeasurement(version);
+        log.info("数据集版本已{}。id={}", newState ? "禁用" : "启用", versionId);
+        return newState;
+    }
+
     /** 软删除逻辑数据集：要求其所有版本均已删除 */
     public void softDeleteDataset(Long datasetId) {
         DatasetInfoEntity dataset = findDatasetById(datasetId);

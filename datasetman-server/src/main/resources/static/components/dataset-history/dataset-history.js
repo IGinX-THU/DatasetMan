@@ -101,7 +101,7 @@ class DatasetHistory extends HTMLElement {
             </style>
             <div class="page">
                 <div class="card">
-                    <div class="header"><h3>数据集档案</h3><div class="actions"><button class="primary" id="newVersion">创建新版本</button><button class="primary" id="editVersion" style="display:none;">编辑</button><button class="danger" id="deleteVersion">删除当前版本</button></div></div>
+                    <div class="header"><h3>数据集档案</h3><div class="actions"><button class="primary" id="newVersion">创建新版本</button><button class="primary" id="editVersion" style="display:none;">编辑</button><button class="danger" id="deleteVersion">禁用当前版本</button></div></div>
                     <div class="info">
                         <div class="item"><label>数据集名称</label><span id="name">-</span></div>
                         <div class="item"><label>版本号</label><span id="versionNo">-</span></div>
@@ -223,7 +223,7 @@ class DatasetHistory extends HTMLElement {
     }
 
     statusBadge(row) {
-        if (row.deleted) return '<span class="badge deleted">已删除</span>';
+        if (row.deleted) return '<span class="badge deleted">已禁用</span>';
         const jobLabel = this.jobStateLabel(row.jobState);
         if (jobLabel) {
             const failStates = [5, 6, 7, 8, 9, 10];
@@ -239,14 +239,41 @@ class DatasetHistory extends HTMLElement {
             container.innerHTML = '<div class="empty">暂无变化记录</div>';
             return;
         }
-        container.innerHTML = `<table><thead><tr><th>版本</th><th>产出方式</th><th>存储路径</th><th>上游版本</th><th>变化配置</th><th>操作人</th><th>时间</th><th>备注</th><th>状态</th></tr></thead><tbody>${this.changes.map(row => {
+        container.innerHTML = `<table><thead><tr><th>版本</th><th>产出方式</th><th>存储路径</th><th>上游版本</th><th>变化配置</th><th>操作人</th><th>时间</th><th>备注</th><th>状态</th><th>操作</th></tr></thead><tbody>${this.changes.map(row => {
             const upstreams = (row.upstreams || []).map(u => `${u.datasetName || ''}/${u.versionNo || u.versionId}`).join(', ') || '-';
             const recipe = this.recipeSummary(row.derivationConfig);
             const activeVid = this.versionIdOf(this.version);
             const statusBadge = this.statusBadge(row);
-            return `<tr data-version-id="${row.versionId}" class="${row.versionId === activeVid ? 'active' : ''}"><td>${this.escape(row.versionNo)}</td><td><span class="badge ${row.provenanceType}">${this.escape(row.provenanceLabel || row.provenanceType)}</span></td><td><code>${this.escape(row.storagePath || '-')}</code></td><td>${this.escape(upstreams)}</td><td title="${this.escape(JSON.stringify(row.derivationConfig || {}))}">${this.escape(recipe)}</td><td>${this.escape(row.operator || '-')}</td><td>${this.escape(this.formatTime(row.createTime))}</td><td>${this.escape(row.remark || '-')}</td><td>${statusBadge}</td></tr>`;
+            const vid = row.versionId || row.createTime;
+            const toggleBtn = row.deleted
+                ? `<button class="toggle-btn enable" data-vid="${vid}" style="padding:2px 10px;font-size:12px;border:1px solid #52c41a;border-radius:4px;background:#f6ffed;color:#52c41a;cursor:pointer;">启用</button>`
+                : `<button class="toggle-btn disable" data-vid="${vid}" style="padding:2px 10px;font-size:12px;border:1px solid #faad14;border-radius:4px;background:#fffbe6;color:#faad14;cursor:pointer;">禁用</button>`;
+            return `<tr data-version-id="${row.versionId}" class="${row.versionId === activeVid ? 'active' : ''}"><td>${this.escape(row.versionNo)}</td><td><span class="badge ${row.provenanceType}">${this.escape(row.provenanceLabel || row.provenanceType)}</span></td><td><code>${this.escape(row.storagePath || '-')}</code></td><td>${this.escape(upstreams)}</td><td title="${this.escape(JSON.stringify(row.derivationConfig || {}))}">${this.escape(recipe)}</td><td>${this.escape(row.operator || '-')}</td><td>${this.escape(this.formatTime(row.createTime))}</td><td>${this.escape(row.remark || '-')}</td><td>${statusBadge}</td><td>${toggleBtn}</td></tr>`;
         }).join('')}</tbody></table>`;
         container.querySelectorAll('tbody tr').forEach(row => row.addEventListener('click', () => this.highlight(Number(row.dataset.versionId))));
+        container.querySelectorAll('.toggle-btn').forEach(btn => btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const vid = Number(btn.dataset.vid);
+            await this.toggleVersion(vid);
+        }));
+    }
+
+    async toggleVersion(versionId) {
+        try {
+            const result = await window.AppConfig.put('dataset', 'versionToggle', { versionId });
+            if (!(result.success || result.code === 200)) throw new Error(result.message || '操作失败');
+            const disabled = result.data;
+            if (window.CommonUtils?.showToast) window.CommonUtils.showToast(disabled ? '已禁用' : '已启用', 'success');
+            // 刷新右侧数据集树
+            if (window.loadDatasetTree) await window.loadDatasetTree();
+            // 重新加载变化过程和血缘
+            const changes = await window.AppConfig.get('dataset', 'changes', { datasetId: this.selection.datasetId });
+            this.changes = ((changes.success || changes.code === 200) && changes.data) ? changes.data : [];
+            this.renderChangeTable();
+            await this.loadGraph();
+        } catch (error) {
+            if (window.CommonUtils?.showToast) window.CommonUtils.showToast(error.message, 'error'); else alert(error.message);
+        }
     }
 
     async loadGraph() {
@@ -921,25 +948,24 @@ class DatasetHistory extends HTMLElement {
         if (!this.version) return;
         const vid = this.versionIdOf(this.version);
         if (vid == null) {
-            if (window.CommonUtils?.showToast) window.CommonUtils.showToast('版本ID缺失，无法删除', 'error'); else alert('版本ID缺失，无法删除');
+            if (window.CommonUtils?.showToast) window.CommonUtils.showToast('版本ID缺失，无法禁用', 'error'); else alert('版本ID缺失，无法禁用');
             return;
         }
         const datasetName = this.version.datasetName || '未命名';
         const versionNo = this.version.versionNo || '-';
 
-        // 使用与删除数据集一致的确认弹窗
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
         overlay.innerHTML = `
             <div style="background:#fff;border-radius:8px;padding:24px;min-width:400px;max-width:500px;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
-                <div style="font-size:18px;font-weight:600;margin-bottom:16px;color:#1f2937;">确认删除版本</div>
+                <div style="font-size:18px;font-weight:600;margin-bottom:16px;color:#1f2937;">确认禁用版本</div>
                 <div style="margin-bottom:24px;color:#595959;line-height:1.6;">
-                    确定要删除数据集 <span style="color:#ff4d4f;font-weight:600;">${datasetName}</span> 的版本 <span style="color:#ff4d4f;font-weight:600;">${versionNo}</span> 吗？<br><br>
-                    <strong>此操作仅逻辑删除该版本档案，不会删除对应数据源和数据。</strong>
+                    确定要禁用数据集 <span style="color:#faad14;font-weight:600;">${datasetName}</span> 的版本 <span style="color:#faad14;font-weight:600;">${versionNo}</span> 吗？<br><br>
+                    <strong>此操作仅禁用该版本档案，不会删除对应数据源和数据，可随时重新启用。</strong>
                 </div>
                 <div style="display:flex;justify-content:flex-end;gap:12px;">
                     <button class="btn-cancel" style="padding:8px 16px;border-radius:4px;border:none;cursor:pointer;font-size:14px;background:#f0f0f0;color:#595959;">取消</button>
-                    <button class="btn-confirm-delete" style="padding:8px 16px;border-radius:4px;border:none;cursor:pointer;font-size:14px;background:#ff4d4f;color:#fff;">确认删除</button>
+                    <button class="btn-confirm-delete" style="padding:8px 16px;border-radius:4px;border:none;cursor:pointer;font-size:14px;background:#faad14;color:#fff;">确认禁用</button>
                 </div>
             </div>
         `;
@@ -952,11 +978,11 @@ class DatasetHistory extends HTMLElement {
 
         confirmBtn.addEventListener('click', async () => {
             confirmBtn.disabled = true;
-            confirmBtn.textContent = '删除中...';
+            confirmBtn.textContent = '处理中...';
             try {
-                const result = await window.AppConfig.delete('dataset', 'versionDelete', { versionId: vid });
-                if (!(result.success || result.code === 200)) throw new Error(result.message || '删除失败');
-                if (window.CommonUtils?.showToast) window.CommonUtils.showToast('版本删除成功', 'success');
+                const result = await window.AppConfig.put('dataset', 'versionToggle', { versionId: vid });
+                if (!(result.success || result.code === 200)) throw new Error(result.message || '操作失败');
+                if (window.CommonUtils?.showToast) window.CommonUtils.showToast('版本已禁用', 'success');
                 this.dispatchEvent(new CustomEvent('dataset-deleted', { bubbles: true, composed: true, detail: this.version }));
                 if (window.loadDataSourceTree) await window.loadDataSourceTree();
                 if (window.loadDatasetTree) await window.loadDatasetTree();

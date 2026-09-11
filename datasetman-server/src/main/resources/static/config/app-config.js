@@ -133,6 +133,7 @@ window.AppConfig = {
             changes: '/api/dataset/changes',
             lineage: '/api/dataset/lineage',
             versionDelete: '/api/dataset/version/delete',
+            versionToggle: '/api/dataset/version/toggle',
             versionUpdate: '/api/dataset/version/update',
             save: '/api/dataset/save',
             testsql: '/api/dataset/testsql',

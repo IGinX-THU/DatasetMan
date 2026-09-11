@@ -457,6 +457,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             showWorkspaceMessage('请先选择要删除的数据集', 'warning');
                         }
                         break;
+                    case 'handleToggleDataset':
+                        console.log('禁用数据集菜单被点击');
+                        const selectedDatasetToggleMenu = getSelectedDatasetInfo();
+                        if (selectedDatasetToggleMenu) {
+                            handleToggleDataset(selectedDatasetToggleMenu);
+                        } else {
+                            showWorkspaceMessage('请先选择要禁用的数据集版本', 'warning');
+                        }
+                        break;
                     case 'showParsingRules':
                         console.log('配置解析规则菜单被点击');
                         showComponent('parsingRules');
@@ -799,6 +808,37 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    async function handleToggleDataset(dataset) {
+        if (typeof dataset === 'string') {
+            dataset = { storagePath: dataset };
+        }
+        const versionId = dataset.versionId;
+        if (!versionId) {
+            showWorkspaceMessage('请先选择要禁用的数据集版本', 'warning');
+            return;
+        }
+        // 调用详情页的禁用逻辑（带确认弹窗）
+        const datasetHistory = document.getElementById('datasetHistory');
+        if (datasetHistory && typeof datasetHistory.deleteCurrent === 'function') {
+            if (datasetHistory.version && datasetHistory.versionIdOf(datasetHistory.version) == versionId) {
+                datasetHistory.deleteCurrent();
+            } else {
+                showComponent('datasetHistory', {
+                    versionId: versionId,
+                    datasetId: dataset.datasetId,
+                    storagePath: dataset.storagePath
+                });
+                setTimeout(() => {
+                    if (datasetHistory.version && datasetHistory.versionIdOf(datasetHistory.version) == versionId) {
+                        datasetHistory.deleteCurrent();
+                    }
+                }, 1000);
+            }
+        } else {
+            showWorkspaceMessage('详情页未就绪', 'error');
+        }
+    }
+
     // 6. 功能按钮点击事件 - 使用ID绑定而非文本绑定
     const addBtns = document.querySelectorAll('.func-btn, .ribbon-btn');
     console.log('找到的功能按钮数量:', addBtns.length);
@@ -891,6 +931,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             showDeleteDatasetConfirmDialog(selectedDatasetDelete);
                         } else {
                             showWorkspaceMessage('请先选择要删除的数据集', 'warning');
+                        }
+                        break;
+                    case 'handleToggleDataset':
+                        console.log('禁用数据集按钮被点击');
+                        const selectedDatasetToggle = getSelectedDatasetInfo();
+                        if (selectedDatasetToggle) {
+                            handleToggleDataset(selectedDatasetToggle);
+                        } else {
+                            showWorkspaceMessage('请先选择要禁用的数据集版本', 'warning');
                         }
                         break;
                     case 'showParsingRules':

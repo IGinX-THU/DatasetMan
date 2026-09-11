@@ -122,6 +122,16 @@ public class DatasetController {
         return Result.success("删除成功");
     }
 
+    @ApiOperation("启用/禁用数据集版本")
+    @PutMapping("/version/toggle")
+    @RequirePermission(Permission.UPDATE)
+    @OperationLog(value = "启用/禁用数据集版本", type = OperationLog.OperationType.UPDATE)
+    public Result<Boolean> toggleVersion(@RequestBody java.util.Map<String, Object> body) {
+        Long versionId = Long.valueOf(body.get("versionId").toString());
+        boolean disabled = datasetVersionService.toggleVersion(versionId);
+        return Result.success(disabled ? "已禁用" : "已启用", disabled);
+    }
+
     @ApiOperation("更新数据集版本档案")
     @PutMapping("/version/update")
     @RequirePermission(Permission.UPDATE)
