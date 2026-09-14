@@ -15,6 +15,26 @@ public class CommonUtil {
     }
 
     /**
+     * 解析版本号格式 v_yyMMdd_HHmmss 为时间戳
+     * 与 generateVersion 相反操作
+     */
+    public static long parseVersionTimestamp(String versionNo) {
+        if (versionNo == null || !versionNo.matches("v_\\d{6}_\\d{6}")) {
+            return System.currentTimeMillis();
+        }
+        try {
+            String timeStr = versionNo.substring(2); // 去掉 "v_"
+            DateTimeFormatter FORMATTER =
+                    DateTimeFormatter.ofPattern("yyMMdd_HHmmss")
+                            .withZone(ZoneId.of("Asia/Shanghai"));
+            Instant instant = FORMATTER.parse(timeStr, Instant::from);
+            return instant.toEpochMilli();
+        } catch (Exception e) {
+            return System.currentTimeMillis();
+        }
+    }
+
+    /**
      * SQL 合法性校验（调整：允许分页语法？不，分页由我们手动拼接，依然禁止用户传入）
      */
     public static void validateSql(String sql) {

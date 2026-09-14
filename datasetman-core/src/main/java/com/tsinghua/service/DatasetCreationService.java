@@ -61,6 +61,8 @@ public class DatasetCreationService {
         registration.setDataModality(request.getDataModality());
         registration.setProject(request.getProject());
         registration.setRemark(request.getRemark());
+        registration.setCategory(request.getCategory());
+        registration.setTags(request.getTags());
 
         Map<String, Object> config = new LinkedHashMap<>();
         String storagePath;
@@ -139,6 +141,11 @@ public class DatasetCreationService {
         }
 
         registration.setStoragePath(storagePath);
+        // 存储路径形如 datasets.<name>.v_yymmdd_hhmmss 时，复用其后缀作为版本号，避免版本号与路径不一致
+        int lastDot = storagePath.lastIndexOf('.');
+        if (lastDot >= 0 && storagePath.substring(lastDot + 1).matches("v_\\d{6}_\\d{6}")) {
+            registration.setVersionNo(storagePath.substring(lastDot + 1));
+        }
         registration.setDerivationConfig(config);
         return datasetVersionService.registerVersion(registration);
     }

@@ -11,9 +11,10 @@ class QualityAssessment extends HTMLElement {
         this.records = [];
         this.dimensionLabels = {
             qcom: '完整性',
+            qacc: '准确性',
             qcon: '一致性',
             qtim: '时效性',
-            qval: '有效性'
+            qconf: '规范性'
         };
         this.pageSize = 10;
         this.currentPage = 1;
@@ -146,9 +147,6 @@ class QualityAssessment extends HTMLElement {
         const queryBtn = this.querySelector('#qaQueryBtn');
         if (queryBtn) queryBtn.addEventListener('click', () => this.queryAndRenderTasks());
 
-        const saveBtn = this.querySelector('#qaSaveBtn');
-        if (saveBtn) saveBtn.addEventListener('click', () => this.saveScores());
-
         const applyFilters = this.querySelector('#qaApplyFilters');
         if (applyFilters) applyFilters.addEventListener('click', () => {
             this.currentPage = 1;
@@ -220,7 +218,7 @@ class QualityAssessment extends HTMLElement {
         if (!tbody) return;
 
         if (this.records.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="qa-empty">暂无测评记录，请在"评价准则"列表点击"提交任务"。</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="qa-empty">暂无测评记录，请在"评价准则"列表点击"提交任务"。</td></tr>';
             return;
         }
 
@@ -231,9 +229,10 @@ class QualityAssessment extends HTMLElement {
                     <td>${item.criteriaName || ''}</td>
                     <td>${this.formatTime(item.createTime)}</td>
                     <td>${score('qcom')}</td>
+                    <td>${score('qacc')}</td>
                     <td>${score('qcon')}</td>
                     <td>${score('qtim')}</td>
-                    <td>${score('qval')}</td>
+                    <td>${score('qconf')}</td>
                     <td>${item.dqi != null && item.dqi !== '' ? Number(item.dqi).toFixed(2) : '-'}</td>
                     <td>
                         <div class="action-buttons">
@@ -263,7 +262,7 @@ class QualityAssessment extends HTMLElement {
         const names = this.ensureParsed(record, 'names');
         console.log('[QA] ensureParsed scores=', scores, 'weights=', weights);
 
-        const dims = ['qcom', 'qcon', 'qtim', 'qval'];
+        const dims = ['qcom', 'qacc', 'qcon', 'qtim', 'qconf'];
         container.innerHTML = dims.map(dim => {
             const label = this.dimensionLabels[dim];
             const jobId = jobIds[dim] || '-';
@@ -299,16 +298,12 @@ class QualityAssessment extends HTMLElement {
                     </div>
                     <div class="qa-dim-score">
                         <label>得分 (0-100)</label>
-                        <input type="number" min="0" max="100" step="0.01" class="qa-score-input" data-dim="${dim}" value="${score}" required>
+                        <div class="qa-dim-info-value">${score !== '' ? score : '-'}</div>
                     </div>
                 </div>
             `;
         }).join('');
 
-        this.querySelectorAll('.qa-score-input').forEach(input => {
-            input.addEventListener('input', () => this.calculateDqi());
-            input.addEventListener('change', () => this.calculateDqi());
-        });
     }
 
     async queryAndRenderTasks() {
@@ -316,7 +311,7 @@ class QualityAssessment extends HTMLElement {
         if (!record) return;
 
         const jobIds = this.ensureParsed(record, 'jobIds');
-        const dims = ['qcom', 'qcon', 'qtim', 'qval'];
+        const dims = ['qcom', 'qacc', 'qcon', 'qtim', 'qconf'];
         let successCount = 0;
         let failCount = 0;
         for (const dim of dims) {
@@ -386,7 +381,7 @@ class QualityAssessment extends HTMLElement {
         if (!record) return;
 
         const weights = this.ensureParsed(record, 'weights');
-        const dims = ['qcom', 'qcon', 'qtim', 'qval'];
+        const dims = ['qcom', 'qacc', 'qcon', 'qtim', 'qconf'];
         let sum = 0;
         let allFilled = true;
         const scores = {};
@@ -433,100 +428,6 @@ class QualityAssessment extends HTMLElement {
         this.currentPassed = passed;
     }
 
-    async saveScores() {
-        const record = this.currentRecord;
-        if (!record) return;
-
-        const weights = this.ensureParsed(record, 'weights');
-        const dims = ['qcom', 'qcon', 'qtim', 'qval'];
-        const scores = {};
-        let dqi = 0;
-        let valid = true;
-
-        dims.forEach(dim => {
-            const input = this.querySelector(`.qa-score-input[data-dim="${dim}"]`);
-            const w = weights[dim] !== undefined ? parseFloat(weights[dim]) : 0;
-            const value = parseFloat(input ? input.value : NaN);
-            if (isNaN(value) || value < 0 || value > 100) {
-                valid = false;
-                return;
-            }
-            scores[dim] = value;
-            dqi += value * w;
-        });
-
-        if (!valid) {
-            if (window.CommonUtils && window.CommonUtils.showToast) {
-                window.CommonUtils.showToast('请输入合法的维度得分（0-100）', 'error');
-            }
-            return;
-        }
-
-        dqi = Math.round(dqi * 100) / 100;
-        const threshold = 95;
-        const passed = dqi >= threshold &&
-            scores.qcom >= threshold &&
-            scores.qcon >= threshold &&
-            scores.qtim >= threshold &&
-            scores.qval >= threshold;
-
-        record.scores = scores;
-        record.dqi = dqi;
-        record.passed = passed;
-
-        try {
-            if (!window.AppConfig || typeof window.AppConfig.post !== 'function') {
-                throw new Error('API未配置');
-            }
-            const eWeights = this.ensureParsed(record, 'weights');
-            const eJobs = this.ensureParsed(record, 'jobs');
-            const eJobIds = this.ensureParsed(record, 'jobIds');
-            const eExportFiles = this.ensureParsed(record, 'exportFiles');
-            const eNames = this.ensureParsed(record, 'names');
-            const buildDim = (dim) => ({
-                weight: eWeights[dim],
-                transformId: eJobs[dim],
-                jobId: eJobIds[dim],
-                exportFile: eExportFiles[dim],
-                name: eNames[dim],
-                score: scores[dim]
-            });
-            const recordToSave = {
-                id: record.id || record.createTime,
-                criteriaId: record.criteriaId,
-                criteriaName: record.criteriaName,
-                description: record.description || '',
-                qcom: buildDim('qcom'),
-                qcon: buildDim('qcon'),
-                qtim: buildDim('qtim'),
-                qval: buildDim('qval'),
-                dqi: dqi.toFixed(2),
-                passed: String(passed)
-            };
-            const result = await window.AppConfig.post('qualityAssessment', 'save', recordToSave);
-            if (!result.success) {
-                throw new Error(result.message || '保存失败');
-            }
-            if (window.CommonUtils && window.CommonUtils.showToast) {
-                window.CommonUtils.showToast('保存成功', 'success');
-            }
-            this.calculateDqi();
-            await this.loadRecords();
-            const key = this.getRecordKey(this.currentRecord);
-            const updatedRecord = key ? this.records.find(r => this.getRecordKey(r) === key) : null;
-            if (updatedRecord) {
-                this.currentRecord = updatedRecord;
-            }
-            this.renderDimensionTasks(this.currentRecord);
-            this.calculateDqi();
-            this.queryAndRenderTasks();
-        } catch (error) {
-            console.error('保存得分失败:', error);
-            if (window.CommonUtils && window.CommonUtils.showToast) {
-                window.CommonUtils.showToast(error.message || '保存失败', 'error');
-            }
-        }
-    }
 
     getRecordKey(record) {
         if (!record) return null;

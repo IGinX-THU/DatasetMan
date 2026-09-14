@@ -17,6 +17,13 @@
 
     <dependencies>
 
+        <!-- 单元测试 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- datasetman Auth Module -->
         <dependency>
             <groupId>com.tsinghua</groupId>

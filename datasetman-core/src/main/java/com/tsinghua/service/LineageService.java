@@ -89,10 +89,46 @@ public class LineageService {
             }
         }
 
-        // 3. 旁系血缘：把同数据集名的所有版本都加进来（含独立的版本树）
+        // 3. 旁系血缘：把同数据集名的所有版本都加进来（含独立的版本树），并加入队列继续收集它们的边
+        //    注意：IginX 读回的实体 id 字段可能为 null，系统统一用 createTime 作为版本标识符
         if (sideLineage && focus.getDatasetName() != null) {
             for (DatasetVersionEntity v : datasetVersionService.listVersions(focus.getDatasetName(), true)) {
-                if (v.getId() != null) visited.add(v.getId());
+                Long vid = versionKey(v);
+                if (vid != null && visited.add(vid)) {
+                    queue.add(vid);
+                }
+            }
+        }
+
+        // 4. 为旁系版本继续收集血缘边（复用步骤 2 的逻辑）
+        while (!queue.isEmpty()) {
+            Long id = queue.poll();
+            DatasetVersionEntity v = datasetVersionService.queryVersion(id);
+            if (v == null) continue;
+            // 从血缘边表收集
+            for (DatasetLineageEntity e : byTo.getOrDefault(id, Collections.emptyList())) {
+                edges.add(e);
+                if (e.getFromVersionId() != null && visited.add(e.getFromVersionId())) queue.add(e.getFromVersionId());
+            }
+            for (DatasetLineageEntity e : byFrom.getOrDefault(id, Collections.emptyList())) {
+                edges.add(e);
+                if (e.getToVersionId() != null && visited.add(e.getToVersionId())) queue.add(e.getToVersionId());
+            }
+            // 从 upstreamVersionIds 补充血缘边
+            List<Long> upstreamIds = datasetVersionService.parseUpstreamIds(v);
+            for (Long uid : upstreamIds) {
+                if (uid == null) continue;
+                boolean alreadyExists = edges.stream().anyMatch(e ->
+                        uid.equals(e.getFromVersionId()) && id.equals(e.getToVersionId()));
+                if (!alreadyExists) {
+                    DatasetLineageEntity supplemental = new DatasetLineageEntity();
+                    supplemental.setFromVersionId(uid);
+                    supplemental.setToVersionId(id);
+                    supplemental.setRelationType(label(v.getProvenanceType()));
+                    supplemental.setPrimary(uid.equals(upstreamIds.get(0)));
+                    edges.add(supplemental);
+                }
+                if (visited.add(uid)) queue.add(uid);
             }
         }
 
@@ -119,12 +155,12 @@ public class LineageService {
     public List<DatasetChangeProcessDTO> getChangeProcess(String datasetName) {
         List<DatasetVersionEntity> versions = datasetVersionService.listVersions(datasetName, true);
         Map<Long, DatasetVersionEntity> cache = new HashMap<>();
-        versions.forEach(v -> cache.put(v.getId(), v));
+        versions.forEach(v -> cache.put(versionKey(v), v));
 
         List<DatasetChangeProcessDTO> rows = new ArrayList<>();
         for (DatasetVersionEntity v : versions) {
             DatasetChangeProcessDTO row = new DatasetChangeProcessDTO();
-            row.setVersionId(v.getId());
+            row.setVersionId(versionKey(v));
             row.setVersionNo(v.getVersionNo());
             row.setProvenanceType(v.getProvenanceType());
             row.setProvenanceLabel(label(v.getProvenanceType()));
@@ -161,8 +197,7 @@ public class LineageService {
 
     private LineageGraphDTO.Node toNode(DatasetVersionEntity v, boolean focus) {
         LineageGraphDTO.Node node = new LineageGraphDTO.Node();
-        // id 是 timestamp 字段，IginX 读回可能为 null，用 createTime 兜底
-        node.setVersionId(v.getId() != null ? v.getId() : v.getCreateTime());
+        node.setVersionId(versionKey(v));
         node.setDatasetName(v.getDatasetName());
         node.setVersionNo(v.getVersionNo());
         node.setProvenanceType(v.getProvenanceType());
@@ -196,5 +231,14 @@ public class LineageService {
         } catch (Exception e) {
             return Collections.singletonMap("raw", json);
         }
+    }
+
+    /**
+     * 统一的版本标识提取：IginX 读回的 id 字段可能为 null，用 createTime 兜底。
+     * 系统里所有版本查询都通过 createTime（queryVersion(Long) 的 where createTime = ?）。
+     */
+    private static Long versionKey(DatasetVersionEntity v) {
+        if (v == null) return null;
+        return v.getId() != null ? v.getId() : v.getCreateTime();
     }
 }

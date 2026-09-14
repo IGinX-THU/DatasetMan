@@ -46,7 +46,7 @@ class DatasetHistory extends HTMLElement {
                 .TRANSFORM, .TRANSFORM_SQL { background:#ede9fe; color:#6d28d9; }
                 .badge.deleted { background:#fef2f2; color:#dc2626; }
                 .badge.active-status { background:#f0fdf4; color:#16a34a; }
-                .graph { width:100%; min-height:1000px; overflow:auto; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; box-sizing:border-box; }
+                .graph { width:100%; min-height:1000px; overflow:hidden; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; box-sizing:border-box; }
                 .node { cursor:pointer; } .node circle { stroke:#fff; stroke-width:3; } .node.focus circle { stroke:#111827; stroke-width:4; }
                 .node text { font-size:11px; fill:#374151; text-anchor:middle; }
                 .empty { padding:40px; color:#9ca3af; text-align:center; }
@@ -497,6 +497,16 @@ class DatasetHistory extends HTMLElement {
             if (pos) {
                 n.x = pos.x;
                 n.y = pos.y;
+            }
+        });
+
+        // 孤立 version 节点（无任何边）锁定 computeLayeredLayout 位置，
+        // 防止被力导向 repulsion 斥力推出画布或打乱分层
+        const connectedIds = new Set();
+        echartsLinks.forEach(l => { connectedIds.add(l.source); connectedIds.add(l.target); });
+        echartsNodes.forEach(n => {
+            if (n.nodeType === 'version' && !connectedIds.has(n.id)) {
+                n.fixed = true;
             }
         });
 

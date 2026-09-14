@@ -1,0 +1,108 @@
+<div class="parsing-rules scene-analysis">
+    <div class="sa-tabs">
+        <button class="sa-tab active" data-tab="category">场景分类统计</button>
+        <button class="sa-tab" data-tab="relation">关系提取</button>
+        <button class="sa-tab" data-tab="impact">影响范围分析</button>
+        <button class="sa-tab" data-tab="report">质量评估报告</button>
+    </div>
+
+    <!-- 1. 场景分类统计 -->
+    <div id="saCategoryView" class="sa-view">
+        <div class="parsing-table-card">
+            <div class="sa-summary" id="saCategorySummary">加载中...</div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>场景编码</th><th>场景名称</th><th>研制阶段</th><th>场景说明</th>
+                            <th>数据集数</th><th>版本数</th><th>样本量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="saCategoryTableBody">
+                        <tr><td colspan="7" class="qa-empty">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 关系提取 -->
+    <div id="saRelationView" class="sa-view" style="display:none;">
+        <div class="parsing-filter-card">
+            <div class="filter-header">数据集关系提取（派生自 / 同源 / 同场景关联）</div>
+            <div class="filter-rows">
+                <div class="filter-row">
+                    <div class="filter-field">
+                        <span class="filter-label">数据集名称</span>
+                        <input class="filter-input" type="text" placeholder="留空则提取全部关系" id="saRelationFilter" />
+                    </div>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <div class="filter-spacer"></div>
+                <button class="filter-btn solid" type="button" id="saRelationApply">提取关系</button>
+            </div>
+        </div>
+        <div class="parsing-table-card">
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead><tr><th>数据集A</th><th>关系</th><th>数据集B</th><th>提取依据</th></tr></thead>
+                    <tbody id="saRelationTableBody">
+                        <tr><td colspan="4" class="qa-empty">点击"提取关系"查看结果</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 影响范围分析 -->
+    <div id="saImpactView" class="sa-view" style="display:none;">
+        <div class="parsing-filter-card">
+            <div class="filter-header">影响范围分析（下游受影响数据集与版本链）</div>
+            <div class="filter-rows">
+                <div class="filter-row">
+                    <div class="filter-field">
+                        <span class="filter-label">版本ID</span>
+                        <input class="filter-input" type="text" placeholder="在右侧数据集树中选择版本，输入其版本ID" id="saImpactVersionId" />
+                    </div>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <div class="filter-spacer"></div>
+                <button class="filter-btn solid" type="button" id="saImpactApply">分析</button>
+                <button class="filter-btn outline" type="button" id="saExportPackage">导出标准数据集包</button>
+            </div>
+        </div>
+        <div id="saImpactResult"></div>
+    </div>
+
+    <!-- 4. 质量评估报告 -->
+    <div id="saReportView" class="sa-view" style="display:none;">
+        <div class="parsing-filter-card">
+            <div class="filter-header">质量自动检测与评估报告（检测、算分、报告全程自动，无需人工录入）</div>
+            <div class="filter-rows">
+                <div class="filter-row">
+                    <div class="filter-field">
+                        <span class="filter-label">数据集版本ID</span>
+                        <input class="filter-input" type="text" placeholder="右侧数据集树中版本的ID" id="saDetectVersionId" />
+                    </div>
+                    <div class="filter-field">
+                        <span class="filter-label">抽样行数</span>
+                        <input class="filter-input" type="number" min="1" max="50000" value="200" id="saSampleSize" />
+                    </div>
+                    <div class="filter-field">
+                        <span class="filter-label">历史测评记录ID</span>
+                        <input class="filter-input" type="text" placeholder="查看已生成的报告（可选）" id="saReportId" />
+                    </div>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <div class="filter-spacer"></div>
+                <button class="filter-btn solid" type="button" id="saAutoDetect">自动检测并生成报告</button>
+                <button class="filter-btn outline" type="button" id="saReportApply">查看历史报告</button>
+                <button class="filter-btn outline" type="button" id="saReportPrint">打印/导出PDF</button>
+            </div>
+        </div>
+        <div id="saReportResult" class="sa-report-area"></div>
+    </div>
+</div>

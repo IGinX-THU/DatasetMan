@@ -75,7 +75,7 @@ public class EvaluationCriteriaService {
         putDimension(weights, jobs, exportFiles, names, DataQualityDimensionEnum.qcom, request.getQcom());
         putDimension(weights, jobs, exportFiles, names, DataQualityDimensionEnum.qcon, request.getQcon());
         putDimension(weights, jobs, exportFiles, names, DataQualityDimensionEnum.qtim, request.getQtim());
-        putDimension(weights, jobs, exportFiles, names, DataQualityDimensionEnum.qval, request.getQval());
+        putDimension(weights, jobs, exportFiles, names, DataQualityDimensionEnum.qconf, request.getQval());
 
         EvaluationCriteriaEntity entity = new EvaluationCriteriaEntity();
         entity.setId(timestamp);
@@ -201,7 +201,7 @@ public class EvaluationCriteriaService {
         validateDimension(DataQualityDimensionEnum.qcom, request.getQcom());
         validateDimension(DataQualityDimensionEnum.qcon, request.getQcon());
         validateDimension(DataQualityDimensionEnum.qtim, request.getQtim());
-        validateDimension(DataQualityDimensionEnum.qval, request.getQval());
+        validateDimension(DataQualityDimensionEnum.qconf, request.getQval());
         double sum = 0.0;
         if (request.getQcom() != null) sum += request.getQcom().getWeight();
         if (request.getQcon() != null) sum += request.getQcon().getWeight();

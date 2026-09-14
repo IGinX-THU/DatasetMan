@@ -16,6 +16,7 @@ import com.tsinghua.entity.DatasetLineageEntity;
 import com.tsinghua.entity.DatasetVersionEntity;
 import com.tsinghua.entity.TransformJobEntity;
 import com.tsinghua.enums.ProvenanceType;
+import com.tsinghua.enums.SceneCategoryEnum;
 import com.tsinghua.util.CommonUtil;
 import com.tsinghua.util.ConvertUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -78,9 +79,18 @@ public class DatasetVersionService {
         }
 
         DatasetVersionEntity version = new DatasetVersionEntity();
-        version.setId(timestamp);
         version.setDatasetName(request.getDatasetName());
-        version.setVersionNo(CommonUtil.generateVersion(timestamp));
+        // 优先复用调用方指定的版本号（如创建向导从存储路径提取），保证版本号与存储路径后缀一致
+        String versionNo = StringUtils.hasText(request.getVersionNo())
+                ? request.getVersionNo() : CommonUtil.generateVersion(timestamp);
+        version.setVersionNo(versionNo);
+        
+        // 如果版本号是 v_yymmdd_hhmmss 格式，解析时间戳用于 id 和 createTime，避免版本号与存储路径不一致
+        long effectiveTimestamp = timestamp;
+        if (versionNo.matches("v_\\d{6}_\\d{6}")) {
+            effectiveTimestamp = CommonUtil.parseVersionTimestamp(versionNo);
+        }
+        version.setId(effectiveTimestamp);
         version.setProvenanceType(type.name());
         version.setStoragePath(request.getStoragePath());
         version.setUpstreamVersionIds(JSONArray.toJSONString(upstreams));
@@ -89,11 +99,19 @@ public class DatasetVersionService {
         version.setSchemaJson(nvl(request.getSchemaJson()));
         version.setRowCount(request.getRowCount() == null ? 0L : request.getRowCount());
         version.setSizeBytes(request.getSizeBytes() == null ? 0L : request.getSizeBytes());
-        version.setCreateTime(timestamp);
+        version.setCreateTime(effectiveTimestamp);
         version.setOperator(operator);
         version.setClientIp(clientIp);
         version.setRemark(nvl(request.getRemark()));
         version.setDataModality(request.getDataModality() != null ? request.getDataModality() : "relational");
+        if (StringUtils.hasText(request.getCategory())) {
+            // 校验并归一化为标准分类编码
+            // 支持逗号分隔的多场景分类（一个数据集可覆盖多类场景）
+            version.setCategory(SceneCategoryEnum.normalizeMulti(request.getCategory()));
+        } else {
+            version.setCategory("");
+        }
+        version.setTags(nvl(request.getTags()));
         version.setDescription(nvl(request.getDescription()));
         version.setProject(StringUtils.hasText(request.getProject()) ? request.getProject() : "default");
         version.setOwner(AuthUtil.getCurrentUsername());
@@ -179,6 +197,14 @@ public class DatasetVersionService {
 
     public DatasetVersionEntity queryVersion(Long versionId) {
         String sql = String.format("select * from %s where createTime = %d;", VERSION_PREFIX, versionId);
+        return query(sql, DatasetVersionEntity::new, VERSION_PREFIX).stream()
+                .findFirst().orElse(null);
+    }
+
+    /** 按数据集名称 + 版本号精确查询 */
+    public DatasetVersionEntity queryVersionByNameAndNo(String datasetName, String versionNo) {
+        String sql = String.format("select * from %s where datasetName = '%s' and versionNo = '%s';",
+                VERSION_PREFIX, escape(datasetName), escape(versionNo));
         return query(sql, DatasetVersionEntity::new, VERSION_PREFIX).stream()
                 .findFirst().orElse(null);
     }
@@ -338,13 +364,20 @@ public class DatasetVersionService {
         return newState;
     }
 
-    /** 更新数据集版本档案（备注、数据类型可编辑） */
+    /** 更新数据集版本档案（备注、数据类型、场景分类、标签可编辑） */
     public void updateVersion(Long versionId, String remark, String dataModality) {
+        updateVersion(versionId, remark, dataModality, null, null);
+    }
+
+    public void updateVersion(Long versionId, String remark, String dataModality, String category, String tags) {
         DatasetVersionEntity version = queryVersion(versionId);
         if (version == null) {
             throw new RuntimeException("版本不存在: " + versionId);
         }
         if (remark != null) version.setRemark(remark);
+        if (dataModality != null) version.setDataModality(dataModality);
+        if (StringUtils.hasText(category)) version.setCategory(SceneCategoryEnum.normalizeMulti(category));
+        if (tags != null) version.setTags(tags);
         if (dataModality != null) version.setDataModality(dataModality);
         version.setId(version.getCreateTime());
         iginxClient.getWriteClient().writeMeasurement(version);

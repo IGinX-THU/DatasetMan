@@ -55,4 +55,12 @@ public class QualityAssessmentEntity {
 
     @Field(name = "owner")
     private String owner;
+
+    /** 自动生成的评估报告（JSON）：四维得分、DQI、问题明细与整改建议 */
+    @Field(name = "reportJson")
+    private String reportJson;
+
+    /** 自动检测明细（JSON）：抽样规模、空值/重复/越界计数、数据年龄等 */
+    @Field(name = "detailJson")
+    private String detailJson;
 }

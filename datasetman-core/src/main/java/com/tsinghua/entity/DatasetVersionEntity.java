@@ -74,6 +74,14 @@ public class DatasetVersionEntity {
     @Field(name = "project")
     private String project;
 
+    /** 场景分类编码，见 SceneCategoryEnum（11类智能体研发场景） */
+    @Field(name = "category")
+    private String category;
+
+    /** 标签，逗号分隔 */
+    @Field(name = "tags")
+    private String tags;
+
     /** 所有者 */
     @Field(name = "owner")
     private String owner;

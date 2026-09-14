@@ -3,17 +3,24 @@ package com.tsinghua.controller;
 import com.tsinghua.auth.annotation.OperationLog;
 import com.tsinghua.auth.annotation.RequirePermission;
 import com.tsinghua.auth.enums.Permission;
+import com.tsinghua.dto.CategoryStatDTO;
 import com.tsinghua.dto.DatasetChangeProcessDTO;
 import com.tsinghua.dto.DatasetCreateRequest;
+import com.tsinghua.dto.DatasetRelationDTO;
 import com.tsinghua.dto.DatasetRequest;
 import com.tsinghua.dto.DatasetTreeDTO;
+import com.tsinghua.dto.ImpactAnalysisDTO;
 import com.tsinghua.dto.LineageGraphDTO;
+import com.alibaba.fastjson2.JSONObject;
 import com.tsinghua.entity.DatasetEntity;
 import com.tsinghua.entity.DatasetVersionEntity;
 import com.tsinghua.model.Result;
+import com.tsinghua.service.DatasetCategoryService;
 import com.tsinghua.service.DatasetCreationService;
+import com.tsinghua.service.DatasetManifestService;
 import com.tsinghua.service.DatasetService;
 import com.tsinghua.service.DatasetVersionService;
+import com.tsinghua.service.ImpactAnalysisService;
 import com.tsinghua.service.LineageService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -41,6 +48,15 @@ public class DatasetController {
 
     @Autowired
     private LineageService lineageService;
+
+    @Autowired
+    private DatasetCategoryService datasetCategoryService;
+
+    @Autowired
+    private ImpactAnalysisService impactAnalysisService;
+
+    @Autowired
+    private DatasetManifestService datasetManifestService;
 
     @ApiOperation("测试SQL")
     @PostMapping("/testsql")
@@ -140,8 +156,55 @@ public class DatasetController {
         Long versionId = Long.valueOf(body.get("versionId").toString());
         String remark = body.get("remark") != null ? body.get("remark").toString() : null;
         String dataModality = body.get("dataType") != null ? body.get("dataType").toString() : null;
-        datasetVersionService.updateVersion(versionId, remark, dataModality);
+        String category = body.get("category") != null ? body.get("category").toString() : null;
+        String tags = body.get("tags") != null ? body.get("tags").toString() : null;
+        datasetVersionService.updateVersion(versionId, remark, dataModality, category, tags);
         return Result.success("更新成功");
+    }
+
+    // ====================================================================
+    // 场景分类管理与关系提取
+    // ====================================================================
+
+    @ApiOperation("11类场景分类统计")
+    @GetMapping("/categories")
+    @RequirePermission(Permission.READ)
+    public Result<List<CategoryStatDTO>> categoryStats() {
+        return Result.success(datasetCategoryService.categoryStats());
+    }
+
+    @ApiOperation("按场景分类查询数据集")
+    @GetMapping("/by-category")
+    @RequirePermission(Permission.READ)
+    public Result<List<DatasetVersionEntity>> byCategory(@RequestParam("category") String category) {
+        return Result.success(datasetCategoryService.datasetsByCategory(category));
+    }
+
+    @ApiOperation("数据集关系提取（派生自/同源/同场景）")
+    @GetMapping("/relations")
+    @RequirePermission(Permission.READ)
+    public Result<List<DatasetRelationDTO>> relations(
+            @RequestParam(value = "datasetName", required = false) String datasetName) {
+        return Result.success(datasetCategoryService.extractRelations(datasetName));
+    }
+
+    // ====================================================================
+    // 影响范围分析 / 标准化导出
+    // ====================================================================
+
+    @ApiOperation("影响范围分析：下游受影响数据集与版本链")
+    @GetMapping("/impact")
+    @RequirePermission(Permission.READ)
+    public Result<ImpactAnalysisDTO> impact(@RequestParam("versionId") Long versionId) {
+        return Result.success(impactAnalysisService.analyze(versionId));
+    }
+
+    @ApiOperation("标准化导出数据集清单（manifest.json）")
+    @PostMapping("/export-package")
+    @RequirePermission(Permission.READ)
+    @OperationLog(value = "导出标准化数据集包", type = OperationLog.OperationType.EXPORT)
+    public Result<JSONObject> exportPackage(@RequestParam("versionId") Long versionId) throws Exception {
+        return Result.success(datasetManifestService.exportManifest(versionId));
     }
 
 }

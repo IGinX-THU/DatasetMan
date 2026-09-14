@@ -26,6 +26,9 @@ public class DatasetVersionRegisterRequest {
     @NotBlank(message = "存储路径不能为空")
     private String storagePath;
 
+    @ApiModelProperty(value = "版本号，如 v_260820_101530（可选，缺省按登记时间生成；创建向导会复用存储路径中的版本后缀，保证二者一致）")
+    private String versionNo;
+
     @ApiModelProperty(value = "上游版本ID列表；首个为主上游")
     private List<Long> upstreamVersionIds;
 
@@ -52,6 +55,12 @@ public class DatasetVersionRegisterRequest {
 
     @ApiModelProperty(value = "数据模态：relational / time_series / key_value / semi_structured / file_system")
     private String dataModality;
+
+    @ApiModelProperty(value = "场景分类编码，见 SceneCategoryEnum（11类智能体研发场景）")
+    private String category;
+
+    @ApiModelProperty(value = "标签，逗号分隔")
+    private String tags;
 
     @ApiModelProperty(value = "关联 Transform 作业状态（仅 TRANSFORM 类型）")
     private Integer jobState;

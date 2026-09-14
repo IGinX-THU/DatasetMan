@@ -83,7 +83,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'semiStructuredViewer',
             'userManual',
             'evaluationCriteria',
-            'qualityAssessment'
+            'qualityAssessment',
+            'sceneAnalysis'
         ];
         
         components.forEach(componentId => {
@@ -990,6 +991,14 @@ document.addEventListener('DOMContentLoaded', function() {
         btnQualityAssessmentRibbon.addEventListener('click', () => {
             console.log('btn-quality-assessment 被点击');
             showComponent('qualityAssessment');
+        });
+    }
+
+    const btnSceneAnalysisRibbon = document.getElementById('btn-scene-analysis');
+    if (btnSceneAnalysisRibbon) {
+        btnSceneAnalysisRibbon.addEventListener('click', () => {
+            console.log('btn-scene-analysis 被点击');
+            showComponent('sceneAnalysis');
         });
     }
 

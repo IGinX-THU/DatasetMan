@@ -257,6 +257,10 @@
                     <span class="ribbon-btn-icon" style="color: #faad14; font-size: 16px; font-weight: bold;">⊘</span>
                     <span class="ribbon-btn-text">禁用</span>
                 </button>
+                <button class="ribbon-btn" id="btn-scene-analysis">
+                    <svg class="ribbon-btn-icon"><use href="#icon-analyze"></use></svg>
+                    <span class="ribbon-btn-text">场景分析</span>
+                </button>
             </div>
         </div>
 
@@ -392,6 +396,8 @@
             <evaluation-criteria id="evaluationCriteria"></evaluation-criteria>
             <!-- 质量测评组件 -->
             <quality-assessment id="qualityAssessment"></quality-assessment>
+            <!-- 场景分析组件（分类统计/关系提取/影响分析/质量报告） -->
+            <scene-analysis id="sceneAnalysis"></scene-analysis>
             <!-- 用户管理组件 -->
             <user-management id="userManagement"></user-management>
             <permission-management id="permissionManagement"></permission-management>
@@ -439,6 +445,7 @@
 <script src="./components/user-manual/user-manual.js"></script>
 <script src="./components/evaluation-criteria/evaluation-criteria.js"></script>
 <script src="./components/quality-assessment/quality-assessment.js"></script>
+<script src="./components/scene-analysis/scene-analysis.js"></script>
 <script src="./lib/jszip/jszip.min.js"></script>
 <script src="./lib/docx-preview/docx-preview.min.js"></script>
 <script src="./js/desktop-shell.js"></script>

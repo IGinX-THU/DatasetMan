@@ -35,6 +35,9 @@ public class QualityAssessmentService {
     @Autowired
     private IginXClient iginxClient;
 
+    @Autowired
+    private QualityReportService qualityReportService;
+
     public QualityAssessmentEntity saveAssessment(QualityAssessmentRequest request) throws Exception {
         long timestamp;
         if (request.getId() != null) {
@@ -56,7 +59,7 @@ public class QualityAssessmentService {
         putDimension(weights, jobs, jobIds, exportFiles, names, scores, DataQualityDimensionEnum.qcom, request.getQcom());
         putDimension(weights, jobs, jobIds, exportFiles, names, scores, DataQualityDimensionEnum.qcon, request.getQcon());
         putDimension(weights, jobs, jobIds, exportFiles, names, scores, DataQualityDimensionEnum.qtim, request.getQtim());
-        putDimension(weights, jobs, jobIds, exportFiles, names, scores, DataQualityDimensionEnum.qval, request.getQval());
+        putDimension(weights, jobs, jobIds, exportFiles, names, scores, DataQualityDimensionEnum.qconf, request.getQval());
 
         QualityAssessmentEntity entity = new QualityAssessmentEntity();
         entity.setId(timestamp);
@@ -75,6 +78,9 @@ public class QualityAssessmentService {
         entity.setOperator(operator);
         entity.setClientIp(clientIp);
         entity.setOwner(StringUtils.hasText(request.getOwner()) ? request.getOwner() : AuthUtil.getCurrentUsername());
+
+        // 自动生成评估报告
+        entity.setReportJson(qualityReportService.generateReport(entity));
 
         WriteClient writeClient = iginxClient.getWriteClient();
         writeClient.writeMeasurement(entity);
@@ -190,7 +196,7 @@ public class QualityAssessmentService {
         validateDimension(DataQualityDimensionEnum.qcom, request.getQcom());
         validateDimension(DataQualityDimensionEnum.qcon, request.getQcon());
         validateDimension(DataQualityDimensionEnum.qtim, request.getQtim());
-        validateDimension(DataQualityDimensionEnum.qval, request.getQval());
+        validateDimension(DataQualityDimensionEnum.qconf, request.getQval());
     }
 
     private void validateDimension(DataQualityDimensionEnum dim, DataQualityDimension dimension) {

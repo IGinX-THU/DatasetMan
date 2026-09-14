@@ -33,4 +33,6 @@ public class DatasetCreateRequest {
     private String dataModality;
     private String project;
     private String remark;
+    private String category; // 场景分类编码，见 SceneCategoryEnum
+    private String tags;
 }
