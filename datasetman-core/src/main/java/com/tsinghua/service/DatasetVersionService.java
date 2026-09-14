@@ -16,7 +16,6 @@ import com.tsinghua.entity.DatasetLineageEntity;
 import com.tsinghua.entity.DatasetVersionEntity;
 import com.tsinghua.entity.TransformJobEntity;
 import com.tsinghua.enums.ProvenanceType;
-import com.tsinghua.enums.SceneCategoryEnum;
 import com.tsinghua.util.CommonUtil;
 import com.tsinghua.util.ConvertUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -104,13 +103,6 @@ public class DatasetVersionService {
         version.setClientIp(clientIp);
         version.setRemark(nvl(request.getRemark()));
         version.setDataModality(request.getDataModality() != null ? request.getDataModality() : "relational");
-        if (StringUtils.hasText(request.getCategory())) {
-            // 校验并归一化为标准分类编码
-            // 支持逗号分隔的多场景分类（一个数据集可覆盖多类场景）
-            version.setCategory(SceneCategoryEnum.normalizeMulti(request.getCategory()));
-        } else {
-            version.setCategory("");
-        }
         version.setTags(nvl(request.getTags()));
         version.setDescription(nvl(request.getDescription()));
         version.setProject(StringUtils.hasText(request.getProject()) ? request.getProject() : "default");
@@ -376,9 +368,7 @@ public class DatasetVersionService {
         }
         if (remark != null) version.setRemark(remark);
         if (dataModality != null) version.setDataModality(dataModality);
-        if (StringUtils.hasText(category)) version.setCategory(SceneCategoryEnum.normalizeMulti(category));
         if (tags != null) version.setTags(tags);
-        if (dataModality != null) version.setDataModality(dataModality);
         version.setId(version.getCreateTime());
         iginxClient.getWriteClient().writeMeasurement(version);
         log.info("数据集版本档案已更新。id={}", versionId);

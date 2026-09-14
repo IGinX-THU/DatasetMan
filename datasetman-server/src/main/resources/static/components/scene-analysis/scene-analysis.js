@@ -1,5 +1,5 @@
 /**
- * 场景分析组件：场景分类统计、数据集关系提取、影响范围分析、质量评估报告、标准包导出。
+ * 场景分析组件：数据类型统计、数据集关系提取、影响范围分析、质量评估报告、标准包导出。
  * 对应后端接口：
  *   GET  /api/dataset/categories
  *   GET  /api/dataset/relations
@@ -104,20 +104,20 @@ class SceneAnalysis extends HTMLElement {
         const summary = this.querySelector('#saCategorySummary');
         const data = await this.apiGet('/api/dataset/categories');
         if (!data || !data.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="qa-empty">暂无分类数据，请先为数据集版本设置场景分类。</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="qa-empty">暂无分类数据。</td></tr>';
             summary.textContent = '';
             return;
         }
         const totalSamples = data.reduce((s, d) => s + (d.totalRowCount || 0), 0);
         const covered = data.filter(d => d.datasetCount > 0).length;
-        summary.textContent = `已覆盖 ${covered}/11 类场景，样本总量 ${totalSamples.toLocaleString()} 条`;
+        summary.textContent = `已覆盖 ${covered} 类数据类型，样本总量 ${totalSamples.toLocaleString()} 条`;
         tbody.innerHTML = data.map(d => `
             <tr>
-                <td>${d.code}</td><td>${d.label}</td>
-                <td>${{design:'设计', manufacturing:'制造', test:'试验', operations:'运维'}[d.stage] || d.stage}</td>
-                <td>${d.description || ''}</td>
-                <td>${d.datasetCount}</td><td>${d.versionCount}</td>
+                <td>${d.label}</td>
+                <td>${d.datasetCount}</td>
+                <td>${d.versionCount}</td>
                 <td>${(d.totalRowCount || 0).toLocaleString()}</td>
+                <td>${(d.datasetNames || []).join(', ')}</td>
             </tr>`).join('');
     }
 

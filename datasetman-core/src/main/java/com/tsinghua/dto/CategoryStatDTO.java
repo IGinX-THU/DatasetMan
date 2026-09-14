@@ -6,14 +6,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 场景分类统计：11类智能体研发场景的数据集覆盖情况。
+ * 数据集分类统计：按数据类型（relational/time_series/key_value/semi_structured/file_system 等）。
  */
 @Data
 public class CategoryStatDTO {
 
+    /** 数据类型编码，如 relational */
     private String code;
+
+    /** 中文名，如 关系型 */
     private String label;
-    private String stage;
+
+    /** 说明 */
     private String description;
 
     /** 数据集（逻辑）数量 */
@@ -25,6 +29,6 @@ public class CategoryStatDTO {
     /** 样本量合计（rowCount 求和） */
     private long totalRowCount;
 
-    /** 该场景下的数据集名称列表 */
+    /** 该类型下的数据集名称列表 */
     private List<String> datasetNames = new ArrayList<>();
 }

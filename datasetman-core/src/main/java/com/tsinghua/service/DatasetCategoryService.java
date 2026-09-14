@@ -3,7 +3,6 @@ package com.tsinghua.service;
 import com.tsinghua.dto.CategoryStatDTO;
 import com.tsinghua.dto.DatasetRelationDTO;
 import com.tsinghua.entity.DatasetVersionEntity;
-import com.tsinghua.enums.SceneCategoryEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,36 +12,53 @@ import java.util.stream.Collectors;
 
 /**
  * 数据集分类管理与关系提取：
- * 1. 按11类智能体研发场景对数据集分类统计与检索；
- * 2. 从血缘、共享上游、场景分类中自动提取数据集间关系。
+ * 1. 按数据类型（relational/time_series/key_value/semi_structured/file_system 等）分类统计与检索；
+ * 2. 从血缘、共享上游、相同数据类型中自动提取数据集间关系。
  */
 @Slf4j
 @Service
 public class DatasetCategoryService {
 
+    /** 平台支持的数据类型及中文名 */
+    private static final LinkedHashMap<String, String> MODALITIES = new LinkedHashMap<>();
+    static {
+        MODALITIES.put("relational", "关系型");
+        MODALITIES.put("time_series", "时序数据");
+        MODALITIES.put("key_value", "键值");
+        MODALITIES.put("semi_structured", "半结构化/文档");
+        MODALITIES.put("file_system", "文件系统");
+        MODALITIES.put("text", "文本");
+        MODALITIES.put("image", "图像");
+        MODALITIES.put("audio", "音频");
+        MODALITIES.put("video", "视频");
+    }
+
+    public static String modalityLabel(String code) {
+        return MODALITIES.getOrDefault(code, code);
+    }
+
     @Autowired
     private DatasetVersionService datasetVersionService;
 
-    /** 11类场景的分类统计数据（未分类的数据集不计入） */
+    /** 按数据类型的分类统计数据 */
     public List<CategoryStatDTO> categoryStats() {
         List<DatasetVersionEntity> versions = datasetVersionService.listAllAccessibleVersions();
 
-        Map<String, List<DatasetVersionEntity>> byCategory = new HashMap<>();
+        Map<String, List<DatasetVersionEntity>> byType = new LinkedHashMap<>();
         for (DatasetVersionEntity v : versions) {
-            if (v.getCategory() == null || v.getCategory().isEmpty()) continue;
-            for (String code : v.getCategory().split("[,，]")) {
-                byCategory.computeIfAbsent(code.trim(), k -> new ArrayList<>()).add(v);
-            }
+            String type = v.getDataModality() == null || v.getDataModality().isEmpty()
+                    ? "unclassified" : v.getDataModality();
+            byType.computeIfAbsent(type, k -> new ArrayList<>()).add(v);
         }
 
         List<CategoryStatDTO> stats = new ArrayList<>();
-        for (SceneCategoryEnum scene : SceneCategoryEnum.values()) {
+        for (Map.Entry<String, List<DatasetVersionEntity>> entry : byType.entrySet()) {
+            String code = entry.getKey();
+            List<DatasetVersionEntity> list = entry.getValue();
             CategoryStatDTO stat = new CategoryStatDTO();
-            stat.setCode(scene.getCode());
-            stat.setLabel(scene.getLabel());
-            stat.setStage(scene.getStage());
-            stat.setDescription(scene.getDescription());
-            List<DatasetVersionEntity> list = byCategory.getOrDefault(scene.getCode(), Collections.emptyList());
+            stat.setCode(code);
+            stat.setLabel("unclassified".equals(code) ? "未分类" : modalityLabel(code));
+            stat.setDescription("数据类型: " + code);
             stat.setVersionCount(list.size());
             stat.setDatasetCount((int) list.stream().map(DatasetVersionEntity::getDatasetName).distinct().count());
             stat.setTotalRowCount(list.stream()
@@ -54,12 +70,15 @@ public class DatasetCategoryService {
         return stats;
     }
 
-    /** 某场景下的数据集（逻辑数据集聚合到最新版本） */
-    public List<DatasetVersionEntity> datasetsByCategory(String category) {
-        SceneCategoryEnum scene = SceneCategoryEnum.of(category);
+    /** 某数据类型下的数据集（逻辑数据集聚合到最新版本），参数兼容中文类型名 */
+    public List<DatasetVersionEntity> datasetsByCategory(String type) {
+        String code = MODALITIES.containsKey(type) ? type
+                : MODALITIES.entrySet().stream()
+                        .filter(e -> e.getValue().equals(type))
+                        .map(Map.Entry::getKey).findFirst().orElse(type);
         Map<String, DatasetVersionEntity> latestByName = new LinkedHashMap<>();
         datasetVersionService.listAllAccessibleVersions().stream()
-                .filter(v -> SceneCategoryEnum.contains(v.getCategory(), scene.getCode()))
+                .filter(v -> code.equals(v.getDataModality()))
                 .forEach(v -> latestByName.merge(v.getDatasetName(), v,
                         (a, b) -> a.getCreateTime() >= b.getCreateTime() ? a : b));
         return latestByName.values().stream()
@@ -71,7 +90,7 @@ public class DatasetCategoryService {
      * 关系提取（按逻辑数据集粒度）：
      * - derived_from：血缘边中跨数据集的派生关系；
      * - same_source：两个数据集共享同一上游数据集；
-     * - same_scene：同一场景分类下的数据集关联。
+     * - same_type：相同数据类型下的数据集关联。
      *
      * @param datasetName 可选，聚焦某个数据集的关系；为空则返回全部
      */
@@ -84,7 +103,7 @@ public class DatasetCategoryService {
         Set<String> seen = new LinkedHashSet<>();
         List<DatasetRelationDTO> relations = new ArrayList<>();
 
-        // 1. derived_from：血缘边（含 upstreamVersionIds 兜底）中 from/to 属于不同逻辑数据集
+        // 1. derived_from：血缘边中 from/to 属于不同逻辑数据集
         datasetVersionService.listAllEdges().forEach(e -> {
             DatasetVersionEntity from = versionById.get(e.getFromVersionId());
             DatasetVersionEntity to = versionById.get(e.getToVersionId());
@@ -97,20 +116,18 @@ public class DatasetCategoryService {
             }
         });
 
-        // 2. same_scene：同一分类下的数据集两两关联
-        Map<String, Set<String>> byCategory = new LinkedHashMap<>();
+        // 2. same_type：同一数据类型下的数据集两两关联
+        Map<String, Set<String>> byType = new LinkedHashMap<>();
         for (DatasetVersionEntity v : versions) {
-            if (v.getCategory() == null || v.getCategory().isEmpty()) continue;
-            for (String code : v.getCategory().split("[,，]")) {
-                byCategory.computeIfAbsent(code.trim(), k -> new TreeSet<>()).add(v.getDatasetName());
-            }
+            if (v.getDataModality() == null || v.getDataModality().isEmpty()) continue;
+            byType.computeIfAbsent(v.getDataModality(), k -> new TreeSet<>()).add(v.getDatasetName());
         }
-        byCategory.forEach((cat, names) -> {
+        byType.forEach((type, names) -> {
             List<String> list = new ArrayList<>(names);
             for (int i = 0; i < list.size(); i++) {
                 for (int j = i + 1; j < list.size(); j++) {
                     addIfMatch(relations, seen, list.get(i), list.get(j),
-                            DatasetRelationDTO.SAME_SCENE, "同属场景分类: " + cat, datasetName);
+                            DatasetRelationDTO.SAME_TYPE, "同数据类型: " + modalityLabel(type), datasetName);
                 }
             }
         });

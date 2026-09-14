@@ -4,14 +4,14 @@ import lombok.Data;
 
 /**
  * 数据集间自动提取的关系。
- * relationType: derived_from（派生自）/ same_source（同源）/ same_scene（同场景关联）
+ * relationType: derived_from（派生自）/ same_source（同源）/ same_type（同类型关联）
  */
 @Data
 public class DatasetRelationDTO {
 
     public static final String DERIVED_FROM = "derived_from";
     public static final String SAME_SOURCE = "same_source";
-    public static final String SAME_SCENE = "same_scene";
+    public static final String SAME_TYPE = "same_type";
 
     private String fromDataset;
     private String toDataset;
@@ -28,7 +28,7 @@ public class DatasetRelationDTO {
         switch (type) {
             case DERIVED_FROM: dto.setRelationLabel("派生自"); break;
             case SAME_SOURCE: dto.setRelationLabel("同源"); break;
-            case SAME_SCENE: dto.setRelationLabel("同场景关联"); break;
+            case SAME_TYPE: dto.setRelationLabel("同类型关联"); break;
             default: dto.setRelationLabel(type);
         }
         dto.setEvidence(evidence);

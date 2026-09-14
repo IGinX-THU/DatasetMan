@@ -56,9 +56,6 @@ public class DatasetVersionRegisterRequest {
     @ApiModelProperty(value = "数据模态：relational / time_series / key_value / semi_structured / file_system")
     private String dataModality;
 
-    @ApiModelProperty(value = "场景分类编码，见 SceneCategoryEnum（11类智能体研发场景）")
-    private String category;
-
     @ApiModelProperty(value = "标签，逗号分隔")
     private String tags;
 

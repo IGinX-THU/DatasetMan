@@ -69,7 +69,6 @@ public class DatasetManifestService {
         dataset.put("description", version.getDescription());
         dataset.put("project", version.getProject());
         dataset.put("owner", version.getOwner());
-        dataset.put("category", version.getCategory());
         dataset.put("tags", version.getTags());
         dataset.put("dataModality", version.getDataModality());
         dataset.put("schema", safeJson(version.getSchemaJson()));

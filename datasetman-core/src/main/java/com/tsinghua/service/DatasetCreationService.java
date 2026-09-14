@@ -61,7 +61,6 @@ public class DatasetCreationService {
         registration.setDataModality(request.getDataModality());
         registration.setProject(request.getProject());
         registration.setRemark(request.getRemark());
-        registration.setCategory(request.getCategory());
         registration.setTags(request.getTags());
 
         Map<String, Object> config = new LinkedHashMap<>();
