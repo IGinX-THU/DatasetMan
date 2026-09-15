@@ -11,10 +11,9 @@ class QualityAssessment extends HTMLElement {
         this.records = [];
         this.dimensionLabels = {
             qcom: '完整性',
-            qacc: '准确性',
             qcon: '一致性',
             qtim: '时效性',
-            qconf: '规范性'
+            qval: '有效性'
         };
         this.pageSize = 10;
         this.currentPage = 1;
@@ -480,10 +479,9 @@ class QualityAssessment extends HTMLElement {
                     <td>${item.detailJson && item.detailJson.sampleSize != null ? item.detailJson.sampleSize : '-'}</td>
                     <td>${this.formatTime(item.createTime)}</td>
                     <td>${score('qcom')}</td>
-                    <td>${score('qacc')}</td>
                     <td>${score('qcon')}</td>
                     <td>${score('qtim')}</td>
-                    <td>${score('qconf')}</td>
+                    <td>${score('qval')}</td>
                     <td>${item.dqi != null && item.dqi !== '' ? Number(item.dqi).toFixed(2) : '-'}</td>
                     <td>
                         <div class="action-buttons">
@@ -518,7 +516,7 @@ class QualityAssessment extends HTMLElement {
         if (!record) return;
 
         const weights = this.ensureParsed(record, 'weights');
-        const dims = ['qcom', 'qacc', 'qcon', 'qtim', 'qconf'];
+        const dims = ['qcom', 'qcon', 'qtim', 'qval'];
         let sum = 0;
         let allFilled = true;
         const scores = {};
@@ -550,13 +548,12 @@ class QualityAssessment extends HTMLElement {
         }
 
         const dqi = Math.round(sum * 100) / 100;
-        const threshold = 80;
+        const threshold = 95; // 4.3.1.6 达标线
         const passed = dqi >= threshold &&
             scores.qcom >= threshold &&
-            scores.qacc >= threshold &&
             scores.qcon >= threshold &&
             scores.qtim >= threshold &&
-            scores.qconf >= threshold;
+            scores.qval >= threshold;
 
         valueEl.textContent = dqi.toFixed(2);
         statusEl.textContent = passed ? '通过' : '未通过';

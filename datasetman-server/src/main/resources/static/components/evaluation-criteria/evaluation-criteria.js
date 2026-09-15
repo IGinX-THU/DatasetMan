@@ -14,7 +14,7 @@ class EvaluationCriteria extends HTMLElement {
         this.pageSize = 10;
         this.currentPage = 1;
         this.totalCount = 0;
-        this.defaultWeights = { qcom: 0.2, qacc: 0.2, qcon: 0.2, qtim: 0.2, qconf: 0.2 };
+        this.defaultWeights = { qcom: 0.25, qcon: 0.25, qtim: 0.25, qval: 0.25 };
     }
 
     async connectedCallback() {
@@ -199,10 +199,9 @@ class EvaluationCriteria extends HTMLElement {
                     <td>${item.name || ''}</td>
                     <td>${item.description || ''}</td>
                     <td>${w('qcom')}</td>
-                    <td>${w('qacc')}</td>
                     <td>${w('qcon')}</td>
                     <td>${w('qtim')}</td>
-                    <td>${w('qconf')}</td>
+                    <td>${w('qval')}</td>
                     <td>
                         <div class="action-buttons">
                             <button class="action-btn edit" data-index="${index}">编辑</button>
@@ -349,7 +348,7 @@ class EvaluationCriteria extends HTMLElement {
 
 
     getDimLabel(dim) {
-        const labels = { qcom: '完整性', qacc: '准确性', qcon: '一致性', qtim: '时效性', qconf: '规范性' };
+        const labels = { qcom: '完整性', qcon: '一致性', qtim: '时效性', qval: '有效性' };
         return labels[dim] || dim;
     }
 

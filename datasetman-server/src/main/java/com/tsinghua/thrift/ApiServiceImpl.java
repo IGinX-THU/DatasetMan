@@ -1586,7 +1586,7 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
             dto.setQtim(convertToDataQualityDimension(thriftRequest.getQtim()));
         }
         if (thriftRequest.isSetQval()) {
-            dto.setQconf(convertToDataQualityDimension(thriftRequest.getQval()));
+            dto.setQval(convertToDataQualityDimension(thriftRequest.getQval()));
         }
         if (thriftRequest.isSetOwner()) {
             dto.setOwner(thriftRequest.getOwner());
