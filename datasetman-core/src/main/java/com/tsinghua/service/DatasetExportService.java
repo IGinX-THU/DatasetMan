@@ -2,6 +2,10 @@ package com.tsinghua.service;
 
 import cn.edu.tsinghua.iginx.session.Session;
 import cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult;
+import cn.edu.tsinghua.iginx.session_v2.IginXClient;
+import cn.edu.tsinghua.iginx.session_v2.QueryClient;
+
+import cn.edu.tsinghua.iginx.session_v2.query.*;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.itextpdf.html2pdf.ConverterProperties;
@@ -9,6 +13,7 @@ import com.itextpdf.html2pdf.HtmlConverter;
 import com.itextpdf.html2pdf.resolver.font.DefaultFontProvider;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.tsinghua.dto.DataQueryRequest;
 import com.tsinghua.entity.DatasetVersionEntity;
 import com.tsinghua.entity.QualityAssessmentEntity;
 import com.tsinghua.util.ConvertUtil;
@@ -18,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -40,6 +46,9 @@ public class DatasetExportService {
     private Session iginxSession;
 
     @Autowired
+    private IginXClient iginxClient;
+
+    @Autowired
     private DatasetVersionService datasetVersionService;
 
     @Autowired
@@ -47,6 +56,9 @@ public class DatasetExportService {
 
     @Autowired
     private QualityAssessmentService qualityAssessmentService;
+
+    @Autowired
+    private DataSourceService dataSourceService;
 
     /**
      * 打包导出当前版本：
@@ -99,31 +111,59 @@ public class DatasetExportService {
     }
 
     /**
-     * 按表导出当前版本：一次查询版本前缀下全部数据（与数据视图同源，保证有数据），
-     * 在内存中按表名（完整路径倒数第二段）分组切分，每张表一个 CSV，
-     * 表头去掉 "datasets.<数据集>.<版本>.<表名>." 前缀，只保留列名。
-     * 注意：IGinX 不支持对子前缀二次 select（会返回空），因此必须复用同一份查询结果。
+     * 按表导出当前版本：从左侧树获取该存储路径下的所有节点，
+     * 按表前缀分组，每张表一个 CSV，文件名为 <前缀>.<表名>.csv，
+     * 表头为 key + 去掉表前缀的列名。
      */
     private void exportVersionTables(ZipOutputStream zip, DatasetVersionEntity v) throws IOException {
         try {
-            SessionExecuteSqlResult all = iginxSession.executeSql(
-                    String.format("select * from %s;", v.getStoragePath()));
-            List<String> paths = all.getPaths();
-            List<Map<String, Object>> records = ConvertUtil.getRecords(all);
-            if (paths == null || paths.isEmpty()) {
+            String storagePath = v.getStoragePath();
+            
+            // 从左侧树获取该存储路径下的所有节点
+            List<com.tsinghua.dto.ColumnDto> treeNodes = dataSourceService.dataSourceTree();
+            List<String> exportPaths = new ArrayList<>();
+            
+            // 过滤出该存储路径下的所有叶子节点
+            for (com.tsinghua.dto.ColumnDto node : treeNodes) {
+                String path = node.getPath();
+                if (path.startsWith(storagePath + ".")) {
+                    exportPaths.add(path);
+                }
+            }
+            
+            if (exportPaths.isEmpty()) {
                 zipEntry(zip, "导出说明.txt", "该版本下未查询到数据".getBytes(StandardCharsets.UTF_8));
                 return;
             }
-            // 表名 = 完整路径倒数第二段（最后一段为列名）；按表分组列
+            
+            // 按表前缀分组：表前缀 = 节点路径去掉最后一部分
+            // 例如：datasets.dataset02.v_260910_162717.value2_ -> 前缀 = datasets.dataset02.v_260910_162717, 表名 = value2_
             Map<String, List<String>> columnsByTable = new LinkedHashMap<>();
-            for (String p : paths) {
-                String[] seg = p.split("\\.");
-                String table = seg.length >= 2 ? seg[seg.length - 2] : "data";
-                columnsByTable.computeIfAbsent(table, k -> new ArrayList<>()).add(p);
+            for (String p : exportPaths) {
+                // 表前缀 = 去掉最后一部分
+                String tablePrefix = p.substring(0, p.lastIndexOf('.'));
+                // 表名 = 最后一部分
+                String tableName = p.substring(p.lastIndexOf('.') + 1);
+                columnsByTable.computeIfAbsent(tablePrefix, k -> new ArrayList<>()).add(p);
             }
+            
+            // 对每个表进行查询导出
             for (Map.Entry<String, List<String>> entry : columnsByTable.entrySet()) {
-                byte[] csv = buildTableCsv(entry.getValue(), records);
-                zipEntry(zip, sanitize(entry.getKey()) + ".csv", csv);
+                String tablePrefix = entry.getKey();
+                List<String> tablePaths = entry.getValue();
+                String tableName = tablePrefix.substring(tablePrefix.lastIndexOf('.') + 1);
+                String fileName = tablePrefix + "." + sanitize(tableName) + ".csv";
+                
+                // 构建查询请求
+                DataQueryRequest request = new DataQueryRequest();
+                request.setPaths(tablePaths);
+                request.setStartTime(0L);
+                request.setEndTime(253402300799999L);
+                request.setPrecision(1000L);
+                request.setTimePrecision(1); // MS
+                
+                byte[] csv = exportTableAsCsv(request, tablePrefix);
+                zipEntry(zip, fileName, csv);
             }
         } catch (Exception e) {
             log.warn("版本按表导出失败 storagePath={}: {}", v.getStoragePath(), e.getMessage());
@@ -131,24 +171,71 @@ public class DatasetExportService {
         }
     }
 
-    /** 由同一份查询结果按列子集生成单表 CSV：表头仅保留叶子列名 */
-    private byte[] buildTableCsv(List<String> tablePaths, List<Map<String, Object>> records) {
-        StringBuilder sb = new StringBuilder();
-        sb.append('\uFEFF');
-        for (int i = 0; i < tablePaths.size(); i++) {
-            if (i > 0) sb.append(',');
-            sb.append(csvEscape(shortName(tablePaths.get(i))));
-        }
-        sb.append('\r').append('\n');
-        for (Map<String, Object> row : records) {
-            for (int i = 0; i < tablePaths.size(); i++) {
-                if (i > 0) sb.append(',');
-                Object val = row.get(tablePaths.get(i));
-                sb.append(csvEscape(val == null ? "" : String.valueOf(val)));
+    /** 参考 DataTableService.exportData 的实现，但返回 byte[] 而不是直接写入 response */
+    private byte[] exportTableAsCsv(DataQueryRequest request, String tablePrefix) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        OutputStreamWriter writer = null;
+        try {
+            QueryClient queryClient = iginxClient.getQueryClient();
+            Set<String> paths = new HashSet<>(request.getPaths());
+            
+            IginXTable table = queryClient.query(
+                    SimpleQuery.builder()
+                            .addMeasurements(paths)
+                            .startKey(0L)
+                            .endKey(253402300799999L)
+                            .build()
+            );
+            
+            writer = new OutputStreamWriter(bos, "UTF-8");
+            
+            // 表头：key + 去掉表前缀的列名
+            IginXHeader header = table.getHeader();
+            if (header.hasTimestamp()) {
+                writer.write("key,");
             }
-            sb.append('\r').append('\n');
+            for (IginXColumn column : header.getColumns()) {
+                String path = column.getName();
+                // 去掉表前缀，只保留列名
+                String columnName = path;
+                if (path.startsWith(tablePrefix + ".")) {
+                    columnName = path.substring((tablePrefix + ".").length());
+                }
+                writer.write(columnName + ",");
+            }
+            writer.write("\n");
+            writer.flush();
+            
+            // 数据行
+            List<IginXRecord> records = table.getRecords();
+            for (IginXRecord record : records) {
+                if (header.hasTimestamp()) {
+                    writer.write(record.getKey() + ",");
+                }
+                for (IginXColumn column : header.getColumns()) {
+                    Object value = record.getValue(column.getName());
+                    if (value instanceof byte[]) {
+                        writer.write(ConvertUtil.bytesToString((byte[]) value));
+                    } else {
+                        writer.write(String.valueOf(value));
+                    }
+                    writer.write(",");
+                }
+                writer.write("\n");
+                writer.flush();
+            }
+            
+            writer.flush();
+            return bos.toByteArray();
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (Exception ex) {
+                    log.error("关闭writer失败", ex);
+                }
+            }
         }
-        return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
 
 
