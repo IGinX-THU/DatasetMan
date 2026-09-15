@@ -335,6 +335,170 @@ function generateId(prefix = 'id') {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+
+/**
+ * 本地PDF报告生成器（移植自 DataModelGov simulation-record 报告方案）：
+ * 通过内容堆叠 + generateHTML 生成带页眉、页脚、水印的 A4 报告，经浏览器打印导出PDF。
+ * 水印参数读取 window.AppConfig.watermark 配置。
+ */
+class LocalPDFGenerator {
+    constructor(options = {}) {
+        this.content = [];
+        this.yPosition = 50;
+        this.pageHeight = 842; // A4高度 (点)
+        this.pageWidth = 595;  // A4宽度 (点)
+        this.margin = 50;
+        this.fontSize = 12;
+        this.lineHeight = 16;
+        this.headerText = options.headerText || '清华大学大数据系统软件国家工程研究中心 - 数据集质量评估报告';
+        this.reportTitle = options.reportTitle || '数据集质量评估报告';
+    }
+
+    addText(text, fontSize = 12, bold = false) {
+        this.content.push({ type: 'text', text: text, fontSize: fontSize, bold: bold });
+        this.yPosition += this.lineHeight;
+        this.checkPageBreak();
+    }
+
+    addTitle(text) {
+        this.addText(text, 18, true);
+        this.yPosition += 10;
+    }
+
+    addSubtitle(text) {
+        this.addText(text, 14, true);
+        this.yPosition += 5;
+    }
+
+    addTable(headers, data) {
+        this.content.push({ type: 'table', headers: headers, data: data });
+        this.yPosition += 20 * (data.length + 2);
+        this.checkPageBreak();
+    }
+
+    addSeparator() {
+        this.content.push({ type: 'separator' });
+        this.yPosition += 5;
+    }
+
+    checkPageBreak() {
+        if (this.yPosition > this.pageHeight - this.margin) {
+            this.yPosition = this.margin;
+            this.content.push({ type: 'newPage' });
+        }
+    }
+
+    addHeader() {
+        this.content.push({ type: 'header', text: this.headerText, y: 30 });
+    }
+
+    addFooter(pageNumber) {
+        this.content.push({ type: 'footer', text: '第 ' + pageNumber + ' 页', y: this.pageHeight - 30 });
+    }
+
+    /** 水印：读取 window.AppConfig.watermark 配置 */
+    addWatermark() {
+        const cfg = (window.AppConfig && window.AppConfig.watermark) || {
+            text: '清华大学大数据系统软件国家工程研究中心',
+            opacity: 0.1
+        };
+        this.content.push({
+            type: 'watermark',
+            text: cfg.text,
+            opacity: cfg.opacity,
+            fontSize: cfg.fontSize || 48,
+            color: cfg.color || '#999',
+            rotation: cfg.rotation || -45,
+            enable: cfg.enable !== false
+        });
+    }
+
+    generateHTML() {
+        let html = '<!DOCTYPE HTML><html><head>' +
+            '<meta charset="UTF-8"><title>' + this.reportTitle + '</title>' +
+            '<style>' +
+            'body { font-family: SimSun, Microsoft YaHei, SimHei, Arial, sans-serif; font-size: ' + this.fontSize + 'pt; line-height: 1.5; margin: 0; padding: 0; position: relative; min-height: 100vh; }' +
+            '.header { text-align: center; font-size: 14pt; font-weight: bold; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }' +
+            '.footer { text-align: center; font-size: 10pt; margin-top: 30px; border-top: 1px solid #333; padding-top: 10px; }' +
+            '.title { text-align: center; font-size: 18pt; font-weight: bold; margin: 20px 0; }' +
+            '.subtitle { font-size: 14pt; font-weight: bold; margin: 15px 0 10px 0; }' +
+            '.content { padding: 20px; }' +
+            '.text { margin: 5px 0; text-align: justify; }' +
+            '.table { width: 100%; border-collapse: collapse; margin: 10px 0; table-layout: fixed; }' +
+            '.table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; word-wrap: break-word; word-break: break-all; }' +
+            '.table th { background-color: #f2f2f2; font-weight: bold; }' +
+            '.pass { color: #389e0d; font-weight: bold; } .fail { color: #cf1322; font-weight: bold; }' +
+            '.separator { height: 1px; background-color: #ccc; margin: 20px 0; }' +
+            '@page { size: A4; margin: 2cm; }' +
+            '</style></head><body>' +
+            '<div class="header">' + this.headerText + '</div>' +
+            '<div class="content">';
+        const escapeHtml = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        this.content.forEach(item => {
+            switch (item.type) {
+                case 'text':
+                    html += '<div class="text" style="font-size:' + item.fontSize + 'pt;' + (item.bold ? 'font-weight:bold;' : '') + '">' + item.text + '</div>';
+                    break;
+                case 'subtitle':
+                    html += '<div class="subtitle">' + item.text + '</div>';
+                    break;
+                case 'title':
+                    html += '<div class="title">' + item.text + '</div>';
+                    break;
+                case 'table':
+                    html += '<table class="table"><tr>';
+                    item.headers.forEach(h => { html += '<th>' + escapeHtml(h) + '</th>'; });
+                    html += '</tr>';
+                    item.data.forEach(row => {
+                        html += '<tr>';
+                        row.forEach(c => { html += '<td>' + escapeHtml(c) + '</td>'; });
+                        html += '</tr>';
+                    });
+                    html += '</table>';
+                    break;
+                case 'watermark': {
+                    // position:fixed 全页覆盖：不占文档流（避免开头大片空白），打印时每页重复
+                    if (item.enable === false) break;
+                    const inner = 'transform:rotate(' + (item.rotation || -45) + 'deg);' +
+                        'font-size:' + (item.fontSize || 48) + 'px;color:' + (item.color || '#999') + ';' +
+                        'opacity:' + (item.opacity == null ? 0.1 : item.opacity) + ';' +
+                        'white-space:nowrap;font-weight:bold;';
+                    html += '<div style="position:fixed;top:0;left:0;width:100%;height:100%;' +
+                        'display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:999;">' +
+                        '<div style="' + inner + '">' + item.text + '</div></div>';
+                    break;
+                }
+                case 'separator':
+                    html += '<div class="separator"></div>';
+                    break;
+                case 'newPage':
+                    html += '<div style="page-break-before: always;"></div>';
+                    break;
+            }
+        });
+        html += '</div><div class="footer">' + this.reportTitle + ' 生成时间: ' + new Date().toLocaleString() + '</div></body></html>';
+        return html;
+    }
+
+    /** 打开新窗口渲染报告并触发打印（可另存为PDF） */
+    generateAndDownload(title) {
+        const htmlContent = this.generateHTML();
+        const win = window.open('', '_blank');
+        if (!win) {
+            alert('无法打开报告窗口，请检查浏览器弹窗设置');
+            return;
+        }
+        win.document.write(htmlContent);
+        win.document.close();
+        win.onload = () => {
+            win.focus();
+            win.print();
+            win.onafterprint = () => win.close();
+            setTimeout(() => { if (!win.closed) win.close(); }, 3000);
+        };
+    }
+}
+
 // 导出到全局对象
 window.CommonUtils = {
     showMessage,
@@ -348,5 +512,6 @@ window.CommonUtils = {
     debounce,
     throttle,
     deepClone,
-    generateId
+    generateId,
+    LocalPDFGenerator
 };

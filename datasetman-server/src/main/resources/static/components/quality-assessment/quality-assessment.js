@@ -402,8 +402,13 @@ class QualityAssessment extends HTMLElement {
                     ? `<div style="font-size:12px;color:#666;margin-top:4px;">请求 ${req} 行，实际抽样 ${actual} 行</div>`
                     : `<div style="font-size:12px;color:#666;margin-top:4px;">抽样 ${actual} 行</div>`;
             }
+            const wmCfg = (window.AppConfig && window.AppConfig.watermark) || {};
+            const wmText = wmCfg.text || '清华大学大数据系统软件国家工程研究中心';
             area.innerHTML = `
-                <div class="qa-section-title">质量评估报告（自动生成）</div>
+                <div class="qa-section-title" style="position:relative;">
+                    质量评估报告（自动生成）
+                    <span style="position:absolute;right:0;top:0;font-size:11px;color:#bbb;transform:rotate(-6deg);pointer-events:none;user-select:none;">${this.escapeHtml(wmText)}</span>
+                </div>
                 ${sampleInfo}
                 <div class="qa-dqi-card" style="display:flex;">
                     <div>
@@ -434,30 +439,66 @@ class QualityAssessment extends HTMLElement {
     }
 
     /** 打印/导出PDF */
+    /** 生成带页眉/水印/页脚的正式评估报告并打印导出（复用 CommonUtils.LocalPDFGenerator） */
     printReport() {
-        if (!this._report) {
+        if (!this._report || !this.currentRecord) {
             if (window.CommonUtils && window.CommonUtils.showToast) {
                 window.CommonUtils.showToast('请先打开一条含报告的测评记录', 'info');
             }
             return;
         }
+        if (!window.CommonUtils || typeof window.CommonUtils.LocalPDFGenerator !== 'function') {
+            // 组件脚本未加载时回退为简单打印
+            const raw = this._report;
+            const win = window.open('', '_blank');
+            win.document.write('<pre>' + JSON.stringify(raw, null, 2) + '</pre>');
+            win.document.close();
+            win.print();
+            return;
+        }
         const report = this._report;
-        const dims = (report.dimensions || []).map(d =>
-            `<tr><td>${d.name}</td><td>${d.score}</td><td>${d.grade}</td><td>${d.evidence || '-'}</td></tr>`).join('');
-        const win = window.open('', '_blank');
-        win.document.write('<html><head><title>质量评估报告</title>' +
-            '<style>body{font-family:"Microsoft YaHei",sans-serif;padding:24px;color:#333}' +
-            'table{border-collapse:collapse;width:100%;margin:12px 0}th,td{border:1px solid #ccc;padding:6px 10px;font-size:13px}' +
-            'h3{border-bottom:2px solid #1890ff;padding-bottom:8px}ul{padding-left:20px}</style></head><body>' +
-            `<h3>${report.title || '数据集质量评估报告'}</h3>` +
-            `<p>准则：${report.criteriaName || '-'}　测评时间：${report.createTime ? new Date(report.createTime).toLocaleString() : '-'}</p>` +
-            `<p>综合得分：<b>${report.score ?? report.dqi}</b>　质量等级：<b>${report.grade || '-'}</b>　${report.conclusion || ''}</p>` +
-            `<table><thead><tr><th>维度</th><th>得分</th><th>评级</th><th>评分依据</th></tr></thead><tbody>${dims}</tbody></table>` +
-            `<p><b>问题明细</b></p><ul>${(report.issues || []).map(i => `<li>${i}</li>`).join('')}</ul>` +
-            `<p><b>整改建议</b></p><ul>${(report.recommendations || []).map(i => `<li>${i}</li>`).join('')}</ul>` +
-            '</body></html>');
-        win.document.close();
-        win.print();
+        const record = this.currentRecord;
+        const gen = new window.CommonUtils.LocalPDFGenerator();
+
+        gen.addWatermark();
+        gen.addTitle('数据集质量评估报告');
+
+        gen.addSubtitle('一、基本信息');
+        gen.addText('数据集名称: ' + (record.datasetName || '-'));
+        gen.addText('数据集版本: ' + (record.versionNo || '-'));
+        gen.addText('评价准则: ' + (report.criteriaName || record.criteriaName || '-'));
+        const detail = record.detailJson || {};
+        gen.addText('抽样规模: ' + (detail.sampling
+            || ('实际抽样 ' + (detail.sampleSize != null ? detail.sampleSize : '-') + ' 行')));
+        gen.addText('测评时间: ' + (report.createTime ? new Date(report.createTime).toLocaleString() : '-'));
+        gen.addText('测评人: ' + (report.operator || '-'));
+        gen.addSeparator();
+
+        gen.addSubtitle('二、检测结论');
+        gen.addText('综合得分 DQI: ' + (report.score != null ? report.score : report.dqi)
+            + '（权重加权，达标线95分）', 12, true);
+        gen.addText('质量等级: ' + (report.grade || '-'));
+        gen.addText('达标情况: ' + (report.passed ? '通过' : '未通过'));
+        gen.addText('结论: ' + (report.conclusion || '-'));
+
+        gen.addSubtitle('三、维度得分明细');
+        const rows = (report.dimensions || []).map(d => [
+            d.name || d.code,
+            String(d.score),
+            d.weight != null ? (Number(d.weight) * 100).toFixed(0) + '%' : '-',
+            d.grade || '-',
+            d.evidence || '-'
+        ]);
+        gen.addTable(['维度', '得分', '权重', '评级', '评分依据（不满足规则的数据项摘要）'], rows);
+
+        gen.addSubtitle('四、问题明细');
+        (report.issues || []).forEach(i => gen.addText('· ' + i));
+        gen.addSeparator();
+
+        gen.addSubtitle('五、整改建议');
+        (report.recommendations || []).forEach(i => gen.addText('· ' + i));
+
+        gen.generateAndDownload('数据集质量评估报告');
     }
 
     renderList() {
