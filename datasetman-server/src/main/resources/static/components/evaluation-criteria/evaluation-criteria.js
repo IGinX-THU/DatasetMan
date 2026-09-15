@@ -14,12 +14,7 @@ class EvaluationCriteria extends HTMLElement {
         this.pageSize = 10;
         this.currentPage = 1;
         this.totalCount = 0;
-        this.defaultWeights = {
-            qcom: 0.3,
-            qcon: 0.2,
-            qtim: 0.2,
-            qval: 0.3
-        };
+        this.defaultWeights = { qcom: 0.2, qacc: 0.2, qcon: 0.2, qtim: 0.2, qconf: 0.2 };
     }
 
     async connectedCallback() {
@@ -148,8 +143,7 @@ class EvaluationCriteria extends HTMLElement {
     }
 
     async showListView() {
-        await this.loadJobsFromAPI();
-        await this.loadCriteriaList();
+                await this.loadCriteriaList();
         this.renderList();
     }
 
@@ -159,7 +153,6 @@ class EvaluationCriteria extends HTMLElement {
     }
 
     async showFormView(record = null) {
-        await this.loadJobsFromAPI();
 
         const titleEl = this.shadowRoot.querySelector('#ecModalTitle');
         if (titleEl) titleEl.textContent = record ? '编辑评价准则' : '新增评价准则';
@@ -176,17 +169,11 @@ class EvaluationCriteria extends HTMLElement {
         }
         if (descInput) descInput.value = record ? record.description || '' : '';
 
-        const dims = ['qcom', 'qcon', 'qtim', 'qval'];
+        const dims = Object.keys(this.defaultWeights);
         dims.forEach(dim => {
             const weightInput = this.shadowRoot.querySelector(`.ec-weight-input[data-dim="${dim}"]`);
-            const jobSelect = this.shadowRoot.querySelector(`.ec-job-select[data-dim="${dim}"]`);
             const weight = record && record.weights && record.weights[dim] !== undefined ? record.weights[dim] : this.defaultWeights[dim];
-            const jobId = record && record.jobs && record.jobs[dim] ? record.jobs[dim] : '';
             if (weightInput) weightInput.value = weight;
-            if (jobSelect) {
-                const option = jobSelect.querySelector(`option[value="${jobId}"]`);
-                jobSelect.value = option ? jobId : '';
-            }
         });
 
         this.updateWeightSummary();
@@ -200,31 +187,26 @@ class EvaluationCriteria extends HTMLElement {
         if (!tbody) return;
 
         if (this.criteriaList.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="ec-empty">暂无评价准则，请点击"新增"添加。</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="ec-empty">暂无评价准则，请点击"新增"添加。</td></tr>';
             return;
         }
 
         tbody.innerHTML = this.criteriaList.map((item, index) => {
-            const dimJob = dim => {
-                const jobId = item.jobs && item.jobs[dim] ? item.jobs[dim] : '';
-                if (!jobId) return '-';
-                const job = this.jobs.find(j => String(j.id) === String(jobId));
-                return job ? job.name : jobId;
-            };
+            const w = dim => item.weights && item.weights[dim] !== undefined && item.weights[dim] !== null
+                ? Number(item.weights[dim]).toFixed(2) : '-';
             return `
                 <tr>
                     <td>${item.name || ''}</td>
                     <td>${item.description || ''}</td>
-                    <td>${dimJob('qcom')}</td>
-                    <td>${dimJob('qcon')}</td>
-                    <td>${dimJob('qtim')}</td>
-                    <td>${dimJob('qval')}</td>
+                    <td>${w('qcom')}</td>
+                    <td>${w('qacc')}</td>
+                    <td>${w('qcon')}</td>
+                    <td>${w('qtim')}</td>
+                    <td>${w('qconf')}</td>
                     <td>
                         <div class="action-buttons">
                             <button class="action-btn edit" data-index="${index}">编辑</button>
                             <button class="action-btn delete" data-index="${index}">删除</button>
-                            <button class="action-btn run" data-index="${index}">提交测评</button>
-                            <button class="action-btn manage" data-index="${index}">管理</button>
                         </div>
                     </td>
                 </tr>
@@ -249,211 +231,8 @@ class EvaluationCriteria extends HTMLElement {
             });
         });
 
-        this.shadowRoot.querySelectorAll('.action-btn.run').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(e.target.dataset.index);
-                this.showSubmitConfirm(this.criteriaList[index]);
-            });
-        });
-
-        this.shadowRoot.querySelectorAll('.action-btn.manage').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(e.target.dataset.index);
-                this.navigateToQualityAssessment(this.criteriaList[index]);
-            });
-        });
     }
 
-    showDeleteConfirm(criteria) {
-        const dialogHtml = `
-            <div class="dialog-mask" style="
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 2000;
-            ">
-                <div class="dialog-content" style="
-                    background: white;
-                    border-radius: 8px;
-                    padding: 24px;
-                    max-width: 400px;
-                    width: 90%;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-                ">
-                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2329;">确认删除</h3>
-                    <p style="margin: 0 0 24px 0; color: #646a73; line-height: 1.5;">
-                        确定要删除准则 "${criteria.name || ''}" 吗？
-                    </p>
-                    <div class="dialog-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
-                        <button type="button" class="cancel-btn" style="
-                            padding: 8px 16px;
-                            border: 1px solid #c9cdd4;
-                            border-radius: 4px;
-                            background: white;
-                            color: #1f2329;
-                            cursor: pointer;
-                            font-size: 14px;
-                        ">取消</button>
-                        <button type="button" class="confirm-btn" style="
-                            padding: 8px 16px;
-                            border: 1px solid #ff4d4f;
-                            border-radius: 4px;
-                            background: #ff4d4f;
-                            color: white;
-                            cursor: pointer;
-                            font-size: 14px;
-                        ">确认删除</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        const dialog = document.createElement('div');
-        dialog.innerHTML = dialogHtml;
-        document.body.appendChild(dialog);
-
-        const dialogMask = dialog.querySelector('.dialog-mask');
-        const dialogContent = dialog.querySelector('.dialog-content');
-        const cancelBtn = dialog.querySelector('.cancel-btn');
-        const confirmBtn = dialog.querySelector('.confirm-btn');
-
-        if (dialogContent) {
-            dialogContent.addEventListener('click', (e) => e.stopPropagation());
-        }
-
-        const closeDialog = () => {
-            try {
-                if (dialog && dialog.parentNode) {
-                    dialog.parentNode.removeChild(dialog);
-                }
-            } catch (e) {
-                console.error('关闭弹窗失败:', e);
-            }
-        };
-
-        if (dialogMask) {
-            dialogMask.addEventListener('click', closeDialog);
-        }
-
-        cancelBtn.addEventListener('click', closeDialog);
-
-        confirmBtn.addEventListener('click', async () => {
-            if (confirmBtn.disabled) return;
-            confirmBtn.disabled = true;
-            confirmBtn.textContent = '删除中...';
-            confirmBtn.style.opacity = '0.6';
-            confirmBtn.style.cursor = 'not-allowed';
-            try {
-                const id = criteria.id || criteria.createTime;
-                await this.deleteCriteria(id);
-            } catch (error) {
-                console.error('删除评价准则失败:', error);
-            } finally {
-                closeDialog();
-            }
-        });
-    }
-
-    showSubmitConfirm(criteria) {
-        const dialogHtml = `
-            <div class="dialog-mask" style="
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 2000;
-            ">
-                <div class="dialog-content" style="
-                    background: white;
-                    border-radius: 8px;
-                    padding: 24px;
-                    max-width: 400px;
-                    width: 90%;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-                ">
-                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2329;">确认提交测评</h3>
-                    <p style="margin: 0 0 24px 0; color: #646a73; line-height: 1.5;">
-                        确定要提交准则 "${criteria.name || ''}" 的测评任务吗？
-                    </p>
-                    <div class="dialog-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
-                        <button type="button" class="cancel-btn" style="
-                            padding: 8px 16px;
-                            border: 1px solid #c9cdd4;
-                            border-radius: 4px;
-                            background: white;
-                            color: #1f2329;
-                            cursor: pointer;
-                            font-size: 14px;
-                        ">取消</button>
-                        <button type="button" class="confirm-btn" style="
-                            padding: 8px 16px;
-                            border: 1px solid #3b82f6;
-                            border-radius: 4px;
-                            background: #3b82f6;
-                            color: white;
-                            cursor: pointer;
-                            font-size: 14px;
-                        ">确认提交</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        const dialog = document.createElement('div');
-        dialog.innerHTML = dialogHtml;
-        document.body.appendChild(dialog);
-
-        const dialogMask = dialog.querySelector('.dialog-mask');
-        const dialogContent = dialog.querySelector('.dialog-content');
-        const cancelBtn = dialog.querySelector('.cancel-btn');
-        const confirmBtn = dialog.querySelector('.confirm-btn');
-
-        if (dialogContent) {
-            dialogContent.addEventListener('click', (e) => e.stopPropagation());
-        }
-
-        const closeDialog = () => {
-            try {
-                if (dialog && dialog.parentNode) {
-                    dialog.parentNode.removeChild(dialog);
-                }
-            } catch (e) {
-                console.error('关闭弹窗失败:', e);
-            }
-        };
-
-        if (dialogMask) {
-            dialogMask.addEventListener('click', closeDialog);
-        }
-
-        cancelBtn.addEventListener('click', closeDialog);
-
-        confirmBtn.addEventListener('click', async () => {
-            if (confirmBtn.disabled) return;
-            confirmBtn.disabled = true;
-            confirmBtn.textContent = '提交中...';
-            confirmBtn.style.opacity = '0.6';
-            confirmBtn.style.cursor = 'not-allowed';
-            try {
-                await this.submitTasks(criteria);
-            } catch (error) {
-                console.error('提交测评失败:', error);
-            } finally {
-                closeDialog();
-            }
-        });
-    }
-
-    navigateToQualityAssessment(criteria) {
-        if (typeof window.showComponent === 'function') {
-            window.showComponent('qualityAssessment', criteria ? criteria.name : null);
-        }
-    }
 
     async loadCriteriaList() {
         try {
@@ -505,47 +284,7 @@ class EvaluationCriteria extends HTMLElement {
         }
     }
 
-    async loadJobsFromAPI() {
-        if (window.AppConfig && typeof window.AppConfig.post === 'function') {
-            try {
-                const result = await window.AppConfig.post('transformCompare', 'query', { pageNum: 1, pageSize: 100, name: null });
-                if (result.success && result.data) {
-                    this.jobs = result.data.map(job => ({
-                        id: job.createTime || job.id || job.name,
-                        name: job.name,
-                        exportFile: job.exportFile || ''
-                    }));
-                } else {
-                    this.jobs = [];
-                }
-            } catch (error) {
-                console.error('加载Transform编排失败:', error);
-                this.jobs = [];
-            }
-        } else {
-            this.jobs = [];
-        }
 
-        this.populateJobSelects();
-    }
-
-    populateJobSelects() {
-        const selects = this.shadowRoot.querySelectorAll('.ec-job-select');
-        selects.forEach(select => {
-            const currentValue = select.value;
-            select.innerHTML = '<option value="">请选择编排</option>';
-            this.jobs.forEach(job => {
-                const option = document.createElement('option');
-                option.value = job.id;
-                option.textContent = job.name || job.id;
-                option.title = `jobId: ${job.id}${job.exportFile ? ' | 导出: ' + job.exportFile : ''}`;
-                select.appendChild(option);
-            });
-            if (currentValue) {
-                select.value = currentValue;
-            }
-        });
-    }
 
     getFormCriteria() {
         const name = this.shadowRoot.querySelector('#ecName')?.value.trim() || '';
@@ -554,15 +293,7 @@ class EvaluationCriteria extends HTMLElement {
 
         Object.keys(this.defaultWeights).forEach(dim => {
             const weightInput = this.shadowRoot.querySelector(`.ec-weight-input[data-dim="${dim}"]`);
-            const jobSelect = this.shadowRoot.querySelector(`.ec-job-select[data-dim="${dim}"]`);
-            const jobId = jobSelect ? jobSelect.value : '';
-            const job = this.jobs.find(j => String(j.id) === String(jobId));
-            form[dim] = {
-                weight: weightInput ? parseFloat(weightInput.value) : this.defaultWeights[dim],
-                transformId: jobId,
-                name: job && job.name ? job.name : '',
-                exportFile: job && job.exportFile ? job.exportFile : ''
-            };
+            form[dim] = { weight: weightInput ? parseFloat(weightInput.value) : this.defaultWeights[dim] };
         });
 
         return form;
@@ -578,15 +309,6 @@ class EvaluationCriteria extends HTMLElement {
         }
 
         const dims = Object.keys(this.defaultWeights);
-        for (const dim of dims) {
-            if (!form[dim] || !form[dim].transformId) {
-                if (window.CommonUtils && window.CommonUtils.showToast) {
-                    window.CommonUtils.showToast(`请选择${this.getDimLabel(dim)}的Transform编排`, 'warning');
-                }
-                return;
-            }
-        }
-
         const sum = dims.reduce((a, dim) => a + (isNaN(form[dim].weight) ? 0 : form[dim].weight), 0);
         if (Math.abs(sum - 1) > 0.001) {
             if (window.CommonUtils && window.CommonUtils.showToast) {
@@ -625,65 +347,9 @@ class EvaluationCriteria extends HTMLElement {
         return result.data;
     }
 
-    async submitTasks(criteria) {
-        if (!criteria) return;
-        const target = criteria;
-        const dims = Object.keys(this.defaultWeights);
-        const jobIds = {};
-        for (const dim of dims) {
-            const transformId = target.jobs && target.jobs[dim];
-            if (!transformId) continue;
-            try {
-                const url = window.AppConfig.getApiUrl('transformJob', 'commit').replace('{createTime}', encodeURIComponent(transformId));
-                const headers = window.AppConfig.getAuthHeaders();
-                const response = await fetch(url, { method: 'PUT', headers });
-                const result = await response.json();
-                if (result.success || result.code === 200) {
-                    const jobData = result.data;
-                    jobIds[dim] = jobData ? (jobData.jobId || '') : '';
-                } else {
-                    console.warn(`${this.getDimLabel(dim)}提交返回:`, result.message);
-                }
-            } catch (error) {
-                console.warn(`${this.getDimLabel(dim)}提交失败:`, error);
-            }
-        }
-
-        const buildDim = (dim) => ({
-            weight: target.weights && target.weights[dim],
-            transformId: target.jobs && target.jobs[dim],
-            jobId: jobIds[dim] || '',
-            exportFile: target.exportFiles && target.exportFiles[dim],
-            name: target.names && target.names[dim],
-            score: null
-        });
-
-        try {
-            const record = {
-                criteriaId: target.id || target.createTime || null,
-                criteriaName: target.name,
-                description: target.description || '',
-                qcom: buildDim('qcom'),
-                qcon: buildDim('qcon'),
-                qtim: buildDim('qtim'),
-                qval: buildDim('qval'),
-                dqi: '',
-                passed: ''
-            };
-            const result = await window.AppConfig.post('qualityAssessment', 'save', record);
-            if (window.CommonUtils && window.CommonUtils.showToast) {
-                window.CommonUtils.showToast('测评已提交', 'success');
-            }
-        } catch (error) {
-            console.error('生成质量测评记录失败:', error);
-            if (window.CommonUtils && window.CommonUtils.showToast) {
-                window.CommonUtils.showToast('任务已提交但生成测评记录失败', 'warning');
-            }
-        }
-    }
 
     getDimLabel(dim) {
-        const labels = { qcom: '完整性', qcon: '一致性', qtim: '时效性', qval: '有效性' };
+        const labels = { qcom: '完整性', qacc: '准确性', qcon: '一致性', qtim: '时效性', qconf: '规范性' };
         return labels[dim] || dim;
     }
 

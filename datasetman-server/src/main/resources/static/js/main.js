@@ -495,6 +495,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('质量测评菜单被点击');
                         showComponent('qualityAssessment');
                         break;
+                    case 'showSceneAnalysis':
+                        console.log('管理分析菜单被点击');
+                        showComponent('sceneAnalysis');
+                        break;
                     case 'showVisualAnalysis':
                         console.log('数值与曲线分析菜单被点击');
                         // 先清空工作区

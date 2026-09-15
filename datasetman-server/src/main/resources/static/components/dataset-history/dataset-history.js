@@ -101,7 +101,7 @@ class DatasetHistory extends HTMLElement {
             </style>
             <div class="page">
                 <div class="card">
-                    <div class="header"><h3>数据集档案</h3><div class="actions"><button class="primary" id="newVersion">创建新版本</button><button class="primary" id="editVersion" style="display:none;">编辑</button><button class="danger" id="deleteVersion">禁用当前版本</button></div></div>
+                    <div class="header"><h3>数据集档案</h3><div class="actions"><button class="primary" id="newVersion">创建新版本</button><button class="primary" id="qualityAssessBtn">质量评估</button><button class="primary" id="editVersion" style="display:none;">编辑</button><button class="danger" id="deleteVersion">禁用当前版本</button></div></div>
                     <div class="info">
                         <div class="item"><label>数据集名称</label><span id="name">-</span></div>
                         <div class="item"><label>版本号</label><span id="versionNo">-</span></div>
@@ -157,6 +157,18 @@ class DatasetHistory extends HTMLElement {
         this.shadowRoot.querySelector('#resetView').addEventListener('click', () => this.resetView());
         this.shadowRoot.querySelector('#fitView').addEventListener('click', () => this.fitAllNodes(false));
         this.shadowRoot.querySelector('#sideLineageToggle').addEventListener('change', () => this.loadGraph());
+
+        this.shadowRoot.querySelector('#qualityAssessBtn').addEventListener('click', () => {
+            const vid = this.versionIdOf(this.version);
+            if (vid == null) {
+                if (window.CommonUtils?.showToast) window.CommonUtils.showToast('请先选择数据集版本', 'error');
+                return;
+            }
+            // 引导到质量测评页：预填当前版本，绑定评价准则执行自动检测或查看报告
+            if (typeof window.showComponent === 'function') {
+                window.showComponent('qualityAssessment', { versionId: vid, datasetName: this.version?.datasetName });
+            }
+        });
         this.shadowRoot.querySelector('#newVersion').addEventListener('click', () => {
             this.dispatchEvent(new CustomEvent('edit-dataset', { bubbles:true, composed:true, detail:this.version }));
         });

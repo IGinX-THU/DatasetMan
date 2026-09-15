@@ -149,6 +149,10 @@ const MENU_ID_MAP = {
         text: '禁用数据集',
         action: 'handleToggleDataset'
     },
+    'menu-scene-analysis': {
+        text: '管理分析',
+        action: 'showSceneAnalysis'
+    },
     'menu-job-orchestration': {
         text: '编排Transform作业',
         action: 'showTransformOrchestrate'

@@ -151,7 +151,7 @@ public class QualityReportService {
         switch (dim) {
             case qcom: base = "补充缺失字段与空值记录，复核数据接入链路的断点重传策略"; break;
             case qacc: base = "清洗越界/矛盾取值，复核采集端量程与单位换算配置"; break;
-            case qcon: base = "去重并统一跨源字段口径与编码规范，重新执行一致性校对作业"; break;
+            case qcon: base = "对重复记录去重，并统一跨源字段的口径与编码规范"; break;
             case qtim: base = "缩短数据同步周期，检查采集链路延迟与积压"; break;
             case qconf: base = "按格式规范（日期/编号模式/编码）清洗数据，完善入库校验规则"; break;
             default: base = "整改后复评";

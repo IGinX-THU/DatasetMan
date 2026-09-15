@@ -83,8 +83,9 @@ public class QualityAssessmentController {
     @RequirePermission(Permission.CREATE)
     @OperationLog(value = "质量自动检测", type = OperationLog.OperationType.CREATE)
     public Result<QualityAssessmentEntity> autoDetect(@RequestParam("versionId") Long versionId,
-                                                       @RequestParam(value = "sampleSize", required = false) Integer sampleSize) {
-        return Result.success("检测完成", qualityDetectionService.autoDetect(versionId, sampleSize));
+                                                       @RequestParam(value = "sampleSize", required = false) Integer sampleSize,
+                                                       @RequestParam(value = "criteriaId", required = false) Long criteriaId) {
+        return Result.success("检测完成", qualityDetectionService.autoDetect(versionId, sampleSize, criteriaId));
     }
 
     @ApiOperation("获取自动生成的质量评估报告（已存报告为空时即时生成）")

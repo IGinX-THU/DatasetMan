@@ -62,7 +62,7 @@ class SceneAnalysis extends HTMLElement {
                 this.querySelectorAll('.sa-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 const name = tab.dataset.tab;
-                ['Category', 'Relation', 'Impact', 'Report'].forEach(v => {
+                ['Category', 'Relation', 'Impact'].forEach(v => {
                     const el = this.querySelector('#sa' + v + 'View');
                     if (el) el.style.display = (v.toLowerCase() === name) ? 'block' : 'none';
                 });
@@ -73,31 +73,8 @@ class SceneAnalysis extends HTMLElement {
         this.querySelector('#saRelationApply')?.addEventListener('click', () => this.loadRelations());
         this.querySelector('#saImpactApply')?.addEventListener('click', () => this.loadImpact());
         this.querySelector('#saExportPackage')?.addEventListener('click', () => this.exportPackage());
-        this.querySelector('#saReportApply')?.addEventListener('click', () => this.loadReport());
-        this.querySelector('#saReportPrint')?.addEventListener('click', () => this.printReport());
-        this.querySelector('#saAutoDetect')?.addEventListener('click', () => this.autoDetect());
     }
 
-    async autoDetect() {
-        const container = this.querySelector('#saReportResult');
-        const versionId = this.querySelector('#saDetectVersionId')?.value.trim();
-        if (!versionId) {
-            container.innerHTML = '<div class="qa-empty">请输入数据集版本ID。</div>';
-            return;
-        }
-        container.innerHTML = '<div class="qa-empty">正在对数据集实际数据抽样检测...</div>';
-        const sampleSize = this.querySelector('#saSampleSize')?.value.trim() || '200';
-        const entity = await this.apiPost('/api/quality-assessment/auto-detect?versionId=' + encodeURIComponent(versionId)
-            + '&sampleSize=' + encodeURIComponent(sampleSize));
-        if (!entity) {
-            container.innerHTML = '<div class="qa-empty">自动检测失败：版本不存在或无权限。</div>';
-            return;
-        }
-        // 检测完成后立即展示自动生成的报告
-        const idInput = this.querySelector('#saReportId');
-        if (idInput) idInput.value = entity.id || entity.createTime;
-        await this.loadReport();
-    }
 
     async loadCategories() {
         const tbody = this.querySelector('#saCategoryTableBody');
@@ -191,66 +168,7 @@ class SceneAnalysis extends HTMLElement {
         }
     }
 
-    async loadReport() {
-        const container = this.querySelector('#saReportResult');
-        const id = this.querySelector('#saReportId')?.value.trim();
-        if (!id) {
-            container.innerHTML = '<div class="qa-empty">请输入测评记录ID。</div>';
-            return;
-        }
-        const raw = await this.apiGet('/api/quality-assessment/report?id=' + encodeURIComponent(id));
-        if (!raw) {
-            container.innerHTML = '<div class="qa-empty">未找到测评记录或报告。</div>';
-            return;
-        }
-        let report;
-        try { report = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) { report = null; }
-        if (!report) {
-            container.innerHTML = '<div class="qa-empty">报告解析失败。</div>';
-            return;
-        }
-        this._report = report;
-        const dims = (report.dimensions || []).map(d => `
-            <tr>
-                <td>${d.name}</td><td>${d.score}</td><td>${Number(d.weight * 100).toFixed(0)}%</td>
-                <td>${d.grade}</td>
-                <td style="max-width:260px;">${d.evidence || '-'}</td>
-                <td style="max-width:260px;">${d.suggestion || '-'}</td>
-            </tr>`).join('');
-        container.innerHTML = `
-            <div class="sa-report-card" id="saReportCard">
-                <h3>${report.title || '数据集质量评估报告'}</h3>
-                <div class="sa-report-meta">
-                    准则：${report.criteriaName || '-'}　|　测评时间：${report.createTime ? new Date(report.createTime).toLocaleString() : '-'}　|　评定人：${report.operator || '-'}　|　测评维度数：${report.dimensionCount || (report.dimensions || []).length}
-                </div>
-                <div class="sa-dqi ${report.passed ? 'sa-dqi-pass' : 'sa-dqi-fail'}">
-                    综合得分：<b>${report.score ?? report.dqi}</b>（权重加权，默认各20%）　质量等级：<b>${report.grade || '-'}</b>　${report.passed ? '✅ 达标' : '❌ 未达标'}
-                </div>
-                <p class="sa-conclusion">${report.conclusion || ''}</p>
-                <table class="data-table">
-                    <thead><tr><th>维度</th><th>得分</th><th>权重</th><th>评级</th><th>评分依据</th><th>改进建议</th></tr></thead>
-                    <tbody>${dims}</tbody>
-                </table>
-                <div class="sa-report-section"><b>问题明细</b><ul>${(report.issues || []).map(i => `<li>${i}</li>`).join('')}</ul></div>
-                <div class="sa-report-section"><b>整改建议</b><ul>${(report.recommendations || []).map(i => `<li>${i}</li>`).join('')}</ul></div>
-            </div>`;
-    }
 
-    printReport() {
-        const card = this.querySelector('#saReportCard');
-        if (!card) {
-            alert('请先查看一份报告再打印。');
-            return;
-        }
-        const win = window.open('', '_blank');
-        win.document.write('<html><head><title>质量评估报告</title>' +
-            '<style>body{font-family:"Microsoft YaHei",sans-serif;padding:24px;color:#333}' +
-            'table{border-collapse:collapse;width:100%;margin:12px 0}th,td{border:1px solid #ccc;padding:6px 10px;font-size:13px}' +
-            'h3{border-bottom:2px solid #1890ff;padding-bottom:8px}ul{padding-left:20px}</style></head><body>'
-            + card.innerHTML + '</body></html>');
-        win.document.close();
-        win.print();
-    }
 }
 
 customElements.define('scene-analysis', SceneAnalysis);

@@ -63,4 +63,12 @@ public class QualityAssessmentEntity {
     /** 自动检测明细（JSON）：抽样规模、空值/重复/越界计数、数据年龄等 */
     @Field(name = "detailJson")
     private String detailJson;
+
+    /** 被检测的数据集名称（自动检测记录） */
+    @Field(name = "datasetName")
+    private String datasetName;
+
+    /** 被检测的数据集版本号（自动检测记录） */
+    @Field(name = "versionNo")
+    private String versionNo;
 }

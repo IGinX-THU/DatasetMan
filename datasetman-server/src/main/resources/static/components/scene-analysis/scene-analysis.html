@@ -3,7 +3,6 @@
         <button class="sa-tab active" data-tab="category">数据类型统计</button>
         <button class="sa-tab" data-tab="relation">关系提取</button>
         <button class="sa-tab" data-tab="impact">影响范围分析</button>
-        <button class="sa-tab" data-tab="report">质量评估报告</button>
     </div>
 
     <!-- 1. 数据类型统计 -->
@@ -75,33 +74,3 @@
         <div id="saImpactResult"></div>
     </div>
 
-    <!-- 4. 质量评估报告 -->
-    <div id="saReportView" class="sa-view" style="display:none;">
-        <div class="parsing-filter-card">
-            <div class="filter-header">质量自动检测与评估报告（检测、算分、报告全程自动，无需人工录入）</div>
-            <div class="filter-rows">
-                <div class="filter-row">
-                    <div class="filter-field">
-                        <span class="filter-label">数据集版本ID</span>
-                        <input class="filter-input" type="text" placeholder="右侧数据集树中版本的ID" id="saDetectVersionId" />
-                    </div>
-                    <div class="filter-field">
-                        <span class="filter-label">抽样行数</span>
-                        <input class="filter-input" type="number" min="1" max="50000" value="200" id="saSampleSize" />
-                    </div>
-                    <div class="filter-field">
-                        <span class="filter-label">历史测评记录ID</span>
-                        <input class="filter-input" type="text" placeholder="查看已生成的报告（可选）" id="saReportId" />
-                    </div>
-                </div>
-            </div>
-            <div class="filter-actions">
-                <div class="filter-spacer"></div>
-                <button class="filter-btn solid" type="button" id="saAutoDetect">自动检测并生成报告</button>
-                <button class="filter-btn outline" type="button" id="saReportApply">查看历史报告</button>
-                <button class="filter-btn outline" type="button" id="saReportPrint">打印/导出PDF</button>
-            </div>
-        </div>
-        <div id="saReportResult" class="sa-report-area"></div>
-    </div>
-</div>

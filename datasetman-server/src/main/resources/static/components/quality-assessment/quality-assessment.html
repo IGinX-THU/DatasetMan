@@ -1,20 +1,39 @@
 <div class="parsing-rules">
     <!-- 查询任务列表 -->
     <div id="qaListView" class="qa-view">
+
+        <!-- 自动检测操作 -->
         <div class="parsing-filter-card">
-            <div class="filter-header">筛选</div>
+            <div class="filter-header">自动质量检测（绑定数据集版本与评价准则，5维度得分与报告自动生成）</div>
             <div class="filter-rows">
-                <div class="filter-row">
-                    <div class="filter-field">
-                        <span class="filter-label">准则名称</span>
-                        <input class="filter-input" type="text" placeholder="请输入准则名称" id="qaFilterName" />
+                <div class="filter-row" style="display:grid;grid-template-columns:1.4fr 1.2fr 1.2fr 0.8fr;gap:12px;align-items:end;">
+                    <div class="filter-field" style="min-width:0;">
+                        <span class="filter-label">数据集</span>
+                        <select class="filter-input" id="qaDatasetSelect" style="width:100%;">
+                            <option value="">请选择数据集</option>
+                        </select>
+                    </div>
+                    <div class="filter-field" style="min-width:0;">
+                        <span class="filter-label">版本</span>
+                        <select class="filter-input" id="qaVersionSelect" style="width:100%;" disabled>
+                            <option value="">请先选择数据集</option>
+                        </select>
+                    </div>
+                    <div class="filter-field" style="min-width:0;">
+                        <span class="filter-label">评价准则</span>
+                        <select class="filter-input" id="qaCriteriaSelect" style="width:100%;">
+                            <option value="">默认权重（各20%）</option>
+                        </select>
+                    </div>
+                    <div class="filter-field" style="min-width:0;">
+                        <span class="filter-label">抽样行数</span>
+                        <input class="filter-input" type="number" min="1" max="50000" value="50000" id="qaSampleSize" style="width:100%;">
                     </div>
                 </div>
             </div>
             <div class="filter-actions">
                 <div class="filter-spacer"></div>
-                <button class="filter-btn outline" type="button" id="qaResetFilters">重置</button>
-                <button class="filter-btn solid" type="button" id="qaApplyFilters">查询</button>
+                <button class="filter-btn solid" type="button" id="qaAutoDetect">自动检测并生成报告</button>
             </div>
         </div>
 
@@ -23,20 +42,37 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>准则名称</th>
-                            <th>提交时间</th>
-                            <th>完整性</th>
-                            <th>准确性</th>
-                            <th>一致性</th>
-                            <th>时效性</th>
-                            <th>规范性</th>
-                            <th>DQI</th>
-                            <th>操作</th>
+                            <th>数据集</th>
+                            <th>版本</th>
+                            <th>评价准则</th>
+                            <th rowspan="2">抽样行数</th>
+                            <th rowspan="2">提交时间</th>
+                            <th rowspan="2">完整性</th>
+                            <th rowspan="2">准确性</th>
+                            <th rowspan="2">一致性</th>
+                            <th rowspan="2">时效性</th>
+                            <th rowspan="2">规范性</th>
+                            <th rowspan="2">DQI</th>
+                            <th rowspan="2">操作</th>
+                        </tr>
+                        <tr class="qa-header-filter">
+                            <th>
+                                <input type="text" placeholder="筛选数据集" id="qaFilterDataset" qa-auto-filter
+                                       style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;box-sizing:border-box;font-weight:normal;" />
+                            </th>
+                            <th>
+                                <input type="text" placeholder="筛选版本" id="qaFilterVersion" qa-auto-filter
+                                       style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;box-sizing:border-box;font-weight:normal;" />
+                            </th>
+                            <th>
+                                <input type="text" placeholder="筛选准则名称" id="qaFilterName" qa-auto-filter
+                                       style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;box-sizing:border-box;font-weight:normal;" />
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="qaTableBody">
                         <tr>
-                            <td colspan="8" class="qa-empty">暂无测评记录，请在"评价准则"列表点击"提交任务"。</td>
+                            <td colspan="12" class="qa-empty">暂无测评记录，请在上方绑定数据集版本执行自动检测。</td>
                         </tr>
                     </tbody>
                 </table>
@@ -45,17 +81,22 @@
         </div>
     </div>
 
-    <!-- 综合质量得分详情 -->
+    <!-- 质量评估报告详情 -->
     <div id="qaDetailView" class="qa-view" style="display: none;">
             <input type="hidden" id="qaRecordId">
+            <div class="qa-form-row">
+                <label>数据集</label>
+                <div id="qaDatasetName" class="qa-readonly-value">-</div>
+            </div>
+            <div class="qa-form-row">
+                <label>版本</label>
+                <div id="qaVersionNo" class="qa-readonly-value">-</div>
+            </div>
             <div class="qa-form-row">
                 <label>评价准则</label>
                 <div id="qaCriteriaName" class="qa-readonly-value">-</div>
             </div>
             <div class="qa-summary" id="qaCriteriaDescription"></div>
-
-            <div class="qa-section-title">四维度 Transform 任务</div>
-            <div class="qa-dim-tasks" id="qaDimensionTasks"></div>
 
             <div class="qa-dqi-card" id="qaDqiCard" style="display: none;">
                 <div>
@@ -65,10 +106,10 @@
                 <div class="qa-status" id="qaStatus">-</div>
             </div>
 
+            <div id="qaReportArea" style="margin-top:16px;"></div>
             <div class="qa-form-actions">
                 <button type="button" class="qa-back-btn" id="qaBackBtn">返回列表</button>
-                <button type="button" class="qa-query-btn" id="qaQueryBtn">查询任务</button>
-                <span style="color:#999;font-size:12px;align-self:center;">维度得分由系统自动检测生成，请使用 功能区【场景分析 → 质量评估报告】执行自动检测</span>
+                <button type="button" class="qa-query-btn" id="qaPrintReport" style="display:none;">打印/导出PDF</button>
             </div>
         </div>
 </div>

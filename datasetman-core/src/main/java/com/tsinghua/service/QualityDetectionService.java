@@ -50,11 +50,24 @@ public class QualityDetectionService {
     @Autowired
     private QualityReportService qualityReportService;
 
-    public QualityAssessmentEntity autoDetect(Long versionId, Integer sampleSize) {
+    @Autowired
+    private com.tsinghua.service.EvaluationCriteriaService evaluationCriteriaService;
+
+    /**
+     * 自动检测。
+     * @param versionId 数据集版本
+     * @param sampleSize 抽样行数
+     * @param criteriaId 可选，评价准则ID：提供时使用准则配置的权重/作业绑定，缺省各维度20%
+     */
+    public QualityAssessmentEntity autoDetect(Long versionId, Integer sampleSize, Long criteriaId) {
         int size = (sampleSize == null || sampleSize < 1) ? SAMPLE_SIZE : Math.min(sampleSize, 50000);
         DatasetVersionEntity version = datasetVersionService.queryVersion(versionId);
         if (version == null) {
             throw new RuntimeException("版本不存在: " + versionId);
+        }
+        com.tsinghua.entity.EvaluationCriteriaEntity criteria = null;
+        if (criteriaId != null) {
+            criteria = evaluationCriteriaService.queryById(criteriaId);
         }
         List<Map<String, Object>> sample = sampleData(version.getStoragePath(), size);
         DetectionResult result = detect(sample, version);
@@ -62,8 +75,11 @@ public class QualityDetectionService {
         long timestamp = System.currentTimeMillis();
         QualityAssessmentEntity entity = new QualityAssessmentEntity();
         entity.setId(timestamp);
-        entity.setCriteriaId(version.getId());
-        entity.setCriteriaName("自动检测-" + version.getDatasetName());
+        // 关联评价准则（权重、作业绑定取自准则），否则记录为独立自动检测
+        entity.setCriteriaId(criteria != null ? criteriaId : version.getId());
+        entity.setCriteriaName(criteria != null
+                ? criteria.getName()
+                : "自动检测-" + version.getDatasetName());
         entity.setDescription(String.format("对数据集 %s %s 的5维度自动质量检测（抽样 %d 行）",
                 version.getDatasetName(), version.getVersionNo(), result.sampleSize));
 
@@ -73,14 +89,21 @@ public class QualityDetectionService {
         JSONObject jobIds = new JSONObject();
         JSONObject exportFiles = new JSONObject();
         JSONObject names = new JSONObject();
+        JSONObject criteriaWeights = parseJson(criteria != null ? criteria.getWeights() : null);
+        JSONObject criteriaJobs = parseJson(criteria != null ? criteria.getJobs() : null);
+        JSONObject criteriaExportFiles = parseJson(criteria != null ? criteria.getExportFiles() : null);
+        JSONObject criteriaNames = parseJson(criteria != null ? criteria.getNames() : null);
         for (DataQualityDimensionEnum dim : DataQualityDimensionEnum.values()) {
             String code = dim.name();
-            weights.put(code, DEFAULT_WEIGHT);
+            Double w = toDouble(criteriaWeights.get(code));
+            weights.put(code, w != null && w > 0 ? w : DEFAULT_WEIGHT);
             scores.put(code, result.scores.getOrDefault(code, 0.0));
             names.put(code, dim.getLabel());
-            jobs.put(code, "auto-detect");
+            Object boundJob = criteriaJobs.get(code);
+            jobs.put(code, boundJob != null ? boundJob : "auto-detect");
             jobIds.put(code, String.valueOf(timestamp));
-            exportFiles.put(code, "");
+            Object exportFile = criteriaExportFiles.get(code);
+            exportFiles.put(code, exportFile != null ? exportFile : "");
         }
         entity.setWeights(weights.toJSONString());
         entity.setScores(scores.toJSONString());
@@ -88,13 +111,24 @@ public class QualityDetectionService {
         entity.setJobIds(jobIds.toJSONString());
         entity.setExportFiles(exportFiles.toJSONString());
         entity.setNames(names.toJSONString());
-        entity.setDqi(String.valueOf(result.composite));
+        // 综合得分按准则权重加权（默认各20%）
+        double weighted = 0.0, weightSum = 0.0;
+        for (DataQualityDimensionEnum dim : DataQualityDimensionEnum.values()) {
+            Double w = toDouble(weights.get(dim.name()));
+            if (w != null && w > 0) {
+                weighted += result.scores.getOrDefault(dim.name(), 0.0) * w;
+                weightSum += w;
+            }
+        }
+        entity.setDqi(String.valueOf(weightSum > 0 ? round(weighted / weightSum) : result.composite));
         entity.setPassed(result.composite >= QualityReportService.PASS_THRESHOLD ? "true" : "false");
         entity.setDetailJson(result.details.toJSONString());
         entity.setCreateTime(timestamp);
         entity.setOperator(OperationLogAspect.getCurrentUser());
         entity.setClientIp(OperationLogAspect.getClientIp());
         entity.setOwner(AuthUtil.getCurrentUsername());
+        entity.setDatasetName(version.getDatasetName());
+        entity.setVersionNo(version.getVersionNo());
         entity.setReportJson(qualityReportService.generateReport(entity));
 
         iginxClient.getWriteClient().writeMeasurement(entity);
@@ -164,7 +198,8 @@ public class QualityDetectionService {
         long reference = newestTime > 0 ? newestTime
                 : (version.getCreateTime() != null ? version.getCreateTime() : 0);
         double ageDays = reference > 0 ? (System.currentTimeMillis() - reference) / 86400000.0 : 0;
-        double qtim = Math.max(0.0, 100.0 - ageDays * 2.0);
+        // 钳制到[0,100]：数据时间在未来（如补录）时年龄为负，不得超出满分
+        double qtim = Math.min(100.0, Math.max(0.0, 100.0 - ageDays * 2.0));
         // 规范性：格式规范符合率
         double qconf = 100.0 * conformantCells / totalCells;
 
@@ -173,7 +208,7 @@ public class QualityDetectionService {
         r.scores.put("qcon", round(qcon));
         r.scores.put("qtim", round(qtim));
         r.scores.put("qconf", round(qconf));
-        r.composite = round((qcom + qacc + qcon + qtim + qconf) / 5.0);
+        r.composite = round((qcom + qacc + qcon + qtim + qconf) / 5.0); // 默认各20%；有准则权重时在组装处加权
 
         // 每维度的评分依据（报告直接引用）
         r.details.put("qcom", String.format("抽样%d行x%d列：空值单元格 %d/%d（非空率 %.2f%%）",
@@ -215,6 +250,10 @@ public class QualityDetectionService {
             }
         }
         if (lower.contains("count") || lower.contains("num") || lower.endsWith("_id") || lower.equals("id")) {
+            // 编号列允许 字母/数字/下划线/连字符（如 sample_id: fault_diagnosis-000123）；count/num 列仍须纯数字
+            if (lower.endsWith("_id") || lower.equals("id")) {
+                return s.matches("[A-Za-z0-9_\\-]+");
+            }
             return s.matches("\\d+");
         }
         // 数值型的物理量（温度/压力/转速/推力等）不应为负
@@ -273,5 +312,24 @@ public class QualityDetectionService {
 
     private static double round(double d) {
         return Math.round(d * 10) / 10.0;
+    }
+
+    private static JSONObject parseJson(String json) {
+        if (json == null || json.isEmpty()) return new JSONObject();
+        try {
+            JSONObject obj = JSONObject.parseObject(json);
+            return obj != null ? obj : new JSONObject();
+        } catch (Exception e) {
+            return new JSONObject();
+        }
+    }
+
+    private static Double toDouble(Object o) {
+        if (o == null) return null;
+        try {
+            return Double.parseDouble(o.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

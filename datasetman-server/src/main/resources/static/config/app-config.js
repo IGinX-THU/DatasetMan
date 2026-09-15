@@ -201,7 +201,9 @@ window.AppConfig = {
             query: '/api/quality-assessment/query',
             count: '/api/quality-assessment/count',
             detail: '/api/quality-assessment/detail',
-            delete: '/api/quality-assessment/delete'
+            delete: '/api/quality-assessment/delete',
+            autoDetect: '/api/quality-assessment/auto-detect',
+            report: '/api/quality-assessment/report'
         }
     },
     

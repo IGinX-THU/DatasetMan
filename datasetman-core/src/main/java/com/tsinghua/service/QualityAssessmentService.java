@@ -101,6 +101,12 @@ public class QualityAssessmentService {
             if (request.getCriteriaName() != null && !request.getCriteriaName().trim().isEmpty()) {
                 sql.append(" AND criteriaName LIKE '^.*").append(request.getCriteriaName().trim()).append(".*'");
             }
+            if (request.getDatasetName() != null && !request.getDatasetName().trim().isEmpty()) {
+                sql.append(" AND datasetName LIKE '^.*").append(request.getDatasetName().trim()).append(".*'");
+            }
+            if (request.getVersionNo() != null && !request.getVersionNo().trim().isEmpty()) {
+                sql.append(" AND versionNo LIKE '^.*").append(request.getVersionNo().trim()).append(".*'");
+            }
 
             sql.append(" ORDER BY createTime DESC");
             sql.append(" LIMIT ").append(request.getPageSize());
@@ -134,6 +140,12 @@ public class QualityAssessmentService {
             }
             if (request.getCriteriaName() != null && !request.getCriteriaName().trim().isEmpty()) {
                 sql.append(" AND criteriaName LIKE '%").append(request.getCriteriaName().trim()).append("%'");
+            }
+            if (request.getDatasetName() != null && !request.getDatasetName().trim().isEmpty()) {
+                sql.append(" AND datasetName LIKE '%").append(request.getDatasetName().trim()).append("%'");
+            }
+            if (request.getVersionNo() != null && !request.getVersionNo().trim().isEmpty()) {
+                sql.append(" AND versionNo LIKE '%").append(request.getVersionNo().trim()).append("%'");
             }
             sql.append(";");
 
