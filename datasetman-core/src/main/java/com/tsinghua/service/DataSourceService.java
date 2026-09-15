@@ -13,9 +13,11 @@ import com.tsinghua.dto.ColumnDto;
 import com.tsinghua.dto.StorageEngineInfoDto;
 import com.tsinghua.dto.request.BaseStorageEngineRequest;
 import com.tsinghua.entity.DataArchiveEntity;
+import com.tsinghua.entity.DatasetVersionEntity;
 import com.tsinghua.enums.SchemaPrefix;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -39,6 +41,10 @@ public class DataSourceService {
 
     @Autowired
     private DataArchiveService dataArchiveService;
+
+    @Autowired
+    @Lazy
+    private DatasetVersionService datasetVersionService;
 
     /**
      * 注册异构数据源
@@ -146,20 +152,45 @@ public class DataSourceService {
             });
         }
 
+        // 从数据集版本获取dataModality（用于datasets.路径）
+        List<DatasetVersionEntity> allVersions = datasetVersionService.listAllAccessibleVersions();
+        Map<String, String> versionModalityMap = new HashMap<>();
+        if (!CollectionUtils.isEmpty(allVersions)) {
+            allVersions.forEach(v -> {
+                if (StringUtils.hasText(v.getStoragePath()) && StringUtils.hasText(v.getDataModality())) {
+                    versionModalityMap.put(v.getStoragePath(), v.getDataModality());
+                }
+            });
+        }
+
         List<ColumnDto> tree = iginxSession.showColumns().stream()
                 .filter(column -> !column.getPath().contains("relational_system"))
                 .map(column -> {
                     ColumnDto dto = new ColumnDto();
                     dto.setPath(column.getPath());
                     dto.setDataType(column.getDataType().getValue());
+                    
+                    // 优先从数据档案获取dataModality
+                    String modality = null;
                     if (!archiveMap.isEmpty()) {
-                        String modality = archiveMap.entrySet().stream()
+                        modality = archiveMap.entrySet().stream()
                                 .filter(entry -> column.getPath().startsWith(entry.getKey()))
                                 .map(Map.Entry::getValue)
                                 .findFirst()
                                 .orElse(null);
-                        dto.setDataModality(modality);
                     }
+                    
+                    // 如果没有从档案获取到，且是datasets.路径，从数据集版本获取
+                    if (modality == null && column.getPath().startsWith("datasets.")) {
+                        // 查找匹配的版本（tree路径可能是datasets.xxx.v_yyy.field，需要匹配前缀）
+                        modality = versionModalityMap.entrySet().stream()
+                                .filter(entry -> column.getPath().startsWith(entry.getKey()))
+                                .map(Map.Entry::getValue)
+                                .findFirst()
+                                .orElse(null);
+                    }
+                    
+                    dto.setDataModality(modality);
                     return dto;
                 })
                 .collect(Collectors.toList());
