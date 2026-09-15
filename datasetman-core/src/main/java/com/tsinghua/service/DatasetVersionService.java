@@ -268,6 +268,8 @@ public class DatasetVersionService {
                     version.setCreateTime(v.getCreateTime());
                     version.setDeleted(v.isDeleted());
                     version.setJobState(v.getJobState());
+                    version.setDataModality(v.getDataModality());
+                    version.setRowCount(v.getRowCount());
                     dataset.getVersions().add(version);
                 });
         return new ArrayList<>(groups.values());

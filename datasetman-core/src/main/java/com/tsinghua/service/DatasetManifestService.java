@@ -55,7 +55,7 @@ public class DatasetManifestService {
         return manifest;
     }
 
-    private JSONObject buildManifest(DatasetVersionEntity version) {
+    public JSONObject buildManifest(DatasetVersionEntity version) {
         JSONObject m = new JSONObject(new LinkedHashMap<>());
         m.put("manifestVersion", "1.0");
         m.put("manifestType", "aero-engine-dataset-package");

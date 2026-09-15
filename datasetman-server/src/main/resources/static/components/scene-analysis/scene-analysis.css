@@ -1,34 +1,62 @@
-.scene-analysis .sa-tabs {
+.scene-analysis .sa-chips {
     display: flex;
-    gap: 4px;
-    margin-bottom: 12px;
-    border-bottom: 1px solid #e8e8e8;
-    padding-bottom: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
 }
 
-.scene-analysis .sa-tab {
-    border: none;
-    background: none;
-    padding: 8px 18px;
-    font-size: 14px;
+.scene-analysis .sa-chip {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 14px;
+    background: #f0f2f5;
+    color: #555;
+    font-size: 12px;
     cursor: pointer;
-    color: #666;
-    border-bottom: 2px solid transparent;
+    border: 1px solid transparent;
+    user-select: none;
 }
 
-.scene-analysis .sa-tab.active {
+.scene-analysis .sa-chip.active {
+    background: #e6f4ff;
     color: #1890ff;
-    border-bottom-color: #1890ff;
+    border-color: #91caff;
     font-weight: 600;
 }
 
+.scene-analysis .sa-chip-loading {
+    color: #999;
+    font-size: 12px;
+    padding: 5px;
+}
+
 .scene-analysis .sa-summary {
-    padding: 10px 14px;
+    padding: 8px 12px;
     color: #555;
     font-size: 13px;
     background: #f0f7ff;
     border-radius: 4px;
     margin-bottom: 10px;
+}
+
+.scene-analysis .sa-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.scene-analysis .sa-search,
+.scene-analysis .sa-select {
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.scene-analysis .sa-search {
+    width: 260px;
 }
 
 .scene-analysis .sa-relation-badge {
@@ -41,52 +69,71 @@
 
 .scene-analysis .sa-relation-derived_from { background: #1890ff; }
 .scene-analysis .sa-relation-same_source { background: #52c41a; }
-.scene-analysis .sa-relation-same_scene { background: #722ed1; }
+.scene-analysis .sa-relation-same_type { background: #722ed1; }
 
-.scene-analysis .sa-report-area {
-    max-width: 900px;
+/* 弹窗 */
+.scene-analysis .sa-modal-mask {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
 }
 
-.scene-analysis .sa-report-card {
+.scene-analysis .sa-modal {
     background: #fff;
-    border: 1px solid #e8e8e8;
-    border-radius: 6px;
-    padding: 24px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border-radius: 8px;
+    width: 82%;
+    max-width: 880px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
 }
 
-.scene-analysis .sa-report-card h3 {
-    margin: 0 0 12px;
-    font-size: 18px;
-    color: #1890ff;
-}
-
-.scene-analysis .sa-report-meta {
-    color: #888;
-    font-size: 12px;
-    margin-bottom: 12px;
-}
-
-.scene-analysis .sa-dqi {
+.scene-analysis .sa-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid #e8e8e8;
     font-size: 15px;
-    padding: 12px 16px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.scene-analysis .sa-modal-close {
+    border: none;
+    background: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #6b7280;
+    line-height: 1;
+}
+
+.scene-analysis .sa-modal-close:hover { color: #111; }
+
+.scene-analysis .sa-modal-body {
+    padding: 16px 18px;
+    overflow: auto;
+}
+
+.scene-analysis .sa-share-item {
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.7;
+}
+
+.scene-analysis .sa-share-item code {
+    background: #f5f5f5;
+    padding: 2px 6px;
     border-radius: 4px;
-    margin: 10px 0;
+    font-size: 12px;
 }
 
-.scene-analysis .sa-dqi-pass { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
-.scene-analysis .sa-dqi-fail { background: #fff2f0; color: #cf1322; border: 1px solid #ffa39e; }
-
-.scene-analysis .sa-conclusion {
-    color: #555;
-    font-size: 13px;
-}
-
-.scene-analysis .sa-report-section {
-    margin-top: 14px;
-    font-size: 13px;
-}
-
-.scene-analysis .sa-report-section ul {
-    margin: 6px 0 0;
+.scene-analysis .action-buttons .action-btn {
+    margin-right: 4px;
 }

@@ -58,6 +58,9 @@ public class DatasetController {
     @Autowired
     private DatasetManifestService datasetManifestService;
 
+    @Autowired
+    private com.tsinghua.service.DatasetExportService datasetExportService;
+
     @ApiOperation("测试SQL")
     @PostMapping("/testsql")
     @RequirePermission(Permission.UPDATE)
@@ -199,12 +202,21 @@ public class DatasetController {
         return Result.success(impactAnalysisService.analyze(versionId));
     }
 
-    @ApiOperation("标准化导出数据集清单（manifest.json）")
+    @ApiOperation("打包导出数据集：全部版本数据表CSV + manifest清单 + 质量评估报告PDF")
     @PostMapping("/export-package")
     @RequirePermission(Permission.READ)
-    @OperationLog(value = "导出标准化数据集包", type = OperationLog.OperationType.EXPORT)
-    public Result<JSONObject> exportPackage(@RequestParam("versionId") Long versionId) throws Exception {
-        return Result.success(datasetManifestService.exportManifest(versionId));
+    @OperationLog(value = "导出标准数据集包", type = OperationLog.OperationType.EXPORT)
+    public void exportPackage(@RequestParam("versionId") Long versionId,
+                              javax.servlet.http.HttpServletResponse response) throws Exception {
+        DatasetVersionEntity version = datasetVersionService.queryVersion(versionId);
+        byte[] zip = datasetExportService.exportPackage(versionId);
+        String fileName = datasetExportService.buildFileName(
+                version != null ? version.getDatasetName() : "dataset",
+                version != null ? version.getVersionNo() : null);
+        response.setContentType("application/zip");
+        response.setHeader("Content-Disposition", "attachment; filename*=UTF-8''"
+                + java.net.URLEncoder.encode(fileName, "UTF-8").replace("+", "%20"));
+        response.getOutputStream().write(zip);
     }
 
 }

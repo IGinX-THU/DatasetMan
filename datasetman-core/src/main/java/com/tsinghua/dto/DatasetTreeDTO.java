@@ -22,5 +22,8 @@ public class DatasetTreeDTO {
         private Long createTime;
         private boolean deleted;
         private Integer jobState;
+        /** 数据类型（与详情页数据类型下拉一致：relational/time-series/semi-structured/...） */
+        private String dataModality;
+        private Long rowCount;
     }
 }

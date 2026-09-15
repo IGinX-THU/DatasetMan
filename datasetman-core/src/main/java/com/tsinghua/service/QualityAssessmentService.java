@@ -185,6 +185,30 @@ public class QualityAssessmentService {
         }
     }
 
+    /** 查询某数据集最新一条测评记录（用于导出质量评估报告） */
+    public QualityAssessmentEntity queryLatestByDatasetName(String datasetName) {
+        try {
+            StringBuilder sql = new StringBuilder("SELECT * FROM relational_system.quality_assessment WHERE datasetName = '")
+                    .append(datasetName == null ? "" : datasetName.replace("'", "''")).append("'");
+            if (!AuthUtil.isAdmin()) {
+                sql.append(" AND owner = '").append(AuthUtil.getCurrentUsername()).append("'");
+            }
+            sql.append(" ORDER BY createTime DESC LIMIT 1;");
+            SessionExecuteSqlResult res = iginxSession.executeSql(sql.toString());
+            List<Map<String, Object>> records = ConvertUtil.getRecords(res);
+            if (records.isEmpty()) return null;
+            QualityAssessmentEntity entity = new QualityAssessmentEntity();
+            records.get(0).forEach((k, v) -> {
+                String fieldName = k.replace(DATA_PREFIX + ".", "");
+                ConvertUtil.setEntityField(entity, DATA_PREFIX, fieldName, v);
+            });
+            return entity;
+        } catch (Exception e) {
+            log.error("按数据集查询最新测评记录失败", e);
+            return null;
+        }
+    }
+
     public void deleteAssessment(Long id) {
         try {
             QualityAssessmentEntity entity = new QualityAssessmentEntity();
