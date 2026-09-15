@@ -325,10 +325,30 @@ class QualityAssessment extends HTMLElement {
         const nameEl = this.querySelector('#qaCriteriaName');
         const descEl = this.querySelector('#qaCriteriaDescription');
         if (nameEl) nameEl.textContent = record.criteriaName || '-';
-        if (descEl) descEl.textContent = record.description || '';
+        
+        // 从 detailJson 解析请求行数和实际抽样行数，动态拼描述（覆盖数据库里存的旧 description）
+        // 注意：detailJson 已在 parseEntity() 里被 JSON.parse 成对象了，这里直接用
+        let description = record.description || '';
+        const detail = record.detailJson || {};
+        const requestSize = detail.requestSize;
+        const actualSize = detail.sampleSize;
+        if (actualSize != null) {
+            const sampleInfo = requestSize != null
+                ? `请求 ${requestSize} 行，实际抽样 ${actualSize} 行`
+                : `抽样 ${actualSize} 行`;
+            // 去掉旧描述末尾的括号部分，换成新的 sampleInfo
+            const base = description.replace(/（.*抽样.*）$/, '').trim();
+            description = `${base}（${sampleInfo}）`;
+        }
+        if (descEl) descEl.textContent = description;
 
         this.setText('#qaDatasetName', record.datasetName || '-');
         this.setText('#qaVersionNo', record.versionNo || '-');
+        
+        // 隐藏抽样信息元素（已整合到描述中）
+        const sampleInfoEl = this.querySelector('#qaSampleInfo');
+        if (sampleInfoEl) sampleInfoEl.textContent = '';
+        
         this.calculateDqi();
         this.loadReport(record);
     }
@@ -359,15 +379,33 @@ class QualityAssessment extends HTMLElement {
                 return;
             }
             this._report = report;
-            const dims = (report.dimensions || []).map(d => `
-                <tr>
-                    <td>${d.name}</td><td>${d.score}</td><td>${d.weight != null ? (Number(d.weight) * 100).toFixed(0) + '%' : '-'}</td>
+            const threshold = 95;
+            const dims = (report.dimensions || []).map(d => {
+                const score = Number(d.score) || 0;
+                const failed = score < threshold;
+                return `
+                <tr style="${failed ? 'background:#fff1f0;' : ''}">
+                    <td>${d.name}</td>
+                    <td>${d.score}${failed ? ' <span style="color:#ff4d4f;font-size:11px;">(未通过，小于95分)</span>' : ''}</td>
+                    <td>${d.weight != null ? (Number(d.weight) * 100).toFixed(0) + '%' : '-'}</td>
                     <td>${d.grade}</td>
                     <td style="max-width:280px;">${d.evidence || '-'}</td>
                     <td style="max-width:280px;">${d.suggestion || '-'}</td>
-                </tr>`).join('');
+                </tr>`;
+            }).join('');
+            // detailJson 已在 parseEntity() 里被 JSON.parse 成对象，这里直接用
+            let sampleInfo = '';
+            const detail = record.detailJson || {};
+            if (detail.sampleSize != null) {
+                const req = detail.requestSize;
+                const actual = detail.sampleSize;
+                sampleInfo = req != null
+                    ? `<div style="font-size:12px;color:#666;margin-top:4px;">请求 ${req} 行，实际抽样 ${actual} 行</div>`
+                    : `<div style="font-size:12px;color:#666;margin-top:4px;">抽样 ${actual} 行</div>`;
+            }
             area.innerHTML = `
                 <div class="qa-section-title">质量评估报告（自动生成）</div>
+                ${sampleInfo}
                 <div class="qa-dqi-card" style="display:flex;">
                     <div>
                         <div class="qa-dqi-label">综合得分（权重加权，默认各20%）</div>
@@ -512,12 +550,13 @@ class QualityAssessment extends HTMLElement {
         }
 
         const dqi = Math.round(sum * 100) / 100;
-        const threshold = 95;
+        const threshold = 80;
         const passed = dqi >= threshold &&
             scores.qcom >= threshold &&
+            scores.qacc >= threshold &&
             scores.qcon >= threshold &&
             scores.qtim >= threshold &&
-            scores.qval >= threshold;
+            scores.qconf >= threshold;
 
         valueEl.textContent = dqi.toFixed(2);
         statusEl.textContent = passed ? '通过' : '未通过';

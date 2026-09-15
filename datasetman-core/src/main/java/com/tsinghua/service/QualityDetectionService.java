@@ -70,7 +70,7 @@ public class QualityDetectionService {
             criteria = evaluationCriteriaService.queryById(criteriaId);
         }
         List<Map<String, Object>> sample = sampleData(version.getStoragePath(), size);
-        DetectionResult result = detect(sample, version);
+        DetectionResult result = detect(sample, version, size);
 
         long timestamp = System.currentTimeMillis();
         QualityAssessmentEntity entity = new QualityAssessmentEntity();
@@ -148,7 +148,7 @@ public class QualityDetectionService {
         int sampleSize;
     }
 
-    private DetectionResult detect(List<Map<String, Object>> sample, DatasetVersionEntity version) {
+    private DetectionResult detect(List<Map<String, Object>> sample, DatasetVersionEntity version, int requestSize) {
         DetectionResult r = new DetectionResult();
         r.sampleSize = sample.size();
 
@@ -221,6 +221,7 @@ public class QualityDetectionService {
         r.details.put("qconf", String.format("格式不规范 %d/%d 单元格（日期/编号/空格/乱码）",
                 totalCells - conformantCells, totalCells));
         r.details.put("sampleSize", sample.size());
+        r.details.put("requestSize", requestSize);
         r.details.put("rowCount", version.getRowCount());
         return r;
     }
