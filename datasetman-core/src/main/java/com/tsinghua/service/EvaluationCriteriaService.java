@@ -73,10 +73,9 @@ public class EvaluationCriteriaService {
         JSONObject exportFiles = new JSONObject();
         JSONObject names = new JSONObject();
         putDimension(weights, jobs, exportFiles, names, DataQualityDimensionEnum.qcom, request.getQcom());
-        putDimension(weights, jobs, exportFiles, names, DataQualityDimensionEnum.qacc, request.getQacc());
         putDimension(weights, jobs, exportFiles, names, DataQualityDimensionEnum.qcon, request.getQcon());
         putDimension(weights, jobs, exportFiles, names, DataQualityDimensionEnum.qtim, request.getQtim());
-        putDimension(weights, jobs, exportFiles, names, DataQualityDimensionEnum.qconf, request.getQconf());
+        putDimension(weights, jobs, exportFiles, names, DataQualityDimensionEnum.qval, request.getQval());
 
         EvaluationCriteriaEntity entity = new EvaluationCriteriaEntity();
         entity.setId(timestamp);
@@ -202,15 +201,13 @@ public class EvaluationCriteriaService {
         // 准则只负责权重配置：每维仅需权重，权重合计须为1
         double sum = 0.0;
         DataQualityDimensionEnum[] dims = {
-                DataQualityDimensionEnum.qcom, DataQualityDimensionEnum.qacc,
-                DataQualityDimensionEnum.qcon, DataQualityDimensionEnum.qtim,
-                DataQualityDimensionEnum.qconf};
+                DataQualityDimensionEnum.qcom, DataQualityDimensionEnum.qcon,
+                DataQualityDimensionEnum.qtim, DataQualityDimensionEnum.qval};
         java.util.Map<DataQualityDimensionEnum, DataQualityDimension> provided = new java.util.LinkedHashMap<>();
         provided.put(DataQualityDimensionEnum.qcom, request.getQcom());
-        provided.put(DataQualityDimensionEnum.qacc, request.getQacc());
         provided.put(DataQualityDimensionEnum.qcon, request.getQcon());
         provided.put(DataQualityDimensionEnum.qtim, request.getQtim());
-        provided.put(DataQualityDimensionEnum.qconf, request.getQconf());
+        provided.put(DataQualityDimensionEnum.qval, request.getQval());
         boolean anyNull = false;
         for (DataQualityDimensionEnum dim : dims) {
             DataQualityDimension d = provided.get(dim);
@@ -221,10 +218,10 @@ public class EvaluationCriteriaService {
             sum += d.getWeight();
         }
         if (anyNull) {
-            throw new IllegalArgumentException("五个维度的权重均不能为空");
+            throw new IllegalArgumentException("四个维度的权重均不能为空");
         }
         if (Math.abs(sum - 1.0) > 0.001) {
-            throw new IllegalArgumentException("五个维度的权重合计必须等于1");
+            throw new IllegalArgumentException("四个维度的权重合计必须等于1");
         }
     }
 

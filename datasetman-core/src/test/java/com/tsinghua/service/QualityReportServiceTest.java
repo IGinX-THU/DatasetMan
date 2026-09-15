@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 质量评估报告自动生成的单元测试（纯逻辑，不依赖 IGinX）。
+ * 对齐课题测试方案 4.3.1.6：完整性/一致性/时效性/有效性 四维，DQI 加权，达标线95。
  */
 class QualityReportServiceTest {
 
@@ -33,12 +34,12 @@ class QualityReportServiceTest {
     }
 
     @Test
-    void reportPassesWhenAllDimensionsGood() {
+    void reportPassesWhenAllDimensionsAboveNinetyFive() {
         String json = service.generateReport(buildEntity(
-                new double[]{95, 92, 93, 90, 96}, new double[]{0.25, 0.25, 0.2, 0.15, 0.15}));
+                new double[]{100, 97, 96, 98}, new double[]{0.25, 0.25, 0.25, 0.25}));
         JSONObject report = JSONObject.parseObject(json);
         assertTrue(report.getBoolean("passed"));
-        assertTrue(report.getDoubleValue("dqi") >= 80);
+        assertTrue(report.getDoubleValue("dqi") >= 95);
         assertEquals("优", report.getJSONArray("dimensions").getJSONObject(0).getString("grade"));
         // 无质量问题时 issue 列表为"未发现明显质量问题"占位提示
         assertEquals(1, ((JSONArray) report.get("issues")).size());
@@ -48,45 +49,45 @@ class QualityReportServiceTest {
     @Test
     void reportGeneratesIssuesAndRecommendationsWhenDimensionLow() {
         String json = service.generateReport(buildEntity(
-                new double[]{95, 45, 93, 90, 70}, new double[]{0.2, 0.2, 0.2, 0.2, 0.2}));
+                new double[]{95, 45, 90, 70}, new double[]{0.25, 0.25, 0.25, 0.25}));
         JSONObject report = JSONObject.parseObject(json);
         assertFalse(report.getBoolean("passed"));
         JSONArray issues = (JSONArray) report.get("issues");
-        assertEquals(2, issues.size()); // 一致性45(差) + 有效性70(中)
+        // 达标线95：完整性95不标（<95才标），一致性45/时效性90/有效性70 共3条
+        assertEquals(3, issues.size());
         JSONArray recs = (JSONArray) report.get("recommendations");
-        assertEquals(2, recs.size());
-        // DQI = (95+45+93+90+70)/5 = 78.6，处于告警区间
-        assertEquals(78.6, report.getDoubleValue("dqi"), 0.01);
+        assertEquals(3, recs.size());
+        // DQI = (95+45+90+70)/4 = 75，处于告警区间
+        assertEquals(75.0, report.getDoubleValue("dqi"), 0.01);
         assertTrue(report.getString("conclusion").contains("告警"));
     }
 
     @Test
-    void reportSupportsFiveDimensionsWithDefaultWeights() {
-        // 5维各20%权重，等价于算术平均
+    void reportSupportsFourDimensionsWithDefaultWeights() {
+        // 4维各0.25权重，等价于算术平均（对齐 4.3.1.6 权重配置确认步骤）
         JSONObject scores = new JSONObject();
         JSONObject weights = new JSONObject();
-        // qcom=100 qacc=90 qcon=80 qtim=70 qconf=60 -> 综合80
-        double[] vals = {100, 90, 80, 70, 60};
-        String[] dims = {"qcom", "qacc", "qcon", "qtim", "qconf"};
+        double[] vals = {100, 90, 80, 70};
+        String[] dims = {"qcom", "qcon", "qtim", "qval"};
         for (int i = 0; i < dims.length; i++) {
             scores.put(dims[i], vals[i]);
-            weights.put(dims[i], 0.2);
+            weights.put(dims[i], 0.25);
         }
         QualityAssessmentEntity entity = buildEntityRaw(scores, weights);
         JSONObject report = JSONObject.parseObject(service.generateReport(entity));
-        assertEquals(5, report.getIntValue("dimensionCount"));
-        assertEquals(5, service.supportedDimensions().size());
-        assertEquals(80.0, report.getDoubleValue("score"), 0.01);
+        assertEquals(4, report.getIntValue("dimensionCount"));
+        assertEquals(4, service.supportedDimensions().size());
+        assertEquals(85.0, report.getDoubleValue("score"), 0.01);
         assertEquals("良", report.getString("grade"));
-        // 每个维度都输出得分、依据占位与建议（不达标维度有建议）
+        // 每个维度都输出得分与依据占位
         JSONArray ds = report.getJSONArray("dimensions");
         assertTrue(ds.getJSONObject(0).containsKey("evidence"));
-        assertTrue(ds.getJSONObject(4).getString("suggestion").contains("规范性"));
+        assertEquals("有效性", ds.getJSONObject(3).getString("name"));
     }
 
     private QualityAssessmentEntity buildEntityRaw(JSONObject scores, JSONObject weights) {
         QualityAssessmentEntity e = new QualityAssessmentEntity();
-        e.setCriteriaName("5维度准则");
+        e.setCriteriaName("4维度准则");
         e.setScores(scores.toJSONString());
         e.setWeights(weights.toJSONString());
         return e;
@@ -94,13 +95,13 @@ class QualityReportServiceTest {
 
     @Test
     void qualityScoreDiscriminatesQualityLevels() {
-        // A/B/C 三组典型得分应单调递减（区分度验证）
-        double[] a = {100, 99, 99, 95, 98};
-        double[] b = {95, 85, 88, 70, 90};
-        double[] c = {82, 60, 65, 40, 72};
+        // A/B/C 三组典型得分应单调递减（4.3.1.6 区分度验证）
+        double[] a = {100, 99, 99, 98};
+        double[] b = {95, 85, 88, 90};
+        double[] c = {82, 60, 65, 72};
         double sa = 0, sb = 0, sc = 0;
-        for (int i = 0; i < 5; i++) {
-            sa += a[i] * 0.2; sb += b[i] * 0.2; sc += c[i] * 0.2;
+        for (int i = 0; i < 4; i++) {
+            sa += a[i] * 0.25; sb += b[i] * 0.25; sc += c[i] * 0.25;
         }
         assertTrue(sa > sb && sb > sc);
     }

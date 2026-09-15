@@ -59,7 +59,7 @@ public class QualityAssessmentService {
         putDimension(weights, jobs, jobIds, exportFiles, names, scores, DataQualityDimensionEnum.qcom, request.getQcom());
         putDimension(weights, jobs, jobIds, exportFiles, names, scores, DataQualityDimensionEnum.qcon, request.getQcon());
         putDimension(weights, jobs, jobIds, exportFiles, names, scores, DataQualityDimensionEnum.qtim, request.getQtim());
-        putDimension(weights, jobs, jobIds, exportFiles, names, scores, DataQualityDimensionEnum.qconf, request.getQval());
+        putDimension(weights, jobs, jobIds, exportFiles, names, scores, DataQualityDimensionEnum.qval, request.getQval());
 
         QualityAssessmentEntity entity = new QualityAssessmentEntity();
         entity.setId(timestamp);
@@ -208,7 +208,7 @@ public class QualityAssessmentService {
         validateDimension(DataQualityDimensionEnum.qcom, request.getQcom());
         validateDimension(DataQualityDimensionEnum.qcon, request.getQcon());
         validateDimension(DataQualityDimensionEnum.qtim, request.getQtim());
-        validateDimension(DataQualityDimensionEnum.qconf, request.getQval());
+        validateDimension(DataQualityDimensionEnum.qval, request.getQval());
     }
 
     private void validateDimension(DataQualityDimensionEnum dim, DataQualityDimension dimension) {

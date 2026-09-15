@@ -19,21 +19,22 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
- * 数据集质量自动检测（对应课题测试方案 4.3.2.2：支持5个以上维度的工业数据质量综合测评）：
- * 对指定数据集版本的实际数据抽样，自动执行 5 个维度的检测规则——
- *   完整性 qcom：非空单元格占比
- *   准确性 qacc：数值正负/取值域/枚举合法等语义规则通过率
- *   一致性 qcon：行唯一性（重复行率）
- *   时效性 qtim：数据最新记录年龄（每滞后1天扣2分）
- *   规范性 qconf：日期可解析、编号模式、无首尾空格/控制字符等格式规范符合率
- * 综合得分按默认权重（各20%）加权计算，并自动生成评估报告落库。全程无人工录入。
+ * 数据集质量自动检测（对应课题测试方案 4.3.1.6 数据质量综合指标测试方案）：
+ * 对指定数据集版本的实际数据抽样，自动执行 4 个维度的检测规则——
+ *   完整性 qcom：必填字段齐备（非空单元格占比）
+ *   一致性 qcon：行唯一性（重复行率），跨源口径一致性的基础校验
+ *   时效性 qtim：数据最新记录年龄（每滞后1天扣2分，钳制[0,100]）
+ *   有效性 qval：字段格式、取值范围、枚举编码、数据类型符合规则
+ *                （语义规则与格式规则同时通过的单元格占比）
+ * DQI 为加权综合得分（权重和为1，默认各0.25），达标线95分。
+ * 输出各维度得分、评价依据、不满足规则的数据项摘要。全程无人工录入。
  */
 @Slf4j
 @Service
 public class QualityDetectionService {
 
     private static final int SAMPLE_SIZE = 200;
-    private static final double DEFAULT_WEIGHT = 0.2;
+    private static final double DEFAULT_WEIGHT = 0.25;
 
     /** 时间类字段名（用于时效性检测） */
     private static final String[] TIME_COLUMNS = {"create_time", "createtime", "time", "timestamp", "date"};
@@ -56,8 +57,8 @@ public class QualityDetectionService {
     /**
      * 自动检测。
      * @param versionId 数据集版本
-     * @param sampleSize 抽样行数
-     * @param criteriaId 可选，评价准则ID：提供时使用准则配置的权重/作业绑定，缺省各维度20%
+     * @param sampleSize 请求抽样行数（实际抽样 = min(请求, 数据集可查询行数)）
+     * @param criteriaId 可选，评价准则ID：提供时使用准则配置的权重，缺省各维度0.25
      */
     public QualityAssessmentEntity autoDetect(Long versionId, Integer sampleSize, Long criteriaId) {
         int size = (sampleSize == null || sampleSize < 1) ? SAMPLE_SIZE : Math.min(sampleSize, 50000);
@@ -75,12 +76,12 @@ public class QualityDetectionService {
         long timestamp = System.currentTimeMillis();
         QualityAssessmentEntity entity = new QualityAssessmentEntity();
         entity.setId(timestamp);
-        // 关联评价准则（权重、作业绑定取自准则），否则记录为独立自动检测
+        // 关联评价准则（权重取自准则），否则记录为独立自动检测
         entity.setCriteriaId(criteria != null ? criteriaId : version.getId());
         entity.setCriteriaName(criteria != null
                 ? criteria.getName()
                 : "自动检测-" + version.getDatasetName());
-        entity.setDescription(String.format("对数据集 %s %s 的5维度自动质量检测（抽样 %d 行）",
+        entity.setDescription(String.format("对数据集 %s %s 的4维度自动质量检测（实际抽样 %d 行）",
                 version.getDatasetName(), version.getVersionNo(), result.sampleSize));
 
         JSONObject weights = new JSONObject();
@@ -111,7 +112,7 @@ public class QualityDetectionService {
         entity.setJobIds(jobIds.toJSONString());
         entity.setExportFiles(exportFiles.toJSONString());
         entity.setNames(names.toJSONString());
-        // 综合得分按准则权重加权（默认各20%）
+        // 综合得分按准则权重加权（默认各0.25）
         double weighted = 0.0, weightSum = 0.0;
         for (DataQualityDimensionEnum dim : DataQualityDimensionEnum.values()) {
             Double w = toDouble(weights.get(dim.name()));
@@ -120,8 +121,9 @@ public class QualityDetectionService {
                 weightSum += w;
             }
         }
-        entity.setDqi(String.valueOf(weightSum > 0 ? round(weighted / weightSum) : result.composite));
-        entity.setPassed(result.composite >= QualityReportService.PASS_THRESHOLD ? "true" : "false");
+        double dqi = weightSum > 0 ? round(weighted / weightSum) : result.composite;
+        entity.setDqi(String.valueOf(dqi));
+        entity.setPassed(dqi >= QualityReportService.PASS_THRESHOLD ? "true" : "false");
         entity.setDetailJson(result.details.toJSONString());
         entity.setCreateTime(timestamp);
         entity.setOperator(OperationLogAspect.getCurrentUser());
@@ -132,8 +134,8 @@ public class QualityDetectionService {
         entity.setReportJson(qualityReportService.generateReport(entity));
 
         iginxClient.getWriteClient().writeMeasurement(entity);
-        log.info("质量自动检测完成。dataset={}, versionId={}, composite={}, sampleSize={}",
-                version.getDatasetName(), versionId, result.composite, result.sampleSize);
+        log.info("质量自动检测完成。dataset={}, versionId={}, dqi={}, sampleSize={}",
+                version.getDatasetName(), versionId, dqi, result.sampleSize);
         return entity;
     }
 
@@ -158,10 +160,14 @@ public class QualityDetectionService {
             }
             r.composite = 0.0;
             r.details.put("error", "未查询到可检测数据（storagePath=" + version.getStoragePath() + "）");
+            r.details.put("sampling", samplingNote(0, requestSize, version));
             return r;
         }
 
-        long totalCells = 0, nonNullCells = 0, accurateCells = 0, conformantCells = 0;
+        long totalCells = 0, nonNullCells = 0, validCells = 0;
+        // 未通过原因聚合：key = "列名|规则"，value = 次数
+        Map<String, Long> qcomFailures = new LinkedHashMap<>();   // 列名 -> 空值次数
+        Map<String, Long> qvalFailures = new LinkedHashMap<>();   // "列名|规则" -> 次数
         Set<String> seenRows = new HashSet<>();
         int duplicateRows = 0;
         long newestTime = -1;
@@ -173,10 +179,19 @@ public class QualityDetectionService {
                 String col = shortName(cell.getKey());
                 Object v = cell.getValue();
                 totalCells++;
-                if (v != null && !String.valueOf(v).trim().isEmpty()) {
-                    nonNullCells++;
-                    if (isAccurate(col, v)) accurateCells++;
-                    if (isConformant(col, v)) conformantCells++;
+                if (v == null || String.valueOf(v).trim().isEmpty()) {
+                    qcomFailures.merge(col, 1L, Long::sum);
+                    rowKey.append(col).append('=').append(v).append('|');
+                    continue;
+                }
+                nonNullCells++;
+                String accFail = accurateRuleFailed(col, v);
+                String confFail = conformantRuleFailed(col, v);
+                if (accFail == null && confFail == null) {
+                    validCells++;
+                } else {
+                    String rule = accFail != null ? accFail : confFail;
+                    qvalFailures.merge(col + " " + rule, 1L, Long::sum);
                 }
                 rowKey.append(col).append('=').append(v).append('|');
             }
@@ -190,8 +205,6 @@ public class QualityDetectionService {
 
         // 完整性：非空单元格占比
         double qcom = 100.0 * nonNullCells / totalCells;
-        // 准确性：语义规则通过率（数值正负/取值域/枚举合法）
-        double qacc = 100.0 * accurateCells / totalCells;
         // 一致性：1 - 重复行率
         double qcon = 100.0 * (1.0 - (double) duplicateRows / sample.size());
         // 时效性：最新记录年龄，每滞后1天扣2分（无时间字段则按版本登记时间）
@@ -200,30 +213,59 @@ public class QualityDetectionService {
         double ageDays = reference > 0 ? (System.currentTimeMillis() - reference) / 86400000.0 : 0;
         // 钳制到[0,100]：数据时间在未来（如补录）时年龄为负，不得超出满分
         double qtim = Math.min(100.0, Math.max(0.0, 100.0 - ageDays * 2.0));
-        // 规范性：格式规范符合率
-        double qconf = 100.0 * conformantCells / totalCells;
+        // 有效性：语义规则与格式规则同时通过的单元格占比
+        double qval = 100.0 * validCells / totalCells;
 
         r.scores.put("qcom", round(qcom));
-        r.scores.put("qacc", round(qacc));
         r.scores.put("qcon", round(qcon));
         r.scores.put("qtim", round(qtim));
-        r.scores.put("qconf", round(qconf));
-        r.composite = round((qcom + qacc + qcon + qtim + qconf) / 5.0); // 默认各20%；有准则权重时在组装处加权
+        r.scores.put("qval", round(qval));
+        r.composite = round((qcom + qcon + qtim + qval) / 4.0); // 默认各0.25；有准则权重时在组装处加权
 
-        // 每维度的评分依据（报告直接引用）
-        r.details.put("qcom", String.format("抽样%d行x%d列：空值单元格 %d/%d（非空率 %.2f%%）",
-                sample.size(), sample.get(0).size(), totalCells - nonNullCells, totalCells, qcom));
-        r.details.put("qacc", String.format("语义规则未通过 %d/%d 单元格（负值/越界/枚举非法）",
-                totalCells - accurateCells, totalCells));
+        // 各维度评价依据与不满足规则的数据项摘要（报告直接引用）
+        r.details.put("sampling", samplingNote(sample.size(), requestSize, version));
+        r.details.put("qcom", String.format("实际抽样%d行x%d列：空值单元格 %d/%d（非空率 %.2f%%）%s",
+                sample.size(), sample.get(0).size(), totalCells - nonNullCells, totalCells, qcom,
+                topSummary(qcomFailures, "缺失最多的列")));
         r.details.put("qcon", String.format("重复行 %d/%d（整行唯一率 %.2f%%）",
                 duplicateRows, sample.size(), qcon));
         r.details.put("qtim", String.format("最新记录距 %.1f 天（数据年龄惩罚每日-2分）", ageDays));
-        r.details.put("qconf", String.format("格式不规范 %d/%d 单元格（日期/编号/空格/乱码）",
-                totalCells - conformantCells, totalCells));
+        r.details.put("qval", String.format("有效性未通过 %d/%d 单元格（%.2f%%通过）%s",
+                totalCells - validCells, totalCells, qval,
+                topSummary(qvalFailures, "主要问题")));
         r.details.put("sampleSize", sample.size());
         r.details.put("requestSize", requestSize);
         r.details.put("rowCount", version.getRowCount());
         return r;
+    }
+
+    /** 抽样说明：解释"实际抽样/请求/登记行数"的关系，避免误解抽样参数失效 */
+    private static String samplingNote(int actual, int request, DatasetVersionEntity version) {
+        String base = String.format("实际抽样 %d 行（请求 %d 行", actual, request);
+        if (version.getRowCount() != null && version.getRowCount() > 0) {
+            base += String.format("；数据集登记 %d 行", version.getRowCount());
+            if (actual < request) {
+                base += "，实际可查询行数少于请求抽样行数";
+            }
+        }
+        return base + "）";
+    }
+
+    /** 聚合未通过项摘要：按次数倒序取前5，格式 "主要问题: 列 规则xN, 列 规则xN"；无失败返回空串 */
+    private static String topSummary(Map<String, Long> failures, String label) {
+        if (failures.isEmpty()) {
+            return "；" + label + ": 无";
+        }
+        List<Map.Entry<String, Long>> top = failures.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .limit(5)
+                .collect(java.util.stream.Collectors.toList());
+        StringBuilder sb = new StringBuilder("；").append(label).append(": ");
+        for (int i = 0; i < top.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(top.get(i).getKey()).append("×").append(top.get(i).getValue());
+        }
+        return sb.toString();
     }
 
     private List<Map<String, Object>> sampleData(String storagePath, int size) {
@@ -237,47 +279,47 @@ public class QualityDetectionService {
         }
     }
 
-    /** 准确性规则：置信度/分数列在[0,1]；计数/物理量为正；通用列不含语义矛盾值 */
-    private boolean isAccurate(String column, Object value) {
+    /** 有效性-语义规则（取值范围/枚举/业务约束）：返回 null 表示通过，否则返回规则名称用于原因标注 */
+    private String accurateRuleFailed(String column, Object value) {
         String s = String.valueOf(value).trim();
-        if (s.isEmpty()) return false;
+        if (s.isEmpty()) return null;
         String lower = column.toLowerCase();
         if (lower.contains("confidence") || lower.contains("score") || lower.contains("weight")) {
             try {
                 double d = Double.parseDouble(s);
-                return d >= 0 && d <= 1;
+                return (d >= 0 && d <= 1) ? null : "取值越界(应在0~1)";
             } catch (NumberFormatException e) {
-                return false;
+                return "应为数值";
             }
         }
         if (lower.contains("count") || lower.contains("num") || lower.endsWith("_id") || lower.equals("id")) {
             // 编号列允许 字母/数字/下划线/连字符（如 sample_id: fault_diagnosis-000123）；count/num 列仍须纯数字
             if (lower.endsWith("_id") || lower.equals("id")) {
-                return s.matches("[A-Za-z0-9_\\-]+");
+                return s.matches("[A-Za-z0-9_\\-]+") ? null : "编号格式非法";
             }
-            return s.matches("\\d+");
+            return s.matches("\\d+") ? null : "计数应为非负整数";
         }
         // 数值型的物理量（温度/压力/转速/推力等）不应为负
         if (lower.matches(".*(temp|pressure|speed|rpm|thrust|flow|rate).*")) {
             try {
-                return Double.parseDouble(s) >= 0;
+                return Double.parseDouble(s) >= 0 ? null : "物理量为负";
             } catch (NumberFormatException ignore) {
                 // 非数值文本列不适用本规则
             }
         }
-        return true;
+        return null;
     }
 
-    /** 规范性规则：时间列可解析；编号列符合模式；无首尾空格与控制字符 */
-    private boolean isConformant(String column, Object value) {
+    /** 有效性-格式规则（日期/编号模式/空格/控制字符）：返回 null 表示通过，否则返回规则名称 */
+    private String conformantRuleFailed(String column, Object value) {
         String s = String.valueOf(value);
-        if (s.isEmpty()) return false;
+        if (s.isEmpty()) return "空值";
         String lower = column.toLowerCase();
         if (lower.contains("time") || lower.contains("date")) {
-            return parseTime(lower, s.trim()) != null;
+            return parseTime(lower, s.trim()) != null ? null : "日期不可解析";
         }
-        if (s.length() != s.trim().length()) return false;  // 首尾空格
-        return !s.chars().anyMatch(c -> c < 9 || (c > 13 && c < 32));  // 控制字符
+        if (s.length() != s.trim().length()) return "含首尾空格";
+        return s.chars().anyMatch(c -> c < 9 || (c > 13 && c < 32)) ? "含控制字符" : null;
     }
 
     private String findTimeColumn(Map<String, Object> row) {

@@ -21,7 +21,8 @@ import java.util.Map;
 @Service
 public class QualityReportService {
 
-    public static final double PASS_THRESHOLD = 80.0;
+    /** 达标线：4.3.1.6 要求 A 组数据集综合得分 DQI >= 95 */
+    public static final double PASS_THRESHOLD = 95.0;
     public static final double WARN_THRESHOLD = 60.0;
 
     /** 由测评记录自动生成报告（JSON 结构），不依赖人工填写 */
@@ -150,10 +151,9 @@ public class QualityReportService {
         if (dim == null) return "整改后复评";
         switch (dim) {
             case qcom: base = "补充缺失字段与空值记录，复核数据接入链路的断点重传策略"; break;
-            case qacc: base = "清洗越界/矛盾取值，复核采集端量程与单位换算配置"; break;
             case qcon: base = "对重复记录去重，并统一跨源字段的口径与编码规范"; break;
             case qtim: base = "缩短数据同步周期，检查采集链路延迟与积压"; break;
-            case qconf: base = "按格式规范（日期/编号模式/编码）清洗数据，完善入库校验规则"; break;
+            case qval: base = "清洗取值越界与格式非法数据，完善字段类型、取值域与枚举编码校验"; break;
             default: base = "整改后复评";
         }
         return score < WARN_THRESHOLD
