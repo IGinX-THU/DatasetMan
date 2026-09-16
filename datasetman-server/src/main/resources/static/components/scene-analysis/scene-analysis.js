@@ -1,5 +1,5 @@
 /**
- * 数据集管理分析组件：右侧数据集树的列表化显示，在此基础上提供
+ * 数据集管理组件：右侧数据集树的列表化显示，在此基础上提供
  *   1. 分类管理：按数据类型的分类统计 chips + 类型筛选（数据类型与档案页下拉一致）；
  *   2. 血缘关系：版本的上下游血缘列表（行内操作，弹窗展示）；
  *   3. 影响范围分析：下游受影响数据集与版本链（行内操作，弹窗展示）；
@@ -17,6 +17,9 @@ class SceneAnalysis extends HTMLElement {
         super();
         this.style.display = 'none';
         this.rows = [];                   // 扁平化版本行
+        this.pageSize = 15;
+        this.currentPage = 1;
+        this.total = 0;
     }
 
     async connectedCallback() {
@@ -57,9 +60,10 @@ class SceneAnalysis extends HTMLElement {
     /** 数据类型标签：与数据集档案页"数据类型"下拉一致 */
     modalityLabel(code) {
         const map = {
-            relational: '关系型', 'time-series': '时序', time_series: '时序',
-            'semi-structured': '半结构化', semi_structured: '半结构化',
-            key_value: '键值', file_system: '文件系统',
+            relational: '关系数据', 'time-series': '时序数据', time_series: '时序数据',
+            'semi-structured': '半结构化数据', semi_structured: '半结构化数据',
+            'key-value': '键值数据', key_value: '键值数据',
+            'file-system': '文件型数据', file_system: '文件型数据',
             text: '文本', image: '图像', audio: '音频', video: '视频'
         };
         if (!code) return '未标注';
@@ -68,8 +72,19 @@ class SceneAnalysis extends HTMLElement {
 
     bindEvents() {
         this.querySelector('#saRefresh')?.addEventListener('click', () => this.refresh());
-        this.querySelector('#saSearchName')?.addEventListener('input', () => this.renderTable());
-        this.querySelector('#saTypeFilter')?.addEventListener('change', () => this.renderTable());
+        let debounceTimer = null;
+        this.querySelector('#saSearchName')?.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => this.refresh(1), 300);
+        });
+        this.querySelector('#saTypeFilter')?.addEventListener('change', () => this.refresh(1));
+        this.querySelector('#saPagination')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-page]');
+            if (!btn || btn.disabled) return;
+            if (btn.dataset.page === 'prev') this.currentPage = Math.max(1, this.currentPage - 1);
+            else this.currentPage = Math.min(this.totalPages(), this.currentPage + 1);
+            this.refresh();
+        });
 
         // 分类 chips 点击
         this.querySelector('#saTypeChips')?.addEventListener('click', (e) => {
@@ -80,7 +95,7 @@ class SceneAnalysis extends HTMLElement {
             const type = chip.dataset.type || '';
             const typeSelect = this.querySelector('#saTypeFilter');
             if (typeSelect) typeSelect.value = type;
-            this.renderTable();
+            this.refresh(1);
         });
 
         // 弹窗关闭
@@ -109,30 +124,36 @@ class SceneAnalysis extends HTMLElement {
                 case 'export': this.exportPackage(name, versionId); break;
                 case 'quality': this.showQualityAssessment(name, versionId); break;
                 case 'detail': this.showDetail(name, versionId); break;
+                case 'toggle': this.toggleVersion(name, versionId); break;
             }
         });
     }
 
-    /** 刷新：数据集树（列表主体）；分类 chips 由树内 dataModality 聚合 */
-    async refresh() {
-        const tree = await this.apiGet('/api/dataset/tree');
-        this.rows = [];
-        (tree || []).forEach(group => {
-            (group.versions || []).forEach(v => {
-                this.rows.push({
-                    datasetName: group.datasetName,
-                    versionId: v.versionId,
-                    versionNo: v.versionNo,
-                    storagePath: v.storagePath,
-                    provenanceType: v.provenanceType,
-                    createTime: v.createTime,
-                    deleted: v.deleted,
-                    dataModality: v.dataModality,
-                    rowCount: v.rowCount
-                });
-            });
-        });
-        this.rows.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
+    /** 刷新：后端分页查询（POST /api/dataset/list/query，含已禁用版本） */
+    async refresh(page) {
+        if (page) this.currentPage = page;
+        const headers = (window.AppConfig && window.AppConfig.getAuthHeaders())
+            ? window.AppConfig.getAuthHeaders() : { 'Content-Type': 'application/json' };
+        const body = {
+            pageNum: this.currentPage,
+            pageSize: this.pageSize,
+            datasetName: (this.querySelector('#saSearchName')?.value || '').trim() || null,
+            dataModality: this.querySelector('#saTypeFilter')?.value || null
+        };
+        try {
+            const [queryRes, countRes] = await Promise.all([
+                fetch('/api/dataset/list/query', { method: 'POST', headers,
+                    body: JSON.stringify(body) }).then(r => r.json()),
+                fetch('/api/dataset/list/count', { method: 'POST', headers,
+                    body: JSON.stringify(body) }).then(r => r.json())
+            ]);
+            this.rows = (queryRes.code === 200 || queryRes.success) ? (queryRes.data || []) : [];
+            this.total = (countRes.code === 200 || countRes.success) ? Number(countRes.data || 0) : 0;
+        } catch (error) {
+            console.error('加载数据集列表失败:', error);
+            this.rows = [];
+            this.total = 0;
+        }
         this.renderChips();
         this.renderTypeFilter();
         this.renderTable();
@@ -161,8 +182,8 @@ class SceneAnalysis extends HTMLElement {
         const totalSamples = stats.reduce((sum, d) => sum + d.totalRowCount, 0);
         const datasetCount = new Set(this.rows.map(r => r.datasetName)).size;
         if (summary) {
-            summary.textContent = '共 ' + datasetCount + ' 个数据集 / ' + this.rows.length
-                + ' 个版本，覆盖 ' + stats.length + ' 类数据类型，样本总量 ' + totalSamples.toLocaleString() + ' 条';
+            summary.textContent = '本页 ' + datasetCount + ' 个数据集 / ' + this.rows.length
+                + ' 个版本，合计 ' + this.total + ' 个版本（含已禁用），本页样本量 ' + totalSamples.toLocaleString() + ' 条';
         }
         const activeType = this.querySelector('#saTypeFilter')?.value || '';
         box.innerHTML = '<span class="sa-chip ' + (activeType === '' ? 'active' : '') + '" data-type="">全部 (' + this.rows.length + ')</span>'
@@ -176,24 +197,40 @@ class SceneAnalysis extends HTMLElement {
         const select = this.querySelector('#saTypeFilter');
         if (!select) return;
         const current = select.value;
-        select.innerHTML = '<option value="">全部数据类型</option>'
-            + this.typeAggregation().map(t => '<option value="' + t.code + '">' + t.label + '</option>').join('');
+        // 与创建数据集向导"数据类型"下拉完全一致的选项（适配 - 与 _ 两种编码写法）
+        // 以注册数据源弹窗"数据模态"下拉的值为准（下划线风格），创建/编辑/筛选三处一致
+        const allTypes = [
+            ['', '全部数据类型'],
+            ['relational', '关系数据'],
+            ['time_series', '时序数据'],
+            ['key_value', '键值数据'],
+            ['semi_structured', '半结构化数据'],
+            ['file_system', '文件型数据'],
+            ['text', '文本'],
+            ['image', '图像'],
+            ['audio', '音频'],
+            ['video', '视频']
+        ];
+        select.innerHTML = allTypes.map(t => '<option value="' + t[0] + '">' + t[1] + '</option>').join('');
         select.value = current;
+    }
+
+    totalPages() {
+        return Math.max(1, Math.ceil(this.total / this.pageSize));
     }
 
     renderTable() {
         const tbody = this.querySelector('#saTableBody');
         if (!tbody) return;
-        const type = this.querySelector('#saTypeFilter')?.value || '';
-        const kw = (this.querySelector('#saSearchName')?.value || '').trim().toLowerCase();
-        const typeLabels = { SOURCE: '数据源挂载', IMPORT: '导入数据', SQL_QUERY: 'SQL查询/转换', TRANSFORM: 'Transform变换' };
-        const rows = this.rows.filter(r =>
-            (!type || (r.dataModality || '') === type) &&
-            (!kw || (r.datasetName || '').toLowerCase().includes(kw)));
-        if (!rows.length) {
+        this.renderPagination(this.total);
+        if (!this.rows.length) {
             tbody.innerHTML = '<tr><td colspan="8" class="qa-empty">未查询到数据集。</td></tr>';
             return;
         }
+        const rows = this.rows.map(r => Object.assign({}, r, {
+            versionId: r.versionId || r.id || r.createTime
+        }));
+        const typeLabels = { SOURCE: '数据源挂载', IMPORT: '导入数据', SQL_QUERY: 'SQL查询/转换', TRANSFORM: 'Transform变换' };
         tbody.innerHTML = rows.map(r => {
             const vid = r.versionId || '';
             return '<tr style="' + (r.deleted ? 'color:#999;' : '') + '">'
@@ -204,14 +241,24 @@ class SceneAnalysis extends HTMLElement {
                 + '<td>' + (typeLabels[r.provenanceType] || r.provenanceType || '-') + '</td>'
                 + '<td>' + (r.deleted ? '已禁用' : '正常') + '</td>'
                 + '<td>' + (r.createTime ? new Date(r.createTime).toLocaleString() : '-') + '</td>'
-                + '<td><div class="action-buttons">'
-                + '<button class="action-btn edit" data-action="quality" data-name="' + r.datasetName + '" data-version-id="' + vid + '">质量评估</button>'
-                + '<button class="action-btn" data-action="lineage" data-name="' + r.datasetName + '" data-version-id="' + vid + '">血缘关系</button>'
-                + '<button class="action-btn" data-action="impact" data-name="' + r.datasetName + '" data-version-id="' + vid + '">影响分析</button>'
-                + '<button class="action-btn report" title="导出当前版本数据表CSV+manifest清单+质量评估报告PDF" data-action="export" data-name="' + r.datasetName + '" data-version-id="' + vid + '">导出</button>'
-                + '<button class="action-btn manage" data-action="detail" data-name="' + r.datasetName + '" data-version-id="' + vid + '">详情</button>'
+                + '<td><div class="sa-actions">'
+                + '<button class="sa-btn quality" data-action="quality" data-name="' + r.datasetName + '" data-version-id="' + vid + '">质量评估</button>'
+                + '<button class="sa-btn ' + (r.deleted ? 'enable' : 'disable') + '" data-action="toggle" data-name="' + r.datasetName + '" data-version-id="' + vid + '">' + (r.deleted ? '启用' : '禁用') + '</button>'
+                + '<button class="sa-btn lineage" data-action="lineage" data-name="' + r.datasetName + '" data-version-id="' + vid + '">关系</button>'
+                + '<button class="sa-btn impact" data-action="impact" data-name="' + r.datasetName + '" data-version-id="' + vid + '">影响</button>'
+                + '<button class="sa-btn export" data-action="export" data-name="' + r.datasetName + '" data-version-id="' + vid + '" title="导出当前版本数据表CSV+manifest清单+质量评估报告PDF">导出</button>'
+                + '<button class="sa-btn detail" data-action="detail" data-name="' + r.datasetName + '" data-version-id="' + vid + '">详情</button>'
                 + '</div></td></tr>';
         }).join('');
+    }
+
+    renderPagination(total) {
+        const bar = this.querySelector('#saPagination');
+        if (!bar) return;
+        const pages = this.totalPages();
+        bar.innerHTML = '<span class="sa-page-info">共 ' + total + ' 条 / 第 ' + this.currentPage + '/' + pages + ' 页</span>'
+            + '<button class="sa-btn" data-page="prev" ' + (this.currentPage <= 1 ? 'disabled' : '') + '>上一页</button>'
+            + '<button class="sa-btn" data-page="next" ' + (this.currentPage >= pages ? 'disabled' : '') + '>下一页</button>';
     }
 
     openModal(id) {
@@ -324,6 +371,30 @@ class SceneAnalysis extends HTMLElement {
     showQualityAssessment(name, versionId) {
         if (typeof window.showComponent === 'function') {
             window.showComponent('qualityAssessment', { versionId, datasetName: name });
+        }
+    }
+
+    /** 启用/禁用版本（原详情页列表操作，移至此处） */
+    async toggleVersion(name, versionId) {
+        if (!versionId) {
+            alert('该版本缺少ID，无法操作。');
+            return;
+        }
+        try {
+            const result = await window.AppConfig.put('dataset', 'versionToggle', { versionId: Number(versionId) });
+            if (!(result.success || result.code === 200)) throw new Error(result.message || '操作失败');
+            if (window.CommonUtils && window.CommonUtils.showToast) {
+                window.CommonUtils.showToast(result.data ? '已禁用' : '已启用', 'success');
+            }
+            // 同步刷新右侧数据集树与本列表
+            if (window.loadDatasetTree) await window.loadDatasetTree();
+            await this.refresh();
+        } catch (error) {
+            if (window.CommonUtils && window.CommonUtils.showToast) {
+                window.CommonUtils.showToast(error.message || '操作失败', 'error');
+            } else {
+                alert(error.message || '操作失败');
+            }
         }
     }
 

@@ -119,7 +119,8 @@ public class DatasetVersionService {
             DatasetLineageEntity edge = new DatasetLineageEntity();
             edge.setId(edgeTs);
             edge.setFromVersionId(upstreams.get(i));
-            edge.setToVersionId(timestamp);
+            // 必须指向版本最终生效的ID（可能来自版本号解析），与节点ID保持一致，否则血缘图无法连线
+            edge.setToVersionId(version.getId());
             edge.setRelationType(type.getRelationType());
             edge.setPrimary(i == 0);
             edge.setCreateTime(edgeTs);
@@ -273,6 +274,65 @@ public class DatasetVersionService {
                     dataset.getVersions().add(version);
                 });
         return new ArrayList<>(groups.values());
+    }
+
+    // ====================================================================
+    // 查询：数据集管理列表（分页，含已禁用版本）
+    // ====================================================================
+
+    /**
+     * 分页查询数据集版本列表（供数据集管理列表页）。
+     * 与树接口解耦：支持名称模糊、数据类型过滤，不因禁用状态过滤。
+     */
+    public List<DatasetVersionEntity> queryVersionPage(com.tsinghua.dto.DatasetListQueryRequest request) {
+        StringBuilder sql = new StringBuilder("SELECT * FROM ").append(VERSION_PREFIX).append(" WHERE 1=1");
+        sql.append(buildListFilters(request));
+        sql.append(" ORDER BY createTime DESC")
+           .append(" LIMIT ").append(request.getPageSize())
+           .append(" OFFSET ").append((request.getPageNum() - 1) * request.getPageSize())
+           .append(";");
+        return queryVersionList(sql.toString());
+    }
+
+    /** 分页总数 */
+    public long countVersionPage(com.tsinghua.dto.DatasetListQueryRequest request) {
+        try {
+            StringBuilder sql = new StringBuilder("SELECT COUNT(1) FROM ").append(VERSION_PREFIX).append(" WHERE 1=1");
+            sql.append(buildListFilters(request)).append(";");
+            SessionExecuteSqlResult res = iginxSession.executeSql(sql.toString());
+            Object v = res.getValues().get(0).get(0);
+            return v == null ? 0 : Long.parseLong(v.toString());
+        } catch (Exception e) {
+            log.error("统计数据集版本总数失败", e);
+            return 0;
+        }
+    }
+
+    private String buildListFilters(com.tsinghua.dto.DatasetListQueryRequest request) {
+        StringBuilder sb = new StringBuilder();
+        if (request.getDatasetName() != null && !request.getDatasetName().trim().isEmpty()) {
+            sb.append(" AND datasetName LIKE '^.*").append(escape(request.getDatasetName().trim())).append(".*'");
+        }
+        if (request.getDataModality() != null && !request.getDataModality().trim().isEmpty()) {
+            sb.append(" AND dataModality = '").append(escape(request.getDataModality().trim())).append("'");
+        }
+        if (request.getProvenanceType() != null && !request.getProvenanceType().trim().isEmpty()) {
+            sb.append(" AND provenanceType = '").append(escape(request.getProvenanceType().trim())).append("'");
+        }
+        return sb.toString();
+    }
+
+    private List<DatasetVersionEntity> queryVersionList(String sql) {
+        List<DatasetVersionEntity> result = new ArrayList<>();
+        try {
+            SessionExecuteSqlResult res = iginxSession.executeSql(sql);
+            for (Map<String, Object> record : ConvertUtil.getRecords(res)) {
+                result.add(ConvertUtil.mapToEntity(new DatasetVersionEntity(), record, VERSION_PREFIX));
+            }
+        } catch (Exception e) {
+            log.error("查询数据集版本列表失败: {}", sql, e);
+        }
+        return result;
     }
 
     public List<Long> parseUpstreamIds(DatasetVersionEntity version) {

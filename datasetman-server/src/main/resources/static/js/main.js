@@ -496,7 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         showComponent('qualityAssessment');
                         break;
                     case 'showSceneAnalysis':
-                        console.log('管理分析菜单被点击');
+                        console.log('数据集管理菜单被点击');
                         showComponent('sceneAnalysis');
                         break;
                     case 'showVisualAnalysis':

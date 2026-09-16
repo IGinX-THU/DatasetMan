@@ -137,3 +137,43 @@
 .scene-analysis .action-buttons .action-btn {
     margin-right: 4px;
 }
+
+/* 行内操作：紧凑按钮，允许换行，不撑破卡片 */
+.scene-analysis .sa-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 6px;
+    max-width: 300px;
+}
+
+.scene-analysis .sa-btn {
+    padding: 2px 8px;
+    font-size: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.scene-analysis .sa-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* 各操作按钮配色：默认无底色，仅彩色边框与文字；悬停填充 */
+.scene-analysis .sa-btn.quality { border-color: #1890ff; color: #1890ff; background: transparent; }
+.scene-analysis .sa-btn.quality:hover { background: #1890ff; color: #fff; }
+.scene-analysis .sa-btn.disable { border-color: #ff4d4f; color: #ff4d4f; background: transparent; }
+.scene-analysis .sa-btn.disable:hover { background: #ff4d4f; color: #fff; }
+.scene-analysis .sa-btn.enable { border-color: #52c41a; color: #52c41a; background: transparent; }
+.scene-analysis .sa-btn.enable:hover { background: #52c41a; color: #fff; }
+.scene-analysis .sa-btn.lineage { border-color: #722ed1; color: #722ed1; background: transparent; }
+.scene-analysis .sa-btn.lineage:hover { background: #722ed1; color: #fff; }
+.scene-analysis .sa-btn.impact { border-color: #fa8c16; color: #fa8c16; background: transparent; }
+.scene-analysis .sa-btn.impact:hover { background: #fa8c16; color: #fff; }
+.scene-analysis .sa-btn.export { border-color: #13c2c2; color: #13c2c2; background: transparent; }
+.scene-analysis .sa-btn.export:hover { background: #13c2c2; color: #fff; }
+.scene-analysis .sa-btn.detail { border-color: #595959; color: #595959; background: transparent; }
+.scene-analysis .sa-btn.detail:hover { background: #595959; color: #fff; }
+.scene-analysis .sa-btn.page-btn { border-color: #d1d5db; color: #374151; background: transparent; }
+
+.scene-analysis .sa-page-info { color: #6b7280; font-size: 12px; margin-right: auto; }

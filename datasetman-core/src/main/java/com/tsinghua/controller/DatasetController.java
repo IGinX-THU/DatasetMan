@@ -103,11 +103,27 @@ public class DatasetController {
         return Result.success(datasetCreationService.create(request));
     }
 
-    @ApiOperation("数据集名称和版本树")
+    @ApiOperation("数据集名称和版本树（右侧边栏）")
     @GetMapping("/tree")
     @RequirePermission(Permission.READ)
     public Result<List<DatasetTreeDTO>> tree() {
         return Result.success(datasetVersionService.getDatasetTree());
+    }
+
+    @ApiOperation("数据集管理列表分页查询（含已禁用版本）")
+    @PostMapping("/list/query")
+    @RequirePermission(Permission.READ)
+    public Result<List<DatasetVersionEntity>> listQuery(@RequestBody com.tsinghua.dto.DatasetListQueryRequest request) {
+        if (request.getPageNum() == null || request.getPageNum() < 1) request.setPageNum(1);
+        if (request.getPageSize() == null || request.getPageSize() < 1) request.setPageSize(15);
+        return Result.success(datasetVersionService.queryVersionPage(request));
+    }
+
+    @ApiOperation("数据集管理列表总数")
+    @PostMapping("/list/count")
+    @RequirePermission(Permission.READ)
+    public Result<Long> listCount(@RequestBody com.tsinghua.dto.DatasetListQueryRequest request) {
+        return Result.success(datasetVersionService.countVersionPage(request));
     }
 
     @ApiOperation("数据集版本详情")

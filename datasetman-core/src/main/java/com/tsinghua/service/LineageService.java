@@ -66,8 +66,9 @@ public class LineageService {
             }
         }
 
-        // 2. 补充：从版本的 upstreamVersionIds 补全血缘边（兼容边表缺失或 IginX 读回异常的情况）
-        //    新发现的上游会继续入队，递归向上追溯，避免只处理一层快照。
+        // 2. 补充：从版本的 upstreamVersionIds 补全血缘边（兼容边表缺失、脏边或 IginX 读回异常的情况）
+        //    焦点版本重新入队：即使 BFS 未连通（如历史脏边指向不存在的版本ID），也能补出焦点与其上游的边
+        queue.add(versionId);
         while (!queue.isEmpty()) {
             Long id = queue.poll();
             DatasetVersionEntity v = datasetVersionService.queryVersion(id);

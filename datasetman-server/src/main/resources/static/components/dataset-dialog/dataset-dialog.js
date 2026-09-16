@@ -226,6 +226,20 @@ class DatasetDialog extends HTMLElement {
         if (transformSelect) {
             transformSelect.innerHTML = '<option value="">请选择 Transform 作业...</option>' +
                 this.options.jobs.map(j => `<option value="${j.createTime}" data-export-type="${j.exportType || ''}" data-export-file="${this.escape(j.exportFile || '')}">${this.escape(j.name)}</option>`).join('');
+            // 依据编排输出目标自动选择数据类型：IGinX -> 时序数据；文件 -> 文件型数据
+            transformSelect.onchange = () => {
+                const selected = transformSelect.selectedOptions[0];
+                if (!selected || !selected.value) return;
+                const exportType = selected.getAttribute('data-export-type');
+                const modalitySelect = $('dataModality');
+                if (!modalitySelect) return;
+                if (exportType === '2') {
+                    modalitySelect.value = 'time_series';
+                } else if (exportType === '1') {
+                    modalitySelect.value = 'file_system';
+                }
+                this.updateStoragePathPreview && this.updateStoragePathPreview();
+            };
         }
     }
 
@@ -520,7 +534,7 @@ class DatasetDialog extends HTMLElement {
         const datasetName = $('datasetName').value.trim() || '-';
         const dataModality = $('dataModality').value;
         const remark = $('remark').value.trim() || '-';
-        const modalityLabels = { relational: '关系型', time_series: '时序数据', key_value: '键值', semi_structured: '半结构化/文档', file_system: '文件系统' };
+        const modalityLabels = { relational: '关系数据', time_series: '时序数据', key_value: '键值数据', semi_structured: '半结构化数据', file_system: '文件型数据' };
 
         let modeLabel, typeLabel, resourceLabel;
         if (this.createMode === 'new') {

@@ -107,9 +107,11 @@ class DatasetHistory extends HTMLElement {
                         <div class="item"><label>版本号</label><span id="versionNo">-</span></div>
                         <div class="item"><label>产出方式</label><span id="type">-</span></div>
                         <div class="item"><label>数据类型</label><span id="dataType">-</span><select id="dataTypeEdit" style="display:none;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;">
-                            <option value="relational">关系型</option>
-                            <option value="time-series">时序</option>
-                            <option value="semi-structured">半结构化</option>
+                            <option value="relational">关系数据</option>
+                            <option value="time_series">时序数据</option>
+                            <option value="key_value">键值数据</option>
+                            <option value="semi_structured">半结构化数据</option>
+                            <option value="file_system">文件型数据</option>
                             <option value="text">文本</option>
                             <option value="image">图像</option>
                             <option value="audio">音频</option>
@@ -228,9 +230,11 @@ class DatasetHistory extends HTMLElement {
 
     dataTypeLabel(dataType) {
         const labels = {
-            relational: '关系型',
-            'time-series': '时序',
-            'semi-structured': '半结构化',
+            relational: '关系数据',
+            'time-series': '时序数据', 'time_series': '时序数据',
+            'semi-structured': '半结构化数据', 'semi_structured': '半结构化数据',
+            'key-value': '键值数据', 'key_value': '键值数据',
+            'file-system': '文件型数据', 'file_system': '文件型数据',
             text: '文本',
             image: '图像',
             audio: '音频',
@@ -265,42 +269,17 @@ class DatasetHistory extends HTMLElement {
             container.innerHTML = '<div class="empty">暂无变化记录</div>';
             return;
         }
-        container.innerHTML = `<table><thead><tr><th>版本</th><th>产出方式</th><th>存储路径</th><th>上游版本</th><th>版本配置</th><th>操作人</th><th>时间</th><th>备注</th><th>状态</th><th>操作</th></tr></thead><tbody>${this.changes.map(row => {
+        container.innerHTML = `<table><thead><tr><th>版本</th><th>产出方式</th><th>存储路径</th><th>上游版本</th><th>版本配置</th><th>操作人</th><th>时间</th><th>备注</th><th>状态</th></tr></thead><tbody>${this.changes.map(row => {
             const upstreams = (row.upstreams || []).map(u => `${u.datasetName || ''}/${u.versionNo || u.versionId}`).join(', ') || '-';
             const recipe = this.recipeSummary(row.derivationConfig);
             const activeVid = this.versionIdOf(this.version);
             const statusBadge = this.statusBadge(row);
             const vid = row.versionId || row.createTime;
-            const toggleBtn = row.deleted
-                ? `<button class="toggle-btn enable" data-vid="${vid}" style="padding:2px 10px;font-size:12px;border:1px solid #52c41a;border-radius:4px;background:#f6ffed;color:#52c41a;cursor:pointer;">启用</button>`
-                : `<button class="toggle-btn disable" data-vid="${vid}" style="padding:2px 10px;font-size:12px;border:1px solid #faad14;border-radius:4px;background:#fffbe6;color:#faad14;cursor:pointer;">禁用</button>`;
-            return `<tr data-version-id="${row.versionId}" class="${row.versionId === activeVid ? 'active' : ''}"><td>${this.escape(row.versionNo)}</td><td><span class="badge ${row.provenanceType}">${this.escape(row.provenanceLabel || row.provenanceType)}</span></td><td><code>${this.escape(row.storagePath || '-')}</code></td><td>${this.escape(upstreams)}</td><td title="${this.escape(JSON.stringify(row.derivationConfig || {}))}">${this.escape(recipe)}</td><td>${this.escape(row.operator || '-')}</td><td>${this.escape(this.formatTime(row.createTime))}</td><td>${this.escape(row.remark || '-')}</td><td>${statusBadge}</td><td>${toggleBtn}</td></tr>`;
+            return `<tr data-version-id="${row.versionId}" class="${row.versionId === activeVid ? 'active' : ''}"><td>${this.escape(row.versionNo)}</td><td><span class="badge ${row.provenanceType}">${this.escape(row.provenanceLabel || row.provenanceType)}</span></td><td><code>${this.escape(row.storagePath || '-')}</code></td><td>${this.escape(upstreams)}</td><td title="${this.escape(JSON.stringify(row.derivationConfig || {}))}">${this.escape(recipe)}</td><td>${this.escape(row.operator || '-')}</td><td>${this.escape(this.formatTime(row.createTime))}</td><td>${this.escape(row.remark || '-')}</td><td>${statusBadge}</td></tr>`;
         }).join('')}</tbody></table>`;
         container.querySelectorAll('tbody tr').forEach(row => row.addEventListener('click', () => this.highlight(Number(row.dataset.versionId))));
-        container.querySelectorAll('.toggle-btn').forEach(btn => btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const vid = Number(btn.dataset.vid);
-            await this.toggleVersion(vid);
-        }));
     }
 
-    async toggleVersion(versionId) {
-        try {
-            const result = await window.AppConfig.put('dataset', 'versionToggle', { versionId });
-            if (!(result.success || result.code === 200)) throw new Error(result.message || '操作失败');
-            const disabled = result.data;
-            if (window.CommonUtils?.showToast) window.CommonUtils.showToast(disabled ? '已禁用' : '已启用', 'success');
-            // 刷新右侧数据集树
-            if (window.loadDatasetTree) await window.loadDatasetTree();
-            // 重新加载变化过程和血缘
-            const changes = await window.AppConfig.get('dataset', 'changes', { datasetName: this.selection.datasetName });
-            this.changes = ((changes.success || changes.code === 200) && changes.data) ? changes.data : [];
-            this.renderChangeTable();
-            await this.loadGraph();
-        } catch (error) {
-            if (window.CommonUtils?.showToast) window.CommonUtils.showToast(error.message, 'error'); else alert(error.message);
-        }
-    }
 
     async loadGraph() {
         const vid = this.versionIdOf(this.version);
@@ -523,6 +502,43 @@ class DatasetHistory extends HTMLElement {
         const graphWidth = Math.max(1000, maxNodesInLayer * colWidth + padding);
         container.style.height = graphHeight + 'px';
         container.style.minWidth = graphWidth + 'px';
+
+        // 禁用版本置灰整条入链：指向禁用版本的边（含中间操作节点）全部置灰，
+        // 而不仅是禁用版本节点本身
+        const deletedVersionIds = new Set(
+            nodes.filter(n => n.deleted).map(n => String(n.versionId || n.createTime))
+        );
+        if (deletedVersionIds.size > 0) {
+            // 1) 直连边：目标版本已禁用 -> 边置灰
+            echartsLinks.forEach(l => {
+                const m = /^v_(.+)$/.exec(l.target) ? null : /^op_(.+?)_(.+)$/.exec(l.target);
+                if (m && deletedVersionIds.has(m[2])) {
+                    l.lineStyle.color = '#d1d5db';
+                    l.lineStyle.opacity = 0.55;
+                    if (l.label) l.label.color = '#cbd5e1';
+                }
+                if (/^v_(.+)$/.test(l.target)) {
+                    const targetVid = l.target.replace(/^v_/, '');
+                    if (deletedVersionIds.has(targetVid)) {
+                        l.lineStyle.color = '#d1d5db';
+                        l.lineStyle.opacity = 0.55;
+                        if (l.label) l.label.color = '#cbd5e1';
+                    }
+                }
+            });
+            // 2) 操作节点：其目标版本已禁用 -> 节点置灰
+            echartsNodes.forEach(n => {
+                if (n.nodeType !== 'operation') return;
+                const m = /^op_(.+?)_(.+)$/.exec(n.id);
+                if (m && deletedVersionIds.has(m[2])) {
+                    n.itemStyle = n.itemStyle || {};
+                    n.itemStyle.color = '#e5e7eb';
+                    n.itemStyle.borderColor = '#cbd5e1';
+                    n.itemStyle.opacity = 0.55;
+                    if (n.label) n.label.color = '#9ca3af';
+                }
+            });
+        }
 
         const chart = window.echarts.init(container);
         const option = {
