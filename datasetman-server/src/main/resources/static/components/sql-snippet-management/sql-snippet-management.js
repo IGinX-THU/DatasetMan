@@ -864,14 +864,18 @@ class SqlSnippetManagement extends HTMLElement {
     }
 
     handleSqlFileUpload(event) {
-        const file = event.target.files[0];
+        const input = event && event.target ? event.target : null;
+        const file = input && input.files ? input.files[0] : null;
         if (!file) return;
 
         const reader = new FileReader();
+        // 记住输入框引用：parseAndFillSql 重渲染弹窗后原节点会被移除，回调里需容错
         reader.onload = (e) => {
-            const content = e.target.result;
+            const content = e && e.target ? e.target.result : reader.result;
             this.parseAndFillSql(content);
-            event.target.value = '';
+            try {
+                if (input && 'value' in input) input.value = '';
+            } catch (ignore) { /* 输入框可能已随重渲染移除，忽略 */ }
         };
         reader.onerror = () => {
             this.showResult('文件读取失败', 'error');
