@@ -170,20 +170,20 @@ public class DataSourceService {
                     dto.setPath(column.getPath());
                     dto.setDataType(column.getDataType().getValue());
                     
-                    // 优先从数据档案获取dataModality
+                    // 优先从数据集版本获取dataModality
                     String modality = null;
-                    if (!archiveMap.isEmpty()) {
-                        modality = archiveMap.entrySet().stream()
+                    if (!versionModalityMap.isEmpty()) {
+                        // 查找匹配的版本（tree路径可能是datasets.xxx.v_yyy.field，需要匹配前缀）
+                        modality = versionModalityMap.entrySet().stream()
                                 .filter(entry -> column.getPath().startsWith(entry.getKey()))
                                 .map(Map.Entry::getValue)
                                 .findFirst()
                                 .orElse(null);
                     }
-                    
-                    // 如果没有从档案获取到，且是datasets.路径，从数据集版本获取
-                    if (modality == null && column.getPath().startsWith("datasets.")) {
-                        // 查找匹配的版本（tree路径可能是datasets.xxx.v_yyy.field，需要匹配前缀）
-                        modality = versionModalityMap.entrySet().stream()
+
+                    // 没有数据集的，从数据档案获取dataModality
+                    if (modality == null && !archiveMap.isEmpty()) {
+                        modality = archiveMap.entrySet().stream()
                                 .filter(entry -> column.getPath().startsWith(entry.getKey()))
                                 .map(Map.Entry::getValue)
                                 .findFirst()
