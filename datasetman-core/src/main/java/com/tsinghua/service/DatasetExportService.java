@@ -195,7 +195,7 @@ public class DatasetExportService {
 
     /**
      * 按表导出当前版本：从左侧树获取该存储路径下的所有节点，
-     * 按表前缀分组，每张表一个 CSV，文件名为 <前缀>.<表名>.csv，
+     * 按表前缀分组，每张表一个 CSV，文件名为 {前缀}.{表名}.csv，
      * 表头为 key + 去掉表前缀的列名。
      */
     private void exportVersionTables(ZipOutputStream zip, DatasetVersionEntity v) throws IOException {
