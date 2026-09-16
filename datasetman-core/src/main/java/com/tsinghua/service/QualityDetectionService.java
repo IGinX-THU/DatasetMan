@@ -43,7 +43,13 @@ public class QualityDetectionService {
     private Session iginxSession;
 
     @Autowired
-    private IginXClient iginxClient;
+    private cn.edu.tsinghua.iginx.session_v2.IginXClient iginxClient;
+
+    @Autowired
+    private DataTableService dataTableService;
+
+    @Autowired
+    private DataSourceService dataSourceService;
 
     @Autowired
     private DatasetVersionService datasetVersionService;
@@ -70,8 +76,16 @@ public class QualityDetectionService {
         if (criteriaId != null) {
             criteria = evaluationCriteriaService.queryById(criteriaId);
         }
-        List<Map<String, Object>> sample = sampleData(version.getStoragePath(), size);
-        DetectionResult result = detect(sample, version, size);
+        // 文件型数据集特殊处理：按文件字节维度检测，而非表格单元格
+        List<Map<String, Object>> sample;
+        DetectionResult result;
+        if (isFileDataset(version)) {
+            result = detectFile(version);
+            sample = Collections.emptyList();
+        } else {
+            sample = sampleData(version.getStoragePath(), size);
+            result = detect(sample, version, size);
+        }
 
         long timestamp = System.currentTimeMillis();
         QualityAssessmentEntity entity = new QualityAssessmentEntity();
@@ -81,8 +95,10 @@ public class QualityDetectionService {
         entity.setCriteriaName(criteria != null
                 ? criteria.getName()
                 : "自动检测-" + version.getDatasetName());
-        entity.setDescription(String.format("对数据集 %s %s 的4维度自动质量检测（实际抽样 %d 行）",
-                version.getDatasetName(), version.getVersionNo(), result.sampleSize));
+        entity.setDescription(String.format("对%s数据集 %s %s 的4维度自动质量检测（%s）",
+                isFileDataset(version) ? "文件型" : "",
+                version.getDatasetName(), version.getVersionNo(),
+                isFileDataset(version) ? "共 " + result.sampleSize + " 个文件" : "实际抽样 " + result.sampleSize + " 行"));
 
         JSONObject weights = new JSONObject();
         JSONObject scores = new JSONObject();
@@ -148,6 +164,105 @@ public class QualityDetectionService {
         final JSONObject details = new JSONObject();
         double composite;
         int sampleSize;
+    }
+
+    private static boolean isFileDataset(DatasetVersionEntity v) {
+        if (v == null) return false;
+        String modality = v.getDataModality();
+        if ("file_system".equals(modality) || "file-system".equals(modality)) {
+            return true;
+        }
+        return v.getStoragePath() != null && v.getStoragePath().startsWith("file_system");
+    }
+
+    /**
+     * 文件型数据集检测（4维度按文件字节口径）：
+     *   完整性 qcom：非空文件占比（空文件=缺失）
+     *   一致性 qcon：1 - 内容重复文件率（相同字节的文件视为重复）
+     *   时效性 qtim：版本登记时间年龄（文件无独立时间列，按版本时间计）
+     *   有效性 qval：文件可完整读取比例（读取失败视为无效）
+     */
+    private DetectionResult detectFile(DatasetVersionEntity version) {
+        DetectionResult r = new DetectionResult();
+        List<String> filePaths = resolveFilePaths(version);
+        r.sampleSize = filePaths.size();
+
+        if (filePaths.isEmpty()) {
+            for (DataQualityDimensionEnum dim : DataQualityDimensionEnum.values()) {
+                r.scores.put(dim.name(), 0.0);
+            }
+            r.composite = 0.0;
+            r.details.put("error", "未查询到文件数据（storagePath=" + version.getStoragePath() + "）");
+            r.details.put("sampling", "文件型数据集，未查询到文件");
+            return r;
+        }
+
+        int emptyFiles = 0, failedFiles = 0, duplicateFiles = 0;
+        long totalBytes = 0;
+        java.util.Set<Integer> seenHashes = new java.util.HashSet<>();
+        for (String path : filePaths) {
+            try {
+                byte[] bytes = dataTableService.queryFileBytes(Collections.singletonList(path));
+                if (bytes == null || bytes.length == 0) {
+                    emptyFiles++;
+                    continue;
+                }
+                totalBytes += bytes.length;
+                if (!seenHashes.add(java.util.Arrays.hashCode(bytes))) {
+                    duplicateFiles++;
+                }
+            } catch (Exception e) {
+                failedFiles++;
+            }
+        }
+        int n = filePaths.size();
+        double qcom = 100.0 * (n - emptyFiles) / n;
+        double qcon = 100.0 * (n - duplicateFiles) / n;
+        long reference = version.getCreateTime() != null ? version.getCreateTime() : 0;
+        double ageDays = reference > 0 ? (System.currentTimeMillis() - reference) / 86400000.0 : 0;
+        double qtim = Math.min(100.0, Math.max(0.0, 100.0 - ageDays * 2.0));
+        double qval = 100.0 * (n - failedFiles) / n;
+
+        r.scores.put("qcom", round(qcom));
+        r.scores.put("qcon", round(qcon));
+        r.scores.put("qtim", round(qtim));
+        r.scores.put("qval", round(qval));
+        r.composite = round((qcom + qcon + qtim + qval) / 4.0);
+
+        r.details.put("sampling", String.format("文件型数据集，共 %d 个文件，合计 %d 字节", n, totalBytes));
+        r.details.put("qcom", String.format("非空文件 %d/%d（空文件 %d 个）%s", n - emptyFiles, n, emptyFiles,
+                emptyFiles == 0 ? "；主要问题: 无" : "；主要问题: 空文件×" + emptyFiles));
+        r.details.put("qcon", String.format("内容重复文件 %d/%d", duplicateFiles, n));
+        r.details.put("qtim", String.format("按版本登记时间计算，距 %.1f 天（每滞后1天扣2分）", ageDays));
+        r.details.put("qval", String.format("可完整读取 %d/%d（读取失败 %d 个）%s", n - failedFiles, n, failedFiles,
+                failedFiles == 0 ? "；主要问题: 无" : "；主要问题: 读取失败×" + failedFiles));
+        r.details.put("sampleSize", n);
+        r.details.put("fileCount", n);
+        r.details.put("totalBytes", totalBytes);
+        return r;
+    }
+
+    /** 解析文件路径：与导出一致，优先树中叶子，否则直接用 storagePath */
+    private List<String> resolveFilePaths(DatasetVersionEntity v) {
+        String storagePath = v.getStoragePath();
+        java.util.LinkedHashSet<String> result = new java.util.LinkedHashSet<>();
+        try {
+            for (com.tsinghua.dto.ColumnDto node : dataSourceService.dataSourceTree()) {
+                String path = node.getPath();
+                if (path == null) continue;
+                if (path.equals(storagePath)
+                        || (storagePath != null && (path.startsWith(storagePath + ".")
+                        || path.startsWith(storagePath + "\\")))) {
+                    result.add(path);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("解析文件路径失败 storagePath={}: {}", storagePath, e.getMessage());
+        }
+        if (result.isEmpty() && storagePath != null && !storagePath.isEmpty()) {
+            result.add(storagePath);
+        }
+        return new ArrayList<>(result);
     }
 
     private DetectionResult detect(List<Map<String, Object>> sample, DatasetVersionEntity version, int requestSize) {
