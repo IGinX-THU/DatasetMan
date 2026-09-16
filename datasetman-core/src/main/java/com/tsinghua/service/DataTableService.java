@@ -328,91 +328,97 @@ public class DataTableService {
     public void queryDataStreaming(DataQueryRequest request, HttpServletResponse response) {
         try {
             log.info("开始流式查询，路径: {}", request.getPaths());
-            QueryClient queryClient = iginxClient.getQueryClient();
-
-            Set<String> paths = new HashSet<>(request.getPaths());
-            long startKey = 0L;
-            long endKey = Long.MAX_VALUE;
-
-            // 设置响应头为二进制流
             response.setStatus(HttpServletResponse.SC_OK);
             response.setContentType("application/octet-stream");
             response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
             response.setHeader(HttpHeaders.PRAGMA, "no-cache");
             response.setHeader(HttpHeaders.EXPIRES, "0");
-
-            OutputStream outputStream = response.getOutputStream();
-
-            // 使用队列进行线程间通信
-            final java.util.concurrent.BlockingQueue<byte[]> queue = new java.util.concurrent.LinkedBlockingQueue<>();
-            final int[] recordCount = {0};
-            final long[] totalBytes = {0};
-            final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
-
-            // 启动Consumer线程查询IginX并放入队列
-            Thread consumerThread = new Thread(() -> {
-                try {
-                    queryClient.query(
-                        SimpleQuery.builder()
-                            .addMeasurements(paths)
-                            .startKey(startKey)
-                            .endKey(endKey)
-                            .build(),
-                        record -> {
-                            for (IginXColumn column: record.getHeader().getColumns()) {
-                                Object value = record.getValue(column.getName());
-                                if (value instanceof byte[]) {
-                                    byte[] bytes = (byte[]) value;
-                                    try {
-                                        queue.put(bytes);
-                                        recordCount[0]++;
-                                        totalBytes[0] += bytes.length;
-                                    } catch (InterruptedException e) {
-                                        log.error("放入队列失败", e);
-                                    }
-                                }
-                            }
-                        }
-                    );
-                } catch (Exception e) {
-                    log.error("Consumer线程异常", e);
-                } finally {
-                    latch.countDown();
-                }
-            });
-
-            consumerThread.start();
-
-            // 主线程从队列取出数据流式写入HTTP响应
-            try {
-                final long[] writtenBytes = {0};
-                
-                byte[] data;
-                while (true) {
-                    data = queue.poll(1, java.util.concurrent.TimeUnit.SECONDS);
-                    if (data == null) {
-                        // 队列为空，检查Consumer是否完成
-                        if (latch.await(100, java.util.concurrent.TimeUnit.MILLISECONDS)) {
-                            // Consumer已完成，队列也为空，退出循环
-                            break;
-                        }
-                        // Consumer未完成，继续等待
-                        continue;
-                    }
-                    outputStream.write(data);
-                    outputStream.flush();
-                    writtenBytes[0] += data.length;
-                }
-                
-                log.info("Consumer完成，放入队列记录数: {}, 总字节数: {}", recordCount[0], totalBytes[0]);
-                log.info("流式查询完成，写入记录数: {}, 写入字节数: {}", recordCount[0], writtenBytes[0]);
-            } catch (InterruptedException e) {
-                log.error("从队列取数据被中断", e);
-            }
-
+            streamFileBytes(request.getPaths(), response.getOutputStream());
         } catch (IOException e) {
             log.error("流式查询失败", e);
             throw new RuntimeException("流式查询失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 读取文件型数据原始字节（与 POST /api/data/fs/query 相同：按 key 顺序拼接各 chunk）。
+     */
+    public byte[] queryFileBytes(Collection<String> paths) {
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        streamFileBytes(paths, bos);
+        return bos.toByteArray();
+    }
+
+    /**
+     * 文件数据视图同款查询：SimpleQuery 流式取出 byte[] chunk，按顺序写入输出流。
+     */
+    public void streamFileBytes(Collection<String> paths, OutputStream outputStream) {
+        QueryClient queryClient = iginxClient.getQueryClient();
+        Set<String> measurementPaths = new HashSet<>(paths);
+        long startKey = 0L;
+        long endKey = Long.MAX_VALUE;
+
+        final java.util.concurrent.BlockingQueue<byte[]> queue = new java.util.concurrent.LinkedBlockingQueue<>();
+        final int[] recordCount = {0};
+        final long[] totalBytes = {0};
+        final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+
+        Thread consumerThread = new Thread(() -> {
+            try {
+                queryClient.query(
+                    SimpleQuery.builder()
+                        .addMeasurements(measurementPaths)
+                        .startKey(startKey)
+                        .endKey(endKey)
+                        .build(),
+                    record -> {
+                        for (IginXColumn column: record.getHeader().getColumns()) {
+                            Object value = record.getValue(column.getName());
+                            if (value instanceof byte[]) {
+                                byte[] bytes = (byte[]) value;
+                                try {
+                                    queue.put(bytes);
+                                    recordCount[0]++;
+                                    totalBytes[0] += bytes.length;
+                                } catch (InterruptedException e) {
+                                    log.error("放入队列失败", e);
+                                }
+                            }
+                        }
+                    }
+                );
+            } catch (Exception e) {
+                log.error("Consumer线程异常", e);
+            } finally {
+                latch.countDown();
+            }
+        });
+
+        consumerThread.start();
+
+        try {
+            final long[] writtenBytes = {0};
+            byte[] data;
+            while (true) {
+                data = queue.poll(1, java.util.concurrent.TimeUnit.SECONDS);
+                if (data == null) {
+                    if (latch.await(100, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                        break;
+                    }
+                    continue;
+                }
+                outputStream.write(data);
+                outputStream.flush();
+                writtenBytes[0] += data.length;
+            }
+            log.info("Consumer完成，放入队列记录数: {}, 总字节数: {}", recordCount[0], totalBytes[0]);
+            log.info("流式查询完成，写入记录数: {}, 写入字节数: {}", recordCount[0], writtenBytes[0]);
+        } catch (InterruptedException e) {
+            log.error("从队列取数据被中断", e);
+            Thread.currentThread().interrupt();
+        } catch (IOException e) {
+            log.error("写入文件字节失败", e);
+            throw new RuntimeException("文件数据读取失败: " + e.getMessage(), e);
         }
     }
 

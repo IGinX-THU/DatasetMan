@@ -3,7 +3,7 @@
  *   1. 分类管理：按数据类型的分类统计 chips + 类型筛选（数据类型与档案页下拉一致）；
  *   2. 血缘关系：版本的上下游血缘列表（行内操作，弹窗展示）；
  *   3. 影响范围分析：下游受影响数据集与版本链（行内操作，弹窗展示）；
- *   4. 导出：打包下载该数据集树下全部版本数据表CSV + manifest清单 + 质量评估报告PDF；
+ *   4. 导出：打包下载该版本数据（文件型为原始文件，其余为CSV）+ manifest清单 + 质量评估报告PDF；
  *   5. 质量评估：跳转质量测评页并预选该数据集版本；
  *   6. 详情：跳转数据集档案页。
  * 对应后端接口：
@@ -198,18 +198,14 @@ class SceneAnalysis extends HTMLElement {
         if (!select) return;
         const current = select.value;
         // 与创建数据集向导"数据类型"下拉完全一致的选项（适配 - 与 _ 两种编码写法）
-        // 以注册数据源弹窗"数据模态"下拉的值为准（下划线风格），创建/编辑/筛选三处一致
+        // 以注册数据源弹窗"数据模态"下拉的值为准（仅此5类），创建/编辑/筛选三处一致
         const allTypes = [
             ['', '全部数据类型'],
             ['relational', '关系数据'],
             ['time_series', '时序数据'],
             ['key_value', '键值数据'],
             ['semi_structured', '半结构化数据'],
-            ['file_system', '文件型数据'],
-            ['text', '文本'],
-            ['image', '图像'],
-            ['audio', '音频'],
-            ['video', '视频']
+            ['file_system', '文件型数据']
         ];
         select.innerHTML = allTypes.map(t => '<option value="' + t[0] + '">' + t[1] + '</option>').join('');
         select.value = current;
@@ -246,7 +242,7 @@ class SceneAnalysis extends HTMLElement {
                 + '<button class="sa-btn ' + (r.deleted ? 'enable' : 'disable') + '" data-action="toggle" data-name="' + r.datasetName + '" data-version-id="' + vid + '">' + (r.deleted ? '启用' : '禁用') + '</button>'
                 + '<button class="sa-btn lineage" data-action="lineage" data-name="' + r.datasetName + '" data-version-id="' + vid + '">关系</button>'
                 + '<button class="sa-btn impact" data-action="impact" data-name="' + r.datasetName + '" data-version-id="' + vid + '">影响</button>'
-                + '<button class="sa-btn export" data-action="export" data-name="' + r.datasetName + '" data-version-id="' + vid + '" title="导出当前版本数据表CSV+manifest清单+质量评估报告PDF">导出</button>'
+                + '<button class="sa-btn export" data-action="export" data-name="' + r.datasetName + '" data-version-id="' + vid + '" title="' + (r.dataModality === 'file_system' || r.dataModality === 'file-system' ? '导出当前版本原始文件+manifest清单+质量评估报告PDF' : '导出当前版本数据表CSV+manifest清单+质量评估报告PDF') + '">导出</button>'
                 + '<button class="sa-btn detail" data-action="detail" data-name="' + r.datasetName + '" data-version-id="' + vid + '">详情</button>'
                 + '</div></td></tr>';
         }).join('');
@@ -341,6 +337,9 @@ class SceneAnalysis extends HTMLElement {
             alert('该版本缺少ID，无法导出。');
             return;
         }
+        if (window.showGlobalLoading) {
+            window.showGlobalLoading('正在导出数据...');
+        }
         try {
             const url = '/api/dataset/export-package?versionId=' + encodeURIComponent(versionId);
             const headers = (window.AppConfig && window.AppConfig.getAuthHeaders())
@@ -364,6 +363,10 @@ class SceneAnalysis extends HTMLElement {
             setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
         } catch (error) {
             alert(error.message || '导出失败');
+        } finally {
+            if (window.hideGlobalLoading) {
+                window.hideGlobalLoading();
+            }
         }
     }
 

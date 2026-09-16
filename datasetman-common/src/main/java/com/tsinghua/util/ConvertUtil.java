@@ -125,6 +125,17 @@ public class ConvertUtil {
     }
 
     /**
+     * 将 IGinX 文件路径还原为带前缀的文件名。
+     * 例如 {@code file_system.fs.video.zkfdv4\mp4} -> {@code file_system.fs.video.zkfdv4.mp4}
+     */
+    public static String iginxPathToFileName(String filePath) {
+        if (filePath == null || filePath.isEmpty()) {
+            return "file";
+        }
+        return filePath.replace('/', '.').replace('\\', '.');
+    }
+
+    /**
      * 判断字节数组是否为有效的UTF-8文本
      * 作为备用判断方法
      *

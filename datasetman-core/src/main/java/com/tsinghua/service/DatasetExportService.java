@@ -60,6 +60,9 @@ public class DatasetExportService {
     @Autowired
     private DataSourceService dataSourceService;
 
+    @Autowired
+    private DataTableService dataTableService;
+
     /**
      * 打包导出当前版本：
      * 该版本数据表 CSV（覆盖其下全部数据） + manifest.json + 质量评估报告PDF。
@@ -73,9 +76,13 @@ public class DatasetExportService {
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try (ZipOutputStream zip = new ZipOutputStream(bos)) {
-            // 1. 当前版本数据：按表导出，每张表一个CSV（表名为存储路径叶子列的父节点，
-            //    表头去掉 "datasets.<数据集>.<版本>.<表名>." 前缀，只保留列名）
-            exportVersionTables(zip, version);
+            // 1. 当前版本数据：文件型数据集按文件原始字节导出（与文件数据视图下载一致），
+            //    其余按表导出 CSV
+            if (isFileDataset(version)) {
+                exportVersionFile(zip, version);
+            } else {
+                exportVersionTables(zip, version);
+            }
 
             // 2. 标准化清单
             JSONObject manifest = datasetManifestService.buildManifest(version);
@@ -102,6 +109,82 @@ public class DatasetExportService {
     public String buildFileName(String datasetName, String versionNo) {
         String safe = datasetName == null ? "dataset" : datasetName.replaceAll("[\\/:*?\"<>|]", "_");
         return safe + "-" + (versionNo == null ? "export" : sanitize(versionNo)) + ".zip";
+    }
+
+    private static boolean isFileDataset(DatasetVersionEntity v) {
+        if (v == null) return false;
+        String modality = v.getDataModality();
+        if ("file_system".equals(modality) || "file-system".equals(modality)) {
+            return true;
+        }
+        return v.getStoragePath() != null && v.getStoragePath().startsWith("file_system");
+    }
+
+    /**
+     * 文件型数据集导出：复用文件数据视图（POST /api/data/fs/query / DataTableService.streamFileBytes）
+     * 按 key 顺序拼接原始文件字节，文件名规则与 file-system-browser 一致。
+     */
+    private void exportVersionFile(ZipOutputStream zip, DatasetVersionEntity v) throws IOException {
+        try {
+            List<String> filePaths = resolveFilePaths(v);
+            if (filePaths.isEmpty()) {
+                zipEntry(zip, "导出说明.txt", "该路径下未查询到文件数据".getBytes(StandardCharsets.UTF_8));
+                return;
+            }
+            Set<String> usedNames = new HashSet<>();
+            int exported = 0;
+            for (String path : filePaths) {
+                byte[] bytes = dataTableService.queryFileBytes(Collections.singletonList(path));
+                if (bytes == null || bytes.length == 0) {
+                    continue;
+                }
+                String fileName = sanitize(ConvertUtil.iginxPathToFileName(path));
+                if (!usedNames.add(fileName)) {
+                    int dot = fileName.lastIndexOf('.');
+                    String stem = dot > 0 ? fileName.substring(0, dot) : fileName;
+                    String ext = dot > 0 ? fileName.substring(dot) : "";
+                    int i = 2;
+                    String candidate;
+                    do {
+                        candidate = stem + "_" + i + ext;
+                        i++;
+                    } while (!usedNames.add(candidate));
+                    fileName = candidate;
+                }
+                zipEntry(zip, fileName, bytes);
+                exported++;
+            }
+            if (exported == 0) {
+                zipEntry(zip, "导出说明.txt", "该路径下未查询到文件数据".getBytes(StandardCharsets.UTF_8));
+            }
+        } catch (Exception e) {
+            log.warn("文件型数据集导出失败 storagePath={}: {}", v.getStoragePath(), e.getMessage());
+            zipEntry(zip, "导出说明.txt", ("文件导出失败: " + e.getMessage()).getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    /** 解析实际文件列路径：优先树中叶子（含 \扩展名），否则直接用 storagePath */
+    private List<String> resolveFilePaths(DatasetVersionEntity v) {
+        String storagePath = v.getStoragePath();
+        LinkedHashSet<String> result = new LinkedHashSet<>();
+        try {
+            List<com.tsinghua.dto.ColumnDto> treeNodes = dataSourceService.dataSourceTree();
+            for (com.tsinghua.dto.ColumnDto node : treeNodes) {
+                String path = node.getPath();
+                if (path == null) continue;
+                if (path.equals(storagePath)
+                        || (storagePath != null && (path.startsWith(storagePath + ".")
+                        || path.startsWith(storagePath + "\\")))) {
+                    result.add(path);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("解析文件路径失败 storagePath={}: {}", storagePath, e.getMessage());
+        }
+        if (result.isEmpty() && storagePath != null && !storagePath.isEmpty()) {
+            result.add(storagePath);
+        }
+        return new ArrayList<>(result);
     }
 
     private void zipEntry(ZipOutputStream zip, String name, byte[] bytes) throws IOException {
