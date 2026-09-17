@@ -79,6 +79,21 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
     @Autowired
     private QualityAssessmentService qualityAssessmentService;
 
+    @Autowired
+    private DatasetCategoryService datasetCategoryService;
+
+    @Autowired
+    private ImpactAnalysisService impactAnalysisService;
+
+    @Autowired
+    private DatasetExportService datasetExportService;
+
+    @Autowired
+    private QualityReportService qualityReportService;
+
+    @Autowired
+    private QualityDetectionService qualityDetectionService;
+
     // ========== Data Source Interface - Match DataSourceController ==========
 
     @Override
@@ -1728,6 +1743,163 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
         @Override
         public void transferTo(java.io.File dest) throws IOException, IllegalStateException {
             Files.write(dest.toPath(), content);
+        }
+    }
+
+    // ========== 数据集管理/分析 - 对齐RESTful新增能力 ==========
+
+    @Override
+    public com.tsinghua.thrift.api.Result listDatasetVersions(com.tsinghua.thrift.api.DatasetListQueryRequest request) throws TException {
+        try {
+            com.tsinghua.dto.DatasetListQueryRequest dto = new com.tsinghua.dto.DatasetListQueryRequest();
+            if (request.isSetPageNum()) dto.setPageNum(request.getPageNum());
+            if (request.isSetPageSize()) dto.setPageSize(request.getPageSize());
+            if (request.isSetDatasetName()) dto.setDatasetName(request.getDatasetName());
+            if (request.isSetDataModality()) dto.setDataModality(request.getDataModality());
+            if (request.isSetProvenanceType()) dto.setProvenanceType(request.getProvenanceType());
+            java.util.List<com.tsinghua.entity.DatasetVersionEntity> list = datasetVersionService.queryVersionPage(dto);
+            String jsonData = convertListToJson(list);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: List dataset versions failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result countDatasetVersions(com.tsinghua.thrift.api.DatasetListQueryRequest request) throws TException {
+        try {
+            com.tsinghua.dto.DatasetListQueryRequest dto = new com.tsinghua.dto.DatasetListQueryRequest();
+            if (request.isSetPageNum()) dto.setPageNum(request.getPageNum());
+            if (request.isSetPageSize()) dto.setPageSize(request.getPageSize());
+            if (request.isSetDatasetName()) dto.setDatasetName(request.getDatasetName());
+            if (request.isSetDataModality()) dto.setDataModality(request.getDataModality());
+            if (request.isSetProvenanceType()) dto.setProvenanceType(request.getProvenanceType());
+            long count = datasetVersionService.countVersionPage(dto);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(String.valueOf(count));
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Count dataset versions failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result getDatasetCategories() throws TException {
+        try {
+            String jsonData = convertListToJson(datasetCategoryService.categoryStats());
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result getDatasetsByCategory(String category) throws TException {
+        try {
+            String jsonData = convertListToJson(datasetCategoryService.datasetsByCategory(category));
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result getDatasetRelations(String datasetName) throws TException {
+        try {
+            String jsonData = convertListToJson(datasetCategoryService.extractRelations(datasetName));
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result getDatasetImpact(long versionId) throws TException {
+        try {
+            com.tsinghua.dto.ImpactAnalysisDTO impact = impactAnalysisService.analyze(versionId);
+            String jsonData = convertEntityToJson(impact);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result exportDatasetPackage(long versionId) throws TException {
+        try {
+            com.tsinghua.entity.DatasetVersionEntity version = datasetVersionService.queryVersion(versionId);
+            byte[] zip = datasetExportService.exportPackage(versionId);
+            String fileName = datasetExportService.buildFileName(
+                    version != null ? version.getDatasetName() : "dataset",
+                    version != null ? version.getVersionNo() : null);
+            java.nio.file.Path dir = java.nio.file.Paths.get("sys_data", "export");
+            java.nio.file.Files.createDirectories(dir);
+            java.nio.file.Path file = dir.resolve(fileName);
+            java.nio.file.Files.write(file, zip);
+            log.info("Thrift RPC: Dataset package exported to {}", file.toAbsolutePath());
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "导出成功");
+            result.setData(file.toAbsolutePath().toString());
+            return result;
+        } catch (Exception e) {
+            return new com.tsinghua.thrift.api.Result(false, "Export failed: " + e.getMessage());
+        }
+    }
+
+    // ========== 质量自动检测/报告 ==========
+
+    @Override
+    public com.tsinghua.thrift.api.Result getQualityDimensions() throws TException {
+        try {
+            String jsonData = convertListToJson(qualityReportService.supportedDimensions());
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result autoDetectQuality(long versionId, int sampleSize, long criteriaId) throws TException {
+        try {
+            com.tsinghua.entity.QualityAssessmentEntity entity = qualityDetectionService.autoDetect(
+                    versionId, sampleSize, criteriaId > 0 ? criteriaId : null);
+            String jsonData = convertEntityToJson(entity);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "检测完成");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Auto detect quality failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Detect failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result getQualityReportById(long id) throws TException {
+        try {
+            com.tsinghua.entity.QualityAssessmentEntity entity = qualityAssessmentService.queryById(id);
+            if (entity == null) {
+                return new com.tsinghua.thrift.api.Result(false, "未找到测评记录: " + id);
+            }
+            String report = (entity.getReportJson() != null && !entity.getReportJson().isEmpty())
+                    ? entity.getReportJson() : qualityReportService.generateReport(entity);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(report);
+            return result;
+        } catch (Exception e) {
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
         }
     }
 }

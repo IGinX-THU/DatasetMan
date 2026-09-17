@@ -134,6 +134,18 @@ struct DatasetCreateRequest {
     12: optional string dataModality,
     13: optional string project,
     14: optional string remark,
+    15: optional string category,
+    16: optional string tags,
+    17: optional string versionNo,
+}
+
+// 数据集管理列表分页查询请求 - 匹配 DatasetListQueryRequest
+struct DatasetListQueryRequest {
+    1: optional i32 pageNum = 1,
+    2: optional i32 pageSize = 15,
+    3: optional string datasetName,
+    4: optional string dataModality,
+    5: optional string provenanceType,
 }
 
 // 数据集树 - 匹配 DatasetTreeDTO
@@ -663,4 +675,39 @@ service ApiService {
     
     // DELETE /api/quality-assessment/delete -> deleteAssessment(Long id)
     Result deleteQualityAssessment(1: i64 id),
+
+    // ========== 数据集管理/分析接口 - 对齐RESTful新增能力 ==========
+
+    // POST /api/dataset/list/query -> 分页查询数据集版本列表（含已禁用）
+    Result listDatasetVersions(1: DatasetListQueryRequest request),
+
+    // POST /api/dataset/list/count -> 分页总数
+    Result countDatasetVersions(1: DatasetListQueryRequest request),
+
+    // GET /api/dataset/categories -> 按数据类型的分类统计
+    Result getDatasetCategories(),
+
+    // GET /api/dataset/by-category?category=x -> 按数据类型查数据集
+    Result getDatasetsByCategory(1: string category),
+
+    // GET /api/dataset/relations?datasetName=x -> 数据集血缘关系提取
+    Result getDatasetRelations(1: string datasetName),
+
+    // GET /api/dataset/impact?versionId=x -> 影响范围分析
+    Result getDatasetImpact(1: i64 versionId),
+
+    // POST /api/dataset/export-package?versionId=x -> 打包导出（CSV+manifest+报告PDF，返回服务器文件路径）
+    Result exportDatasetPackage(1: i64 versionId),
+
+    // ========== 质量自动检测/报告接口 ==========
+
+    // GET /api/quality-assessment/dimensions -> 维度列表与规则
+    Result getQualityDimensions(),
+
+    // POST /api/quality-assessment/auto-detect?versionId=x&sampleSize=N&criteriaId=y
+    // -> 4维自动检测并生成报告（全流程无人工录分）
+    Result autoDetectQuality(1: i64 versionId, 2: optional i32 sampleSize, 3: optional i64 criteriaId),
+
+    // GET /api/quality-assessment/report?id=x -> 自动生成的评估报告
+    Result getQualityReportById(1: i64 id),
 }

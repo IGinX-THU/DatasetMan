@@ -1429,12 +1429,15 @@ class DatasetCreateRequest(object):
      - dataModality
      - project
      - remark
+     - category
+     - tags
+     - versionNo
 
     """
     thrift_spec = None
 
 
-    def __init__(self, datasetName = None, provenanceType = None, sourcePath = None, importFileName = None, importFileBase64 = None, importKeyColumn = None, sqlSnippetId = None, upstreamVersionIds = None, udfNames = None, transformCompareCreateTime = None, description = None, dataModality = None, project = None, remark = None,):
+    def __init__(self, datasetName = None, provenanceType = None, sourcePath = None, importFileName = None, importFileBase64 = None, importKeyColumn = None, sqlSnippetId = None, upstreamVersionIds = None, udfNames = None, transformCompareCreateTime = None, description = None, dataModality = None, project = None, remark = None, category = None, tags = None, versionNo = None,):
         self.datasetName = datasetName
         self.provenanceType = provenanceType
         self.sourcePath = sourcePath
@@ -1449,6 +1452,9 @@ class DatasetCreateRequest(object):
         self.dataModality = dataModality
         self.project = project
         self.remark = remark
+        self.category = category
+        self.tags = tags
+        self.versionNo = versionNo
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -1539,6 +1545,21 @@ class DatasetCreateRequest(object):
                     self.remark = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
+            elif fid == 15:
+                if ftype == TType.STRING:
+                    self.category = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 16:
+                if ftype == TType.STRING:
+                    self.tags = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 17:
+                if ftype == TType.STRING:
+                    self.versionNo = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -1611,6 +1632,121 @@ class DatasetCreateRequest(object):
         if self.remark is not None:
             oprot.writeFieldBegin('remark', TType.STRING, 14)
             oprot.writeString(self.remark.encode('utf-8') if sys.version_info[0] == 2 else self.remark)
+            oprot.writeFieldEnd()
+        if self.category is not None:
+            oprot.writeFieldBegin('category', TType.STRING, 15)
+            oprot.writeString(self.category.encode('utf-8') if sys.version_info[0] == 2 else self.category)
+            oprot.writeFieldEnd()
+        if self.tags is not None:
+            oprot.writeFieldBegin('tags', TType.STRING, 16)
+            oprot.writeString(self.tags.encode('utf-8') if sys.version_info[0] == 2 else self.tags)
+            oprot.writeFieldEnd()
+        if self.versionNo is not None:
+            oprot.writeFieldBegin('versionNo', TType.STRING, 17)
+            oprot.writeString(self.versionNo.encode('utf-8') if sys.version_info[0] == 2 else self.versionNo)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class DatasetListQueryRequest(object):
+    """
+    Attributes:
+     - pageNum
+     - pageSize
+     - datasetName
+     - dataModality
+     - provenanceType
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, pageNum = 1, pageSize = 15, datasetName = None, dataModality = None, provenanceType = None,):
+        self.pageNum = pageNum
+        self.pageSize = pageSize
+        self.datasetName = datasetName
+        self.dataModality = dataModality
+        self.provenanceType = provenanceType
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I32:
+                    self.pageNum = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.I32:
+                    self.pageSize = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.datasetName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.dataModality = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.STRING:
+                    self.provenanceType = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('DatasetListQueryRequest')
+        if self.pageNum is not None:
+            oprot.writeFieldBegin('pageNum', TType.I32, 1)
+            oprot.writeI32(self.pageNum)
+            oprot.writeFieldEnd()
+        if self.pageSize is not None:
+            oprot.writeFieldBegin('pageSize', TType.I32, 2)
+            oprot.writeI32(self.pageSize)
+            oprot.writeFieldEnd()
+        if self.datasetName is not None:
+            oprot.writeFieldBegin('datasetName', TType.STRING, 3)
+            oprot.writeString(self.datasetName.encode('utf-8') if sys.version_info[0] == 2 else self.datasetName)
+            oprot.writeFieldEnd()
+        if self.dataModality is not None:
+            oprot.writeFieldBegin('dataModality', TType.STRING, 4)
+            oprot.writeString(self.dataModality.encode('utf-8') if sys.version_info[0] == 2 else self.dataModality)
+            oprot.writeFieldEnd()
+        if self.provenanceType is not None:
+            oprot.writeFieldBegin('provenanceType', TType.STRING, 5)
+            oprot.writeString(self.provenanceType.encode('utf-8') if sys.version_info[0] == 2 else self.provenanceType)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -5214,6 +5350,18 @@ DatasetCreateRequest.thrift_spec = (
     (12, TType.STRING, 'dataModality', 'UTF8', None, ),  # 12
     (13, TType.STRING, 'project', 'UTF8', None, ),  # 13
     (14, TType.STRING, 'remark', 'UTF8', None, ),  # 14
+    (15, TType.STRING, 'category', 'UTF8', None, ),  # 15
+    (16, TType.STRING, 'tags', 'UTF8', None, ),  # 16
+    (17, TType.STRING, 'versionNo', 'UTF8', None, ),  # 17
+)
+all_structs.append(DatasetListQueryRequest)
+DatasetListQueryRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.I32, 'pageNum', None, 1, ),  # 1
+    (2, TType.I32, 'pageSize', None, 15, ),  # 2
+    (3, TType.STRING, 'datasetName', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'dataModality', 'UTF8', None, ),  # 4
+    (5, TType.STRING, 'provenanceType', 'UTF8', None, ),  # 5
 )
 all_structs.append(DatasetTreeVersion)
 DatasetTreeVersion.thrift_spec = (

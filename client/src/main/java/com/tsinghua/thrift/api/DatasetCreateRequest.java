@@ -25,6 +25,9 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
   private static final org.apache.thrift.protocol.TField DATA_MODALITY_FIELD_DESC = new org.apache.thrift.protocol.TField("dataModality", org.apache.thrift.protocol.TType.STRING, (short)12);
   private static final org.apache.thrift.protocol.TField PROJECT_FIELD_DESC = new org.apache.thrift.protocol.TField("project", org.apache.thrift.protocol.TType.STRING, (short)13);
   private static final org.apache.thrift.protocol.TField REMARK_FIELD_DESC = new org.apache.thrift.protocol.TField("remark", org.apache.thrift.protocol.TType.STRING, (short)14);
+  private static final org.apache.thrift.protocol.TField CATEGORY_FIELD_DESC = new org.apache.thrift.protocol.TField("category", org.apache.thrift.protocol.TType.STRING, (short)15);
+  private static final org.apache.thrift.protocol.TField TAGS_FIELD_DESC = new org.apache.thrift.protocol.TField("tags", org.apache.thrift.protocol.TType.STRING, (short)16);
+  private static final org.apache.thrift.protocol.TField VERSION_NO_FIELD_DESC = new org.apache.thrift.protocol.TField("versionNo", org.apache.thrift.protocol.TType.STRING, (short)17);
 
   private static final org.apache.thrift.scheme.SchemeFactory STANDARD_SCHEME_FACTORY = new DatasetCreateRequestStandardSchemeFactory();
   private static final org.apache.thrift.scheme.SchemeFactory TUPLE_SCHEME_FACTORY = new DatasetCreateRequestTupleSchemeFactory();
@@ -43,6 +46,9 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
   public @org.apache.thrift.annotation.Nullable java.lang.String dataModality; // optional
   public @org.apache.thrift.annotation.Nullable java.lang.String project; // optional
   public @org.apache.thrift.annotation.Nullable java.lang.String remark; // optional
+  public @org.apache.thrift.annotation.Nullable java.lang.String category; // optional
+  public @org.apache.thrift.annotation.Nullable java.lang.String tags; // optional
+  public @org.apache.thrift.annotation.Nullable java.lang.String versionNo; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -59,7 +65,10 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
     DESCRIPTION((short)11, "description"),
     DATA_MODALITY((short)12, "dataModality"),
     PROJECT((short)13, "project"),
-    REMARK((short)14, "remark");
+    REMARK((short)14, "remark"),
+    CATEGORY((short)15, "category"),
+    TAGS((short)16, "tags"),
+    VERSION_NO((short)17, "versionNo");
 
     private static final java.util.Map<java.lang.String, _Fields> byName = new java.util.HashMap<java.lang.String, _Fields>();
 
@@ -103,6 +112,12 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
           return PROJECT;
         case 14: // REMARK
           return REMARK;
+        case 15: // CATEGORY
+          return CATEGORY;
+        case 16: // TAGS
+          return TAGS;
+        case 17: // VERSION_NO
+          return VERSION_NO;
         default:
           return null;
       }
@@ -149,7 +164,7 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
   private static final int __SQLSNIPPETID_ISSET_ID = 0;
   private static final int __TRANSFORMCOMPARECREATETIME_ISSET_ID = 1;
   private byte __isset_bitfield = 0;
-  private static final _Fields[] optionals = {_Fields.SOURCE_PATH,_Fields.IMPORT_FILE_NAME,_Fields.IMPORT_FILE_BASE64,_Fields.IMPORT_KEY_COLUMN,_Fields.SQL_SNIPPET_ID,_Fields.UPSTREAM_VERSION_IDS,_Fields.UDF_NAMES,_Fields.TRANSFORM_COMPARE_CREATE_TIME,_Fields.DESCRIPTION,_Fields.DATA_MODALITY,_Fields.PROJECT,_Fields.REMARK};
+  private static final _Fields[] optionals = {_Fields.SOURCE_PATH,_Fields.IMPORT_FILE_NAME,_Fields.IMPORT_FILE_BASE64,_Fields.IMPORT_KEY_COLUMN,_Fields.SQL_SNIPPET_ID,_Fields.UPSTREAM_VERSION_IDS,_Fields.UDF_NAMES,_Fields.TRANSFORM_COMPARE_CREATE_TIME,_Fields.DESCRIPTION,_Fields.DATA_MODALITY,_Fields.PROJECT,_Fields.REMARK,_Fields.CATEGORY,_Fields.TAGS,_Fields.VERSION_NO};
   public static final java.util.Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     java.util.Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new java.util.EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -182,6 +197,12 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
     tmpMap.put(_Fields.PROJECT, new org.apache.thrift.meta_data.FieldMetaData("project", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
     tmpMap.put(_Fields.REMARK, new org.apache.thrift.meta_data.FieldMetaData("remark", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+    tmpMap.put(_Fields.CATEGORY, new org.apache.thrift.meta_data.FieldMetaData("category", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+    tmpMap.put(_Fields.TAGS, new org.apache.thrift.meta_data.FieldMetaData("tags", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+    tmpMap.put(_Fields.VERSION_NO, new org.apache.thrift.meta_data.FieldMetaData("versionNo", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
     metaDataMap = java.util.Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(DatasetCreateRequest.class, metaDataMap);
@@ -244,6 +265,15 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
     if (other.isSetRemark()) {
       this.remark = other.remark;
     }
+    if (other.isSetCategory()) {
+      this.category = other.category;
+    }
+    if (other.isSetTags()) {
+      this.tags = other.tags;
+    }
+    if (other.isSetVersionNo()) {
+      this.versionNo = other.versionNo;
+    }
   }
 
   @Override
@@ -269,6 +299,9 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
     this.dataModality = null;
     this.project = null;
     this.remark = null;
+    this.category = null;
+    this.tags = null;
+    this.versionNo = null;
   }
 
   @org.apache.thrift.annotation.Nullable
@@ -649,6 +682,81 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
     }
   }
 
+  @org.apache.thrift.annotation.Nullable
+  public java.lang.String getCategory() {
+    return this.category;
+  }
+
+  public DatasetCreateRequest setCategory(@org.apache.thrift.annotation.Nullable java.lang.String category) {
+    this.category = category;
+    return this;
+  }
+
+  public void unsetCategory() {
+    this.category = null;
+  }
+
+  /** Returns true if field category is set (has been assigned a value) and false otherwise */
+  public boolean isSetCategory() {
+    return this.category != null;
+  }
+
+  public void setCategoryIsSet(boolean value) {
+    if (!value) {
+      this.category = null;
+    }
+  }
+
+  @org.apache.thrift.annotation.Nullable
+  public java.lang.String getTags() {
+    return this.tags;
+  }
+
+  public DatasetCreateRequest setTags(@org.apache.thrift.annotation.Nullable java.lang.String tags) {
+    this.tags = tags;
+    return this;
+  }
+
+  public void unsetTags() {
+    this.tags = null;
+  }
+
+  /** Returns true if field tags is set (has been assigned a value) and false otherwise */
+  public boolean isSetTags() {
+    return this.tags != null;
+  }
+
+  public void setTagsIsSet(boolean value) {
+    if (!value) {
+      this.tags = null;
+    }
+  }
+
+  @org.apache.thrift.annotation.Nullable
+  public java.lang.String getVersionNo() {
+    return this.versionNo;
+  }
+
+  public DatasetCreateRequest setVersionNo(@org.apache.thrift.annotation.Nullable java.lang.String versionNo) {
+    this.versionNo = versionNo;
+    return this;
+  }
+
+  public void unsetVersionNo() {
+    this.versionNo = null;
+  }
+
+  /** Returns true if field versionNo is set (has been assigned a value) and false otherwise */
+  public boolean isSetVersionNo() {
+    return this.versionNo != null;
+  }
+
+  public void setVersionNoIsSet(boolean value) {
+    if (!value) {
+      this.versionNo = null;
+    }
+  }
+
   @Override
   public void setFieldValue(_Fields field, @org.apache.thrift.annotation.Nullable java.lang.Object value) {
     switch (field) {
@@ -764,6 +872,30 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
       }
       break;
 
+    case CATEGORY:
+      if (value == null) {
+        unsetCategory();
+      } else {
+        setCategory((java.lang.String)value);
+      }
+      break;
+
+    case TAGS:
+      if (value == null) {
+        unsetTags();
+      } else {
+        setTags((java.lang.String)value);
+      }
+      break;
+
+    case VERSION_NO:
+      if (value == null) {
+        unsetVersionNo();
+      } else {
+        setVersionNo((java.lang.String)value);
+      }
+      break;
+
     }
   }
 
@@ -813,6 +945,15 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
     case REMARK:
       return getRemark();
 
+    case CATEGORY:
+      return getCategory();
+
+    case TAGS:
+      return getTags();
+
+    case VERSION_NO:
+      return getVersionNo();
+
     }
     throw new java.lang.IllegalStateException();
   }
@@ -853,6 +994,12 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
       return isSetProject();
     case REMARK:
       return isSetRemark();
+    case CATEGORY:
+      return isSetCategory();
+    case TAGS:
+      return isSetTags();
+    case VERSION_NO:
+      return isSetVersionNo();
     }
     throw new java.lang.IllegalStateException();
   }
@@ -996,6 +1143,33 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
         return false;
     }
 
+    boolean this_present_category = true && this.isSetCategory();
+    boolean that_present_category = true && that.isSetCategory();
+    if (this_present_category || that_present_category) {
+      if (!(this_present_category && that_present_category))
+        return false;
+      if (!this.category.equals(that.category))
+        return false;
+    }
+
+    boolean this_present_tags = true && this.isSetTags();
+    boolean that_present_tags = true && that.isSetTags();
+    if (this_present_tags || that_present_tags) {
+      if (!(this_present_tags && that_present_tags))
+        return false;
+      if (!this.tags.equals(that.tags))
+        return false;
+    }
+
+    boolean this_present_versionNo = true && this.isSetVersionNo();
+    boolean that_present_versionNo = true && that.isSetVersionNo();
+    if (this_present_versionNo || that_present_versionNo) {
+      if (!(this_present_versionNo && that_present_versionNo))
+        return false;
+      if (!this.versionNo.equals(that.versionNo))
+        return false;
+    }
+
     return true;
   }
 
@@ -1058,6 +1232,18 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
     hashCode = hashCode * 8191 + ((isSetRemark()) ? 131071 : 524287);
     if (isSetRemark())
       hashCode = hashCode * 8191 + remark.hashCode();
+
+    hashCode = hashCode * 8191 + ((isSetCategory()) ? 131071 : 524287);
+    if (isSetCategory())
+      hashCode = hashCode * 8191 + category.hashCode();
+
+    hashCode = hashCode * 8191 + ((isSetTags()) ? 131071 : 524287);
+    if (isSetTags())
+      hashCode = hashCode * 8191 + tags.hashCode();
+
+    hashCode = hashCode * 8191 + ((isSetVersionNo()) ? 131071 : 524287);
+    if (isSetVersionNo())
+      hashCode = hashCode * 8191 + versionNo.hashCode();
 
     return hashCode;
   }
@@ -1210,6 +1396,36 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
         return lastComparison;
       }
     }
+    lastComparison = java.lang.Boolean.compare(isSetCategory(), other.isSetCategory());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetCategory()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.category, other.category);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = java.lang.Boolean.compare(isSetTags(), other.isSetTags());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetTags()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.tags, other.tags);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = java.lang.Boolean.compare(isSetVersionNo(), other.isSetVersionNo());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetVersionNo()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.versionNo, other.versionNo);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -1358,6 +1574,36 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
         sb.append("null");
       } else {
         sb.append(this.remark);
+      }
+      first = false;
+    }
+    if (isSetCategory()) {
+      if (!first) sb.append(", ");
+      sb.append("category:");
+      if (this.category == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.category);
+      }
+      first = false;
+    }
+    if (isSetTags()) {
+      if (!first) sb.append(", ");
+      sb.append("tags:");
+      if (this.tags == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.tags);
+      }
+      first = false;
+    }
+    if (isSetVersionNo()) {
+      if (!first) sb.append(", ");
+      sb.append("versionNo:");
+      if (this.versionNo == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.versionNo);
       }
       first = false;
     }
@@ -1540,6 +1786,30 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 15: // CATEGORY
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+              struct.category = iprot.readString();
+              struct.setCategoryIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 16: // TAGS
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+              struct.tags = iprot.readString();
+              struct.setTagsIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 17: // VERSION_NO
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+              struct.versionNo = iprot.readString();
+              struct.setVersionNoIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
         }
@@ -1660,6 +1930,27 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
           oprot.writeFieldEnd();
         }
       }
+      if (struct.category != null) {
+        if (struct.isSetCategory()) {
+          oprot.writeFieldBegin(CATEGORY_FIELD_DESC);
+          oprot.writeString(struct.category);
+          oprot.writeFieldEnd();
+        }
+      }
+      if (struct.tags != null) {
+        if (struct.isSetTags()) {
+          oprot.writeFieldBegin(TAGS_FIELD_DESC);
+          oprot.writeString(struct.tags);
+          oprot.writeFieldEnd();
+        }
+      }
+      if (struct.versionNo != null) {
+        if (struct.isSetVersionNo()) {
+          oprot.writeFieldBegin(VERSION_NO_FIELD_DESC);
+          oprot.writeString(struct.versionNo);
+          oprot.writeFieldEnd();
+        }
+      }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
@@ -1721,7 +2012,16 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
       if (struct.isSetRemark()) {
         optionals.set(13);
       }
-      oprot.writeBitSet(optionals, 14);
+      if (struct.isSetCategory()) {
+        optionals.set(14);
+      }
+      if (struct.isSetTags()) {
+        optionals.set(15);
+      }
+      if (struct.isSetVersionNo()) {
+        optionals.set(16);
+      }
+      oprot.writeBitSet(optionals, 17);
       if (struct.isSetDatasetName()) {
         oprot.writeString(struct.datasetName);
       }
@@ -1776,12 +2076,21 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
       if (struct.isSetRemark()) {
         oprot.writeString(struct.remark);
       }
+      if (struct.isSetCategory()) {
+        oprot.writeString(struct.category);
+      }
+      if (struct.isSetTags()) {
+        oprot.writeString(struct.tags);
+      }
+      if (struct.isSetVersionNo()) {
+        oprot.writeString(struct.versionNo);
+      }
     }
 
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, DatasetCreateRequest struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TTupleProtocol iprot = (org.apache.thrift.protocol.TTupleProtocol) prot;
-      java.util.BitSet incoming = iprot.readBitSet(14);
+      java.util.BitSet incoming = iprot.readBitSet(17);
       if (incoming.get(0)) {
         struct.datasetName = iprot.readString();
         struct.setDatasetNameIsSet(true);
@@ -1855,6 +2164,18 @@ public class DatasetCreateRequest implements org.apache.thrift.TBase<DatasetCrea
       if (incoming.get(13)) {
         struct.remark = iprot.readString();
         struct.setRemarkIsSet(true);
+      }
+      if (incoming.get(14)) {
+        struct.category = iprot.readString();
+        struct.setCategoryIsSet(true);
+      }
+      if (incoming.get(15)) {
+        struct.tags = iprot.readString();
+        struct.setTagsIsSet(true);
+      }
+      if (incoming.get(16)) {
+        struct.versionNo = iprot.readString();
+        struct.setVersionNoIsSet(true);
       }
     }
   }

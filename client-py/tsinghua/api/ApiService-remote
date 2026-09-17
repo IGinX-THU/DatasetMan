@@ -101,6 +101,16 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('  Result countQualityAssessments(QualityAssessmentQueryRequest request)')
     print('  Result getQualityAssessment(i64 id)')
     print('  Result deleteQualityAssessment(i64 id)')
+    print('  Result listDatasetVersions(DatasetListQueryRequest request)')
+    print('  Result countDatasetVersions(DatasetListQueryRequest request)')
+    print('  Result getDatasetCategories()')
+    print('  Result getDatasetsByCategory(string category)')
+    print('  Result getDatasetRelations(string datasetName)')
+    print('  Result getDatasetImpact(i64 versionId)')
+    print('  Result exportDatasetPackage(i64 versionId)')
+    print('  Result getQualityDimensions()')
+    print('  Result autoDetectQuality(i64 versionId, i32 sampleSize, i64 criteriaId)')
+    print('  Result getQualityReportById(i64 id)')
     print('')
     sys.exit(0)
 
@@ -641,6 +651,66 @@ elif cmd == 'deleteQualityAssessment':
         print('deleteQualityAssessment requires 1 args')
         sys.exit(1)
     pp.pprint(client.deleteQualityAssessment(eval(args[0]),))
+
+elif cmd == 'listDatasetVersions':
+    if len(args) != 1:
+        print('listDatasetVersions requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.listDatasetVersions(eval(args[0]),))
+
+elif cmd == 'countDatasetVersions':
+    if len(args) != 1:
+        print('countDatasetVersions requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.countDatasetVersions(eval(args[0]),))
+
+elif cmd == 'getDatasetCategories':
+    if len(args) != 0:
+        print('getDatasetCategories requires 0 args')
+        sys.exit(1)
+    pp.pprint(client.getDatasetCategories())
+
+elif cmd == 'getDatasetsByCategory':
+    if len(args) != 1:
+        print('getDatasetsByCategory requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.getDatasetsByCategory(args[0],))
+
+elif cmd == 'getDatasetRelations':
+    if len(args) != 1:
+        print('getDatasetRelations requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.getDatasetRelations(args[0],))
+
+elif cmd == 'getDatasetImpact':
+    if len(args) != 1:
+        print('getDatasetImpact requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.getDatasetImpact(eval(args[0]),))
+
+elif cmd == 'exportDatasetPackage':
+    if len(args) != 1:
+        print('exportDatasetPackage requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.exportDatasetPackage(eval(args[0]),))
+
+elif cmd == 'getQualityDimensions':
+    if len(args) != 0:
+        print('getQualityDimensions requires 0 args')
+        sys.exit(1)
+    pp.pprint(client.getQualityDimensions())
+
+elif cmd == 'autoDetectQuality':
+    if len(args) != 3:
+        print('autoDetectQuality requires 3 args')
+        sys.exit(1)
+    pp.pprint(client.autoDetectQuality(eval(args[0]), eval(args[1]), eval(args[2]),))
+
+elif cmd == 'getQualityReportById':
+    if len(args) != 1:
+        print('getQualityReportById requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.getQualityReportById(eval(args[0]),))
 
 else:
     print('Unrecognized method %s' % cmd)
