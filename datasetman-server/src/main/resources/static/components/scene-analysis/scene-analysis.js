@@ -17,7 +17,7 @@ class SceneAnalysis extends HTMLElement {
         super();
         this.style.display = 'none';
         this.rows = [];                   // 扁平化版本行
-        this.pageSize = 15;
+        this.pageSize = 10;
         this.currentPage = 1;
         this.total = 0;
     }
@@ -30,6 +30,7 @@ class SceneAnalysis extends HTMLElement {
     async loadResources() {
         this.innerHTML = `
             <link rel="stylesheet" href="./components/scene-analysis/scene-analysis.css">
+            <link rel="stylesheet" href="./components/common-pagination/common-pagination.css">
         `;
         try {
             const response = await fetch('./components/scene-analysis/scene-analysis.html');
@@ -78,13 +79,7 @@ class SceneAnalysis extends HTMLElement {
             debounceTimer = setTimeout(() => this.refresh(1), 300);
         });
         this.querySelector('#saTypeFilter')?.addEventListener('change', () => this.refresh(1));
-        this.querySelector('#saPagination')?.addEventListener('click', (e) => {
-            const btn = e.target.closest('button[data-page]');
-            if (!btn || btn.disabled) return;
-            if (btn.dataset.page === 'prev') this.currentPage = Math.max(1, this.currentPage - 1);
-            else this.currentPage = Math.min(this.totalPages(), this.currentPage + 1);
-            this.refresh();
-        });
+        this.initPagination();
 
         // 分类 chips 点击
         this.querySelector('#saTypeChips')?.addEventListener('click', (e) => {
@@ -218,7 +213,7 @@ class SceneAnalysis extends HTMLElement {
     renderTable() {
         const tbody = this.querySelector('#saTableBody');
         if (!tbody) return;
-        this.renderPagination(this.total);
+        this.updatePagination();
         if (!this.rows.length) {
             tbody.innerHTML = '<tr><td colspan="8" class="qa-empty">未查询到数据集。</td></tr>';
             return;
@@ -248,13 +243,22 @@ class SceneAnalysis extends HTMLElement {
         }).join('');
     }
 
-    renderPagination(total) {
-        const bar = this.querySelector('#saPagination');
-        if (!bar) return;
-        const pages = this.totalPages();
-        bar.innerHTML = '<span class="sa-page-info">共 ' + total + ' 条 / 第 ' + this.currentPage + '/' + pages + ' 页</span>'
-            + '<button class="sa-btn" data-page="prev" ' + (this.currentPage <= 1 ? 'disabled' : '') + '>上一页</button>'
-            + '<button class="sa-btn" data-page="next" ' + (this.currentPage >= pages ? 'disabled' : '') + '>下一页</button>';
+    initPagination() {
+        const pagination = this.querySelector('#pagination');
+        if (pagination) {
+            pagination.addEventListener('pagination-change', (e) => {
+                this.currentPage = e.detail.currentPage;
+                this.pageSize = e.detail.pageSize;
+                this.refresh();
+            });
+        }
+    }
+
+    updatePagination() {
+        const pagination = this.querySelector('#pagination');
+        if (pagination && typeof pagination.setPagination === 'function') {
+            pagination.setPagination(this.currentPage, this.pageSize, this.total);
+        }
     }
 
     openModal(id) {

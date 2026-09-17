@@ -174,6 +174,30 @@
 .scene-analysis .sa-btn.export:hover { background: #13c2c2; color: #fff; }
 .scene-analysis .sa-btn.detail { border-color: #595959; color: #595959; background: transparent; }
 .scene-analysis .sa-btn.detail:hover { background: #595959; color: #fff; }
-.scene-analysis .sa-btn.page-btn { border-color: #d1d5db; color: #374151; background: transparent; }
+/* 表格样式对齐 transform-compare 标准 */
+.scene-analysis .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
 
-.scene-analysis .sa-page-info { color: #6b7280; font-size: 12px; margin-right: auto; }
+.scene-analysis .data-table th {
+    background: #f8fafc;
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 1px solid #edf0f5;
+    white-space: nowrap;
+}
+
+.scene-analysis .data-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    color: #2b2f36;
+    white-space: nowrap;
+}
+
+.scene-analysis .data-table tr:hover {
+    background: #f8fafc;
+}

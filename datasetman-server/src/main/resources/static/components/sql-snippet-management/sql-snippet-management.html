@@ -1,9 +1,24 @@
 <div class="sql-snippet-management">
-    <div class="db-table-card">
+    <div class="parsing-filter-card">
+        <div class="filter-header">筛选</div>
+        <div class="filter-rows">
+            <div class="filter-row">
+                <div class="filter-field">
+                    <span class="filter-label">脚本名称</span>
+                    <input class="filter-input" id="searchInput" type="text" placeholder="请输入脚本名称" />
+                </div>
+            </div>
+        </div>
+        <div class="filter-actions">
+            <div class="filter-spacer"></div>
+            <button class="filter-btn outline" type="button" id="resetFilters">重置</button>
+            <button class="filter-btn solid" type="button" id="applyFilters">查询</button>
+        </div>
+    </div>
+
+    <div class="parsing-table-card">
         <div class="table-toolbar">
-            <input type="text" id="searchInput" class="search-input" placeholder="按名称搜索..." style="flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px;">
             <button class="toolbar-btn green" type="button" id="createBtn">新建SQL脚本</button>
-            <button class="toolbar-btn blue" type="button" id="refreshBtn">刷新</button>
         </div>
         <div class="table-wrapper">
             <table class="data-table">
@@ -21,5 +36,6 @@
                 </tbody>
             </table>
         </div>
+        <common-pagination id="pagination"></common-pagination>
     </div>
 </div>

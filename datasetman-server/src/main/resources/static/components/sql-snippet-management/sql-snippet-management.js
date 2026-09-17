@@ -11,6 +11,8 @@ class SqlSnippetManagement extends HTMLElement {
         this._isSubmitting = false; // 防止重复提交标志
         this.sqlList = []; // SQL列表
         this.debounceTimer = null; // 防抖定时器
+        this.currentPage = 1;
+        this.pageSize = 10;
         this.attachShadow({ mode: 'open' });
     }
 
@@ -21,6 +23,10 @@ class SqlSnippetManagement extends HTMLElement {
 
     render() {
         this.shadowRoot.innerHTML = `
+            <link rel="stylesheet" href="./components/common-pagination/common-pagination.css">
+            <link rel="stylesheet" href="./css/variables.css">
+            <link rel="stylesheet" href="./css/base-components.css">
+            <link rel="stylesheet" href="./css/workbench-crud-panel.css">
             <style>
                 :host {
                     display: none;
@@ -40,75 +46,24 @@ class SqlSnippetManagement extends HTMLElement {
                     box-sizing: border-box;
                 }
 
-                .db-table-card {
-                    background: #ffffff;
-                    border-radius: 8px;
-                    border: 1px solid #e2e6ef;
-                    padding: 20px 16px 16px;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-                }
-
-                .table-toolbar {
-                    display: flex;
-                    gap: 12px;
-                    margin-bottom: 16px;
-                    align-items: center;
-                }
-
-                .search-input {
-                    flex: 1;
-                    border: 1px solid #d1d5db;
-                    border-radius: 4px;
-                    padding: 8px 12px;
-                    font-size: 13px;
-                    color: #1f2329;
-                    background: #ffffff;
-                    transition: all 0.2s;
-                    box-sizing: border-box;
-                }
-                .search-input:focus {
-                    outline: none;
-                    border-color: #4c89ff;
-                    box-shadow: 0 0 0 2px rgba(76, 137, 255, 0.15);
-                }
-
-                .toolbar-btn {
-                    padding: 6px 14px;
-                    border: none;
-                    border-radius: 4px;
-                    font-size: 13px;
-                    font-weight: 500;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    color: white;
-                }
-                .toolbar-btn.green {
-                    background: #10b981;
-                }
-                .toolbar-btn.green:hover { background: #059669; }
-                .toolbar-btn.blue {
-                    background: #4c89ff;
-                }
-                .toolbar-btn.blue:hover { background: #3d7bf7; }
-
-                .table-wrapper {
-                    overflow-x: auto;
-                }
-
                 .data-table {
                     width: 100%;
                     border-collapse: collapse;
-                    font-size: 13px;
-                }
-                .data-table th, .data-table td {
-                    padding: 10px 14px;
-                    text-align: left;
-                    border-bottom: 1px solid #edf0f5;
+                    font-size: 12px;
                 }
                 .data-table th {
                     background: #f8fafc;
+                    padding: 12px 16px;
+                    text-align: left;
                     font-weight: 600;
                     color: #374151;
+                    border-bottom: 1px solid #edf0f5;
+                    white-space: nowrap;
+                }
+                .data-table td {
+                    padding: 12px 16px;
+                    border-bottom: 1px solid #f3f4f6;
+                    color: #2b2f36;
                     white-space: nowrap;
                 }
                 .data-table tbody tr:hover {
@@ -496,11 +451,26 @@ class SqlSnippetManagement extends HTMLElement {
             </style>
 
             <div class="main-container">
-                <div class="db-table-card">
+                <div class="parsing-filter-card">
+                    <div class="filter-header">筛选</div>
+                    <div class="filter-rows">
+                        <div class="filter-row">
+                            <div class="filter-field">
+                                <span class="filter-label">脚本名称</span>
+                                <input class="filter-input" id="searchInput" type="text" placeholder="请输入脚本名称" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="filter-actions">
+                        <div class="filter-spacer"></div>
+                        <button class="filter-btn outline" type="button" id="resetFilters">重置</button>
+                        <button class="filter-btn solid" type="button" id="applyFilters">查询</button>
+                    </div>
+                </div>
+
+                <div class="parsing-table-card">
                     <div class="table-toolbar">
-                        <input type="text" id="searchInput" class="search-input" placeholder="按名称搜索SQL脚本...">
                         <button class="toolbar-btn green" type="button" id="createBtn">新建SQL脚本</button>
-                        <button class="toolbar-btn blue" type="button" id="refreshBtn">刷新</button>
                     </div>
                     <div class="table-wrapper">
                         <table class="data-table">
@@ -517,6 +487,7 @@ class SqlSnippetManagement extends HTMLElement {
                             <tbody id="tableBody"></tbody>
                         </table>
                     </div>
+                    <common-pagination id="pagination"></common-pagination>
                 </div>
             </div>
 
@@ -580,17 +551,24 @@ class SqlSnippetManagement extends HTMLElement {
 
     initEventListeners() {
         const createBtn = this.shadowRoot.querySelector('#createBtn');
-        const refreshBtn = this.shadowRoot.querySelector('#refreshBtn');
         const searchInput = this.shadowRoot.querySelector('#searchInput');
+        const resetBtn = this.shadowRoot.querySelector('#resetFilters');
+        const applyBtn = this.shadowRoot.querySelector('#applyFilters');
 
         if (createBtn) createBtn.addEventListener('click', () => this.showModal('create'));
-        if (refreshBtn) refreshBtn.addEventListener('click', () => this.loadSnippets());
+        if (applyBtn) applyBtn.addEventListener('click', () => this.loadSnippets(searchInput?.value.trim() || ''));
+        if (resetBtn) resetBtn.addEventListener('click', () => {
+            if (searchInput) searchInput.value = '';
+            this.loadSnippets();
+        });
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 clearTimeout(this._searchTimer);
                 this._searchTimer = setTimeout(() => this.loadSnippets(e.target.value.trim()), 300);
             });
         }
+
+        this.initPagination();
 
         // 弹窗相关事件绑定（与原 dataset-dialog.js 保持一致）
         const closeBtn = this.shadowRoot.querySelector('#closeBtn');
@@ -644,11 +622,13 @@ class SqlSnippetManagement extends HTMLElement {
                 this.showMessage(result.message || '加载SQL脚本列表失败', 'error');
                 this.snippets = [];
             }
+            this.currentPage = 1;
             this.renderTable();
         } catch (error) {
             console.error('加载SQL脚本列表失败:', error);
             this.showMessage('加载SQL脚本列表失败', 'error');
             this.snippets = [];
+            this.currentPage = 1;
             this.renderTable();
         }
     }
@@ -656,6 +636,8 @@ class SqlSnippetManagement extends HTMLElement {
     renderTable() {
         const tbody = this.shadowRoot.querySelector('#tableBody');
         if (!tbody) return;
+
+        this.updatePagination();
 
         if (this.snippets.length === 0) {
             tbody.innerHTML = `
@@ -668,7 +650,12 @@ class SqlSnippetManagement extends HTMLElement {
             return;
         }
 
-        tbody.innerHTML = this.snippets.map(snippet => {
+        // 客户端分页：按 currentPage 和 pageSize 切片
+        const start = (this.currentPage - 1) * this.pageSize;
+        const end = start + this.pageSize;
+        const pageSnippets = this.snippets.slice(start, end);
+
+        tbody.innerHTML = pageSnippets.map(snippet => {
             let sqlCount = 0;
             try {
                 sqlCount = JSON.parse(snippet.sqlList || '[]').length;
@@ -703,6 +690,24 @@ class SqlSnippetManagement extends HTMLElement {
                 this.deleteSnippet(id);
             });
         });
+    }
+
+    initPagination() {
+        const pagination = this.shadowRoot.querySelector('#pagination');
+        if (pagination) {
+            pagination.addEventListener('pagination-change', (e) => {
+                this.currentPage = e.detail.currentPage;
+                this.pageSize = e.detail.pageSize;
+                this.renderTable();
+            });
+        }
+    }
+
+    updatePagination() {
+        const pagination = this.shadowRoot.querySelector('#pagination');
+        if (pagination && typeof pagination.setPagination === 'function') {
+            pagination.setPagination(this.currentPage, this.pageSize, this.snippets.length);
+        }
     }
 
     async showModal(mode = 'create', id = null) {
