@@ -3,6 +3,7 @@ package com.tsinghua.service;
 import cn.edu.tsinghua.iginx.session.Session;
 import cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult;
 import cn.edu.tsinghua.iginx.session_v2.IginXClient;
+import cn.edu.tsinghua.iginx.session_v2.WriteClient;
 import cn.edu.tsinghua.iginx.session_v2.write.Point;
 import com.tsinghua.dto.DatasetCreateRequest;
 import com.tsinghua.dto.DatasetVersionRegisterRequest;
@@ -80,7 +81,7 @@ public class DatasetCreationService {
             if (!StringUtils.hasText(request.getImportFileBase64())) {
                 throw new IllegalArgumentException("请上传导入文件");
             }
-            storagePath = nextStoragePath(request.getDatasetName());
+            storagePath = nextStoragePath(request.getDatasetName(), request.getVersionNo());
             // 解码 Base64 文件内容，写入临时文件，调用 DataTableService.importCsvFile
             byte[] fileBytes = Base64.getDecoder().decode(request.getImportFileBase64());
             Path tempFile = Files.createTempFile("dataset_import_", ".csv");
@@ -117,7 +118,7 @@ public class DatasetCreationService {
                 config.put("udfNames", request.getUdfNames());
             }
 
-            storagePath = nextStoragePath(request.getDatasetName());
+            storagePath = nextStoragePath(request.getDatasetName(), request.getVersionNo());
             MaterializeResult result = materializeSql(rawSqlList, request.getUpstreamVersionIds(), storagePath);
             registration.setRowCount(result.rowCount);
             registration.setSchemaJson(com.alibaba.fastjson2.JSONArray.toJSONString(result.paths));
@@ -149,15 +150,21 @@ public class DatasetCreationService {
         return datasetVersionService.registerVersion(registration);
     }
 
+    /** 单批写入的数据点上限，防止大结果集一次性写入撑爆堆内存 */
+    private static final int WRITE_BATCH_POINTS = 5000;
+
     private MaterializeResult materializeSql(List<String> sqlList, List<Long> upstreamIds, String storagePath) throws Exception {
         if (sqlList == null || sqlList.isEmpty()) {
             throw new IllegalArgumentException("SQL语句列表为空");
         }
         String upstreamPath = firstUpstreamPath(upstreamIds);
-        List<Point> points = new ArrayList<>();
         Set<String> paths = new LinkedHashSet<>();
+        Map<String, Integer> usedFields = new HashMap<>();
         long rowCount = 0;
         long keyBase = System.currentTimeMillis();
+
+        WriteClient writeClient = iginxClient.getWriteClient();
+        List<Point> batch = new ArrayList<>();
 
         for (int queryIndex = 0; queryIndex < sqlList.size(); queryIndex++) {
             String rawSql = sqlList.get(queryIndex);
@@ -165,24 +172,55 @@ public class DatasetCreationService {
             String sql = bindSql(rawSql.trim(), upstreamPath, storagePath);
             CommonUtil.validateSql(sql);
             SessionExecuteSqlResult result = iginxSession.executeSql(sql);
-            List<Map<String, Object>> records = ConvertUtil.getRecords(result);
+            List<String> outPaths = result.getPaths();
+            List<List<Object>> rows = result.getValues();
+
+            // 列名只保留原输出路径的最后一级（叶子），按路径一次性分配，重名自动加序号
+            String[] fields = new String[outPaths.size()];
+            for (int i = 0; i < outPaths.size(); i++) {
+                String base = normalizePath(outPaths.get(i).substring(outPaths.get(i).lastIndexOf('.') + 1));
+                if (base.isEmpty()) base = "value";
+                String field = base;
+                Integer seen = usedFields.get(base);
+                int seq = seen == null ? 0 : seen;
+                while (paths.contains(storagePath + "." + field)) {
+                    seq += 1;
+                    field = base + "_" + seq;
+                }
+                usedFields.put(base, seq);
+                fields[i] = field;
+            }
+
             long rowOffset = rowCount;
-            for (int rowIndex = 0; rowIndex < records.size(); rowIndex++) {
-                for (Map.Entry<String, Object> entry : records.get(rowIndex).entrySet()) {
-                    String field = normalizePath(entry.getKey());
-                    Point point = ConvertUtil.createFieldPoint(storagePath, field, entry.getValue(), keyBase + rowOffset + rowIndex);
+            for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
+                List<Object> row = rows.get(rowIndex);
+                long key = keyBase + rowOffset + rowIndex;
+                for (int i = 0; i < outPaths.size(); i++) {
+                    if (i >= row.size()) break;
+                    Object value = row.get(i);
+                    if (value == null) continue;
+                    if (value instanceof byte[]) {
+                        value = ConvertUtil.bytesToString((byte[]) value);
+                    }
+                    Point point = ConvertUtil.createFieldPoint(storagePath, fields[i], value, key);
                     if (point != null) {
-                        points.add(point);
-                        paths.add(storagePath + "." + field);
+                        batch.add(point);
+                        paths.add(storagePath + "." + fields[i]);
                     }
                 }
+                if (batch.size() >= WRITE_BATCH_POINTS) {
+                    writeClient.writePoints(batch);  // 分批写入，避免全量堆积导致 OOM
+                    batch = new ArrayList<>();
+                }
             }
-            rowCount += records.size();
+            rowCount += rows.size();
         }
-        if (points.isEmpty()) {
+        if (!batch.isEmpty()) {
+            writeClient.writePoints(batch);
+        }
+        if (paths.isEmpty()) {
             throw new IllegalArgumentException("SQL执行结果为空，未创建数据集版本");
         }
-        iginxClient.getWriteClient().writePoints(points);
         return new MaterializeResult(rowCount, new ArrayList<>(paths));
     }
 
@@ -204,9 +242,13 @@ public class DatasetCreationService {
                 .replace("{target}", targetPath);
     }
 
-    private String nextStoragePath(String datasetName) {
+    private String nextStoragePath(String datasetName, String plannedVersionNo) {
         long now = System.currentTimeMillis();
         String safeName = normalizePath(datasetName).replace('.', '_');
+        // 前端预览时规划的版本号优先复用，保证预览存储路径与实际创建一致
+        if (plannedVersionNo != null && plannedVersionNo.matches("v_\\d{6}_\\d{6}")) {
+            return SchemaPrefix.DATASET_PREFIX + "." + safeName + "." + plannedVersionNo;
+        }
         return SchemaPrefix.DATASET_PREFIX + "." + safeName + "." + CommonUtil.generateVersion(now);
     }
 

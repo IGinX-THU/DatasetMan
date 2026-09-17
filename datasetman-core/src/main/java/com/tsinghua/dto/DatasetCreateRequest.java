@@ -35,4 +35,7 @@ public class DatasetCreateRequest {
     private String remark;
     private String category; // 场景分类编码，见 SceneCategoryEnum
     private String tags;
+
+    /** 可选：前端规划的目标版本号（v_yymmdd_HHmmss），保证存储路径预览与实际创建一致 */
+    private String versionNo;
 }

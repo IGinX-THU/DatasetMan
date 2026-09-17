@@ -321,6 +321,7 @@ class DatasetDialog extends HTMLElement {
             const $ = (id) => this.shadowRoot.getElementById(id);
             const nameInput = $('datasetName');
             if (this.createMode === 'new') {
+                this.resetPlannedVersionNo();
                 // 新建模式：默认选 SOURCE，显示新建模式卡片
                 const sourceCard = this.shadowRoot.querySelector('#typeCardsNew .type-card[data-type="SOURCE"]');
                 if (sourceCard) sourceCard.click();
@@ -496,10 +497,17 @@ class DatasetDialog extends HTMLElement {
         return `v_${parts.year}${parts.month}${parts.day}_${parts.hour}${parts.minute}${parts.second}`;
     }
 
+    resetPlannedVersionNo() {
+        this.plannedVersionNo = null;
+    }
+
     previewSqlStoragePath() {
         const datasetName = this.shadowRoot.getElementById('datasetName').value.trim();
         const safeName = this.normalizePath(datasetName).replace(/\./g, '_');
-        const version = this.generateVersion(Date.now());
+        if (!this.plannedVersionNo) {
+            this.plannedVersionNo = this.generateVersion(Date.now());
+        }
+        const version = this.plannedVersionNo;
         return `datasets.${safeName || '<数据集名称>'}.${version}`;
     }
 
@@ -584,6 +592,7 @@ class DatasetDialog extends HTMLElement {
         if (!datasetName) return this.fail('请输入数据集名称', 'datasetNameError');
 
         const request = { datasetName, dataModality, remark, provenanceType: this.selectedType };
+        if (this.plannedVersionNo) request.versionNo = this.plannedVersionNo;
 
         if (this.selectedType === 'SOURCE' && this.createMode === 'new') {
             request.provenanceType = 'SOURCE';

@@ -884,7 +884,13 @@ class SqlSnippetManagement extends HTMLElement {
     }
 
     parseAndFillSql(content) {
-        const sqlStatements = content
+        // 忽略注释行（-- 行注释与块注释），仅解析有效 SQL
+        const effective = content
+            .split('\n')
+            .filter(line => line.trim() && !line.trim().startsWith('--'))
+            .join('\n')
+            .replace(/\/\*[\s\S]*?\*\//g, '');
+        const sqlStatements = effective
             .split(';')
             .map(sql => sql.trim())
             .filter(sql => sql.length > 0)
