@@ -129,6 +129,7 @@ window.AppConfig = {
         // 数据集相关
         dataset: {
             create: '/api/dataset/create',
+            preview: '/api/dataset/preview',
             tree: '/api/dataset/tree',
             versionMetas: '/api/dataset/version/metas',
             changes: '/api/dataset/changes',

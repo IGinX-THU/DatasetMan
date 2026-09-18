@@ -46,7 +46,7 @@ class DatasetHistory extends HTMLElement {
                 .TRANSFORM, .TRANSFORM_SQL { background:#ede9fe; color:#6d28d9; }
                 .badge.deleted { background:#fef2f2; color:#dc2626; }
                 .badge.active-status { background:#f0fdf4; color:#16a34a; }
-                .graph { width:100%; min-height:1000px; overflow:hidden; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; box-sizing:border-box; }
+                .graph { width:100%; height:1000px; overflow:hidden; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; box-sizing:border-box; }
                 .node { cursor:pointer; } .node circle { stroke:#fff; stroke-width:3; } .node.focus circle { stroke:#111827; stroke-width:4; }
                 .node text { font-size:11px; fill:#374151; text-anchor:middle; }
                 .empty { padding:40px; color:#9ca3af; text-align:center; }
@@ -130,7 +130,7 @@ class DatasetHistory extends HTMLElement {
                 </div>
                 <div class="card">
                     <div class="header"><h3>血缘图谱</h3></div>
-                    <div class="toolbar"><label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="checkbox" id="sideLineageToggle" checked>显示旁系血缘</label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="fitView">缩放居中</button><button id="resetView">重置视图</button></div>
+                    <div class="toolbar"><label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="checkbox" id="sideLineageToggle" checked>显示旁系血缘</label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button></div>
                     <div class="graph" id="graph"></div>
                 </div>
             </div>
@@ -157,7 +157,6 @@ class DatasetHistory extends HTMLElement {
         this.shadowRoot.querySelector('#zoomIn').addEventListener('click', () => this.zoomBy(1.25));
         this.shadowRoot.querySelector('#zoomOut').addEventListener('click', () => this.zoomBy(0.8));
         this.shadowRoot.querySelector('#resetView').addEventListener('click', () => this.resetView());
-        this.shadowRoot.querySelector('#fitView').addEventListener('click', () => this.fitAllNodes(false));
         this.shadowRoot.querySelector('#sideLineageToggle').addEventListener('change', () => this.loadGraph());
 
         this.shadowRoot.querySelector('#newVersion').addEventListener('click', () => {
@@ -491,17 +490,9 @@ class DatasetHistory extends HTMLElement {
             }
         });
 
-        // 画布大小根据层数和每层节点数计算
-        const layers = layout.layers;
-        const numLayers = Object.keys(layers).length;
-        const maxNodesInLayer = Math.max(...Object.values(layers).map(arr => arr.length));
-        const colWidth = 200;
-        const rowHeight = 160;
-        const padding = 300;
-        const graphHeight = Math.max(800, numLayers * rowHeight + padding);
-        const graphWidth = Math.max(1000, maxNodesInLayer * colWidth + padding);
-        container.style.height = graphHeight + 'px';
-        container.style.minWidth = graphWidth + 'px';
+        // 画布尺寸固定，复杂关系图只通过 ECharts 内部缩放适配，不撑大页面
+        container.style.height = '';
+        container.style.minWidth = '';
 
         // 禁用版本置灰整条入链：指向禁用版本的边（含中间操作节点）全部置灰，
         // 而不仅是禁用版本节点本身
@@ -603,128 +594,8 @@ class DatasetHistory extends HTMLElement {
         container._chart = chart;
         container._resizeObserver = resizeObserver;
 
-        // 等力导向布局稳定后，自适应缩放到合适大小
-        setTimeout(() => {
-            chart.resize();
-        }, 300);
-
-        // 力导向布局稳定过程中自动适配（仅当节点被斥力推出视口时缩小，不干扰用户主动缩放）
-        this._fitCancelled = false;
-        const autoFit = () => { if (!this._fitCancelled) this.fitAllNodes(true); };
-        [400, 1200, 2500].forEach(delay => setTimeout(autoFit, delay));
-        // 区分"用户主动平移/缩放"（graphRoam）与"拖拽节点"：
-        // 主动漫游后停止自动适配；拖拽节点结束后若有节点在视口外，自动缩小拉回视线
-        this._roamedThisDrag = false;
-        const cancelAuto = () => { this._fitCancelled = true; this._roamedThisDrag = true; };
-        chart.on('graphRoam', cancelAuto);
-        chart.on('graphroam', cancelAuto);
-        try {
-            const zr = chart.getZr();
-            zr.on('mousedown', () => { this._fitCancelled = true; this._roamedThisDrag = false; });
-            zr.on('mouseup', () => {
-                if (this._roamedThisDrag) return; // 用户主动漫游，不干预
-                setTimeout(() => this.fitAllNodes(true), 120);
-            });
-        } catch (e) { /* zr 不可用时忽略 */ }
-    }
-
-    /**
-     * 缩放居中：计算全部节点的像素包围盒，直接变换视图 group（与鼠标漫游同路径）使其全部落在视口内。
-     * 说明：chart.convertToPixel 不支持 graph 的 View 坐标系，graphRoam action 是 update:"none"
-     * 不会触发重绘，因此这里复刻 ECharts 鼠标漫游的实现：直接修改 zrender group 的变换并同步
-     * coordinateSystem，group 变更会自动触发重绘。
-     * @param onlyZoomOut true 时仅在内容超出视口时缩小（用于自动适配），不反向放大；
-     *                    false（按钮触发）时完整地缩放并居中。
-     */
-    fitAllNodes(onlyZoomOut) {
-        const container = this.shadowRoot.querySelector('#graph');
-        const chart = container && container._chart;
-        if (!chart) return;
-        try {
-            const seriesModel = chart.getModel().getSeriesByIndex(0);
-            if (!seriesModel || !seriesModel.getGraph) return;
-            const cs = seriesModel.coordinateSystem;
-            const view = chart._chartsMap && seriesModel.__viewId
-                ? chart._chartsMap[seriesModel.__viewId] : null;
-            const group = view && view.group;
-
-            // 像素坐标换算：优先 coordinateSystem.dataToPoint，退化到 group 变换推算
-            const toPixel = (p) => {
-                if (cs && cs.dataToPoint) {
-                    const q = cs.dataToPoint(p);
-                    return (q && isFinite(q[0]) && isFinite(q[1])) ? q : null;
-                }
-                if (group) {
-                    return [p[0] * (group.scaleX || 1) + (group.x || 0),
-                            p[1] * (group.scaleY || 1) + (group.y || 0)];
-                }
-                return null;
-            };
-            const pixelBounds = () => {
-                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, count = 0;
-                seriesModel.getGraph().eachNode(node => {
-                    const layout = node.getLayout && node.getLayout();
-                    if (!layout) return;
-                    const px = toPixel(layout);
-                    if (!px) return;
-                    count++;
-                    if (px[0] < minX) minX = px[0];
-                    if (px[0] > maxX) maxX = px[0];
-                    if (px[1] < minY) minY = px[1];
-                    if (px[1] > maxY) maxY = px[1];
-                });
-                return count ? { minX, maxX, minY, maxY } : null;
-            };
-
-            let bounds = pixelBounds();
-            if (!bounds) return;
-            const w = chart.getWidth(), h = chart.getHeight();
-            const pad = 110; // 预留节点尺寸与标签空间
-            const bw = Math.max(bounds.maxX - bounds.minX, 1);
-            const bh = Math.max(bounds.maxY - bounds.minY, 1);
-            let factor = Math.min((w - pad * 2) / bw, (h - pad * 2) / bh);
-            factor = Math.min(Math.max(factor, 0.05), 1.6);
-            if (onlyZoomOut && factor >= 1.0) return;
-
-            // 对 group（zrender元素，改后自动重绘）与 coordinateSystem（保持换算一致）施加同样变换
-            const targets = [group, cs].filter(t => !!t);
-            const applyZoom = (a, ox, oy) => {
-                targets.forEach(t => {
-                    const sx = t.scaleX == null ? 1 : t.scaleX;
-                    const sy = t.scaleY == null ? 1 : t.scaleY;
-                    const x0 = t.x || 0, y0 = t.y || 0;
-                    const nx = x0 - (ox - x0) * (a - 1);
-                    const ny = y0 - (oy - y0) * (a - 1);
-                    if (typeof t.attr === 'function') t.attr({ x: nx, y: ny, scaleX: sx * a, scaleY: sy * a });
-                    else {
-                        t.x = nx; t.y = ny; t.scaleX = sx * a; t.scaleY = sy * a;
-                        if (typeof t.updateTransform === 'function') t.updateTransform();
-                    }
-                });
-            };
-            const applyPan = (dx, dy) => {
-                targets.forEach(t => {
-                    if (typeof t.attr === 'function') t.attr({ x: (t.x || 0) + dx, y: (t.y || 0) + dy });
-                    else {
-                        t.x += dx; t.y += dy;
-                        if (typeof t.updateTransform === 'function') t.updateTransform();
-                    }
-                });
-            };
-
-            if (Math.abs(factor - 1) > 0.02) {
-                applyZoom(factor, (bounds.minX + bounds.maxX) / 2, (bounds.minY + bounds.maxY) / 2);
-            }
-            // 缩放后重算包围盒并平移居中
-            bounds = pixelBounds();
-            if (!bounds) return;
-            const dx = w / 2 - (bounds.minX + bounds.maxX) / 2;
-            const dy = h / 2 - (bounds.minY + bounds.maxY) / 2;
-            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) applyPan(dx, dy);
-        } catch (e) {
-            console.warn('缩放居中失败，回退为重置视图', e);
-            try { chart.setOption({ series: [{ zoom: 1, center: null }] }); } catch (ignore) { /* 忽略 */ }
-        }
+        // 等力导向布局稳定后刷新 ECharts 尺寸，首次绘制保持原始布局
+        setTimeout(() => chart.resize(), 300);
     }
 
     /**

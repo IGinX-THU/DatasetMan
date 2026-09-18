@@ -480,64 +480,68 @@ class DatasetDialog extends HTMLElement {
         }
     }
 
-    normalizePath(path) {
-        if (!path) return 'value';
-        return path.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5.]/g, '_').replace(/\.{2,}/g, '.').replace(/^\.|\.$/g, '');
-    }
-
-    generateVersion(timestamp) {
-        const date = new Date(timestamp);
-        const fmt = new Intl.DateTimeFormat('zh-CN', {
-            timeZone: 'Asia/Shanghai',
-            year: '2-digit', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-        });
-        const parts = {};
-        fmt.formatToParts(date).forEach(p => { parts[p.type] = p.value; });
-        return `v_${parts.year}${parts.month}${parts.day}_${parts.hour}${parts.minute}${parts.second}`;
-    }
-
     resetPlannedVersionNo() {
         this.plannedVersionNo = null;
+        this.previewData = null;
     }
 
-    previewSqlStoragePath() {
-        const datasetName = this.shadowRoot.getElementById('datasetName').value.trim();
-        const safeName = this.normalizePath(datasetName).replace(/\./g, '_');
-        if (!this.plannedVersionNo) {
-            this.plannedVersionNo = this.generateVersion(Date.now());
+    previewRequest() {
+        const $ = (id) => this.shadowRoot.getElementById(id);
+        const request = {
+            datasetName: $('datasetName').value.trim(),
+            provenanceType: this.selectedType
+        };
+        if (this.selectedType === 'SOURCE' && this.createMode === 'new') {
+            request.sourcePath = $('sourcePath').value;
+        } else if (this.createMode !== 'new') {
+            request.upstreamVersionIds = [Number(this.upstreamVersionId || $('upstreamVersion').value)];
+            if (this.selectedType === 'SQL_QUERY') request.sqlSnippetId = Number($('sqlSnippet').value);
+            if (this.selectedType === 'TRANSFORM') request.transformCompareCreateTime = Number($('transformJob').value);
         }
-        const version = this.plannedVersionNo;
-        return `datasets.${safeName || '<数据集名称>'}.${version}`;
+        return request;
+    }
+
+    async loadStoragePathPreview() {
+        this.previewData = null;
+        this.plannedVersionNo = null;
+        const pathEl = this.shadowRoot.getElementById('confirmPathValue');
+        if (!this.canPreview()) {
+            if (pathEl) pathEl.textContent = '-';
+            return null;
+        }
+        if (pathEl) pathEl.textContent = '加载中...';
+        try {
+            const result = await window.AppConfig.post('dataset', 'preview', this.previewRequest());
+            if (!result || result.code !== 200 || !result.data) throw new Error(result?.message || '路径预览失败');
+            this.previewData = result.data;
+            this.plannedVersionNo = result.data.versionNo;
+            if (pathEl) pathEl.textContent = result.data.storagePath || '-';
+            return result.data;
+        } catch (error) {
+            console.error('加载数据集路径预览失败:', error);
+            if (pathEl) pathEl.textContent = '预览失败: ' + error.message;
+            return null;
+        }
+    }
+
+    canPreview() {
+        const $ = (id) => this.shadowRoot.getElementById(id);
+        if (!$('datasetName').value.trim() || !this.selectedType) return false;
+        if (this.createMode === 'new') {
+            if (this.selectedType === 'SOURCE') return !!$('sourcePath').value;
+            return this.selectedType === 'IMPORT';
+        }
+        if (!(this.upstreamVersionId || $('upstreamVersion').value)) return false;
+        if (this.selectedType === 'SQL_QUERY') return !!$('sqlSnippet').value;
+        if (this.selectedType === 'TRANSFORM') return !!$('transformJob').value;
+        return false;
     }
 
     getStoragePathPreview() {
-        if (this.selectedType === 'SOURCE' && this.createMode === 'new') {
-            return this.shadowRoot.getElementById('sourcePath').value || '<请选择数据源>';
-        } else if (this.selectedType === 'IMPORT') {
-            return this.previewSqlStoragePath();
-        } else if (this.selectedType === 'SQL_QUERY') {
-            return this.previewSqlStoragePath();
-        } else if (this.selectedType === 'TRANSFORM') {
-            const jobSelect = this.shadowRoot.getElementById('transformJob');
-            const selected = jobSelect.selectedOptions[0];
-            if (selected && selected.value) {
-                const exportType = selected.getAttribute('data-export-type');
-                const exportFile = selected.getAttribute('data-export-file') || '';
-                if (exportType === '2') return 'transform';
-                if (exportType === '1' && exportFile) {
-                    let file = exportFile.replace(/\\/g, '/');
-                    file = file.substring(file.lastIndexOf('/') + 1);
-                    return 'file_system.sys_data.job.' + file;
-                }
-                return '<无法解析输出路径>';
-            }
-            return '<请选择 Transform 作业>';
-        }
-        return '-';
+        return this.previewData?.storagePath || '加载中...';
     }
 
-    updateConfirmPreview() {
+    async updateConfirmPreview() {
         const $ = (id) => this.shadowRoot.getElementById(id);
         const datasetName = $('datasetName').value.trim() || '-';
         const dataModality = $('dataModality').value;
@@ -579,7 +583,7 @@ class DatasetDialog extends HTMLElement {
             <div class="summary-row"><div class="summary-label">数据类型</div><div class="summary-value">${modalityLabels[dataModality] || dataModality}</div></div>
             <div class="summary-row"><div class="summary-label">备注</div><div class="summary-value">${this.escape(remark)}</div></div>
         `;
-        $('confirmPathValue').textContent = this.getStoragePathPreview();
+        await this.loadStoragePathPreview();
     }
 
     async handleSubmit() {
@@ -590,6 +594,10 @@ class DatasetDialog extends HTMLElement {
         const dataModality = $('dataModality').value;
         const remark = $('remark').value.trim();
         if (!datasetName) return this.fail('请输入数据集名称', 'datasetNameError');
+
+        // 提交前重新获取后端规划的版本号与存储路径，保证预览与实际创建一致
+        const preview = await this.loadStoragePathPreview();
+        if (!preview) return this.fail('存储路径预览失败，无法创建数据集');
 
         const request = { datasetName, dataModality, remark, provenanceType: this.selectedType };
         if (this.plannedVersionNo) request.versionNo = this.plannedVersionNo;

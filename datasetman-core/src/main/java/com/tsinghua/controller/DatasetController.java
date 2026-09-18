@@ -6,6 +6,7 @@ import com.tsinghua.auth.enums.Permission;
 import com.tsinghua.dto.CategoryStatDTO;
 import com.tsinghua.dto.DatasetChangeProcessDTO;
 import com.tsinghua.dto.DatasetCreateRequest;
+import com.tsinghua.dto.DatasetPathPreviewDTO;
 import com.tsinghua.dto.DatasetRelationDTO;
 import com.tsinghua.dto.DatasetRequest;
 import com.tsinghua.dto.DatasetTreeDTO;
@@ -93,6 +94,13 @@ public class DatasetController {
             @RequestParam("path") String path) throws Exception {
         datasetService.deleteDataset(path);
         return Result.success("删除成功");
+    }
+
+    @ApiOperation("预览数据集存储路径（版本号由后端规划）")
+    @PostMapping("/preview")
+    @RequirePermission(Permission.CREATE)
+    public Result<DatasetPathPreviewDTO> preview(@Validated @RequestBody DatasetCreateRequest request) {
+        return Result.success(datasetCreationService.preview(request));
     }
 
     @ApiOperation("向导式创建数据集版本")

@@ -6,6 +6,7 @@ import cn.edu.tsinghua.iginx.session_v2.IginXClient;
 import cn.edu.tsinghua.iginx.session_v2.WriteClient;
 import cn.edu.tsinghua.iginx.session_v2.write.Point;
 import com.tsinghua.dto.DatasetCreateRequest;
+import com.tsinghua.dto.DatasetPathPreviewDTO;
 import com.tsinghua.dto.DatasetVersionRegisterRequest;
 import com.tsinghua.dto.DataImportRequest;
 import com.tsinghua.entity.DataArchiveEntity;
@@ -51,6 +52,32 @@ public class DatasetCreationService {
 
     @Autowired
     private DataTableService dataTableService;
+
+    public DatasetPathPreviewDTO preview(DatasetCreateRequest request) {
+        ProvenanceType type = ProvenanceType.of(request.getProvenanceType());
+        DatasetPathPreviewDTO result = new DatasetPathPreviewDTO();
+        result.setDatasetName(request.getDatasetName());
+        result.setProvenanceType(type.name());
+        result.setVersionNo(CommonUtil.generateVersion(System.currentTimeMillis()));
+        if (type == ProvenanceType.SOURCE) {
+            if (!StringUtils.hasText(request.getSourcePath())) {
+                throw new IllegalArgumentException("请选择数据源");
+            }
+            result.setStoragePath(request.getSourcePath());
+        } else if (type == ProvenanceType.TRANSFORM) {
+            if (request.getTransformCompareCreateTime() == null) {
+                throw new IllegalArgumentException("请选择 Transform 作业");
+            }
+            TransformCompareEntity compare = transformCompareService.queryJob(request.getTransformCompareCreateTime());
+            if (compare == null) {
+                throw new IllegalArgumentException("Transform作业不存在");
+            }
+            result.setStoragePath(resolveTransformCompareOutputPath(compare));
+        } else {
+            result.setStoragePath(nextStoragePath(request.getDatasetName(), result.getVersionNo()));
+        }
+        return result;
+    }
 
     public DatasetVersionEntity create(DatasetCreateRequest request) throws Exception {
         ProvenanceType type = ProvenanceType.of(request.getProvenanceType());
@@ -253,9 +280,17 @@ public class DatasetCreationService {
     }
 
     private String resolveTransformOutputPath(TransformJobEntity job) {
+        return buildTransformOutputPath(job.getExportType(), job.getExportFiletName());
+    }
+
+    private String resolveTransformCompareOutputPath(TransformCompareEntity compare) {
+        return buildTransformOutputPath(compare.getExportType(), compare.getExportFile());
+    }
+
+    static String buildTransformOutputPath(Integer exportType, String exportFile) {
         // exportType: 0=none, 1=file, 2=IGinX
-        if (job.getExportType() != null && job.getExportType() == 1 && StringUtils.hasText(job.getExportFiletName())) {
-            String file = job.getExportFiletName().replace('\\', '/');
+        if (exportType != null && exportType == 1 && StringUtils.hasText(exportFile)) {
+            String file = exportFile.replace('\\', '/');
             file = file.substring(file.lastIndexOf('/') + 1);
             // 文件名中的 '.' 在 IGinX schema 路径中是层级分隔符，需转义为 '\'
             file = file.replace(".", "\\");
