@@ -107,6 +107,12 @@ public class DataTableService {
             return queryDataBySql(request);
         }
 
+        // Client方式查询成功但查无数据时，使用SQL方式再查一次兜底
+        if (resultSet.isEmpty()) {
+            log.info("Client方式查询无数据，尝试使用SQL方式再查一次, paths: {}", request.getPaths());
+            return queryDataBySql(request);
+        }
+
         return new TableDto(columns, resultSet);
     }
 
@@ -127,9 +133,9 @@ public class DataTableService {
                 }
             }
             
-            // 提取时间参数
+            // 提取时间参数（默认值与Client方式queryIginXTable保持一致，endKey按timePrecision换算单位）
             long startKey = Optional.ofNullable(request.getStartTime()).orElse(0L);
-            long endKey = Optional.ofNullable(request.getEndTime()).orElse(2534023007999990000L);
+            long endKey = Optional.ofNullable(request.getEndTime()).orElse(calculateMaxTime(request.getTimePrecision()));
             long precision = request.getPrecision();
             if (precision <= 0L) {
                 precision = 1000L;
@@ -181,7 +187,12 @@ public class DataTableService {
                 for (int i=0; i<=header.size() -1; i++){
                     Object value = row.get(i);
                     if (value instanceof byte[]) {
-                        rs.put(header.get(i), new String((byte[]) value, StandardCharsets.UTF_8));
+                        // 与Client方式的二进制转换逻辑保持一致：可读文本按UTF-8解码，否则Base64
+                        if (ConvertUtil.isValidUtf8((byte[]) value)) {
+                            rs.put(header.get(i), ConvertUtil.bytesToString((byte[]) value));
+                        } else {
+                            rs.put(header.get(i), ConvertUtil.bytesToBase64((byte[]) value));
+                        }
                     } else {
                         rs.put(header.get(i), row.get(i));
                     }

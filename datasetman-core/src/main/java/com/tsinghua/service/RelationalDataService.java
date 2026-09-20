@@ -40,19 +40,25 @@ public class RelationalDataService {
         try {
             // 构建SQL查询语句
             String sql = buildQuerySql(request);
-            
+
             // 修复分页计算：OFFSET应该是(pageNum - 1) * pageSize
             int offset = (request.getPageNum() - 1) * request.getPageSize();
             String finalSql = sql + String.format(" LIMIT %s OFFSET %s;", request.getPageSize(), offset);
-            
-            log.info("执行SQL: {}, tableName: {}, pageSize: {}, offset: {}", 
+
+            log.info("执行SQL: {}, tableName: {}, pageSize: {}, offset: {}",
                     finalSql, request.getTableName(), request.getPageSize(), offset);
-            
+
             // iginxSession.openSession();
             SessionExecuteSqlResult res = iginxSession.executeSql(finalSql);
             // iginxSession.closeSession();
-            
+
             TableDto result = convertTableDto(res);
+
+            // SQL方式查询成功但查无数据时，使用Client方式再查一次兜底
+            if (result.getRecords().isEmpty()) {
+                log.info("SQL方式查询无数据，尝试使用Client方式再查一次, tableName: {}", request.getTableName());
+                return queryDataByClient(request);
+            }
 
             return result;
         } catch (Exception e) {
@@ -61,20 +67,18 @@ public class RelationalDataService {
         }
     }
 
-    /** 当SQL方式查询失败时，使用Client方式作为fallback */
+    /** 当SQL方式查询失败或查无数据时，使用Client方式作为fallback */
     private TableDto queryDataByClient(RelationalQueryRequest request) {
         try {
             // 将RelationalQueryRequest转换为DataQueryRequest格式
             // 从tableName构建列路径，获取该表下的所有列
             Set<String> paths = new HashSet<>();
             paths.add(request.getTableName() + ".*");
-            
-            // 构建DataQueryRequest参数，参考DataTableService.queryIginXTable的实现
+
+            // 默认时间范围与SQL方式的默认语义保持一致（startKey=0，endKey按毫秒精度取最大时间）
             long startKey = 0L;
-            long endKey = 253402300799999L; // 毫秒级最大时间（将根据timePrecision转换）
-            long precision = 1000L;
-            TimePrecision timePrecision = TimePrecision.MS;
-            
+            long endKey = calculateMaxTime(null);
+
             // 使用Client方式查询
             QueryClient queryClient = iginxClient.getQueryClient();
             IginXTable table = queryClient.query(
@@ -84,11 +88,11 @@ public class RelationalDataService {
                             .endKey(endKey)
                             .build()
             );
-            
+
             // 转换为TableDto
             List<String> columns = new ArrayList<>();
             List<Map<String, Object>> records = new ArrayList<>();
-            
+
             IginXHeader header = table.getHeader();
             if (header.hasTimestamp()) {
                 columns.add("key");
@@ -96,7 +100,7 @@ public class RelationalDataService {
             for (IginXColumn column : header.getColumns()) {
                 columns.add(column.getName());
             }
-            
+
             List<IginXRecord> iginxRecords = table.getRecords();
             for (IginXRecord record : iginxRecords) {
                 Map<String, Object> recordMap = new LinkedHashMap<>();
@@ -117,22 +121,220 @@ public class RelationalDataService {
                 }
                 records.add(recordMap);
             }
-            
-            // 应用分页
+
+            // Client方式（新版数据访问接口）不支持下推WHERE值过滤和ORDER BY，
+            // 在内存中按IGinX-SQL语义执行，保证与SQL方式结果一致
+            records = applyFiltersAndSort(records, request);
+
+            // 应用分页（等价于SQL的 LIMIT pageSize OFFSET (pageNum-1)*pageSize）
             int offset = (request.getPageNum() - 1) * request.getPageSize();
             int limit = request.getPageSize();
             if (offset < records.size()) {
-                int endIndex = Math.min(offset + limit, records.size());
-                records = records.subList(offset, endIndex);
+                records = new ArrayList<>(records.subList(offset, Math.min(offset + limit, records.size())));
             } else {
                 records = new ArrayList<>();
             }
-            
+
             return new TableDto(columns, records);
         } catch (Exception e) {
             log.error("Client方式查询也失败", e);
-            return null;
+            return new TableDto(new ArrayList<>(), new ArrayList<>());
         }
+    }
+
+    /**
+     * 在内存中按IGinX-SQL语义执行WHERE过滤（手册3.2.3.2值过滤、3.2.3.7模糊查询）
+     * 和ORDER BY排序（手册3.2.3.15，默认升序），与buildQuerySql生成的SQL语义保持一致
+     */
+    private List<Map<String, Object>> applyFiltersAndSort(List<Map<String, Object>> records, RelationalQueryRequest request) {
+        List<Map<String, Object>> result = records;
+        if (request.getFilters() != null && !request.getFilters().isEmpty()) {
+            result = new ArrayList<>();
+            for (Map<String, Object> record : records) {
+                if (evaluateFilters(request.getFilters(), record)) {
+                    result.add(record);
+                }
+            }
+        }
+        if (StringUtils.hasText(request.getSortField())) {
+            boolean desc = "DESC".equalsIgnoreCase(request.getSortDirection());
+            Comparator<Map<String, Object>> comparator = Comparator.comparing(
+                    r -> toComparable(r.get(request.getSortField())),
+                    Comparator.nullsLast(Comparator.naturalOrder()));
+            if (desc) {
+                comparator = comparator.reversed();
+            }
+            result.sort(comparator);
+        }
+        return result;
+    }
+
+    /**
+     * 按filter条件列表求值，支持AND/OR优先级和括号分组，
+     * 与buildWhereClause生成的SQL表达式语义一致
+     */
+    private boolean evaluateFilters(List<RelationalQueryRequest.FilterCondition> filters, Map<String, Object> record) {
+        return evalOrExpr(filters, new int[]{0}, record);
+    }
+
+    /** OR表达式：AND表达式 (OR AND表达式)*，OR优先级最低 */
+    private boolean evalOrExpr(List<RelationalQueryRequest.FilterCondition> filters, int[] index, Map<String, Object> record) {
+        boolean value = evalAndExpr(filters, index, record);
+        while (index[0] < filters.size()
+                && "OR".equalsIgnoreCase(filters.get(index[0]).getLogicOperator())) {
+            boolean right = evalAndExpr(filters, index, record);
+            value = value || right;
+        }
+        return value;
+    }
+
+    /** AND表达式：单元 (AND 单元)* */
+    private boolean evalAndExpr(List<RelationalQueryRequest.FilterCondition> filters, int[] index, Map<String, Object> record) {
+        boolean value = evalUnit(filters, index, record);
+        while (index[0] < filters.size()
+                && "AND".equalsIgnoreCase(filters.get(index[0]).getLogicOperator())) {
+            boolean right = evalUnit(filters, index, record);
+            value = value && right;
+        }
+        return value;
+    }
+
+    /** 单元：括号分组（组内递归求值）| 单个条件 */
+    private boolean evalUnit(List<RelationalQueryRequest.FilterCondition> filters, int[] index, Map<String, Object> record) {
+        RelationalQueryRequest.FilterCondition cond = filters.get(index[0]);
+        if (Boolean.TRUE.equals(cond.getStartGroup())) {
+            // 找到与之配对的endGroup下标，组内按完整表达式递归求值
+            int depth = 0;
+            int groupEnd = -1;
+            for (int j = index[0]; j < filters.size(); j++) {
+                if (Boolean.TRUE.equals(filters.get(j).getStartGroup())) {
+                    depth++;
+                }
+                if (Boolean.TRUE.equals(filters.get(j).getEndGroup())) {
+                    depth--;
+                    if (depth == 0) {
+                        groupEnd = j;
+                        break;
+                    }
+                }
+            }
+            if (groupEnd < 0) {
+                groupEnd = filters.size() - 1;
+            }
+            boolean value = evalOrExpr(filters.subList(index[0] + 1, groupEnd + 1), new int[]{0}, record);
+            index[0] = groupEnd + 1;
+            return value;
+        }
+        index[0]++;
+        return evalCondition(cond, record);
+    }
+
+    /** 单个条件求值，操作符语义与buildCondition生成的SQL保持一致 */
+    private boolean evalCondition(RelationalQueryRequest.FilterCondition filter, Map<String, Object> record) {
+        String field = filter.getField();
+        String operator = filter.getOperator() == null ? "=" : filter.getOperator().trim();
+        String op = operator.toUpperCase();
+        String expected = filter.getValue();
+        Object actual = record.get(field);
+        String actualStr = actual == null ? null : String.valueOf(actual);
+
+        switch (op) {
+            case "LIKE":
+                // 手册3.2.3.7：like为正则匹配
+                return actualStr != null && actualStr.matches(expected == null ? "" : expected);
+            case "包含":
+                // 与buildCondition一致：转换为正则的包含匹配
+                return actualStr != null && actualStr.matches("^.*" + expected + ".*");
+            case "IN":
+                return matchesIn(actual, expected, true);
+            case "NOT IN":
+                return matchesIn(actual, expected, false);
+            case "=":
+            case "==":
+                return compareEquals(actual, expected);
+            case "!=":
+                return !compareEquals(actual, expected);
+            case ">":
+            case "<":
+            case ">=":
+            case "<=":
+                int cmp = compareValues(actual, expected);
+                if (cmp == Integer.MIN_VALUE) {
+                    return false;
+                }
+                switch (op) {
+                    case ">":  return cmp > 0;
+                    case "<":  return cmp < 0;
+                    case ">=": return cmp >= 0;
+                    default:   return cmp <= 0;
+                }
+            default:
+                // 与buildCondition一致：默认按等于处理
+                return compareEquals(actual, expected);
+        }
+    }
+
+    /** IN/NOT IN求值；SQL语义下NULL参与比较结果为false */
+    private boolean matchesIn(Object actual, String rawValue, boolean expectMatch) {
+        if (actual == null) {
+            return false;
+        }
+        boolean matched = false;
+        if (rawValue != null) {
+            for (String v : rawValue.split(",")) {
+                if (compareEquals(actual, v.trim())) {
+                    matched = true;
+                    break;
+                }
+            }
+        }
+        return expectMatch == matched;
+    }
+
+    /** 等值比较，数字按数值比较、布尔按布尔比较，其余按字符串比较 */
+    private boolean compareEquals(Object actual, String expected) {
+        if (actual == null || expected == null) {
+            return actual == null && expected == null;
+        }
+        if (actual instanceof Number && isNumeric(expected)) {
+            return ((Number) actual).doubleValue() == Double.parseDouble(expected.trim());
+        }
+        if (actual instanceof Boolean) {
+            return actual.equals(Boolean.parseBoolean(expected.trim()));
+        }
+        return String.valueOf(actual).equals(expected);
+    }
+
+    /** 比较，返回-1/0/1；无法比较（空值或类型不匹配）返回Integer.MIN_VALUE */
+    private int compareValues(Object actual, String expected) {
+        if (actual == null || expected == null) {
+            return Integer.MIN_VALUE;
+        }
+        if (actual instanceof Number && isNumeric(expected)) {
+            return Double.compare(((Number) actual).doubleValue(), Double.parseDouble(expected.trim()));
+        }
+        return Integer.signum(String.valueOf(actual).compareTo(expected));
+    }
+
+    private boolean isNumeric(String str) {
+        if (str == null || str.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            Double.parseDouble(str.trim());
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    /** 排序键归一化：数值统一按double比较，其余（String/Boolean）本身可比较 */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Comparable toComparable(Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        return (Comparable) value;
     }
 
     /** 根据timePrecision计算最大时间（10000-01-01 23:59:59.999） */

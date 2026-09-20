@@ -578,6 +578,7 @@ html.font-scale-1-5 .ribbon-btn-icon {
     display: flex;
     flex: 1;
     min-height: 0;
+    position: relative;
 }
 
 /* 侧边栏通用样式 */
@@ -586,6 +587,9 @@ html.font-scale-1-5 .ribbon-btn-icon {
     border-right: 1px solid #ccc;
     display: flex;
     flex-direction: column;
+    flex-shrink: 0; /* 防止被压缩 */
+    min-width: 150px;
+    max-width: 600px;
 }
 
 .left-sidebar {
@@ -593,6 +597,41 @@ html.font-scale-1-5 .ribbon-btn-icon {
 }
 
 .right-sidebar {
+    border-left: 1px solid #ccc;
+}
+
+/* 分割条样式 */
+.resizer {
+    width: 5px;
+    background-color: #ddd;
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background-color 0.2s;
+    position: relative;
+    z-index: 10;
+}
+
+.resizer:hover {
+    background-color: #999;
+}
+
+.resizer::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 30px;
+    background-color: #666;
+    border-radius: 1px;
+}
+
+.left-resizer {
+    border-right: 1px solid #ccc;
+}
+
+.right-resizer {
     border-left: 1px solid #ccc;
 }
 

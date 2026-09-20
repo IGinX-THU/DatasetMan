@@ -36,6 +36,73 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // 初始化分割条拖动功能
+    initResizers();
+
+    // 分割条拖动功能
+    function initResizers() {
+        const leftResizer = document.getElementById('leftResizer');
+        const rightResizer = document.getElementById('rightResizer');
+        const leftSidebar = document.getElementById('leftSidebar');
+        const rightSidebar = document.getElementById('rightSidebar');
+        const workspace = document.getElementById('workspace');
+        const mainContainer = document.querySelector('.main-container');
+
+        if (!leftResizer || !rightResizer || !leftSidebar || !rightSidebar || !workspace) {
+            console.warn('分割条或侧边栏元素未找到');
+            return;
+        }
+
+        // 左侧分割条拖动
+        let isLeftResizing = false;
+        leftResizer.addEventListener('mousedown', function(e) {
+            isLeftResizing = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        // 右侧分割条拖动
+        let isRightResizing = false;
+        rightResizer.addEventListener('mousedown', function(e) {
+            isRightResizing = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (isLeftResizing) {
+                const containerRect = mainContainer.getBoundingClientRect();
+                const newLeftWidth = e.clientX - containerRect.left;
+                
+                // 限制最小和最大宽度
+                if (newLeftWidth >= 150 && newLeftWidth <= 600) {
+                    leftSidebar.style.width = newLeftWidth + 'px';
+                }
+            }
+
+            if (isRightResizing) {
+                const containerRect = mainContainer.getBoundingClientRect();
+                const newRightWidth = containerRect.right - e.clientX;
+                
+                // 限制最小和最大宽度
+                if (newRightWidth >= 150 && newRightWidth <= 600) {
+                    rightSidebar.style.width = newRightWidth + 'px';
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (isLeftResizing || isRightResizing) {
+                isLeftResizing = false;
+                isRightResizing = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+    }
+
     // 全局变量：跟踪当前选中的数据源
     let selectedDataSource = null;
 

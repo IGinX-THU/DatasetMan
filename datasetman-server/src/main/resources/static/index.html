@@ -333,7 +333,7 @@
 <!-- 主内容区 -->
 <div class="main-container">
     <!-- 左侧数据资源库 -->
-    <div class="sidebar left-sidebar">
+    <div class="sidebar left-sidebar" id="leftSidebar">
         <div class="sidebar-content-wrapper">
             <div class="sidebar-panel left-sidebar-panel active" data-panel="data">
                 <div class="sidebar-title">
@@ -354,8 +354,11 @@
         </div>
     </div>
 
+    <!-- 左侧分割条 -->
+    <div class="resizer left-resizer" id="leftResizer"></div>
+
     <!-- 中间工作区 -->
-    <div class="workspace">
+    <div class="workspace" id="workspace">
         <div class="workspace-title">工作区</div>
         <div class="workspace-content">
             <!-- 数据集创建向导组件 -->
@@ -400,8 +403,11 @@
         </div>
     </div>
 
+    <!-- 右侧分割条 -->
+    <div class="resizer right-resizer" id="rightResizer"></div>
+
     <!-- 右侧数据集 -->
-    <div class="sidebar right-sidebar">
+    <div class="sidebar right-sidebar" id="rightSidebar">
         <div class="sidebar-content-wrapper">
             <div class="sidebar-panel right-sidebar-panel active" data-panel="dataset">
                 <div class="sidebar-title">数据集</div>

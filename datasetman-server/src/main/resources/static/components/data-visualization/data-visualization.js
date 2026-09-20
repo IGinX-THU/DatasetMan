@@ -327,11 +327,27 @@ class DataVisualization extends HTMLElement {
                 }
             } else {
                 console.warn('获取时间范围失败:', result.message);
-                this.setFallbackTimeRange(startTimeElement, endTimeElement);
+                // 获取时间范围失败，清空时间输入框
+                if (startTimeElement) {
+                    startTimeElement.value = '';
+                    console.log('清空开始时间');
+                }
+                if (endTimeElement) {
+                    endTimeElement.value = '';
+                    console.log('清空结束时间');
+                }
             }
         } catch (error) {
             console.error('获取时间范围异常:', error);
-            this.setFallbackTimeRange(startTimeElement, endTimeElement);
+            // 获取时间范围异常，清空时间输入框
+            if (startTimeElement) {
+                startTimeElement.value = '';
+                console.log('清空开始时间');
+            }
+            if (endTimeElement) {
+                endTimeElement.value = '';
+                console.log('清空结束时间');
+            }
         }
     }
 
@@ -2856,12 +2872,62 @@ class DataVisualization extends HTMLElement {
                 
                 // 对window_start和window_end列进行时间转换显示
                 if (column === 'window_start' && record.window_start_timestamp !== undefined) {
-                    if (this.isValidTimestamp(record.window_start_timestamp)) {
-                        value = new Date(record.window_start_timestamp).toLocaleString();
+                    // 根据时间单位转换时间戳
+                    let displayTimestamp = record.window_start_timestamp;
+                    if (this.timestampUnit === 9) {
+                        displayTimestamp = record.window_start_timestamp / 1000000; // 纳秒转毫秒
+                    } else if (this.timestampUnit === 8) {
+                        displayTimestamp = record.window_start_timestamp / 1000; // 微秒转毫秒
+                    } else if (this.timestampUnit === 6) {
+                        displayTimestamp = record.window_start_timestamp * 1000; // 秒转毫秒
+                    } else if (this.timestampUnit === 5) {
+                        displayTimestamp = record.window_start_timestamp * 60000; // 分转毫秒
+                    } else if (this.timestampUnit === 4) {
+                        displayTimestamp = record.window_start_timestamp * 3600000; // 时转毫秒
+                    } else if (this.timestampUnit === 3) {
+                        displayTimestamp = record.window_start_timestamp * 86400000; // 天转毫秒
+                    } else if (this.timestampUnit === 2) {
+                        displayTimestamp = record.window_start_timestamp * 604800000; // 周转毫秒
+                    } else if (this.timestampUnit === 1) {
+                        displayTimestamp = record.window_start_timestamp * 2592000000; // 月转毫秒（近似）
+                    } else if (this.timestampUnit === 0) {
+                        displayTimestamp = record.window_start_timestamp * 31536000000; // 年转毫秒（近似）
+                    }
+                    
+                    const date = new Date(displayTimestamp);
+                    if (!isNaN(date.getTime())) {
+                        value = date.toLocaleString();
+                    } else {
+                        value = record.window_start_timestamp; // 转换失败，显示原始值
                     }
                 } else if (column === 'window_end' && record.window_end_timestamp !== undefined) {
-                    if (this.isValidTimestamp(record.window_end_timestamp)) {
-                        value = new Date(record.window_end_timestamp).toLocaleString();
+                    // 根据时间单位转换时间戳
+                    let displayTimestamp = record.window_end_timestamp;
+                    if (this.timestampUnit === 9) {
+                        displayTimestamp = record.window_end_timestamp / 1000000; // 纳秒转毫秒
+                    } else if (this.timestampUnit === 8) {
+                        displayTimestamp = record.window_end_timestamp / 1000; // 微秒转毫秒
+                    } else if (this.timestampUnit === 6) {
+                        displayTimestamp = record.window_end_timestamp * 1000; // 秒转毫秒
+                    } else if (this.timestampUnit === 5) {
+                        displayTimestamp = record.window_end_timestamp * 60000; // 分转毫秒
+                    } else if (this.timestampUnit === 4) {
+                        displayTimestamp = record.window_end_timestamp * 3600000; // 时转毫秒
+                    } else if (this.timestampUnit === 3) {
+                        displayTimestamp = record.window_end_timestamp * 86400000; // 天转毫秒
+                    } else if (this.timestampUnit === 2) {
+                        displayTimestamp = record.window_end_timestamp * 604800000; // 周转毫秒
+                    } else if (this.timestampUnit === 1) {
+                        displayTimestamp = record.window_end_timestamp * 2592000000; // 月转毫秒（近似）
+                    } else if (this.timestampUnit === 0) {
+                        displayTimestamp = record.window_end_timestamp * 31536000000; // 年转毫秒（近似）
+                    }
+                    
+                    const date = new Date(displayTimestamp);
+                    if (!isNaN(date.getTime())) {
+                        value = date.toLocaleString();
+                    } else {
+                        value = record.window_end_timestamp; // 转换失败，显示原始值
                     }
                 } else if (typeof value === 'number') {
                     value = value.toFixed(2);
