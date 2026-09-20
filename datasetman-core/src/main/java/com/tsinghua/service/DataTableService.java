@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -102,10 +103,113 @@ public class DataTableService {
                 resultSet.add(recordMap);
             }
         } catch (Exception e) {
-            log.error("数据查询失败", e);
+            log.warn("Client方式查询失败，尝试使用SQL方式查询: {}", e.getMessage());
+            return queryDataBySql(request);
         }
 
         return new TableDto(columns, resultSet);
+    }
+
+    /** 当Client方式查询失败时，使用SQL方式作为fallback */
+    private TableDto queryDataBySql(DataQueryRequest request) {
+        try {
+            // 提取共同的表前缀
+            String tablePrefix = extractCommonPrefix(request.getPaths());
+            
+            // 提取后缀路径
+            List<String> suffixPaths = new ArrayList<>();
+            for (String path : request.getPaths()) {
+                if (path.startsWith(tablePrefix + ".")) {
+                    String suffix = path.substring((tablePrefix + ".").length());
+                    suffixPaths.add(suffix);
+                } else {
+                    suffixPaths.add(path);
+                }
+            }
+            
+            // 提取时间参数
+            long startKey = Optional.ofNullable(request.getStartTime()).orElse(0L);
+            long endKey = Optional.ofNullable(request.getEndTime()).orElse(2534023007999990000L);
+            long precision = request.getPrecision();
+            if (precision <= 0L) {
+                precision = 1000L;
+            }
+            TimePrecision timePrecision;
+            if (request.getTimePrecision() == null || TimePrecision.findByValue(request.getTimePrecision()) == null) {
+                timePrecision = TimePrecision.MS;
+            } else {
+                timePrecision = TimePrecision.findByValue(request.getTimePrecision());
+            }
+            
+            // 构建SQL
+            String sql;
+            if (request.getAggregateType() == null || AggregateType.findByValue(request.getAggregateType()) == null) {
+                // SimpleQuery模式：SELECT suffixPath1, suffixPath2 FROM prefix WHERE key >= startKey AND key <= endKey
+                String selectClause = String.join(", ", suffixPaths);
+                String whereClause = String.format(" WHERE key >= %d AND key <= %d", startKey, endKey);
+                sql = String.format("SELECT %s FROM %s%s;", selectClause, tablePrefix, whereClause);
+            } else {
+                // DownsampleQuery模式：SELECT aggregate(suffixPath) FROM prefix WHERE key >= startKey AND key <= endKey OVER WINDOW (SIZE precision IN [startKey, endKey])
+                AggregateType aggregateType = AggregateType.findByValue(request.getAggregateType());
+                String aggregateName = aggregateType.name();
+                
+                // 对每个后缀路径应用聚合函数
+                List<String> aggregatePaths = suffixPaths.stream()
+                    .map(suffix -> String.format("%s(%s)", aggregateName, suffix))
+                    .collect(java.util.stream.Collectors.toList());
+                String selectClause = String.join(", ", aggregatePaths);
+                
+                String whereClause = String.format(" WHERE key >= %d AND key <= %d", startKey, endKey);
+                String windowClause = String.format(" OVER WINDOW (SIZE %d IN [%d, %d])", precision, startKey, endKey);
+                sql = String.format("SELECT %s FROM %s%s%s;", selectClause, tablePrefix, whereClause, windowClause);
+            }
+            
+            log.info("使用SQL方式查询: {}", sql);
+            
+            SessionExecuteSqlResult res = iginxSession.executeSql(sql);
+            List<String> header = res.getPaths();
+            List<Map<String, Object>> records = new ArrayList<>();
+            List<List<Object>> rows = res.getValues();
+            
+            for(int j = 0; j < rows.size(); j++) {
+                Map<String, Object> rs = new LinkedHashMap<>();
+                long[] keys = res.getKeys();
+                if (keys != null && keys.length > 0){
+                    rs.put("key", keys[j]);
+                }
+                List<Object> row = rows.get(j);
+                for (int i=0; i<=header.size() -1; i++){
+                    Object value = row.get(i);
+                    if (value instanceof byte[]) {
+                        rs.put(header.get(i), new String((byte[]) value, StandardCharsets.UTF_8));
+                    } else {
+                        rs.put(header.get(i), row.get(i));
+                    }
+                }
+                records.add(rs);
+            }
+            
+            List<String> columns = new ArrayList<>();
+            if (res.getKeys() != null && res.getKeys().length > 0){
+                columns.add("key");
+            }
+            columns.addAll(header);
+            
+            return new TableDto(columns, records);
+        } catch (Exception e) {
+            log.error("SQL方式查询也失败", e);
+            return new TableDto(new ArrayList<>(), new ArrayList<>());
+        }
+    }
+
+    /** 提取路径的共同前缀（表名） */
+    private String extractCommonPrefix(List<String> paths) {
+        if (paths == null || paths.isEmpty()) {
+            return "";
+        }
+        String firstPath = paths.get(0);
+        int lastDotIndex = firstPath.lastIndexOf('.');
+        return lastDotIndex > 0 ? firstPath.substring(0, lastDotIndex) : firstPath;
     }
 
     public Long importData(MultipartFile file, DataImportRequest importConfig) throws Exception {
@@ -256,8 +360,8 @@ public class DataTableService {
         Set<String> paths = new HashSet<>(request.getPaths());
         // 最小时间（1970-01-01）
         long startKey = Optional.ofNullable(request.getStartTime()).orElse(0L);
-        //最大时间（10000-01-01 23:59:59.999） 足够大，但不会导致查询 OOM
-        long endKey = Optional.ofNullable(request.getEndTime()).orElse(253402300799999L);
+        //最大时间（10000-01-01 23:59:59.999 纳秒） 足够大，但不会导致查询 OOM
+        long endKey = Optional.ofNullable(request.getEndTime()).orElse(2534023007999990000L);
         long precision = request.getPrecision();
         if (precision <= 0L) {
             precision = 1000L;

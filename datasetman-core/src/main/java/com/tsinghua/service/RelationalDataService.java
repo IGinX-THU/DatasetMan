@@ -2,8 +2,14 @@ package com.tsinghua.service;
 
 import cn.edu.tsinghua.iginx.session.Session;
 import cn.edu.tsinghua.iginx.session.SessionExecuteSqlResult;
+import cn.edu.tsinghua.iginx.session_v2.IginXClient;
+import cn.edu.tsinghua.iginx.session_v2.QueryClient;
+
+import cn.edu.tsinghua.iginx.session_v2.query.*;
+import cn.edu.tsinghua.iginx.thrift.TimePrecision;
 import com.tsinghua.dto.RelationalQueryRequest;
 import com.tsinghua.dto.TableDto;
+import com.tsinghua.util.ConvertUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
@@ -17,10 +23,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -28,6 +32,9 @@ public class RelationalDataService {
 
     @Autowired
     private Session iginxSession;
+
+    @Autowired
+    private IginXClient iginxClient;
 
     public TableDto queryData(RelationalQueryRequest request) {
         try {
@@ -49,7 +56,81 @@ public class RelationalDataService {
 
             return result;
         } catch (Exception e) {
-            log.error("查询失败", e);
+            log.warn("SQL方式查询失败，尝试使用Client方式查询: {}", e.getMessage());
+            return queryDataByClient(request);
+        }
+    }
+
+    /** 当SQL方式查询失败时，使用Client方式作为fallback */
+    private TableDto queryDataByClient(RelationalQueryRequest request) {
+        try {
+            // 将RelationalQueryRequest转换为DataQueryRequest格式
+            // 从tableName构建列路径，获取该表下的所有列
+            Set<String> paths = new HashSet<>();
+            paths.add(request.getTableName() + ".*");
+            
+            // 构建DataQueryRequest参数，参考DataTableService.queryIginXTable的实现
+            long startKey = 0L;
+            long endKey = 253402300799999000000L; // 纳秒级最大时间
+            long precision = 1000L;
+            TimePrecision timePrecision = TimePrecision.MS;
+            
+            // 使用Client方式查询
+            QueryClient queryClient = iginxClient.getQueryClient();
+            IginXTable table = queryClient.query(
+                    SimpleQuery.builder()
+                            .addMeasurements(paths)
+                            .startKey(startKey)
+                            .endKey(endKey)
+                            .build()
+            );
+            
+            // 转换为TableDto
+            List<String> columns = new ArrayList<>();
+            List<Map<String, Object>> records = new ArrayList<>();
+            
+            IginXHeader header = table.getHeader();
+            if (header.hasTimestamp()) {
+                columns.add("key");
+            }
+            for (IginXColumn column : header.getColumns()) {
+                columns.add(column.getName());
+            }
+            
+            List<IginXRecord> iginxRecords = table.getRecords();
+            for (IginXRecord record : iginxRecords) {
+                Map<String, Object> recordMap = new LinkedHashMap<>();
+                if (header.hasTimestamp()) {
+                    recordMap.put("key", record.getKey());
+                }
+                for (IginXColumn column : header.getColumns()) {
+                    Object value = record.getValue(column.getName());
+                    if (value instanceof byte[]) {
+                        if (ConvertUtil.isValidUtf8((byte[]) value)) {
+                            recordMap.put(column.getName(), ConvertUtil.bytesToString((byte[]) value));
+                        } else {
+                            recordMap.put(column.getName(), ConvertUtil.bytesToBase64((byte[]) value));
+                        }
+                    } else {
+                        recordMap.put(column.getName(), value);
+                    }
+                }
+                records.add(recordMap);
+            }
+            
+            // 应用分页
+            int offset = (request.getPageNum() - 1) * request.getPageSize();
+            int limit = request.getPageSize();
+            if (offset < records.size()) {
+                int endIndex = Math.min(offset + limit, records.size());
+                records = records.subList(offset, endIndex);
+            } else {
+                records = new ArrayList<>();
+            }
+            
+            return new TableDto(columns, records);
+        } catch (Exception e) {
+            log.error("Client方式查询也失败", e);
             return null;
         }
     }

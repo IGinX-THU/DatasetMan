@@ -15,6 +15,13 @@ class DataVisualization extends HTMLElement {
         this.totalPages = 0;
         this.dataSource = '';
         this.availablePoints = [];
+        // 保存原始的时间戳（可能为纳秒级）
+        this.originalMinKey = null;
+        this.originalMaxKey = null;
+        // 时间戳单位：1=纳秒, 2=微秒, 3=毫秒, 4=秒
+        this.timestampUnit = 3; // 默认毫秒
+        // 标识时间是否被用户手动修改
+        this.isUserModifiedTime = false;
     }
 
     async connectedCallback() {
@@ -238,10 +245,33 @@ class DataVisualization extends HTMLElement {
                 console.log('timeRange对象:', timeRange);
                 console.log('minKey:', timeRange.minKey, 'maxKey:', timeRange.maxKey);
                 
+                // 保存原始时间戳
+                this.originalMinKey = timeRange.minKey;
+                this.originalMaxKey = timeRange.maxKey;
+                
+                // 检测时间戳单位
+                const timestampStr = String(Math.floor(Math.abs(timeRange.minKey || 0)));
+                if (timestampStr.length >= 16) {
+                    this.timestampUnit = 1; // 纳秒
+                } else if (timestampStr.length >= 13) {
+                    this.timestampUnit = 3; // 毫秒
+                } else if (timestampStr.length >= 10) {
+                    this.timestampUnit = 4; // 秒
+                }
+                console.log('检测到时间戳单位:', this.timestampUnit, '(1=纳秒, 2=微秒, 3=毫秒, 4=秒)');
+                
+                // 重置用户修改标记
+                this.isUserModifiedTime = false;
+                
                 if (timeRange.minKey != null || timeRange.maxKey != null) {
                     // 分别检查minKey和maxKey，哪个有效就设置哪个
                     if (timeRange.minKey != null && this.isValidTimestamp(timeRange.minKey)) {
-                        const startDate = new Date(timeRange.minKey);
+                        // 转换纳秒级时间戳为毫秒级
+                        let minKey = timeRange.minKey;
+                        if (String(Math.floor(Math.abs(minKey))).length >= 16) {
+                            minKey = minKey / 1000000;
+                        }
+                        const startDate = new Date(minKey);
                         const startTime = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}T${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}:${String(startDate.getSeconds()).padStart(2, '0')}`;
                         if (startTimeElement) {
                             startTimeElement.value = startTime;
@@ -256,7 +286,12 @@ class DataVisualization extends HTMLElement {
                     }
                     
                     if (timeRange.maxKey != null && this.isValidTimestamp(timeRange.maxKey)) {
-                        const endDate = new Date(timeRange.maxKey);
+                        // 转换纳秒级时间戳为毫秒级
+                        let maxKey = timeRange.maxKey;
+                        if (String(Math.floor(Math.abs(maxKey))).length >= 16) {
+                            maxKey = maxKey / 1000000;
+                        }
+                        const endDate = new Date(maxKey);
                         const endTime = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}T${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}:${String(endDate.getSeconds()).padStart(2, '0')}`;
                         if (endTimeElement) {
                             endTimeElement.value = endTime;
@@ -417,6 +452,7 @@ class DataVisualization extends HTMLElement {
         const numValue = Number(timestamp);
         
         // 检查是否是时间戳格式：
+        // 纳秒级时间戳：19位数字（如 1789870957344712700，InfluxDB使用）
         // 毫秒级时间戳：13位数字（如 1704067200000）
         // 秒级时间戳：10位数字（如 1704067200）
         const timestampStr = String(Math.floor(Math.abs(numValue)));
@@ -427,7 +463,13 @@ class DataVisualization extends HTMLElement {
         }
         
         // 尝试转换为日期
-        const date = new Date(numValue);
+        // 如果是纳秒级时间戳，需要转换为毫秒级
+        let dateValue = numValue;
+        if (timestampStr.length >= 16) { // 纳秒级时间戳通常16位以上
+            dateValue = numValue / 1000000; // 纳秒转毫秒
+        }
+        
+        const date = new Date(dateValue);
         return !isNaN(date.getTime());
     }
 
@@ -663,6 +705,22 @@ class DataVisualization extends HTMLElement {
     }
 
     bindEvents() {
+        const startTimeInput = this.shadowRoot.getElementById('startTime');
+        const endTimeInput = this.shadowRoot.getElementById('endTime');
+        
+        // 监听时间输入框的修改事件
+        if (startTimeInput) {
+            startTimeInput.addEventListener('change', () => {
+                this.isUserModifiedTime = true;
+                console.log('用户修改了开始时间');
+            });
+        }
+        if (endTimeInput) {
+            endTimeInput.addEventListener('change', () => {
+                this.isUserModifiedTime = true;
+                console.log('用户修改了结束时间');
+            });
+        }
         // 关闭按钮
         const closeBtn = this.shadowRoot.getElementById('closeBtn');
         if (closeBtn) {
@@ -1233,10 +1291,40 @@ class DataVisualization extends HTMLElement {
 
             // 处理时间参数
             if (startTimeInput && startTimeInput.value) {
-                startTime = new Date(startTimeInput.value).getTime();
+                if (!this.isUserModifiedTime && this.originalMinKey != null) {
+                    // 用户未修改，使用原始时间戳
+                    startTime = this.originalMinKey;
+                } else {
+                    // 用户修改了，根据时间戳单位转换
+                    const inputTime = new Date(startTimeInput.value).getTime();
+                    if (this.timestampUnit === 1) {
+                        startTime = inputTime * 1000000; // 毫秒转纳秒
+                    } else if (this.timestampUnit === 2) {
+                        startTime = inputTime * 1000; // 毫秒转微秒
+                    } else if (this.timestampUnit === 4) {
+                        startTime = inputTime / 1000; // 毫秒转秒
+                    } else {
+                        startTime = inputTime; // 毫秒
+                    }
+                }
             }
             if (endTimeInput && endTimeInput.value) {
-                endTime = new Date(endTimeInput.value).getTime();
+                if (!this.isUserModifiedTime && this.originalMaxKey != null) {
+                    // 用户未修改，使用原始时间戳
+                    endTime = this.originalMaxKey;
+                } else {
+                    // 用户修改了，根据时间戳单位转换
+                    const inputTime = new Date(endTimeInput.value).getTime();
+                    if (this.timestampUnit === 1) {
+                        endTime = inputTime * 1000000; // 毫秒转纳秒
+                    } else if (this.timestampUnit === 2) {
+                        endTime = inputTime * 1000; // 毫秒转微秒
+                    } else if (this.timestampUnit === 4) {
+                        endTime = inputTime / 1000; // 毫秒转秒
+                    } else {
+                        endTime = inputTime; // 毫秒
+                    }
+                }
             }
 
             // 如果没有设置时间，但有快速选择的时间，使用快速选择的时间
@@ -1353,10 +1441,40 @@ class DataVisualization extends HTMLElement {
 
             // 处理时间参数（与loadData方法相同的逻辑）
             if (startTimeInput && startTimeInput.value) {
-                startTime = new Date(startTimeInput.value).getTime();
+                if (!this.isUserModifiedTime && this.originalMinKey != null) {
+                    // 用户未修改，使用原始时间戳
+                    startTime = this.originalMinKey;
+                } else {
+                    // 用户修改了，根据时间戳单位转换
+                    const inputTime = new Date(startTimeInput.value).getTime();
+                    if (this.timestampUnit === 1) {
+                        startTime = inputTime * 1000000; // 毫秒转纳秒
+                    } else if (this.timestampUnit === 2) {
+                        startTime = inputTime * 1000; // 毫秒转微秒
+                    } else if (this.timestampUnit === 4) {
+                        startTime = inputTime / 1000; // 毫秒转秒
+                    } else {
+                        startTime = inputTime; // 毫秒
+                    }
+                }
             }
             if (endTimeInput && endTimeInput.value) {
-                endTime = new Date(endTimeInput.value).getTime();
+                if (!this.isUserModifiedTime && this.originalMaxKey != null) {
+                    // 用户未修改，使用原始时间戳
+                    endTime = this.originalMaxKey;
+                } else {
+                    // 用户修改了，根据时间戳单位转换
+                    const inputTime = new Date(endTimeInput.value).getTime();
+                    if (this.timestampUnit === 1) {
+                        endTime = inputTime * 1000000; // 毫秒转纳秒
+                    } else if (this.timestampUnit === 2) {
+                        endTime = inputTime * 1000; // 毫秒转微秒
+                    } else if (this.timestampUnit === 4) {
+                        endTime = inputTime / 1000; // 毫秒转秒
+                    } else {
+                        endTime = inputTime; // 毫秒
+                    }
+                }
             }
 
             // 如果没有设置时间，但有快速选择的时间，使用快速选择的时间
