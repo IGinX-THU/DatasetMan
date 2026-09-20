@@ -71,7 +71,7 @@ public class RelationalDataService {
             
             // 构建DataQueryRequest参数，参考DataTableService.queryIginXTable的实现
             long startKey = 0L;
-            long endKey = 253402300799999000000L; // 纳秒级最大时间
+            long endKey = 253402300799999000L; // 纳秒级最大时间
             long precision = 1000L;
             TimePrecision timePrecision = TimePrecision.MS;
             
