@@ -71,6 +71,21 @@
                             <input type="datetime-local" class="query-input" id="endTime" step="1">
                         </div>
                         <div class="query-item">
+                            <label class="query-label">时间单位</label>
+                            <select class="query-select" id="timeUnit">
+                                <option value="9">纳秒(ns)</option>
+                                <option value="8">微秒(μs)</option>
+                                <option value="7" selected>毫秒(ms)</option>
+                                <option value="6">秒(s)</option>
+                                <option value="5">分(m)</option>
+                                <option value="4">时(h)</option>
+                                <option value="3">天(d)</option>
+                                <option value="2">周(w)</option>
+                                <option value="1">月(m)</option>
+                                <option value="0">年(y)</option>
+                            </select>
+                        </div>
+                        <div class="query-item">
                             <label class="query-label">降采样函数</label>
                             <select class="query-select" id="aggregationFunction">
                                 <option value="">原始数据</option>

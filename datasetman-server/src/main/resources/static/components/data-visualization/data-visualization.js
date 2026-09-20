@@ -252,13 +252,19 @@ class DataVisualization extends HTMLElement {
                 // 检测时间戳单位
                 const timestampStr = String(Math.floor(Math.abs(timeRange.minKey || 0)));
                 if (timestampStr.length >= 16) {
-                    this.timestampUnit = 1; // 纳秒
+                    this.timestampUnit = 9; // 纳秒
                 } else if (timestampStr.length >= 13) {
-                    this.timestampUnit = 3; // 毫秒
+                    this.timestampUnit = 7; // 毫秒
                 } else if (timestampStr.length >= 10) {
-                    this.timestampUnit = 4; // 秒
+                    this.timestampUnit = 6; // 秒
                 }
-                console.log('检测到时间戳单位:', this.timestampUnit, '(1=纳秒, 2=微秒, 3=毫秒, 4=秒)');
+                console.log('检测到时间戳单位:', this.timestampUnit, '(0=年, 1=月, 2=周, 3=天, 4=时, 5=分, 6=秒, 7=毫秒, 8=微秒, 9=纳秒)');
+                
+                // 设置时间单位下拉选的值
+                const timeUnitSelect = this.shadowRoot.getElementById('timeUnit');
+                if (timeUnitSelect) {
+                    timeUnitSelect.value = this.timestampUnit;
+                }
                 
                 // 重置用户修改标记
                 this.isUserModifiedTime = false;
@@ -719,6 +725,16 @@ class DataVisualization extends HTMLElement {
             endTimeInput.addEventListener('change', () => {
                 this.isUserModifiedTime = true;
                 console.log('用户修改了结束时间');
+            });
+        }
+        
+        // 监听时间单位选择
+        const timeUnitSelect = this.shadowRoot.getElementById('timeUnit');
+        if (timeUnitSelect) {
+            timeUnitSelect.addEventListener('change', (e) => {
+                this.timestampUnit = parseInt(e.target.value);
+                this.isUserModifiedTime = true;
+                console.log('用户修改了时间单位:', this.timestampUnit);
             });
         }
         // 关闭按钮
@@ -1287,7 +1303,7 @@ class DataVisualization extends HTMLElement {
             let endTime = null;
             let aggregateType = null;
             let precision = null; // 不设置默认值，让后端处理
-            let timePrecision = 7; // 固定为毫秒
+            let timePrecision = this.timestampUnit; // 使用选择的时间单位
 
             // 处理时间参数
             if (startTimeInput && startTimeInput.value) {
@@ -1295,14 +1311,26 @@ class DataVisualization extends HTMLElement {
                     // 用户未修改，使用原始时间戳
                     startTime = this.originalMinKey;
                 } else {
-                    // 用户修改了，根据时间戳单位转换
+                    // 用户修改了，根据选择的时间单位转换（IGinX TimePrecision枚举值）
                     const inputTime = new Date(startTimeInput.value).getTime();
-                    if (this.timestampUnit === 1) {
+                    if (this.timestampUnit === 9) {
                         startTime = inputTime * 1000000; // 毫秒转纳秒
-                    } else if (this.timestampUnit === 2) {
+                    } else if (this.timestampUnit === 8) {
                         startTime = inputTime * 1000; // 毫秒转微秒
-                    } else if (this.timestampUnit === 4) {
+                    } else if (this.timestampUnit === 6) {
                         startTime = inputTime / 1000; // 毫秒转秒
+                    } else if (this.timestampUnit === 5) {
+                        startTime = inputTime / 60000; // 毫秒转分
+                    } else if (this.timestampUnit === 4) {
+                        startTime = inputTime / 3600000; // 毫秒转时
+                    } else if (this.timestampUnit === 3) {
+                        startTime = inputTime / 86400000; // 毫秒转天
+                    } else if (this.timestampUnit === 2) {
+                        startTime = inputTime / 604800000; // 毫秒转周
+                    } else if (this.timestampUnit === 1) {
+                        startTime = inputTime / 2592000000; // 毫秒转月（近似）
+                    } else if (this.timestampUnit === 0) {
+                        startTime = inputTime / 31536000000; // 毫秒转年（近似）
                     } else {
                         startTime = inputTime; // 毫秒
                     }
@@ -1313,14 +1341,26 @@ class DataVisualization extends HTMLElement {
                     // 用户未修改，使用原始时间戳
                     endTime = this.originalMaxKey;
                 } else {
-                    // 用户修改了，根据时间戳单位转换
+                    // 用户修改了，根据选择的时间单位转换（IGinX TimePrecision枚举值）
                     const inputTime = new Date(endTimeInput.value).getTime();
-                    if (this.timestampUnit === 1) {
+                    if (this.timestampUnit === 9) {
                         endTime = inputTime * 1000000; // 毫秒转纳秒
-                    } else if (this.timestampUnit === 2) {
+                    } else if (this.timestampUnit === 8) {
                         endTime = inputTime * 1000; // 毫秒转微秒
-                    } else if (this.timestampUnit === 4) {
+                    } else if (this.timestampUnit === 6) {
                         endTime = inputTime / 1000; // 毫秒转秒
+                    } else if (this.timestampUnit === 5) {
+                        endTime = inputTime / 60000; // 毫秒转分
+                    } else if (this.timestampUnit === 4) {
+                        endTime = inputTime / 3600000; // 毫秒转时
+                    } else if (this.timestampUnit === 3) {
+                        endTime = inputTime / 86400000; // 毫秒转天
+                    } else if (this.timestampUnit === 2) {
+                        endTime = inputTime / 604800000; // 毫秒转周
+                    } else if (this.timestampUnit === 1) {
+                        endTime = inputTime / 2592000000; // 毫秒转月（近似）
+                    } else if (this.timestampUnit === 0) {
+                        endTime = inputTime / 31536000000; // 毫秒转年（近似）
                     } else {
                         endTime = inputTime; // 毫秒
                     }
@@ -1437,7 +1477,7 @@ class DataVisualization extends HTMLElement {
             let endTime = null;
             let aggregateType = null;
             let precision = null;
-            let timePrecision = 7; // 固定为毫秒
+            let timePrecision = this.timestampUnit; // 使用选择的时间单位
 
             // 处理时间参数（与loadData方法相同的逻辑）
             if (startTimeInput && startTimeInput.value) {
@@ -1445,14 +1485,26 @@ class DataVisualization extends HTMLElement {
                     // 用户未修改，使用原始时间戳
                     startTime = this.originalMinKey;
                 } else {
-                    // 用户修改了，根据时间戳单位转换
+                    // 用户修改了，根据选择的时间单位转换（IGinX TimePrecision枚举值）
                     const inputTime = new Date(startTimeInput.value).getTime();
-                    if (this.timestampUnit === 1) {
+                    if (this.timestampUnit === 9) {
                         startTime = inputTime * 1000000; // 毫秒转纳秒
-                    } else if (this.timestampUnit === 2) {
+                    } else if (this.timestampUnit === 8) {
                         startTime = inputTime * 1000; // 毫秒转微秒
-                    } else if (this.timestampUnit === 4) {
+                    } else if (this.timestampUnit === 6) {
                         startTime = inputTime / 1000; // 毫秒转秒
+                    } else if (this.timestampUnit === 5) {
+                        startTime = inputTime / 60000; // 毫秒转分
+                    } else if (this.timestampUnit === 4) {
+                        startTime = inputTime / 3600000; // 毫秒转时
+                    } else if (this.timestampUnit === 3) {
+                        startTime = inputTime / 86400000; // 毫秒转天
+                    } else if (this.timestampUnit === 2) {
+                        startTime = inputTime / 604800000; // 毫秒转周
+                    } else if (this.timestampUnit === 1) {
+                        startTime = inputTime / 2592000000; // 毫秒转月（近似）
+                    } else if (this.timestampUnit === 0) {
+                        startTime = inputTime / 31536000000; // 毫秒转年（近似）
                     } else {
                         startTime = inputTime; // 毫秒
                     }
@@ -1463,14 +1515,26 @@ class DataVisualization extends HTMLElement {
                     // 用户未修改，使用原始时间戳
                     endTime = this.originalMaxKey;
                 } else {
-                    // 用户修改了，根据时间戳单位转换
+                    // 用户修改了，根据选择的时间单位转换（IGinX TimePrecision枚举值）
                     const inputTime = new Date(endTimeInput.value).getTime();
-                    if (this.timestampUnit === 1) {
+                    if (this.timestampUnit === 9) {
                         endTime = inputTime * 1000000; // 毫秒转纳秒
-                    } else if (this.timestampUnit === 2) {
+                    } else if (this.timestampUnit === 8) {
                         endTime = inputTime * 1000; // 毫秒转微秒
-                    } else if (this.timestampUnit === 4) {
+                    } else if (this.timestampUnit === 6) {
                         endTime = inputTime / 1000; // 毫秒转秒
+                    } else if (this.timestampUnit === 5) {
+                        endTime = inputTime / 60000; // 毫秒转分
+                    } else if (this.timestampUnit === 4) {
+                        endTime = inputTime / 3600000; // 毫秒转时
+                    } else if (this.timestampUnit === 3) {
+                        endTime = inputTime / 86400000; // 毫秒转天
+                    } else if (this.timestampUnit === 2) {
+                        endTime = inputTime / 604800000; // 毫秒转周
+                    } else if (this.timestampUnit === 1) {
+                        endTime = inputTime / 2592000000; // 毫秒转月（近似）
+                    } else if (this.timestampUnit === 0) {
+                        endTime = inputTime / 31536000000; // 毫秒转年（近似）
                     } else {
                         endTime = inputTime; // 毫秒
                     }
@@ -2181,8 +2245,35 @@ class DataVisualization extends HTMLElement {
 
                     const xValue = params[0].value[0];
                     let xLabel = '';
-                    if (xAxisColumn === 'key' && this.isValidTimestamp(xValue)) {
-                        xLabel = new Date(xValue).toLocaleString();
+                    if (xAxisColumn === 'key') {
+                        // 根据时间单位转换时间戳
+                        let displayTimestamp = xValue;
+                        if (this.timestampUnit === 9) {
+                            displayTimestamp = xValue / 1000000; // 纳秒转毫秒
+                        } else if (this.timestampUnit === 8) {
+                            displayTimestamp = xValue / 1000; // 微秒转毫秒
+                        } else if (this.timestampUnit === 6) {
+                            displayTimestamp = xValue * 1000; // 秒转毫秒
+                        } else if (this.timestampUnit === 5) {
+                            displayTimestamp = xValue * 60000; // 分转毫秒
+                        } else if (this.timestampUnit === 4) {
+                            displayTimestamp = xValue * 3600000; // 时转毫秒
+                        } else if (this.timestampUnit === 3) {
+                            displayTimestamp = xValue * 86400000; // 天转毫秒
+                        } else if (this.timestampUnit === 2) {
+                            displayTimestamp = xValue * 604800000; // 周转毫秒
+                        } else if (this.timestampUnit === 1) {
+                            displayTimestamp = xValue * 2592000000; // 月转毫秒（近似）
+                        } else if (this.timestampUnit === 0) {
+                            displayTimestamp = xValue * 31536000000; // 年转毫秒（近似）
+                        }
+                        
+                        const date = new Date(displayTimestamp);
+                        if (!isNaN(date.getTime())) {
+                            xLabel = date.toLocaleString();
+                        } else {
+                            xLabel = String(xValue);
+                        }
                     } else {
                         xLabel = String(xValue);
                     }
@@ -2220,8 +2311,35 @@ class DataVisualization extends HTMLElement {
                 nameGap: 30,
                 axisLabel: {
                     formatter: (value) => {
-                        if (xAxisColumn === 'key' && this.isValidTimestamp(value)) {
-                            return new Date(value).toLocaleString();
+                        if (xAxisColumn === 'key') {
+                            // 根据时间单位转换时间戳
+                            let displayTimestamp = value;
+                            if (this.timestampUnit === 9) {
+                                displayTimestamp = value / 1000000; // 纳秒转毫秒
+                            } else if (this.timestampUnit === 8) {
+                                displayTimestamp = value / 1000; // 微秒转毫秒
+                            } else if (this.timestampUnit === 6) {
+                                displayTimestamp = value * 1000; // 秒转毫秒
+                            } else if (this.timestampUnit === 5) {
+                                displayTimestamp = value * 60000; // 分转毫秒
+                            } else if (this.timestampUnit === 4) {
+                                displayTimestamp = value * 3600000; // 时转毫秒
+                            } else if (this.timestampUnit === 3) {
+                                displayTimestamp = value * 86400000; // 天转毫秒
+                            } else if (this.timestampUnit === 2) {
+                                displayTimestamp = value * 604800000; // 周转毫秒
+                            } else if (this.timestampUnit === 1) {
+                                displayTimestamp = value * 2592000000; // 月转毫秒（近似）
+                            } else if (this.timestampUnit === 0) {
+                                displayTimestamp = value * 31536000000; // 年转毫秒（近似）
+                            }
+                            
+                            const date = new Date(displayTimestamp);
+                            if (!isNaN(date.getTime())) {
+                                return date.toLocaleString();
+                            } else {
+                                return String(value);
+                            }
                         } else {
                             return String(value);
                         }
@@ -2368,8 +2486,35 @@ class DataVisualization extends HTMLElement {
                 trigger: 'item',
                 formatter: (params) => {
                     let xLabel;
-                    if (xAxisColumn === 'key' && this.isValidTimestamp(params.value[0])) {
-                        xLabel = new Date(params.value[0]).toLocaleString();
+                    if (xAxisColumn === 'key') {
+                        // 根据时间单位转换时间戳
+                        let displayTimestamp = params.value[0];
+                        if (this.timestampUnit === 9) {
+                            displayTimestamp = params.value[0] / 1000000; // 纳秒转毫秒
+                        } else if (this.timestampUnit === 8) {
+                            displayTimestamp = params.value[0] / 1000; // 微秒转毫秒
+                        } else if (this.timestampUnit === 6) {
+                            displayTimestamp = params.value[0] * 1000; // 秒转毫秒
+                        } else if (this.timestampUnit === 5) {
+                            displayTimestamp = params.value[0] * 60000; // 分转毫秒
+                        } else if (this.timestampUnit === 4) {
+                            displayTimestamp = params.value[0] * 3600000; // 时转毫秒
+                        } else if (this.timestampUnit === 3) {
+                            displayTimestamp = params.value[0] * 86400000; // 天转毫秒
+                        } else if (this.timestampUnit === 2) {
+                            displayTimestamp = params.value[0] * 604800000; // 周转毫秒
+                        } else if (this.timestampUnit === 1) {
+                            displayTimestamp = params.value[0] * 2592000000; // 月转毫秒（近似）
+                        } else if (this.timestampUnit === 0) {
+                            displayTimestamp = params.value[0] * 31536000000; // 年转毫秒（近似）
+                        }
+                        
+                        const date = new Date(displayTimestamp);
+                        if (!isNaN(date.getTime())) {
+                            xLabel = date.toLocaleString();
+                        } else {
+                            xLabel = params.value[0].toFixed(2);
+                        }
                     } else {
                         xLabel = params.value[0].toFixed(2);
                     }
@@ -2393,8 +2538,35 @@ class DataVisualization extends HTMLElement {
                 nameGap: 30,
                 axisLabel: {
                     formatter: (value) => {
-                        if (xAxisColumn === 'key' && this.isValidTimestamp(value)) {
-                            return new Date(value).toLocaleString();
+                        if (xAxisColumn === 'key') {
+                            // 根据时间单位转换时间戳
+                            let displayTimestamp = value;
+                            if (this.timestampUnit === 9) {
+                                displayTimestamp = value / 1000000; // 纳秒转毫秒
+                            } else if (this.timestampUnit === 8) {
+                                displayTimestamp = value / 1000; // 微秒转毫秒
+                            } else if (this.timestampUnit === 6) {
+                                displayTimestamp = value * 1000; // 秒转毫秒
+                            } else if (this.timestampUnit === 5) {
+                                displayTimestamp = value * 60000; // 分转毫秒
+                            } else if (this.timestampUnit === 4) {
+                                displayTimestamp = value * 3600000; // 时转毫秒
+                            } else if (this.timestampUnit === 3) {
+                                displayTimestamp = value * 86400000; // 天转毫秒
+                            } else if (this.timestampUnit === 2) {
+                                displayTimestamp = value * 604800000; // 周转毫秒
+                            } else if (this.timestampUnit === 1) {
+                                displayTimestamp = value * 2592000000; // 月转毫秒（近似）
+                            } else if (this.timestampUnit === 0) {
+                                displayTimestamp = value * 31536000000; // 年转毫秒（近似）
+                            }
+                            
+                            const date = new Date(displayTimestamp);
+                            if (!isNaN(date.getTime())) {
+                                return date.toLocaleString();
+                            } else {
+                                return String(value);
+                            }
                         } else {
                             return String(value);
                         }
@@ -2631,10 +2803,39 @@ class DataVisualization extends HTMLElement {
             const originalKey = record.key;
             const parsedTimestamp = record.timestamp;
             
-            // 判断是否是有效时间戳
+            // 根据时间单位转换时间戳
             let displayContent = originalKey;
-            if (this.isValidTimestamp(parsedTimestamp)) {
-                displayContent = new Date(parsedTimestamp).toLocaleString();
+            let displayTimestamp = parsedTimestamp;
+            
+            if (parsedTimestamp != null && !isNaN(parsedTimestamp)) {
+                // 根据选择的时间单位转换时间戳
+                if (this.timestampUnit === 9) {
+                    displayTimestamp = parsedTimestamp / 1000000; // 纳秒转毫秒
+                } else if (this.timestampUnit === 8) {
+                    displayTimestamp = parsedTimestamp / 1000; // 微秒转毫秒
+                } else if (this.timestampUnit === 6) {
+                    displayTimestamp = parsedTimestamp * 1000; // 秒转毫秒
+                } else if (this.timestampUnit === 5) {
+                    displayTimestamp = parsedTimestamp * 60000; // 分转毫秒
+                } else if (this.timestampUnit === 4) {
+                    displayTimestamp = parsedTimestamp * 3600000; // 时转毫秒
+                } else if (this.timestampUnit === 3) {
+                    displayTimestamp = parsedTimestamp * 86400000; // 天转毫秒
+                } else if (this.timestampUnit === 2) {
+                    displayTimestamp = parsedTimestamp * 604800000; // 周转毫秒
+                } else if (this.timestampUnit === 1) {
+                    displayTimestamp = parsedTimestamp * 2592000000; // 月转毫秒（近似）
+                } else if (this.timestampUnit === 0) {
+                    displayTimestamp = parsedTimestamp * 31536000000; // 年转毫秒（近似）
+                }
+                
+                // 尝试转换为日期
+                const date = new Date(displayTimestamp);
+                if (!isNaN(date.getTime())) {
+                    displayContent = date.toLocaleString();
+                } else {
+                    displayContent = originalKey; // 转换失败，显示原始值
+                }
             }
             
             timeTd.innerHTML = `<div>${displayContent}</div>`;
