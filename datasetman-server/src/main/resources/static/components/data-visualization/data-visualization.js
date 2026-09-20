@@ -367,8 +367,17 @@ class DataVisualization extends HTMLElement {
                 const totalCount = countResult.data;
                 console.log('数据总量:', totalCount);
                 
-                // 如果数据量超过100条，需要降采样
-                if (totalCount > 100) {
+                // 数据量较小时，默认降采样函数选原始数据
+                const aggregationSelect = this.shadowRoot.getElementById('aggregationFunction');
+                if (aggregationSelect) {
+                    if (totalCount <= 1000) {
+                        aggregationSelect.value = ''; // 原始数据
+                        console.log('数据量较小，设置为原始数据');
+                    }
+                }
+                
+                // 如果数据量超过1000条，需要降采样
+                if (totalCount > 1000) {
                     const timeSpan = maxKey - minKey; // 毫秒
                     const targetCount = 100;
                     const intervalMs = Math.ceil(timeSpan / targetCount);
@@ -384,9 +393,9 @@ class DataVisualization extends HTMLElement {
                         console.log('设置时间间隔:', precision);
                     }
                     
-                    console.log(`数据量${totalCount}条超过100条，自动设置降采样间隔: ${precision}ms`);
+                    console.log(`数据量${totalCount}条超过1000条，自动设置降采样间隔: ${precision}ms`);
                 } else {
-                    console.log(`数据量${totalCount}条在100条以内，不需要降采样`);
+                    console.log(`数据量${totalCount}条在1000条以内，不需要降采样`);
                 }
             }
         } catch (error) {
