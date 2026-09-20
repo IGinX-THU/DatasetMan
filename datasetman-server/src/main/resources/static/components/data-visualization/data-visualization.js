@@ -251,12 +251,20 @@ class DataVisualization extends HTMLElement {
                 
                 // 检测时间戳单位
                 const timestampStr = String(Math.floor(Math.abs(timeRange.minKey || 0)));
-                if (timestampStr.length >= 16) {
+                // 如果时间戳太小（小于某个阈值），可能是相对时间或其他格式，使用默认毫秒
+                const minTimestamp = 1000000000; // 2001-09-09的毫秒时间戳
+                if (timeRange.minKey < minTimestamp) {
+                    this.timestampUnit = 7; // 默认毫秒
+                    console.log('时间戳过小，使用默认毫秒单位，时间戳:', timeRange.minKey);
+                } else if (timestampStr.length >= 16) {
                     this.timestampUnit = 9; // 纳秒
                 } else if (timestampStr.length >= 13) {
                     this.timestampUnit = 7; // 毫秒
                 } else if (timestampStr.length >= 10) {
                     this.timestampUnit = 6; // 秒
+                } else {
+                    this.timestampUnit = 7; // 默认毫秒
+                    console.log('时间戳格式未知，使用默认毫秒单位');
                 }
                 console.log('检测到时间戳单位:', this.timestampUnit, '(0=年, 1=月, 2=周, 3=天, 4=时, 5=分, 6=秒, 7=毫秒, 8=微秒, 9=纳秒)');
                 

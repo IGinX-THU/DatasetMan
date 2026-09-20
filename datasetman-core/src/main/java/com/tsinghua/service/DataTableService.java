@@ -354,14 +354,55 @@ public class DataTableService {
         }
     }
 
+    /** 根据timePrecision计算最大时间（10000-01-01 23:59:59.999） */
+    private long calculateMaxTime(Integer timePrecisionValue) {
+        // 10000-01-01 23:59:59.999 毫秒级时间戳
+        long maxTimeMs = 253402300799999L;
+        
+        if (timePrecisionValue == null) {
+            return maxTimeMs; // 默认毫秒
+        }
+        
+        TimePrecision timePrecision = TimePrecision.findByValue(timePrecisionValue);
+        if (timePrecision == null) {
+            return maxTimeMs; // 默认毫秒
+        }
+        
+        // 根据不同的时间精度转换为对应的单位
+        switch (timePrecision) {
+            case NS: // 纳秒：毫秒 * 1,000,000
+                return maxTimeMs * 1000000;
+            case US: // 微秒：毫秒 * 1,000
+                return maxTimeMs * 1000;
+            case MS: // 毫秒：不转换
+                return maxTimeMs;
+            case S: // 秒：毫秒 / 1,000
+                return maxTimeMs / 1000;
+            case MIN: // 分：毫秒 / 60,000
+                return maxTimeMs / 60000;
+            case HOUR: // 时：毫秒 / 3,600,000
+                return maxTimeMs / 3600000;
+            case DAY: // 天：毫秒 / 86,400,000
+                return maxTimeMs / 86400000;
+            case WEEK: // 周：毫秒 / 604,800,000
+                return maxTimeMs / 604800000;
+            case MONTH: // 月：毫秒 / 25,920,000,000（近似）
+                return maxTimeMs / 2592000000L;
+            case YEAR: // 年：毫秒 / 315,360,000,000（近似）
+                return maxTimeMs / 31536000000L;
+            default:
+                return maxTimeMs;
+        }
+    }
+
     public IginXTable queryIginXTable(DataQueryRequest request) {
         QueryClient queryClient = iginxClient.getQueryClient();
 
         Set<String> paths = new HashSet<>(request.getPaths());
         // 最小时间（1970-01-01）
         long startKey = Optional.ofNullable(request.getStartTime()).orElse(0L);
-        //最大时间（10000-01-01 23:59:59.999 纳秒） 足够大，但不会导致查询 OOM
-        long endKey = Optional.ofNullable(request.getEndTime()).orElse(2534023007999990000L);
+        // 根据timePrecision计算最大时间
+        long endKey = Optional.ofNullable(request.getEndTime()).orElse(calculateMaxTime(request.getTimePrecision()));
         long precision = request.getPrecision();
         if (precision <= 0L) {
             precision = 1000L;
