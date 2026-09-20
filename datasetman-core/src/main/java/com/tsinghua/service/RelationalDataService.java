@@ -43,12 +43,10 @@ public class RelationalDataService {
             
             // iginxSession.openSession();
             SessionExecuteSqlResult res = iginxSession.executeSql(finalSql);
-            List<Map<String, Object>> records = getRecords(res);
             // iginxSession.closeSession();
             
-            TableDto result = new TableDto(res.getPaths(), records);
-            log.info("查询结果: paths={}, records={}", res.getPaths(), records.size());
-            
+            TableDto result = convertTableDto(res);
+
             return result;
         } catch (Exception e) {
             log.error("查询失败", e);
@@ -68,10 +66,10 @@ public class RelationalDataService {
             
             // iginxSession.openSession();
             SessionExecuteSqlResult res = iginxSession.executeSql(sql);
-            List<Map<String, Object>> records = getRecords(res);
+            TableDto tableDto = convertTableDto(res);
             // iginxSession.closeSession();
             
-            if (records.isEmpty()) {
+            if (tableDto.getRecords().isEmpty()) {
                 log.warn("没有数据可导出");
                 return new byte[0];
             }
@@ -101,7 +99,7 @@ public class RelationalDataService {
             dataStyle.setBorderRight(BorderStyle.THIN);
             
             // 写入表头
-            List<String> headers = res.getPaths();
+            List<String> headers = tableDto.getHeader();
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.size(); i++) {
                 Cell cell = headerRow.createCell(i);
@@ -110,9 +108,9 @@ public class RelationalDataService {
             }
             
             // 写入数据
-            for (int i = 0; i < records.size(); i++) {
+            for (int i = 0; i < tableDto.getRecords().size(); i++) {
                 Row row = sheet.createRow(i + 1);
-                Map<String, Object> record = records.get(i);
+                Map<String, Object> record = tableDto.getRecords().get(i);
                 
                 for (int j = 0; j < headers.size(); j++) {
                     String header = headers.get(j);
@@ -153,7 +151,6 @@ public class RelationalDataService {
             byte[] result = outputStream.toByteArray();
             outputStream.close();
             
-            log.info("Excel导出成功，数据条数: {}, 文件大小: {} bytes", records.size(), result.length);
             return result;
             
         } catch (Exception e) {
@@ -200,13 +197,18 @@ public class RelationalDataService {
             // 先查询一次获取表头
             // iginxSession.openSession();
             SessionExecuteSqlResult headerRes = iginxSession.executeSql(baseSql + " LIMIT 1;");
-            List<String> headers = headerRes.getPaths();
             // iginxSession.closeSession();
             
-            if (headers.isEmpty()) {
+            if (headerRes.getPaths().isEmpty()) {
                 log.warn("没有表头信息");
                 return;
             }
+
+            List<String> headers = new ArrayList<>();
+            if (headerRes.getKeys() != null && headerRes.getKeys().length > 0){
+                headers.add("key");
+            }
+            headers.addAll(headerRes.getPaths());
             
             // 写入表头
             Row headerRow = sheet.createRow(0);
@@ -230,7 +232,7 @@ public class RelationalDataService {
                 
                 // iginxSession.openSession();
                 SessionExecuteSqlResult batchRes = iginxSession.executeSql(batchSql);
-                List<Map<String, Object>> records = getRecords(batchRes);
+                List<Map<String, Object>> records = getKeyRecords(batchRes);
                 // iginxSession.closeSession();
                 
                 if (records.isEmpty()) {
@@ -451,12 +453,17 @@ public class RelationalDataService {
     }
 
     @NonNullDecl
-    public List<Map<String, Object>> getRecords(SessionExecuteSqlResult res) {
+    public List<Map<String, Object>> getKeyRecords(SessionExecuteSqlResult res) {
         List<String> header = res.getPaths();
         List<Map<String, Object>> records = new ArrayList<>();
         List<List<Object>>  rows = res.getValues();
-        rows.forEach(row -> {
+        for(int j = 0; j < rows.size(); j++) {
             Map<String, Object> rs = new LinkedHashMap<>();
+            long[] keys = res.getKeys();
+            if (keys != null && keys.length > 0){
+                rs.put("key", keys[j]);
+            }
+            List<Object> row = rows.get(j);
             for (int i=0; i<=header.size() -1; i++){
                 Object value = row.get(i);
                 if (value instanceof byte[]) {
@@ -466,8 +473,18 @@ public class RelationalDataService {
                 }
             }
             records.add(rs);
-        });
+        };
         return records;
+    }
+
+    private TableDto convertTableDto(SessionExecuteSqlResult res) {
+        List<Map<String, Object>> records = getKeyRecords(res);
+        List<String> keys = new ArrayList<>();
+        if (res.getKeys() != null && res.getKeys().length > 0){
+            keys.add("key");
+        }
+        keys.addAll(res.getPaths());
+        return new TableDto(keys, records);
     }
 
     public Object countData(RelationalQueryRequest request) {
