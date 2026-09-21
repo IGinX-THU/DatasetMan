@@ -2369,6 +2369,52 @@ function showVisualAnalysis() {
                     console.log('🌲 直接绑定点击右侧叶子节点:', { versionId, datasetName, storagePath, rawVersionId });
                     if (versionId) {
                         showComponent('datasetHistory', { versionId, datasetName, storagePath });
+                        
+                        // 根据存储路径展开左侧树对应节点
+                        if (storagePath) {
+                            const leftSidebarTree = document.getElementById('dataSourceTree');
+                            if (leftSidebarTree) {
+                                // 清除所有高亮
+                                leftSidebarTree.querySelectorAll('.tree-node.highlighted').forEach(node => {
+                                    node.classList.remove('highlighted');
+                                });
+                                
+                                // 尝试找到完全匹配存储路径的节点
+                                let targetNode = leftSidebarTree.querySelector(`.tree-node[data-full-path="${storagePath}"]`);
+                                
+                                // 如果没有完全匹配，尝试前缀匹配
+                                if (!targetNode) {
+                                    const allNodes = leftSidebarTree.querySelectorAll('.tree-node[data-full-path]');
+                                    let bestMatch = null;
+                                    let maxMatchLength = 0;
+                                    
+                                    for (const node of allNodes) {
+                                        const nodePath = node.getAttribute('data-full-path');
+                                        if (nodePath && storagePath.startsWith(nodePath)) {
+                                            if (nodePath.length > maxMatchLength) {
+                                                maxMatchLength = nodePath.length;
+                                                bestMatch = node;
+                                            }
+                                        }
+                                    }
+                                    targetNode = bestMatch;
+                                }
+                                
+                                if (targetNode) {
+                                    // 先展开所有父节点
+                                    let parent = targetNode.parentElement;
+                                    while (parent && parent.classList.contains('tree-children')) {
+                                        const parentNode = parent.parentElement;
+                                        if (parentNode && parentNode.classList.contains('tree-node')) {
+                                            parentNode.classList.add('expanded');
+                                        }
+                                        parent = parentNode ? parentNode.parentElement : null;
+                                    }
+                                    targetNode.classList.add('highlighted');
+                                    targetNode.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                }
+                            }
+                        }
                     } else {
                         console.warn('⚠️ versionId 为空，无法显示数据集历史', { rawVersionId, node: this });
                     }

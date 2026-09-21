@@ -405,15 +405,30 @@ class SceneAnalysis extends HTMLElement {
         }
     }
 
-    /** 详情：跳转数据集档案页 */
+    /** 详情：触发右侧树对应节点的点击事件 */
     showDetail(name, versionId) {
-        const row = this.rows.find(r => String(r.versionId) === String(versionId)) || {};
-        if (typeof window.showComponent === 'function') {
-            window.showComponent('datasetHistory', {
-                versionId: versionId,
-                datasetName: name,
-                storagePath: row.storagePath
-            });
+        const rightSidebarTree = document.getElementById('datasetTree');
+        if (!rightSidebarTree) {
+            console.warn('未找到右侧数据集树');
+            return;
+        }
+        
+        // 找到对应的版本节点
+        const targetNode = rightSidebarTree.querySelector(`.tree-node[data-version-id="${versionId}"]`);
+        if (targetNode) {
+            // 触发点击事件
+            targetNode.click();
+        } else {
+            console.warn('未找到对应的树节点:', { name, versionId });
+            // 如果找不到节点，回退到原来的逻辑
+            const row = this.rows.find(r => String(r.versionId) === String(versionId)) || {};
+            if (typeof window.showComponent === 'function') {
+                window.showComponent('datasetHistory', {
+                    versionId: versionId,
+                    datasetName: name,
+                    storagePath: row.storagePath
+                });
+            }
         }
     }
 }
