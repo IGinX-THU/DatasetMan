@@ -2374,9 +2374,17 @@ function showVisualAnalysis() {
                         if (storagePath) {
                             const leftSidebarTree = document.getElementById('dataSourceTree');
                             if (leftSidebarTree) {
-                                // 清除所有高亮
+                                // 清除所有高亮和选中状态
                                 leftSidebarTree.querySelectorAll('.tree-node.highlighted').forEach(node => {
                                     node.classList.remove('highlighted');
+                                });
+                                leftSidebarTree.querySelectorAll('.tree-node.active').forEach(node => {
+                                    node.classList.remove('active');
+                                });
+                                
+                                // 收起所有展开的节点
+                                leftSidebarTree.querySelectorAll('.tree-node.expanded').forEach(node => {
+                                    node.classList.remove('expanded');
                                 });
                                 
                                 // 尝试找到完全匹配存储路径的节点
@@ -2401,16 +2409,45 @@ function showVisualAnalysis() {
                                 }
                                 
                                 if (targetNode) {
-                                    // 先展开所有父节点
-                                    let parent = targetNode.parentElement;
-                                    while (parent && parent.classList.contains('tree-children')) {
-                                        const parentNode = parent.parentElement;
-                                        if (parentNode && parentNode.classList.contains('tree-node')) {
-                                            parentNode.classList.add('expanded');
+                                    const isLeafNode = targetNode.getAttribute('data-is-leaf') === 'true';
+
+                                    if (isLeafNode) {
+                                        // 叶子节点：展开其所有父节点，并记录直接父节点
+                                        let parent = targetNode.parentElement;
+                                        let directParentNode = null;
+                                        while (parent && parent.classList.contains('tree-children')) {
+                                            const parentNode = parent.parentElement;
+                                            if (parentNode && parentNode.classList.contains('tree-node')) {
+                                                parentNode.classList.add('expanded');
+                                                if (!directParentNode) {
+                                                    directParentNode = parentNode;
+                                                }
+                                            }
+                                            parent = parentNode ? parentNode.parentElement : null;
                                         }
-                                        parent = parentNode ? parentNode.parentElement : null;
+
+                                        // 叶子节点高亮，直接父节点选中（与鼠标点击该父节点效果一致）
+                                        targetNode.classList.add('highlighted');
+                                        if (directParentNode) {
+                                            directParentNode.classList.add('active');
+                                        }
+                                    } else {
+                                        // 非叶子节点：展开当前节点及其所有父节点
+                                        let parent = targetNode.parentElement;
+                                        while (parent && parent.classList.contains('tree-children')) {
+                                            const parentNode = parent.parentElement;
+                                            if (parentNode && parentNode.classList.contains('tree-node')) {
+                                                parentNode.classList.add('expanded');
+                                            }
+                                            parent = parentNode ? parentNode.parentElement : null;
+                                        }
+                                        targetNode.classList.add('expanded');
+                                        
+                                        // 非叶子节点同时高亮和选中
+                                        targetNode.classList.add('highlighted');
+                                        targetNode.classList.add('active');
                                     }
-                                    targetNode.classList.add('highlighted');
+                                    
                                     targetNode.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                                 }
                             }
@@ -2495,7 +2532,7 @@ function showVisualAnalysis() {
                 
                 if (targetNode) {
                     console.log('找到目标节点:', targetNode);
-                    // 先展开所有父节点
+                    // 先展开所有父节点（血缘图谱点击不收起其他节点）
                     let parent = targetNode.parentElement;
                     while (parent && parent.classList.contains('tree-children')) {
                         const parentNode = parent.parentElement;
