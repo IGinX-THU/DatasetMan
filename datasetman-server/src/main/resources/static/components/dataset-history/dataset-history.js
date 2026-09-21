@@ -985,11 +985,15 @@ class DatasetHistory extends HTMLElement {
         const row = this.shadowRoot.querySelector(`#changeTable tr[data-version-id="${versionId}"]`);
         if (row) row.scrollIntoView({ behavior:'smooth', block:'nearest' });
         
-        // 触发自定义事件，通知右侧数据集树高亮对应节点
+        // 从版本数据中获取存储路径
+        const version = this.changes.find(c => this.versionIdOf(c) === versionId);
+        const storagePath = version ? version.storagePath : null;
+        
+        // 触发自定义事件，通知右侧数据集树和左侧数据源树高亮对应节点
         this.dispatchEvent(new CustomEvent('highlight-dataset-version', {
             bubbles: true,
             composed: true,
-            detail: { versionId: versionId }
+            detail: { versionId: versionId, storagePath: storagePath }
         }));
     }
 

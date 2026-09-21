@@ -2382,24 +2382,89 @@ function showVisualAnalysis() {
 
     window.loadDatasetTree = loadDatasetTree;
 
-    // 监听血缘图谱点击节点事件，高亮右侧数据集树对应节点
+    // 监听血缘图谱点击节点事件，高亮右侧数据集树和左侧数据源树对应节点
     document.addEventListener('highlight-dataset-version', function(e) {
         const versionId = e.detail.versionId;
-        console.log('血缘图谱点击节点，高亮右侧数据集树节点:', versionId);
+        const storagePath = e.detail.storagePath;
+        console.log('血缘图谱点击节点，高亮左右侧边栏节点:', { versionId, storagePath });
         
+        // 高亮右侧数据集树
         const rightSidebarTree = document.getElementById('datasetTree');
-        if (!rightSidebarTree) return;
+        if (rightSidebarTree) {
+            // 清除所有高亮
+            rightSidebarTree.querySelectorAll('.tree-node.highlighted').forEach(node => {
+                node.classList.remove('highlighted');
+            });
+            
+            // 高亮对应的版本节点
+            const targetNode = rightSidebarTree.querySelector(`.tree-node[data-version-id="${versionId}"]`);
+            if (targetNode) {
+                // 先展开父节点
+                let parent = targetNode.parentElement;
+                while (parent && parent.classList.contains('tree-children')) {
+                    const parentNode = parent.parentElement;
+                    if (parentNode && parentNode.classList.contains('tree-node')) {
+                        parentNode.classList.add('expanded');
+                    }
+                    parent = parentNode ? parentNode.parentElement : null;
+                }
+                targetNode.classList.add('highlighted');
+                targetNode.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
         
-        // 清除所有高亮
-        rightSidebarTree.querySelectorAll('.tree-node.highlighted').forEach(node => {
-            node.classList.remove('highlighted');
-        });
-        
-        // 高亮对应的版本节点
-        const targetNode = rightSidebarTree.querySelector(`.tree-node[data-version-id="${versionId}"]`);
-        if (targetNode) {
-            targetNode.classList.add('highlighted');
-            targetNode.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // 高亮左侧数据源树（根据存储路径）
+        if (storagePath) {
+            const leftSidebarTree = document.getElementById('dataSourceTree');
+            if (leftSidebarTree) {
+                // 清除所有高亮
+                leftSidebarTree.querySelectorAll('.tree-node.highlighted').forEach(node => {
+                    node.classList.remove('highlighted');
+                });
+                
+                // 使用原始存储路径（保持双反斜杠）
+                console.log('原始存储路径:', storagePath);
+                
+                // 尝试找到完全匹配存储路径的节点
+                let targetNode = leftSidebarTree.querySelector(`.tree-node[data-full-path="${storagePath}"]`);
+                
+                // 如果没有完全匹配，尝试前缀匹配（存储路径可能包含版本号）
+                if (!targetNode) {
+                    const allNodes = leftSidebarTree.querySelectorAll('.tree-node[data-full-path]');
+                    let bestMatch = null;
+                    let maxMatchLength = 0;
+                    
+                    for (const node of allNodes) {
+                        const nodePath = node.getAttribute('data-full-path');
+                        if (nodePath && storagePath.startsWith(nodePath)) {
+                            // 选择匹配长度最长的节点（避免匹配到根节点）
+                            if (nodePath.length > maxMatchLength) {
+                                maxMatchLength = nodePath.length;
+                                bestMatch = node;
+                            }
+                        }
+                    }
+                    targetNode = bestMatch;
+                }
+                
+                if (targetNode) {
+                    console.log('找到目标节点:', targetNode);
+                    // 先展开所有父节点
+                    let parent = targetNode.parentElement;
+                    while (parent && parent.classList.contains('tree-children')) {
+                        const parentNode = parent.parentElement;
+                        if (parentNode && parentNode.classList.contains('tree-node')) {
+                            parentNode.classList.add('expanded');
+                            console.log('展开父节点:', parentNode);
+                        }
+                        parent = parentNode ? parentNode.parentElement : null;
+                    }
+                    targetNode.classList.add('highlighted');
+                    targetNode.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    console.log('未找到匹配的节点，路径:', storagePath);
+                }
+            }
         }
     });
 
