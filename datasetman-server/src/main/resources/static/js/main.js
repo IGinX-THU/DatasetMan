@@ -2382,6 +2382,27 @@ function showVisualAnalysis() {
 
     window.loadDatasetTree = loadDatasetTree;
 
+    // 监听血缘图谱点击节点事件，高亮右侧数据集树对应节点
+    document.addEventListener('highlight-dataset-version', function(e) {
+        const versionId = e.detail.versionId;
+        console.log('血缘图谱点击节点，高亮右侧数据集树节点:', versionId);
+        
+        const rightSidebarTree = document.getElementById('datasetTree');
+        if (!rightSidebarTree) return;
+        
+        // 清除所有高亮
+        rightSidebarTree.querySelectorAll('.tree-node.highlighted').forEach(node => {
+            node.classList.remove('highlighted');
+        });
+        
+        // 高亮对应的版本节点
+        const targetNode = rightSidebarTree.querySelector(`.tree-node[data-version-id="${versionId}"]`);
+        if (targetNode) {
+            targetNode.classList.add('highlighted');
+            targetNode.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    });
+
     function escapeHtml(value) {
         return String(value == null ? '' : value)
             .replace(/&/g, '&amp;')

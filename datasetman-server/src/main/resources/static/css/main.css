@@ -847,6 +847,15 @@ html.font-scale-1-5 .ribbon-btn-icon {
     margin: 1px 0;
 }
 
+.tree-node.highlighted {
+    background-color: #fef3c7;
+    color: #d97706;
+    font-weight: 500;
+    border-radius: 2px;
+    margin: 1px 0;
+    border: 2px solid #f59e0b;
+}
+
 /* 简洁的展开/折叠指示器 */
 .tree-node.expanded > .tree-node-text::before,
 .tree-node:not(.expanded) > .tree-node-text::before {

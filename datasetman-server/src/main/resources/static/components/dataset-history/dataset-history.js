@@ -977,12 +977,20 @@ class DatasetHistory extends HTMLElement {
     }
 
     highlight(versionId) {
+        // 高亮变化过程表格中的对应行
         this.shadowRoot.querySelectorAll('#changeTable tbody tr').forEach(row => {
             const rowVid = Number(row.dataset.versionId);
             row.classList.toggle('active', rowVid === versionId || rowVid === Number(versionId));
         });
         const row = this.shadowRoot.querySelector(`#changeTable tr[data-version-id="${versionId}"]`);
         if (row) row.scrollIntoView({ behavior:'smooth', block:'nearest' });
+        
+        // 触发自定义事件，通知右侧数据集树高亮对应节点
+        this.dispatchEvent(new CustomEvent('highlight-dataset-version', {
+            bubbles: true,
+            composed: true,
+            detail: { versionId: versionId }
+        }));
     }
 
     async deleteCurrent() {
