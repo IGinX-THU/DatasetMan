@@ -108,6 +108,8 @@ public class QualityAssessmentService {
                 sql.append(" AND versionNo LIKE '^.*").append(request.getVersionNo().trim()).append(".*'");
             }
 
+            sql.append(" AND datasetName != ''");
+            sql.append(" AND versionNo != ''");
             sql.append(" ORDER BY createTime DESC");
             sql.append(" LIMIT ").append(request.getPageSize());
             sql.append(" OFFSET ").append((request.getPageNum() - 1) * request.getPageSize());
@@ -147,6 +149,8 @@ public class QualityAssessmentService {
             if (request.getVersionNo() != null && !request.getVersionNo().trim().isEmpty()) {
                 sql.append(" AND versionNo LIKE '%").append(request.getVersionNo().trim()).append("%'");
             }
+            sql.append(" AND datasetName != ''");
+            sql.append(" AND versionNo != ''");
             sql.append(";");
 
             SessionExecuteSqlResult res = iginxSession.executeSql(sql.toString());
