@@ -324,6 +324,23 @@ class DatasetHistory extends HTMLElement {
             TRANSFORM_SQL: '#8b5cf6'
         };
 
+        // 预估总节点数（版本节点 + 操作节点），用于动态调整大小
+        const edges = this.graph.edges || [];
+        const operationCount = edges.filter(e => {
+            const toNode = (this.graph.nodes || []).find(n => (n.versionId || n.createTime) === e.to);
+            const derivType = toNode ? toNode.provenanceType : null;
+            return derivType === 'SQL_QUERY' || derivType === 'TRANSFORM'
+                || derivType === 'SELECT' || derivType === 'SELECT_UDF'
+                || derivType === 'TRANSFORM_SQL';
+        }).length;
+        const estimatedNodeCount = nodes.length + operationCount;
+        
+        // 根据节点数量动态调整节点大小和字体
+        const nodeScale = Math.max(0.6, Math.min(1, 1 - (estimatedNodeCount - 5) * 0.03));
+        const versionNodeSize = (n) => Math.round((n.focus ? 64 : 48) * nodeScale);
+        const operationNodeSize = [Math.round(120 * nodeScale), Math.round(44 * nodeScale)];
+        const labelFontSize = Math.max(9, Math.round(11 * nodeScale));
+
         const echartsNodes = [];
         const echartsLinks = [];
         const versionKeyMap = new Map(); // versionId -> echarts node id
@@ -341,7 +358,7 @@ class DatasetHistory extends HTMLElement {
                 id: nodeId,
                 name: `${n.datasetName || ''}\n${n.versionNo || ''}`,
                 symbol: 'circle',
-                symbolSize: n.focus ? 64 : 48,
+                symbolSize: versionNodeSize(n),
                 itemStyle: {
                     color: deleted ? '#cbd5e1' : color,
                     borderColor: n.focus ? '#111827' : (deleted ? '#94a3b8' : '#fff'),
@@ -353,7 +370,7 @@ class DatasetHistory extends HTMLElement {
                 label: {
                     show: true,
                     position: 'bottom',
-                    fontSize: 11,
+                    fontSize: labelFontSize,
                     color: deleted ? '#94a3b8' : '#374151',
                     formatter: () => `${n.datasetName || ''}\n${n.versionNo || ''}`
                 },
@@ -366,7 +383,6 @@ class DatasetHistory extends HTMLElement {
         //    对于每条 from->to 边，若 to 节点 provenanceType 为 SQL_QUERY/TRANSFORM 等，
         //    在 from 与 to 之间插入一个操作节点，承载 SQL/Transform/UDF 等元数据。
         const operationNodeSet = new Set();
-        const edges = this.graph.edges || [];
         const nodeMap = new Map();
         nodes.forEach(n => { nodeMap.set(n.versionId || n.createTime, n); });
 
@@ -406,7 +422,7 @@ class DatasetHistory extends HTMLElement {
                         id: opNodeId,
                         name: opDetail ? `${opLabel}\n${opDetail}` : opLabel,
                         symbol: 'roundRect',
-                        symbolSize: [120, 44],
+                        symbolSize: operationNodeSize,
                         itemStyle: {
                             color: opInfo.color,
                             borderColor: opInfo.borderColor,
@@ -415,7 +431,7 @@ class DatasetHistory extends HTMLElement {
                         },
                         label: {
                             show: true,
-                            fontSize: 10,
+                            fontSize: labelFontSize,
                             color: opInfo.textColor,
                             formatter: () => opDetail ? `${opLabel}\n${opDetail}` : opLabel
                         },
@@ -538,6 +554,13 @@ class DatasetHistory extends HTMLElement {
         }
 
         const chart = window.echarts.init(container);
+        
+        // 根据节点数量动态调整力导向参数，避免节点多时挤成一团
+        const nodeCount = echartsNodes.length;
+        const repulsion = Math.max(500, nodeCount * 120);  // 节点越多，排斥力越大
+        const edgeLength = [120, Math.min(500, 250 + nodeCount * 30)];  // 节点越多，边越长
+        const gravity = Math.max(0.0005, 0.015 - nodeCount * 0.0008);  // 节点越多，中心引力越小
+        
         const option = {
             tooltip: {
                 show: false
@@ -547,9 +570,9 @@ class DatasetHistory extends HTMLElement {
                 layout: 'force',
                 force: {
                     initLayout: 'none',
-                    repulsion: 400,
-                    edgeLength: [100, 200],
-                    gravity: 0.02,
+                    repulsion: repulsion,
+                    edgeLength: edgeLength,
+                    gravity: gravity,
                     friction: 0.8,
                     layoutAnimation: true
                 },
