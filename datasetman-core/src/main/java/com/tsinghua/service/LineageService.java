@@ -228,10 +228,20 @@ public class LineageService {
             return Collections.emptyMap();
         }
         try {
-            return JSONObject.parseObject(json);
+            // 修复 fastjson2 生成的非法 JSON：数字 key 未加引号 {123:[0]} → {"123":[0]}
+            String fixed = fixNumericKeysInJson(json);
+            return JSONObject.parseObject(fixed);
         } catch (Exception e) {
             return Collections.singletonMap("raw", json);
         }
+    }
+
+    /** 修复 JSON 中未加引号的数字 key：{123: "x"} → {"123": "x"}，但不误改字符串内容里的数字 */
+    private static String fixNumericKeysInJson(String json) {
+        // 匹配对象开头的 { 后面跟的数字 key（后面是 : 或 : 加空格）
+        // 排除字符串内部的 {数字:  ，只处理 JSON 结构层面
+        return json.replaceAll("(?<=\\{)(\\d+)(?=\\s*:)", "\"$1\"")
+                   .replaceAll("(?<=,)(\\d+)(?=\\s*:)", "\"$1\"");
     }
 
     /**

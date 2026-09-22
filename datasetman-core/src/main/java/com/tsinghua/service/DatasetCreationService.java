@@ -145,6 +145,11 @@ public class DatasetCreationService {
                 config.put("udfNames", request.getUdfNames());
             }
 
+            // 多数据集转换：保存 SQL 语句与上游版本的绑定关系，用于血缘图谱展示
+            if (request.getUpstreamSqlBindings() != null && !request.getUpstreamSqlBindings().isEmpty()) {
+                config.put("upstreamSqlBindings", request.getUpstreamSqlBindings());
+            }
+
             storagePath = nextStoragePath(request.getDatasetName(), request.getVersionNo());
             MaterializeResult result = materializeSql(rawSqlList, request.getUpstreamVersionIds(), storagePath);
             registration.setRowCount(result.rowCount);

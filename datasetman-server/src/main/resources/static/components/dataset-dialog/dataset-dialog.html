@@ -45,6 +45,10 @@
                         <strong>导入数据</strong>
                         <span>上传 CSV 文件，导入到 IginX 并物化为新数据集。适用于将本地文件数据纳入管理的场景。</span>
                     </div>
+                    <div class="type-card" data-type="MULTI_TRANSFORM">
+                        <strong>多数据集转换</strong>
+                        <span>选取多个已有数据集版本，通过 SQL 或 Transform 作业合并/转换为一个新数据集。</span>
+                    </div>
                 </div>
                 <div class="type-panel active" id="panel-new-SOURCE">
                     <div class="form-group">
@@ -77,6 +81,53 @@
                         <label>指定 Key 列（可选）</label>
                         <input type="text" class="form-control" id="importKeyColumn" placeholder="从 CSV 中选出列名作为 key 列，留空则自动从 0 开始生成">
                         <div class="hint">如果 CSV 没有 key 列，可指定一个 long 类型列作为 key。</div>
+                    </div>
+                </div>
+                <div class="type-panel" id="panel-new-MULTI_TRANSFORM">
+                    <div class="form-group">
+                        <label class="required">上游数据集版本（可多选，Ctrl/Shift + 点击）</label>
+                        <select class="form-control" id="upstreamVersionsMulti" multiple size="6">
+                        </select>
+                        <div class="hint">选中多个上游数据集版本，选好 SQL 脚本后逐条绑定每条 SQL 语句对应哪个上游，用于血缘图谱展示。</div>
+                        <div class="field-error" id="upstreamVersionsMultiError"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="required">产出方式</label>
+                        <div class="type-cards" id="typeCardsMulti">
+                            <div class="type-card active" data-type="SQL_QUERY">
+                        <strong>SQL 查询/转换</strong>
+                        <span>选取 SQL 脚本，逐条绑定 SQL 语句与上游版本的关系，用于血缘图谱展示。</span>
+                    </div>
+                            <div class="type-card" data-type="TRANSFORM">
+                                <strong>Transform 作业</strong>
+                                <span>选取已编排的 Transform 作业，提交执行并物化输出。</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="type-panel" id="panel-new-MULTI_SQL_QUERY" style="display:none;">
+                        <div class="form-group">
+                            <label class="required">选取已托管 SQL 脚本</label>
+                            <select class="form-control" id="multiSqlSnippet">
+                                <option value="">请选择 SQL 脚本...</option>
+                            </select>
+                            <div class="hint">脚本在「<a href="#" class="hint-link" id="link-sql-snippet-multi">SQL脚本管理</a>」菜单中编排。选好脚本后，下方将展示每条 SQL 语句与上游版本的绑定，用于血缘图谱展示。</div>
+                            <div class="field-error" id="multiSqlSnippetError"></div>
+                        </div>
+                        <div class="sql-binding-area" id="multiSqlBindingArea" style="display:none;">
+                            <div class="sql-binding-title">SQL 语句与上游版本绑定</div>
+                            <div class="sql-binding-hint">勾选每条 SQL 语句对应哪些上游数据集版本（一条 SQL 可关联多个上游）</div>
+                            <div id="multiSqlBindingList"></div>
+                        </div>
+                    </div>
+                    <div class="type-panel" id="panel-new-MULTI_TRANSFORM_JOB" style="display:none;">
+                        <div class="form-group">
+                            <label class="required">选取已编排的 Transform 作业</label>
+                            <select class="form-control" id="multiTransformJob">
+                                <option value="">请选择 Transform 作业...</option>
+                            </select>
+                            <div class="hint">作业在「<a href="#" class="hint-link" id="link-transform-compare-multi">Transform编排</a>」菜单中编排。</div>
+                            <div class="field-error" id="multiTransformJobError"></div>
+                        </div>
                     </div>
                 </div>
             </div>

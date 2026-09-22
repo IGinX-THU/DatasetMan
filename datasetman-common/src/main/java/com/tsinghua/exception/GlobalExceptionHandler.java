@@ -4,6 +4,7 @@ import cn.edu.tsinghua.iginx.exception.SessionException;
 import cn.edu.tsinghua.iginx.session_v2.exception.IginXException;
 import com.tsinghua.model.Result;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -21,6 +22,16 @@ import java.util.Set;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * 处理请求体 JSON 解析异常（字段类型不匹配等）
+     * 防止 Spring Boot 的 Whitelabel Error Page 追加到 JSON 响应后面
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public Result<Void> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+        log.warn("请求体JSON解析异常: {}", e.getMessage());
+        return Result.paramError("请求参数格式错误: " + e.getMessage());
+    }
 
     /**
      * 处理参数校验异常

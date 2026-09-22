@@ -394,7 +394,13 @@ class DatasetHistory extends HTMLElement {
                     const opInfo = this.extractOperationInfo(toNode, cfg);
                     const opLabel = opInfo.type;
                     const opDetail = opInfo.detail;
-                    const opFull = opInfo.full;
+                    let opFull = opInfo.full;
+
+                    // 如果有 upstreamSqlBindings（多数据集转换），按当前边的 fromVid 过滤 SQL 语句
+                    const bindings = cfg.upstreamSqlBindings;
+                    if (bindings && opFull.sqlSnippet) {
+                        opFull = this.filterOperationFullByUpstream(opFull, bindings, fromVid);
+                    }
 
                     echartsNodes.push({
                         id: opNodeId,
@@ -732,6 +738,40 @@ class DatasetHistory extends HTMLElement {
             potentialUsers: cfg.potentialUsers || null
         };
         return { type, detail, color, borderColor, textColor, full };
+    }
+
+    /**
+     * 多数据集转换场景下，按上游版本ID过滤操作节点的 SQL 语句。
+     * upstreamSqlBindings 结构: { "1234567890": [0, 2], "1234567891": [1, 2] }
+     * 为 null 或 fromVid 无绑定则原样返回。
+     */
+    filterOperationFullByUpstream(opFull, bindings, fromVid) {
+        if (!bindings) return opFull;
+        const key = String(fromVid);
+        const sqlIndices = bindings[key];
+        if (!sqlIndices || sqlIndices.length === 0) return opFull;
+
+        const filtered = Object.assign({}, opFull);
+        const original = opFull.sqlSnippet;
+        if (!original || typeof original !== 'object') {
+            return filtered;
+        }
+
+        let sqlList = [];
+        try {
+            sqlList = typeof original.sqlList === 'string'
+                ? JSON.parse(original.sqlList)
+                : (Array.isArray(original.sqlList) ? original.sqlList : []);
+        } catch (e) { sqlList = []; }
+
+        const idxSet = new Set(sqlIndices);
+        const filteredList = sqlList.filter((_, i) => idxSet.has(i));
+        if (filteredList.length > 0) {
+            const filteredSql = Object.assign({}, original);
+            filteredSql.sqlList = filteredList;
+            filtered.sqlSnippet = filteredSql;
+        }
+        return filtered;
     }
 
     /** 版本节点 tooltip：还原旧实现的丰富字段 */

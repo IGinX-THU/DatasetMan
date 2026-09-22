@@ -261,10 +261,10 @@ public class ConvertUtil {
                 } else if (fieldType == Boolean.class || fieldType == boolean.class) {
                     setFieldValue(entity, field, ((Integer) value) == 1);
                 } else {
-                    setFieldValue(entity, field, value.toString());
+                    setFieldValue(entity, field, value);
                 }
             } else {
-                setFieldValue(entity, field, value.toString());
+                setFieldValue(entity, field, value);
             }
         } catch (Exception e) {
             logger.warn("设置字段 {} 失败: {}", fieldName, e.getMessage());

@@ -1,11 +1,13 @@
 package com.tsinghua.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
 import java.util.List;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DatasetCreateRequest {
     @NotBlank(message = "数据集名称不能为空")
     private String datasetName;
@@ -24,6 +26,8 @@ public class DatasetCreateRequest {
     private Long sqlSnippetId;
     private List<Long> upstreamVersionIds;
     private List<String> udfNames;
+    /** SQL 语句与上游版本的绑定：{ upstreamVersionId(as String) -> [sqlIndex, ...] } */
+    private java.util.Map<String, List<Integer>> upstreamSqlBindings;
 
     // 3. TRANSFORM 对应参数
     private Long transformCompareCreateTime;
