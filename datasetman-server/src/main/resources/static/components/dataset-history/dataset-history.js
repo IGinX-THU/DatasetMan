@@ -642,14 +642,74 @@ class DatasetHistory extends HTMLElement {
         // 等力导向布局稳定后刷新 ECharts 尺寸，首次绘制保持原始布局
         setTimeout(() => chart.resize(), 300);
         
-        // 力导向布局完全稳定后检测节点是否超出视口，如果有就自动缩小
-        setTimeout(() => this.autoZoomToFit(), 1500);
+        // 动态检测力导向布局是否稳定，稳定后再检测节点是否超出视口
+        this._checkLayoutStable(chart);
+    }
+
+    /**
+     * 动态检测力导向布局是否稳定
+     * 通过检测节点坐标是否在一段时间内不再变化来判断
+     * @param chart ECharts 实例
+     * @param maxZoomCount 最大允许缩小次数，默认为 5
+     */
+    _checkLayoutStable(chart, maxZoomCount = 5) {
+        let lastPositions = null;
+        let stableCount = 0;
+        const checkInterval = 200; // 每 200ms 检测一次
+        const stableThreshold = 3; // 连续 3 次坐标不变认为稳定
+        
+        const check = () => {
+            const seriesModel = chart.getModel().getSeriesByIndex(0);
+            if (!seriesModel || !seriesModel.coordinateSystem) return;
+            
+            const cs = seriesModel.coordinateSystem;
+            const currentPositions = [];
+            
+            // 获取所有节点的当前坐标
+            seriesModel.getGraph().eachNode(node => {
+                const layout = node.getLayout();
+                if (layout) {
+                    currentPositions.push({ x: layout[0], y: layout[1] });
+                }
+            });
+            
+            // 比较坐标是否变化
+            if (lastPositions && currentPositions.length === lastPositions.length) {
+                let changed = false;
+                for (let i = 0; i < currentPositions.length; i++) {
+                    const dx = Math.abs(currentPositions[i].x - lastPositions[i].x);
+                    const dy = Math.abs(currentPositions[i].y - lastPositions[i].y);
+                    if (dx > 1 || dy > 1) { // 坐标变化超过 1px 认为还在移动
+                        changed = true;
+                        break;
+                    }
+                }
+                
+                if (!changed) {
+                    stableCount++;
+                    if (stableCount >= stableThreshold) {
+                        // 布局稳定，检测是否需要缩小
+                        this.autoZoomToFit(maxZoomCount);
+                        return;
+                    }
+                } else {
+                    stableCount = 0;
+                }
+            }
+            
+            lastPositions = currentPositions;
+            setTimeout(check, checkInterval);
+        };
+        
+        // 延迟开始检测，给布局一些初始时间
+        setTimeout(check, 300);
     }
 
     /**
      * 检测是否有节点超出视口，如果有就自动点击缩小按钮
+     * 缩小后会重新启动布局稳定检测，循环直到所有节点都在视口内或达到最大缩小次数
      */
-    autoZoomToFit() {
+    autoZoomToFit(maxZoomCount = 5) {
         const container = this.shadowRoot.querySelector('#graph');
         const chart = container && container._chart;
         if (!chart) return;
@@ -681,9 +741,11 @@ class DatasetHistory extends HTMLElement {
             }
         });
         
-        // 如果有节点超出视口，自动缩小
-        if (hasOutOfView) {
+        // 如果有节点超出视口，自动缩小并重新启动布局稳定检测
+        if (hasOutOfView && maxZoomCount > 0) {
             this.zoomBy(0.8);
+            // 缩小后布局会再次变化，重新启动布局稳定检测
+            setTimeout(() => this._checkLayoutStable(chart, maxZoomCount - 1), 100);
         }
     }
 
