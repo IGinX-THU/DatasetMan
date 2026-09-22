@@ -641,6 +641,50 @@ class DatasetHistory extends HTMLElement {
 
         // 等力导向布局稳定后刷新 ECharts 尺寸，首次绘制保持原始布局
         setTimeout(() => chart.resize(), 300);
+        
+        // 布局稳定后检测节点是否超出视口，如果有就自动缩小
+        setTimeout(() => this.autoZoomToFit(), 500);
+    }
+
+    /**
+     * 检测是否有节点超出视口，如果有就自动点击缩小按钮
+     */
+    autoZoomToFit() {
+        const container = this.shadowRoot.querySelector('#graph');
+        const chart = container && container._chart;
+        if (!chart) return;
+        
+        const seriesModel = chart.getModel().getSeriesByIndex(0);
+        if (!seriesModel || !seriesModel.coordinateSystem) return;
+        
+        const cs = seriesModel.coordinateSystem;
+        const width = chart.getWidth();
+        const height = chart.getHeight();
+        const padding = 20; // 边距
+        
+        let hasOutOfView = false;
+        
+        // 检查所有节点是否在视口内
+        seriesModel.getGraph().eachNode(node => {
+            const layout = node.getLayout();
+            if (!layout) return;
+            
+            const pixel = cs.dataToPoint(layout);
+            if (!pixel) return;
+            
+            const x = pixel[0];
+            const y = pixel[1];
+            
+            // 检查节点是否在视口外
+            if (x < padding || x > width - padding || y < padding || y > height - padding) {
+                hasOutOfView = true;
+            }
+        });
+        
+        // 如果有节点超出视口，自动缩小
+        if (hasOutOfView) {
+            this.zoomBy(0.8);
+        }
     }
 
     /**
