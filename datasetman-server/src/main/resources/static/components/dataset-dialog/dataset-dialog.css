@@ -445,6 +445,84 @@
     color: var(--text-secondary);
 }
 
+/* ===== 穿梭框 ===== */
+.transfer-box {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    border: 1px solid var(--border-secondary);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    background: var(--bg-primary);
+}
+
+.transfer-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.transfer-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    text-align: center;
+}
+
+.transfer-select {
+    flex: 1;
+    min-height: 200px;
+    border: 1px solid var(--border-secondary);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    font-size: 12px;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    cursor: pointer;
+}
+
+.transfer-select option {
+    padding: 4px 6px;
+    border-radius: 3px;
+}
+
+.transfer-select option:checked {
+    background: rgba(6, 182, 212, 0.25);
+    color: var(--text-primary);
+}
+
+.transfer-target {
+    border-color: rgba(6, 182, 212, 0.4);
+}
+
+.transfer-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+.transfer-btn {
+    width: 36px;
+    height: 28px;
+    border: 1px solid var(--border-secondary);
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.transfer-btn:hover {
+    border-color: #06b6d4;
+    color: #06b6d4;
+    background: rgba(6, 182, 212, 0.08);
+}
+
 /* SQL 语句与上游版本绑定 */
 .sql-binding-area {
     margin-top: 16px;

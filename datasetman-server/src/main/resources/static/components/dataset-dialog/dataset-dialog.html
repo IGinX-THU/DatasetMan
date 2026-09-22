@@ -85,10 +85,23 @@
                 </div>
                 <div class="type-panel" id="panel-new-MULTI_TRANSFORM">
                     <div class="form-group">
-                        <label class="required">上游数据集版本（可多选，Ctrl/Shift + 点击）</label>
-                        <select class="form-control" id="upstreamVersionsMulti" multiple size="6">
-                        </select>
-                        <div class="hint">选中多个上游数据集版本，选好 SQL 脚本后逐条绑定每条 SQL 语句对应哪个上游，用于血缘图谱展示。</div>
+                        <label class="required">上游数据集版本</label>
+                        <div class="transfer-box" id="upstreamTransferBox">
+                            <div class="transfer-col">
+                                <div class="transfer-header">可选版本</div>
+                                <select class="transfer-select" id="upstreamTransferSource" multiple size="8"></select>
+                            </div>
+                            <div class="transfer-btns">
+                                <button type="button" class="transfer-btn" id="transferRight">▸</button>
+                                <button type="button" class="transfer-btn" id="transferAllRight">▸▸</button>
+                                <button type="button" class="transfer-btn" id="transferLeft">◂</button>
+                                <button type="button" class="transfer-btn" id="transferAllLeft">◂◂</button>
+                            </div>
+                            <div class="transfer-col">
+                                <div class="transfer-header">已选上游</div>
+                                <select class="transfer-select transfer-target" id="upstreamTransferTarget" multiple size="8"></select>
+                            </div>
+                        </div>
                         <div class="field-error" id="upstreamVersionsMultiError"></div>
                     </div>
                     <div class="form-group">

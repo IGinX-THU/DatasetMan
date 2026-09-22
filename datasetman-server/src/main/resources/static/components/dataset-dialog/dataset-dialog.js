@@ -107,21 +107,21 @@ class DatasetDialog extends HTMLElement {
             });
         });
 
-        // 多数据集转换：多选上游版本
-        $('upstreamVersionsMulti')?.addEventListener('change', () => {
-            const select = $('upstreamVersionsMulti');
-            this.multiUpstreamVersionIds = Array.from(select.selectedOptions).map(o => Number(o.value));
-            // 上游变了，刷新绑定 UI
-            const snippetId = $('multiSqlSnippet')?.value;
-            if (snippetId) this.loadMultiSqlBinding(snippetId);
-            this.updateConfirmPreview();
-        });
+        // 多数据集转换：穿梭框
+        $('transferRight')?.addEventListener('click', () => this.transferUpstream(true, false));
+        $('transferAllRight')?.addEventListener('click', () => this.transferUpstream(true, true));
+        $('transferLeft')?.addEventListener('click', () => this.transferUpstream(false, false));
+        $('transferAllLeft')?.addEventListener('click', () => this.transferUpstream(false, true));
+        $('upstreamTransferSource')?.addEventListener('dblclick', () => this.transferUpstream(true, false));
+        $('upstreamTransferTarget')?.addEventListener('dblclick', () => this.transferUpstream(false, false));
 
         // 多数据集转换：SQL 脚本选取后加载绑定 UI
         $('multiSqlSnippet')?.addEventListener('change', (e) => {
             const snippetId = e.target.value;
             if (snippetId) {
+                this.multiUpstreamVersionIds = this.readTargetUpstreamIds();
                 this.loadMultiSqlBinding(snippetId);
+                this.updateConfirmPreview();
             } else {
                 this.hideMultiSqlBinding();
             }
@@ -204,10 +204,12 @@ class DatasetDialog extends HTMLElement {
         this.multiSelectedType = null;
         this.hideSqlPreview();
         this.hideMultiSqlBinding();
-        // 重置多选上游版本下拉框选中状态
-        const upstreamMulti = this.shadowRoot.getElementById('upstreamVersionsMulti');
-        if (upstreamMulti) {
-            Array.from(upstreamMulti.selectedOptions).forEach(o => o.selected = false);
+        // 重置穿梭框：target 清空，option 移回 source
+        const src = this.shadowRoot.getElementById('upstreamTransferSource');
+        const tgt = this.shadowRoot.getElementById('upstreamTransferTarget');
+        if (src && tgt) {
+            Array.from(tgt.options).forEach(o => src.appendChild(o));
+            tgt.innerHTML = '';
         }
         // 重置多数据集转换子面板可见性
         const multiSqlPanel = this.shadowRoot.getElementById('panel-new-MULTI_SQL_QUERY');
@@ -276,10 +278,10 @@ class DatasetDialog extends HTMLElement {
                 this.options.datasets.map(d => (d.versions || []).map(v => `<option value="${v.versionId || v.createTime}" data-dataset-name="${this.escape(d.datasetName)}" data-storage-path="${this.escape(v.storagePath || '')}">${this.escape(d.datasetName)} / ${this.escape(v.versionNo)}</option>`).join('')).join('');
         }
 
-        // 多数据集转换：多选上游版本
-        const upstreamMulti = $('upstreamVersionsMulti');
-        if (upstreamMulti) {
-            upstreamMulti.innerHTML =
+        // 多数据集转换：穿梭框 source 列表
+        const srcSelect = $('upstreamTransferSource');
+        if (srcSelect) {
+            srcSelect.innerHTML =
                 this.options.datasets.map(d => (d.versions || []).map(v => `<option value="${v.versionId || v.createTime}" data-dataset-name="${this.escape(d.datasetName)}" data-storage-path="${this.escape(v.storagePath || '')}">${this.escape(d.datasetName)} / ${this.escape(v.versionNo)}</option>`).join('')).join('');
         }
 
@@ -454,6 +456,7 @@ class DatasetDialog extends HTMLElement {
         const $ = (id) => this.shadowRoot.getElementById(id);
         const datasetName = $('datasetName').value.trim();
         if (!datasetName) return this.fail('请输入数据集名称', 'datasetNameError');
+        console.log('[validateStep2] createMode=', this.createMode, 'selectedType=', this.selectedType, 'multiSelectedType=', this.multiSelectedType, 'multiUpstreamVersionIds=', this.multiUpstreamVersionIds);
         if (this.createMode === 'new') {
             // 新建模式：SOURCE / IMPORT / MULTI_TRANSFORM
             if (this.selectedType === 'SOURCE') {
@@ -465,8 +468,8 @@ class DatasetDialog extends HTMLElement {
                     return this.fail('请上传 CSV 文件', 'importFileFieldError');
                 }
             } else if (this.selectedType === 'MULTI_TRANSFORM') {
-                if (!this.multiUpstreamVersionIds || this.multiUpstreamVersionIds.length < 2) {
-                    return this.fail('请至少选择 2 个上游数据集版本', 'upstreamVersionsMultiError');
+                if (!this.multiUpstreamVersionIds || this.multiUpstreamVersionIds.length < 1) {
+                    return this.fail('请至少选择 1 个上游数据集版本', 'upstreamVersionsMultiError');
                 }
                 if (!this.multiSelectedType) {
                     return this.fail('请选择产出方式');
@@ -474,6 +477,10 @@ class DatasetDialog extends HTMLElement {
                 if (this.multiSelectedType === 'SQL_QUERY') {
                     const snippetId = $('multiSqlSnippet').value;
                     if (!snippetId) return this.fail('请选择 SQL 脚本', 'multiSqlSnippetError');
+                    // 校验至少有一个复选框被勾选（每条 SQL 至少关联一个上游）
+                    const bindingList = this.shadowRoot.getElementById('multiSqlBindingList');
+                    const checkedCount = bindingList ? bindingList.querySelectorAll('input[type=checkbox]:checked').length : 0;
+                    if (checkedCount === 0) return this.fail('请为 SQL 语句勾选上游版本绑定', 'multiSqlSnippetError');
                 } else if (this.multiSelectedType === 'TRANSFORM') {
                     const createTime = $('multiTransformJob').value;
                     if (!createTime) return this.fail('请选择 Transform 作业', 'multiTransformJobError');
@@ -620,7 +627,9 @@ class DatasetDialog extends HTMLElement {
         this.previewData = null;
         this.plannedVersionNo = null;
         const pathEl = this.shadowRoot.getElementById('confirmPathValue');
-        if (!this.canPreview()) {
+        const can = this.canPreview();
+        console.log('[loadStoragePathPreview] canPreview=', can, 'previewRequest=', this.previewRequest());
+        if (!can) {
             if (pathEl) pathEl.textContent = '-';
             return null;
         }
@@ -647,9 +656,15 @@ class DatasetDialog extends HTMLElement {
             if (this.selectedType === 'IMPORT') return true;
             if (this.selectedType === 'MULTI_TRANSFORM') {
                 if (!this.multiSelectedType) return false;
-                if (!this.multiUpstreamVersionIds || this.multiUpstreamVersionIds.length < 2) return false;
-                if (this.multiSelectedType === 'SQL_QUERY') return !!$('multiSqlSnippet').value;
+                if (!this.multiUpstreamVersionIds || this.multiUpstreamVersionIds.length < 1) return false;
+                if (this.multiSelectedType === 'SQL_QUERY') {
+                    if (!$('multiSqlSnippet').value) return false;
+                    const bindingList = this.shadowRoot.getElementById('multiSqlBindingList');
+                    const checkedCount = bindingList ? bindingList.querySelectorAll('input[type=checkbox]:checked').length : 0;
+                    if (checkedCount === 0) return false;
+                }
                 if (this.multiSelectedType === 'TRANSFORM') return !!$('multiTransformJob').value;
+                return true;
             }
             return false;
         }
@@ -679,9 +694,10 @@ class DatasetDialog extends HTMLElement {
                 resourceLabel = (importFile && importFile.files && importFile.files.length) ? importFile.files[0].name : '<未选择>';
             } else if (this.selectedType === 'MULTI_TRANSFORM') {
                 typeLabel = '多数据集转换 → ' + (this.multiSelectedType === 'TRANSFORM' ? 'Transform作业' : 'SQL查询/转换');
-                const upstreamMulti = $('upstreamVersionsMulti');
-                const selectedOpts = Array.from(upstreamMulti.selectedOptions);
-                resourceLabel = selectedOpts.map(o => `上游: ${o.textContent}`).join('<br>') || '<未选择上游>';
+                const tgt = this.shadowRoot.getElementById('upstreamTransferTarget');
+                resourceLabel = tgt && tgt.options.length > 0
+                    ? Array.from(tgt.options).map(o => `上游: ${o.textContent}`).join('<br>')
+                    : '<未选择上游>';
                 if (this.multiSelectedType === 'SQL_QUERY') {
                     const snippetOpt = $('multiSqlSnippet').selectedOptions[0];
                     resourceLabel += `<br>SQL脚本: ${snippetOpt && snippetOpt.value ? snippetOpt.textContent : '<未选择>'}`;
@@ -882,6 +898,28 @@ class DatasetDialog extends HTMLElement {
         }
     }
 
+    /** 穿梭框移动 option：toTarget=true 从 source→target，all=true 全部 */
+    transferUpstream(toTarget, all) {
+        const src = this.shadowRoot.getElementById('upstreamTransferSource');
+        const tgt = this.shadowRoot.getElementById('upstreamTransferTarget');
+        if (!src || !tgt) return;
+        const from = toTarget ? src : tgt;
+        const to = toTarget ? tgt : src;
+        const opts = all ? Array.from(from.options) : Array.from(from.selectedOptions);
+        opts.forEach(o => to.appendChild(o));
+        this.multiUpstreamVersionIds = this.readTargetUpstreamIds();
+        const snippetIdEl = this.shadowRoot.getElementById('multiSqlSnippet');
+        const snippetId = snippetIdEl?.value;
+        if (snippetId) this.loadMultiSqlBinding(snippetId);
+        this.updateConfirmPreview();
+    }
+
+    /** 读取穿梭框 target 中所有 option 的 ID */
+    readTargetUpstreamIds() {
+        const tgt = this.shadowRoot.getElementById('upstreamTransferTarget');
+        return tgt ? Array.from(tgt.options).map(o => Number(o.value)) : [];
+    }
+
     hideSqlPreview() {
         const area = this.shadowRoot.getElementById('sqlPreviewArea');
         const content = this.shadowRoot.getElementById('sqlPreviewContent');
@@ -910,14 +948,14 @@ class DatasetDialog extends HTMLElement {
                 return;
             }
 
-            // 构建上游版本选项列表
-            const upstreamSelect = this.shadowRoot.getElementById('upstreamVersionsMulti');
+            // 构建上游版本选项列表（来自穿梭框 target）
+            const tgt = this.shadowRoot.getElementById('upstreamTransferTarget');
             const selectedUpstreamIds = this.multiUpstreamVersionIds || [];
             const upstreamOpts = [];
-            if (upstreamSelect) {
-                selectedUpstreamIds.forEach(id => {
-                    const opt = upstreamSelect.querySelector(`option[value="${id}"]`);
-                    if (opt) upstreamOpts.push({ id, label: opt.textContent });
+            if (tgt) {
+                Array.from(tgt.options).forEach(o => {
+                    const id = Number(o.value);
+                    if (selectedUpstreamIds.includes(id)) upstreamOpts.push({ id, label: o.textContent });
                 });
             }
 
