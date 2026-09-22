@@ -336,7 +336,13 @@ class DatasetHistory extends HTMLElement {
         const estimatedNodeCount = nodes.length + operationCount;
         
         // 根据节点数量动态调整节点大小和字体
-        const nodeScale = Math.max(0.6, Math.min(1, 1 - (estimatedNodeCount - 5) * 0.03));
+        // 只在节点数 > 10 时才调整，节点少时使用原始大小
+        let nodeScale;
+        if (estimatedNodeCount <= 10) {
+            nodeScale = 1;  // 节点少时使用原始大小
+        } else {
+            nodeScale = Math.max(0.6, Math.min(1, 1 - (estimatedNodeCount - 10) * 0.03));
+        }
         const versionNodeSize = (n) => Math.round((n.focus ? 64 : 48) * nodeScale);
         const operationNodeSize = [Math.round(120 * nodeScale), Math.round(44 * nodeScale)];
         const labelFontSize = Math.max(9, Math.round(11 * nodeScale));
@@ -556,10 +562,20 @@ class DatasetHistory extends HTMLElement {
         const chart = window.echarts.init(container);
         
         // 根据节点数量动态调整力导向参数，避免节点多时挤成一团
+        // 只在节点数 > 10 时才调整，节点少时使用原始默认参数
         const nodeCount = echartsNodes.length;
-        const repulsion = Math.max(500, nodeCount * 120);  // 节点越多，排斥力越大
-        const edgeLength = [120, Math.min(500, 250 + nodeCount * 30)];  // 节点越多，边越长
-        const gravity = Math.max(0.0005, 0.015 - nodeCount * 0.0008);  // 节点越多，中心引力越小
+        let repulsion, edgeLength, gravity;
+        if (nodeCount <= 10) {
+            // 节点少时使用原始默认参数
+            repulsion = 400;
+            edgeLength = [100, 200];
+            gravity = 0.02;
+        } else {
+            // 节点多时动态调整
+            repulsion = Math.max(400, nodeCount * 120);
+            edgeLength = [100, Math.min(400, 200 + nodeCount * 30)];
+            gravity = Math.max(0.0005, 0.02 - nodeCount * 0.0008);
+        }
         
         const option = {
             tooltip: {
