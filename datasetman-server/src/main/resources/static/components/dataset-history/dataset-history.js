@@ -706,8 +706,8 @@ class DatasetHistory extends HTMLElement {
     }
 
     /**
-     * 检测是否有节点超出视口，如果有就自动点击缩小按钮
-     * 缩小后会重新启动布局稳定检测，循环直到所有节点都在视口内或达到最大缩小次数
+     * 自动适配视口：先尝试平移，平移解决不了再缩放
+     * 会循环检测直到所有节点都在视口内或达到最大缩小次数
      */
     autoZoomToFit(maxZoomCount = 5) {
         const container = this.shadowRoot.querySelector('#graph');
@@ -722,9 +722,11 @@ class DatasetHistory extends HTMLElement {
         const height = chart.getHeight();
         const padding = 20; // 边距
         
-        let hasOutOfView = false;
+        // 计算所有节点的包围盒
+        let minX = Infinity, maxX = -Infinity;
+        let minY = Infinity, maxY = -Infinity;
+        let nodeCount = 0;
         
-        // 检查所有节点是否在视口内
         seriesModel.getGraph().eachNode(node => {
             const layout = node.getLayout();
             if (!layout) return;
@@ -732,19 +734,58 @@ class DatasetHistory extends HTMLElement {
             const pixel = cs.dataToPoint(layout);
             if (!pixel) return;
             
+            nodeCount++;
             const x = pixel[0];
             const y = pixel[1];
             
-            // 检查节点是否在视口外
-            if (x < padding || x > width - padding || y < padding || y > height - padding) {
-                hasOutOfView = true;
-            }
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
         });
         
-        // 如果有节点超出视口，自动缩小并重新启动布局稳定检测
-        if (hasOutOfView && maxZoomCount > 0) {
+        if (nodeCount === 0) return;
+        
+        // 计算包围盒中心和视口中心
+        const bboxCenterX = (minX + maxX) / 2;
+        const bboxCenterY = (minY + maxY) / 2;
+        const viewportCenterX = width / 2;
+        const viewportCenterY = height / 2;
+        
+        // 计算需要的平移量
+        const dx = viewportCenterX - bboxCenterX;
+        const dy = viewportCenterY - bboxCenterY;
+        
+        // 检查平移后是否所有节点都在视口内
+        const availableWidth = width - padding * 2;
+        const availableHeight = height - padding * 2;
+        const bboxWidth = maxX - minX;
+        const bboxHeight = maxY - minY;
+        
+        const canFitByPan = bboxWidth <= availableWidth && bboxHeight <= availableHeight;
+        
+        if (canFitByPan) {
+            // 只需要平移
+            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+                chart.dispatchAction({
+                    type: 'graphRoam',
+                    seriesIndex: 0,
+                    dx: dx,
+                    dy: dy
+                });
+            }
+        } else if (maxZoomCount > 0) {
+            // 需要缩放，先平移到中心，再缩放
+            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+                chart.dispatchAction({
+                    type: 'graphRoam',
+                    seriesIndex: 0,
+                    dx: dx,
+                    dy: dy
+                });
+            }
+            // 缩放后布局会再次变化，重新启动布局稳定检测
             this.zoomBy(0.8);
-            // 缩小后布局会再次变化，重新启动布局稳定检测
             setTimeout(() => this._checkLayoutStable(chart, maxZoomCount - 1), 100);
         }
     }
