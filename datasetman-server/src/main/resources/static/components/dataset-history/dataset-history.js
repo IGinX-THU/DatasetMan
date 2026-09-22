@@ -642,8 +642,8 @@ class DatasetHistory extends HTMLElement {
         // 等力导向布局稳定后刷新 ECharts 尺寸，首次绘制保持原始布局
         setTimeout(() => chart.resize(), 300);
         
-        // 布局稳定后检测节点是否超出视口，如果有就自动缩小
-        setTimeout(() => this.autoZoomToFit(), 500);
+        // 力导向布局完全稳定后检测节点是否超出视口，如果有就自动缩小
+        setTimeout(() => this.autoZoomToFit(), 1500);
     }
 
     /**
