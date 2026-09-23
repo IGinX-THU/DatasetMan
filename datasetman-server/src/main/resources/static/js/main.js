@@ -189,9 +189,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // 将hideAllComponents暴露到全局作用域
     window.hideAllComponents = hideAllComponents;
     
-    // 全局Loading功能（引用计数：并发请求全部结束才隐藏；300ms延迟显示防快速请求闪烁）
+    // 全局Loading功能（引用计数：并发请求全部结束才隐藏；300ms延迟显示防快速请求闪烁；
+    // 300ms延迟隐藏：串行链式请求的间隙内保持遮罩连续显示，避免"隐藏又显示"不停跳动）
     let globalLoadingCount = 0;
-    let globalLoadingTimer = null;
+    let globalLoadingShowTimer = null;
+    let globalLoadingHideTimer = null;
     let globalLoadingMessage = '正在加载...';
 
     const renderGlobalLoading = function() {
@@ -231,6 +233,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         console.log('显示全局loading:', globalLoadingMessage, '计数:', globalLoadingCount);
 
+        // 有新请求到来，取消延迟隐藏，遮罩保持连续显示
+        if (globalLoadingHideTimer) {
+            clearTimeout(globalLoadingHideTimer);
+            globalLoadingHideTimer = null;
+        }
+
         const workspaceContent = document.querySelector('.workspace-content');
         if (!workspaceContent) {
             return;
@@ -245,9 +253,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     textEl.textContent = globalLoadingMessage;
                 }
             }
-        } else if (!globalLoadingTimer) {
-            globalLoadingTimer = setTimeout(function() {
-                globalLoadingTimer = null;
+        } else if (!globalLoadingShowTimer) {
+            globalLoadingShowTimer = setTimeout(function() {
+                globalLoadingShowTimer = null;
                 if (globalLoadingCount > 0) {
                     renderGlobalLoading();
                 }
@@ -259,16 +267,26 @@ document.addEventListener('DOMContentLoaded', function() {
         globalLoadingCount = Math.max(0, globalLoadingCount - 1);
         console.log('隐藏全局loading, 计数:', globalLoadingCount);
         if (globalLoadingCount === 0) {
-            if (globalLoadingTimer) {
-                clearTimeout(globalLoadingTimer);
-                globalLoadingTimer = null;
+            // 取消未触发的延迟显示
+            if (globalLoadingShowTimer) {
+                clearTimeout(globalLoadingShowTimer);
+                globalLoadingShowTimer = null;
             }
-            const workspaceContent = document.querySelector('.workspace-content');
-            if (workspaceContent) {
-                const loadingEl = workspaceContent.querySelector('.global-loading-overlay');
-                if (loadingEl) {
-                    loadingEl.remove();
-                }
+            // 延迟300ms再移除遮罩：若间隙内有新请求（show会取消本定时器）则无缝衔接
+            if (!globalLoadingHideTimer) {
+                globalLoadingHideTimer = setTimeout(function() {
+                    globalLoadingHideTimer = null;
+                    if (globalLoadingCount > 0) {
+                        return;
+                    }
+                    const workspaceContent = document.querySelector('.workspace-content');
+                    if (workspaceContent) {
+                        const loadingEl = workspaceContent.querySelector('.global-loading-overlay');
+                        if (loadingEl) {
+                            loadingEl.remove();
+                        }
+                    }
+                }, 300);
             }
         }
     };
