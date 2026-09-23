@@ -640,7 +640,7 @@ class DatasetHistory extends HTMLElement {
         container._resizeObserver = resizeObserver;
 
         // 等力导向布局稳定后刷新 ECharts 尺寸，首次绘制保持原始布局
-        setTimeout(() => chart.resize(), 300);
+        setTimeout(() => { if (!chart.isDisposed()) chart.resize(); }, 300);
         
         // 动态检测力导向布局是否稳定，稳定后再检测节点是否超出视口
         this._checkLayoutStable(chart);
@@ -659,7 +659,11 @@ class DatasetHistory extends HTMLElement {
         const stableThreshold = 3; // 连续 3 次坐标不变认为稳定
         
         const check = () => {
-            const seriesModel = chart.getModel().getSeriesByIndex(0);
+            // 图表已被销毁（血缘图重绘/切换视图）时终止检测循环，避免getModel()为null报错
+            if (chart.isDisposed()) return;
+            const model = chart.getModel();
+            if (!model) return;
+            const seriesModel = model.getSeriesByIndex(0);
             if (!seriesModel || !seriesModel.coordinateSystem) return;
             
             const cs = seriesModel.coordinateSystem;
@@ -712,8 +716,8 @@ class DatasetHistory extends HTMLElement {
     autoZoomToFit(maxZoomCount = 5) {
         const container = this.shadowRoot.querySelector('#graph');
         const chart = container && container._chart;
-        if (!chart) return;
-        
+        if (!chart || chart.isDisposed()) return;
+
         const seriesModel = chart.getModel().getSeriesByIndex(0);
         if (!seriesModel || !seriesModel.coordinateSystem) return;
         
@@ -1176,7 +1180,7 @@ class DatasetHistory extends HTMLElement {
     focusNode() {
         const container = this.shadowRoot.querySelector('#graph');
         const chart = container._chart;
-        if (!chart || !this.version) return;
+        if (!chart || chart.isDisposed() || !this.version) return;
         const vid = this.versionIdOf(this.version);
         if (vid == null) return;
         const nodeId = `v_${vid}`;
@@ -1188,7 +1192,7 @@ class DatasetHistory extends HTMLElement {
     zoomBy(factor) {
         const container = this.shadowRoot.querySelector('#graph');
         const chart = container._chart;
-        if (!chart) return;
+        if (!chart || chart.isDisposed()) return;
         // 使用 ECharts graph 的 zoom 属性，配合 roam 实现缩放
         const option = chart.getOption();
         const series = option.series[0] || {};
