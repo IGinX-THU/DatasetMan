@@ -19,4 +19,6 @@ public class RegisterTaskInfoDto {
     private String ipPortPair;
     @ApiModelProperty(value = "函数类型")
     private String type;
+    @ApiModelProperty(value = "函数说明（来自函数档案）")
+    private String desc;
 }

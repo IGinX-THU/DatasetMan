@@ -99,7 +99,8 @@ public class FunctionService {
                             info.getClassName(),
                             info.getFileName(),
                             joiner.toString(),
-                            info.getType().toString()));
+                            info.getType().toString(),
+                            null));
         }
         if (TRANSFORM.equalsIgnoreCase(type)){
             return registerTaskInfoDtos.stream().filter(info -> TRANSFORM.equalsIgnoreCase(info.getType())).collect(Collectors.toList());

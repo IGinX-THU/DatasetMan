@@ -182,6 +182,20 @@ class UdfManagement extends HTMLElement {
                             " required>
                         </div>
                         <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; color: #1f2329; font-size: 14px;">函数说明</label>
+                            <textarea id="archiveDesc" placeholder="输入函数的功能说明（选填）" rows="3" style="
+                                width: 100%;
+                                padding: 8px 12px;
+                                border: 1px solid #c9cdd4;
+                                border-radius: 4px;
+                                font-size: 14px;
+                                color: #1f2329;
+                                background: white;
+                                box-sizing: border-box;
+                                resize: vertical;
+                            "></textarea>
+                        </div>
+                        <div style="margin-bottom: 16px;">
                             <label style="display: block; margin-bottom: 8px; color: #1f2329; font-size: 14px;">Python脚本</label>
                             <div id="uploadArea" style="
                                 border: 2px dashed #c9cdd4;
@@ -309,6 +323,7 @@ class UdfManagement extends HTMLElement {
             const type = form.querySelector('#udfType')?.value;
             const name = form.querySelector('#udfName')?.value.trim();
             const className = form.querySelector('#className')?.value.trim();
+            const desc = form.querySelector('#archiveDesc')?.value.trim();
 
             if (!type || !name || !className) {
                 this.showMessage('请填写完整信息', 'error');
@@ -322,7 +337,7 @@ class UdfManagement extends HTMLElement {
 
             const fileToUpload = this.selectedFile;
             closeDialog();
-            this.registerUdf(type, name, className, fileToUpload);
+            this.registerUdf(type, name, className, fileToUpload, desc);
         });
     }
 
@@ -380,13 +395,16 @@ class UdfManagement extends HTMLElement {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    async registerUdf(type, name, className, file) {
+    async registerUdf(type, name, className, file, desc) {
         try {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('name', name);
             formData.append('className', className);
             formData.append('udfType', type);
+            if (desc) {
+                formData.append('desc', desc);
+            }
 
             const result = await window.AppConfig.upload('udf', 'register', formData);
 
@@ -421,7 +439,8 @@ class UdfManagement extends HTMLElement {
                     type: udf.type,
                     className: udf.className,
                     fileName: udf.fileName,
-                    ipPortPair: udf.ipPortPair
+                    ipPortPair: udf.ipPortPair,
+                    desc: udf.desc || ''
                 }));
                 this.renderTable();
             } else {
@@ -437,6 +456,91 @@ class UdfManagement extends HTMLElement {
         }
     }
 
+    /** 编辑函数说明 */
+    editDescription(name) {
+        const udf = this.udfs.find(u => u.name === name);
+        const currentDesc = udf ? (udf.desc || '') : '';
+        const dialog = document.createElement('div');
+        dialog.innerHTML = `
+            <div class="dialog-mask" style="
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            ">
+                <div class="dialog-content" style="
+                    background: white;
+                    border-radius: 8px;
+                    padding: 24px;
+                    max-width: 500px;
+                    width: 90%;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                ">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2329;">编辑函数说明</h3>
+                    <p style="margin: 0 0 8px 0; color: #646a73; font-size: 14px;">函数：${name}</p>
+                    <textarea id="descInput" rows="4" placeholder="输入函数的功能说明" style="
+                        width: 100%;
+                        padding: 8px 12px;
+                        border: 1px solid #c9cdd4;
+                        border-radius: 4px;
+                        font-size: 14px;
+                        color: #1f2329;
+                        background: white;
+                        box-sizing: border-box;
+                        resize: vertical;
+                        margin-bottom: 16px;
+                    ">${currentDesc}</textarea>
+                    <div class="dialog-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button class="cancel-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #c9cdd4;
+                            border-radius: 4px;
+                            background: white;
+                            color: #1f2329;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">取消</button>
+                        <button class="confirm-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #4c89ff;
+                            border-radius: 4px;
+                            background: #4c89ff;
+                            color: white;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">保存</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(dialog);
+
+        const closeDialog = () => document.body.removeChild(dialog);
+        dialog.querySelector('.cancel-btn').addEventListener('click', closeDialog);
+        dialog.querySelector('.confirm-btn').addEventListener('click', async () => {
+            const desc = dialog.querySelector('#descInput').value.trim();
+            try {
+                const result = await window.AppConfig.post('function', 'archiveUpdate', { name: name, desc: desc, type: 'udf' });
+                if (result.code === 200) {
+                    if (udf) {
+                        udf.desc = desc;
+                    }
+                    closeDialog();
+                    this.renderTable();
+                    this.showMessage('函数说明已保存', 'success');
+                } else {
+                    this.showMessage(result.message || '保存失败，请重试', 'error');
+                }
+            } catch (error) {
+                console.error('保存函数说明失败:', error);
+                this.showMessage('保存失败，请重试', 'error');
+            }
+        });
+    }
+
     renderTable() {
         const tbody = this.querySelector('#tableBody');
         if (!tbody) return;
@@ -447,7 +551,7 @@ class UdfManagement extends HTMLElement {
         if (this.udfs.length === 0) {
             newTbody.innerHTML = `
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
                         暂无UDF
                     </td>
                 </tr>
@@ -456,13 +560,15 @@ class UdfManagement extends HTMLElement {
         }
 
         newTbody.innerHTML = this.udfs.map(udf => `
-            <tr data-id="${udf.id}">
+            <tr data-id="${udf.id}" data-name="${udf.name}">
                 <td>${udf.name}</td>
                 <td><code>${udf.className}</code></td>
                 <td>${udf.fileName}</td>
+                <td class="desc-cell" title="${this.escapeAttr(udf.desc || '')}">${udf.desc || '-'}</td>
                 <td>${udf.ipPortPair}</td>
                 <td>${udf.type}</td>
                 <td>
+                    <button class="action-btn edit" data-name="${udf.name}">编辑</button>
                     <button class="action-btn download" data-id="${udf.id}" data-filename="${udf.fileName}">下载</button>
                     <button class="action-btn delete" data-id="${udf.id}">删除</button>
                 </td>
@@ -476,8 +582,17 @@ class UdfManagement extends HTMLElement {
             } else if (e.target.classList.contains('download')) {
                 const fileName = e.target.getAttribute('data-filename');
                 this.downloadUdf(fileName);
+            } else if (e.target.classList.contains('edit')) {
+                const name = e.target.getAttribute('data-name');
+                this.editDescription(name);
             }
         });
+    }
+
+    escapeAttr(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     deleteUdf(id) {

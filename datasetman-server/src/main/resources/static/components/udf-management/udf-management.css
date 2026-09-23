@@ -78,9 +78,30 @@
     transition: all 0.2s;
 }
 
+.action-btn.edit {
+    padding: 4px 8px;
+    border: 1px solid #3b82f6;
+    border-radius: 4px;
+    background: transparent;
+    color: #3b82f6;
+}
+
+.action-btn.edit:hover {
+    background: #3b82f6;
+    color: white;
+}
+
 .action-btn.delete {
     background: var(--error-color);
     color: white;
+}
+
+.desc-cell {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-secondary);
 }
 
 .action-btn:hover {

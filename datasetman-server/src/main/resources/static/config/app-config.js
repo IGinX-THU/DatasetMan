@@ -142,6 +142,10 @@ window.AppConfig = {
             metas: '/api/dataset/metas',
             delete: '/api/dataset/delete'
         },
+        // 函数档案（说明等冗余信息的更新）
+        function: {
+            archiveUpdate: '/api/function/archive/update'
+        },
         // Transform相关
         transform: {
             register: '/api/function/register/transform',
