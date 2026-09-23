@@ -40,7 +40,8 @@ window.AppConfig = {
             remove: '/api/datasource/remove',
             test: '/api/datasource/test',
             tree: '/api/datasource/tree',
-            archives: '/api/datasource/archives'
+            archives: '/api/datasource/archives',
+            archiveUpdate: '/api/datasource/archive/update'
         },
         // 数据查询相关
         data: {

@@ -27,6 +27,9 @@ public class StorageEngineInfoDto {
     private String schemaPrefix;
     @Nullable
     private String dataPrefix;
+    /** 数据模态（来自数据源档案，注册时的数据模态选项） */
+    @Nullable
+    private String dataModality;
 
     public StorageEngineInfoDto() {
     }

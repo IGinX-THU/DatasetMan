@@ -49,6 +49,19 @@
     border-color: var(--color-danger-dark);
 }
 
+/* 编辑按钮：与SQL脚本管理页一致的白底蓝字描边样式 */
+.action-btn.edit {
+    border: 1px solid #3b82f6;
+    background: white;
+    color: #3b82f6;
+}
+
+.action-btn.edit:hover {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+}
+
 .action-btn:active {
     transform: scale(0.95);
 }

@@ -108,6 +108,29 @@ public class DataSourceService {
         ClusterInfo clusterInfo = iginxSession.getClusterInfo();
         List<StorageEngineInfo> storageEngineInfos = clusterInfo.getStorageEngineInfos();
         List<StorageEngineInfoDto> storageEngineInfoDtos = storageEngineInfos.stream().map(s -> new StorageEngineInfoDto(s.id, s.ip, s.port, s.type.getValue(), s.schemaPrefix, s.dataPrefix)).collect(Collectors.toList());
+
+        // 从数据源档案回填数据模态（注册时的数据模态选项保存于档案desc）
+        try {
+            List<DataArchiveEntity> archives = dataArchiveService.queryArchives(null, "datasource", null, null, null, null);
+            Map<String, String> modalityMap = new HashMap<>();
+            if (!CollectionUtils.isEmpty(archives)) {
+                archives.forEach(archive -> {
+                    if (StringUtils.hasText(archive.getName()) && StringUtils.hasText(archive.getDesc())) {
+                        modalityMap.putIfAbsent(archive.getName(), archive.getDesc());
+                    }
+                });
+            }
+            if (!modalityMap.isEmpty()) {
+                storageEngineInfoDtos.forEach(storageEngineInfoDto -> {
+                    String tablePrefix = StringUtils.hasText(storageEngineInfoDto.getDataPrefix()) ?
+                            storageEngineInfoDto.getSchemaPrefix() + "." + storageEngineInfoDto.getDataPrefix() :
+                            storageEngineInfoDto.getSchemaPrefix();
+                    storageEngineInfoDto.setDataModality(modalityMap.get(tablePrefix));
+                });
+            }
+        } catch (Exception e) {
+            log.warn("回填数据源数据模态失败: {}", e.getMessage());
+        }
         // iginxSession.closeSession();
         if (!AuthUtil.isAdmin()) {
             List<StorageEngineInfoDto> filteredList = new ArrayList<>();
@@ -130,14 +153,28 @@ public class DataSourceService {
 
     /**
      * 查询全部已注册数据源档案（type=datasource），供创建数据集弹窗下拉选取。
-     */
-    public List<DataArchiveEntity> dataSourceArchives() {
+     */    public List<DataArchiveEntity> dataSourceArchives() {
         List<DataArchiveEntity> archives = dataArchiveService.queryArchives(null, "datasource", null, null, null, null);
         // 排除系统内部注册的作业输出目录（file_system.sys_data 及其子路径）
         String internalPrefix = SchemaPrefix.FILE_SYSTEM + "." + SchemaPrefix.SYS_DIR_PREFIX;
         return archives.stream()
                 .filter(a -> a.getName() == null || !a.getName().startsWith(internalPrefix))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 更新数据源档案中的数据模态（档案不存在时补建，desc字段与注册时数据模态同源）
+     */
+    public void updateDataSourceModality(String tablePrefix, String dataModality) throws Exception {
+        DataArchiveEntity archive = dataArchiveService.findByName(tablePrefix);
+        if (archive == null) {
+            archive = new DataArchiveEntity();
+            archive.setName(tablePrefix);
+            archive.setType("datasource");
+        }
+        archive.setDesc(dataModality);
+        dataArchiveService.saveArchive(archive);
+        log.info("数据源数据模态已更新: {}, dataModality={}", tablePrefix, dataModality);
     }
 
     public List<ColumnDto> dataSourceTree() throws Exception {

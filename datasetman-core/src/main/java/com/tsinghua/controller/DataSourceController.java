@@ -19,6 +19,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 数据源管理接口
@@ -132,6 +133,22 @@ public class DataSourceController {
     @OperationLog(value = "查询数据源档案列表", type = OperationLog.OperationType.QUERY, recordResult = false)
     public Result<List<DataArchiveEntity>> archives() {
         return Result.success(dataSourceService.dataSourceArchives());
+    }
+
+    /**
+     * 更新数据源数据模态（保存于数据源档案）
+     */
+    @ApiOperation("更新数据源数据模态")
+    @PostMapping("/archive/update")
+    @RequirePermission(Permission.DATASOURCE_UPDATE)
+    @OperationLog(value = "更新数据源数据模态", type = OperationLog.OperationType.UPDATE)
+    public Result<Void> updateArchive(@RequestBody Map<String, String> body) throws Exception {
+        String name = body.get("name");
+        if (name == null || name.trim().isEmpty()) {
+            return Result.error("数据源标识不能为空");
+        }
+        dataSourceService.updateDataSourceModality(name.trim(), body.getOrDefault("dataModality", ""));
+        return Result.success("保存成功");
     }
 
 }

@@ -126,7 +126,7 @@ class DataSourceList extends HTMLElement {
         if (pageData.length === 0) {
             newTbody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">
                         暂无数据源
                     </td>
                 </tr>
@@ -142,7 +142,9 @@ class DataSourceList extends HTMLElement {
                 <td>${this.getTypeText(dataSource.type)}</td>
                 <td>${dataSource.schemaPrefix || '-'}</td>
                 <td>${dataSource.dataPrefix || '-'}</td>
+                <td>${this.getModalityText(dataSource.dataModality)}</td>
                 <td>
+                    <button class="action-btn edit" title="编辑数据模态" data-id="${dataSource.id}">编辑</button>
                     <button class="action-btn delete" title="移除" data-id="${dataSource.id}">卸载</button>
                 </td>
             </tr>
@@ -155,8 +157,127 @@ class DataSourceList extends HTMLElement {
                 console.log('Delete button clicked, id:', e.target.getAttribute('data-id'));
                 const id = parseInt(e.target.getAttribute('data-id'));
                 this.removeDataSource(id);
+            } else if (e.target.classList.contains('edit')) {
+                const id = parseInt(e.target.getAttribute('data-id'));
+                this.editModality(id);
             }
         });
+    }
+
+    /** 编辑数据模态（保存到数据源档案，与注册时的数据模态同源） */
+    editModality(id) {
+        const dataSource = this.dataSources.find(ds => ds.id === id);
+        if (!dataSource) return;
+
+        const tablePrefix = this.getTablePrefix(dataSource);
+        const dialog = document.createElement('div');
+        dialog.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            ">
+                <div class="dialog-content" style="
+                    background: white;
+                    border-radius: 8px;
+                    padding: 24px;
+                    max-width: 420px;
+                    width: 90%;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                ">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2329;">编辑数据模态</h3>
+                    <p style="margin: 0 0 12px 0; color: #646a73; font-size: 13px; word-break: break-all;">
+                        数据源：${tablePrefix}
+                    </p>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; color: #1f2329; font-size: 14px;">数据模态</label>
+                        <select id="modalitySelect" style="
+                            width: 100%;
+                            padding: 8px 12px;
+                            border: 1px solid #c9cdd4;
+                            border-radius: 4px;
+                            font-size: 14px;
+                            color: #1f2329;
+                            background: white;
+                            box-sizing: border-box;
+                        ">
+                            <option value="relational">关系数据</option>
+                            <option value="time_series">时序数据</option>
+                            <option value="key_value">键值数据</option>
+                            <option value="semi_structured">半结构化数据</option>
+                            <option value="file_system">文件型数据</option>
+                        </select>
+                    </div>
+                    <div class="dialog-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button class="cancel-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #c9cdd4;
+                            border-radius: 4px;
+                            background: white;
+                            color: #1f2329;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">取消</button>
+                        <button class="confirm-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #4c89ff;
+                            border-radius: 4px;
+                            background: #4c89ff;
+                            color: white;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">保存</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(dialog);
+
+        dialog.querySelector('#modalitySelect').value = dataSource.dataModality || '';
+
+        const closeDialog = () => document.body.removeChild(dialog);
+        dialog.querySelector('.cancel-btn').addEventListener('click', closeDialog);
+
+        dialog.querySelector('.confirm-btn').addEventListener('click', async () => {
+            const dataModality = dialog.querySelector('#modalitySelect').value;
+            try {
+                const result = await window.AppConfig.post('datasource', 'archiveUpdate', {
+                    name: tablePrefix,
+                    dataModality: dataModality
+                });
+
+                if (result.success || result.code === 200) {
+                    dataSource.dataModality = dataModality;
+                    closeDialog();
+                    this.renderTable();
+                    this.showMessage('数据模态已保存', 'success');
+                    // 左侧数据资源树的模态标注与档案同源，同步刷新
+                    if (window.loadDataSourceTree) {
+                        window.loadDataSourceTree();
+                    }
+                } else {
+                    this.showMessage(result.message || '保存失败，请重试', 'error');
+                }
+            } catch (error) {
+                console.error('保存数据模态失败:', error);
+                this.showMessage('保存失败，请稍后重试', 'error');
+            }
+        });
+    }
+
+    /** 数据源档案名：schemaPrefix[.dataPrefix]，与后端tablePrefix规则一致 */
+    getTablePrefix(dataSource) {
+        if (dataSource.dataPrefix) {
+            return dataSource.schemaPrefix + '.' + dataSource.dataPrefix;
+        }
+        return dataSource.schemaPrefix;
     }
 
     getTypeText(type) {
@@ -170,6 +291,19 @@ class DataSourceList extends HTMLElement {
             6: 'redis'
         };
         return typeMap[type] || `类型${type}`;
+    }
+
+    /** 数据模态显示文案（与注册表单的数据模态选项一致） */
+    getModalityText(modality) {
+        const modalityMap = {
+            relational: '关系数据',
+            time_series: '时序数据',
+            key_value: '键值数据',
+            semi_structured: '半结构化数据',
+            file_system: '文件型数据'
+        };
+        if (!modality) return '-';
+        return modalityMap[modality] || modality;
     }
 
     viewDataSource(id) {
