@@ -145,7 +145,11 @@ class UserManual extends HTMLElement {
 
     downloadManual() {
         const manualUrl = `${window.AppConfig.api.baseURL}/api/doc/user-manual/file`;
-        
+
+        // blob下载需读取响应流，走不了统一request，手动配对全局loading
+        if (window.showGlobalLoading) {
+            window.showGlobalLoading('正在下载文件...');
+        }
         fetch(manualUrl, {
             headers: window.AppConfig.getAuthHeaders()
         })
@@ -169,6 +173,11 @@ class UserManual extends HTMLElement {
                 console.error('下载用户手册失败:', error);
                 if (window.CommonUtils && window.CommonUtils.showToast) {
                     window.CommonUtils.showToast('下载失败: ' + error.message, 'error');
+                }
+            })
+            .finally(() => {
+                if (window.hideGlobalLoading) {
+                    window.hideGlobalLoading();
                 }
             });
     }

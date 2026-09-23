@@ -129,14 +129,8 @@ class TransformCompare extends HTMLElement {
     async commitJobFromAPI(createTime) {
         try {
             const url = window.AppConfig.getApiUrl('transformJob', 'commit').replace('{createTime}', createTime);
-            const headers = window.AppConfig.getAuthHeaders();
-
-            const response = await fetch(url, {
-                method: 'PUT',
-                headers: headers
-            });
-
-            const result = await response.json();
+            // 走统一请求层：自动注入token与loading
+            const result = await window.AppConfig.request(url, { method: 'PUT' });
 
             if (result.code === 200 || result.success) {
                 this.showToast('任务已提交');
@@ -322,8 +316,8 @@ class TransformCompare extends HTMLElement {
         this._datasourceTreePromise = window.AppConfig.get('datasource', 'tree');
         this._sqlSnippetsPromise = window.AppConfig.get('sqlSnippet', 'list');
         const tfUrl = window.AppConfig.getApiUrl('transform', 'query').replace('{type}', 'transform');
-        const tfHeaders = window.AppConfig.getAuthHeaders();
-        this._transformFunctionsPromise = fetch(tfUrl, { method: 'GET', headers: tfHeaders }).then(r => r.json());
+        // 走统一请求层（loading=false：弹窗下拉预取不触发全局遮罩）
+        this._transformFunctionsPromise = window.AppConfig.request(tfUrl, { method: 'GET', loading: false });
 
         const dialogHtml = `
             <div class="dialog-mask" style="
@@ -602,8 +596,8 @@ class TransformCompare extends HTMLElement {
             // 并行预取数据源树、Transform函数和作业详情
             this._datasourceTreePromise = window.AppConfig.get('datasource', 'tree');
             const tfUrl = window.AppConfig.getApiUrl('transform', 'query').replace('{type}', 'transform');
-            const tfHeaders = window.AppConfig.getAuthHeaders();
-            this._transformFunctionsPromise = fetch(tfUrl, { method: 'GET', headers: tfHeaders }).then(r => r.json());
+            // 走统一请求层（loading=false：弹窗下拉预取不触发全局遮罩）
+            this._transformFunctionsPromise = window.AppConfig.request(tfUrl, { method: 'GET', loading: false });
             const result = await window.AppConfig.get('transformCompare', 'detail', { createTime });
             
             if (result.success && result.data) {
@@ -1680,11 +1674,8 @@ class TransformCompare extends HTMLElement {
     getTransformFunctions() {
         if (!this._transformFunctionsPromise) {
             const url = window.AppConfig.getApiUrl('transform', 'query').replace('{type}', 'transform');
-            const headers = window.AppConfig.getAuthHeaders();
-            this._transformFunctionsPromise = fetch(url, {
-                method: 'GET',
-                headers: headers
-            }).then(response => response.json());
+            // 走统一请求层（loading=false：弹窗下拉预取不触发全局遮罩）
+            this._transformFunctionsPromise = window.AppConfig.request(url, { method: 'GET', loading: false });
         }
         return this._transformFunctionsPromise;
     }

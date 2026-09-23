@@ -24,22 +24,13 @@ class MenuPermission {
     // 加载用户角色
     async loadUserRole() {
         try {
-            const response = await fetch('/api/user/current', {
-                headers: {
-                    'Authorization': 'Bearer ' + localStorage.getItem('jwtToken')
-                }
+            // 走统一请求层（loading=false：启动期认证请求不触发全局遮罩）；非2xx由request抛错进入catch跳转登录页
+            const data = await window.AppConfig.request('/api/user/current', {
+                method: 'GET',
+                loading: false
             });
-            
-            if (response.ok) {
-                const data = await response.json();
-                this.currentUser = data.data;
-                this.userRole = this.currentUser.role;
-            } else {
-                // 获取用户失败，跳转到登录页面
-                console.error('获取用户信息失败，跳转到登录页面');
-                window.location.href = '/login.html';
-                throw new Error('获取用户信息失败');
-            }
+            this.currentUser = data.data;
+            this.userRole = this.currentUser.role;
         } catch (error) {
             console.error('获取用户角色失败，跳转到登录页面:', error);
             window.location.href = '/login.html';

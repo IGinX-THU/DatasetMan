@@ -169,8 +169,7 @@ class QualityAssessment extends HTMLElement {
                 + '?versionId=' + encodeURIComponent(versionId)
                 + '&sampleSize=' + encodeURIComponent(sampleSize)
                 + (criteriaId ? '&criteriaId=' + encodeURIComponent(criteriaId) : '');
-            const res = await fetch(url, { method: 'POST', headers: window.AppConfig.getAuthHeaders() });
-            const json = await res.json();
+            const json = await window.AppConfig.request(url, { method: 'POST' });
             if (!(json.success || json.code === 200)) {
                 throw new Error(json.message || '检测失败');
             }

@@ -189,23 +189,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // 将hideAllComponents暴露到全局作用域
     window.hideAllComponents = hideAllComponents;
     
-    // 全局Loading功能
-    window.showGlobalLoading = function(message = '正在加载...') {
-        console.log('显示全局loading:', message);
-        
-        // 获取工作区容器
+    // 全局Loading功能（引用计数：并发请求全部结束才隐藏；300ms延迟显示防快速请求闪烁）
+    let globalLoadingCount = 0;
+    let globalLoadingTimer = null;
+    let globalLoadingMessage = '正在加载...';
+
+    const renderGlobalLoading = function() {
         const workspaceContent = document.querySelector('.workspace-content');
         if (!workspaceContent) {
-            console.error('找不到workspace-content容器');
             return;
         }
-        
+
         // 确保工作区容器有相对定位
         if (getComputedStyle(workspaceContent).position === 'static') {
             workspaceContent.style.position = 'relative';
         }
-        
-        // 检查是否已存在loading元素
+
         let loadingEl = workspaceContent.querySelector('.global-loading-overlay');
         if (!loadingEl) {
             loadingEl = document.createElement('div');
@@ -213,28 +212,63 @@ document.addEventListener('DOMContentLoaded', function() {
             loadingEl.innerHTML = `
                 <div class="global-loading-spinner">
                     <div class="global-spinner"></div>
-                    <div class="global-loading-text">${message}</div>
+                    <div class="global-loading-text"></div>
                 </div>
             `;
             workspaceContent.appendChild(loadingEl);
-        } else {
-            // 更新loading文字
-            const textEl = loadingEl.querySelector('.global-loading-text');
-            if (textEl) {
-                textEl.textContent = message;
-            }
+        }
+        const textEl = loadingEl.querySelector('.global-loading-text');
+        if (textEl) {
+            textEl.textContent = globalLoadingMessage;
         }
     };
-    
-    window.hideGlobalLoading = function() {
-        console.log('隐藏全局loading');
-        
-        // 从工作区容器中移除loading元素
+
+    window.showGlobalLoading = function(message = '正在加载...', updateText = true) {
+        globalLoadingCount++;
+        // updateText=false 时保留已有文案（供请求层调用，不覆盖组件设置的具体文案）
+        if (updateText || globalLoadingCount === 1) {
+            globalLoadingMessage = message;
+        }
+        console.log('显示全局loading:', globalLoadingMessage, '计数:', globalLoadingCount);
+
         const workspaceContent = document.querySelector('.workspace-content');
-        if (workspaceContent) {
-            const loadingEl = workspaceContent.querySelector('.global-loading-overlay');
-            if (loadingEl) {
-                loadingEl.remove();
+        if (!workspaceContent) {
+            return;
+        }
+
+        // 遮罩已显示则按需更新文字，否则延迟300ms渲染（期间hide会取消，避免闪烁）
+        const loadingEl = workspaceContent.querySelector('.global-loading-overlay');
+        if (loadingEl) {
+            if (updateText) {
+                const textEl = loadingEl.querySelector('.global-loading-text');
+                if (textEl) {
+                    textEl.textContent = globalLoadingMessage;
+                }
+            }
+        } else if (!globalLoadingTimer) {
+            globalLoadingTimer = setTimeout(function() {
+                globalLoadingTimer = null;
+                if (globalLoadingCount > 0) {
+                    renderGlobalLoading();
+                }
+            }, 300);
+        }
+    };
+
+    window.hideGlobalLoading = function() {
+        globalLoadingCount = Math.max(0, globalLoadingCount - 1);
+        console.log('隐藏全局loading, 计数:', globalLoadingCount);
+        if (globalLoadingCount === 0) {
+            if (globalLoadingTimer) {
+                clearTimeout(globalLoadingTimer);
+                globalLoadingTimer = null;
+            }
+            const workspaceContent = document.querySelector('.workspace-content');
+            if (workspaceContent) {
+                const loadingEl = workspaceContent.querySelector('.global-loading-overlay');
+                if (loadingEl) {
+                    loadingEl.remove();
+                }
             }
         }
     };

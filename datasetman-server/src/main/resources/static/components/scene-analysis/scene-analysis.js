@@ -51,11 +51,14 @@ class SceneAnalysis extends HTMLElement {
     }
 
     async apiGet(url) {
-        const headers = (window.AppConfig && window.AppConfig.getAuthHeaders())
-            ? window.AppConfig.getAuthHeaders() : { 'Content-Type': 'application/json' };
-        const response = await fetch(url, { method: 'GET', headers });
-        const result = await response.json();
-        return (result.code === 200 || result.success) ? result.data : null;
+        // 走统一请求层：自动注入token与loading；异常转成null，由调用方展示查询失败提示
+        try {
+            const result = await window.AppConfig.request(url, { method: 'GET' });
+            return (result.code === 200 || result.success) ? result.data : null;
+        } catch (error) {
+            console.error('请求失败:', url, error);
+            return null;
+        }
     }
 
     /** 数据类型标签：与数据集档案页"数据类型"下拉一致 */
@@ -127,8 +130,6 @@ class SceneAnalysis extends HTMLElement {
     /** 刷新：后端分页查询（POST /api/dataset/list/query，含已禁用版本） */
     async refresh(page) {
         if (page) this.currentPage = page;
-        const headers = (window.AppConfig && window.AppConfig.getAuthHeaders())
-            ? window.AppConfig.getAuthHeaders() : { 'Content-Type': 'application/json' };
         const body = {
             pageNum: this.currentPage,
             pageSize: this.pageSize,
@@ -136,11 +137,10 @@ class SceneAnalysis extends HTMLElement {
             dataModality: this.querySelector('#saTypeFilter')?.value || null
         };
         try {
+            // 走统一请求层：自动注入token与loading
             const [queryRes, countRes] = await Promise.all([
-                fetch('/api/dataset/list/query', { method: 'POST', headers,
-                    body: JSON.stringify(body) }).then(r => r.json()),
-                fetch('/api/dataset/list/count', { method: 'POST', headers,
-                    body: JSON.stringify(body) }).then(r => r.json())
+                window.AppConfig.request('/api/dataset/list/query', { method: 'POST', body: JSON.stringify(body) }),
+                window.AppConfig.request('/api/dataset/list/count', { method: 'POST', body: JSON.stringify(body) })
             ]);
             this.rows = (queryRes.code === 200 || queryRes.success) ? (queryRes.data || []) : [];
             this.total = (countRes.code === 200 || countRes.success) ? Number(countRes.data || 0) : 0;

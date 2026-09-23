@@ -50,6 +50,11 @@ public class SqlSnippetService {
             // 编辑：复用原id
             timestamp = request.getId();
         } else {
+            // 新建：重名校验（同名且未删除的脚本不允许重复创建）
+            SqlSnippetEntity existing = queryByName(request.getName());
+            if (existing != null) {
+                throw new IllegalArgumentException("SQL脚本名称已存在: " + request.getName());
+            }
             timestamp = System.currentTimeMillis();
         }
 

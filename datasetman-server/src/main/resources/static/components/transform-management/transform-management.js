@@ -408,14 +408,8 @@ class TransformManagement extends HTMLElement {
     async loadTransforms() {
         try {
             const url = window.AppConfig.getApiUrl('transform', 'query').replace('{type}', 'transform');
-            const headers = window.AppConfig.getAuthHeaders();
-
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: headers
-            });
-
-            const result = await response.json();
+            // 走统一请求层：自动注入token与loading
+            const result = await window.AppConfig.request(url, { method: 'GET' });
 
             if (result.code === 200 && result.data) {
                 this.transforms = result.data.map((transform, index) => ({
@@ -653,14 +647,8 @@ class TransformManagement extends HTMLElement {
                 }
 
                 const url = window.AppConfig.getApiUrl('transform', 'delete').replace('{name}', encodeURIComponent(transform.name));
-                const headers = window.AppConfig.getAuthHeaders();
-
-                const response = await fetch(url, {
-                    method: 'DELETE',
-                    headers: headers
-                });
-
-                const result = await response.json();
+                // 走统一请求层：自动注入token与loading
+                const result = await window.AppConfig.request(url, { method: 'DELETE' });
 
                 if (result.code === 200) {
                     closeDialog();
@@ -686,6 +674,10 @@ class TransformManagement extends HTMLElement {
     }
 
     async downloadTransform(fileName) {
+        // blob下载需读取响应流，走不了统一request，手动配对全局loading
+        if (window.showGlobalLoading) {
+            window.showGlobalLoading('正在下载文件...');
+        }
         try {
             const url = window.AppConfig.getApiUrl('transform', 'download').replace('{fileName}', encodeURIComponent(fileName));
             const headers = window.AppConfig.getAuthHeaders();
@@ -713,6 +705,10 @@ class TransformManagement extends HTMLElement {
         } catch (error) {
             console.error('下载Transform文件失败:', error);
             this.showMessage('下载失败，请重试', 'error');
+        } finally {
+            if (window.hideGlobalLoading) {
+                window.hideGlobalLoading();
+            }
         }
     }
 

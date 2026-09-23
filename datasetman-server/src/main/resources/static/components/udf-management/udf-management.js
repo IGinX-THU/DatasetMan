@@ -423,14 +423,8 @@ class UdfManagement extends HTMLElement {
     async loadUdfs() {
         try {
             const url = window.AppConfig.getApiUrl('udf', 'query').replace('{type}', 'udf');
-            const headers = window.AppConfig.getAuthHeaders();
-
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: headers
-            });
-
-            const result = await response.json();
+            // 走统一请求层：自动注入token与loading
+            const result = await window.AppConfig.request(url, { method: 'GET' });
 
             if (result.code === 200 && result.data) {
                 this.udfs = result.data.map((udf, index) => ({
@@ -668,14 +662,8 @@ class UdfManagement extends HTMLElement {
                 }
 
                 const url = window.AppConfig.getApiUrl('udf', 'delete').replace('{name}', encodeURIComponent(udf.name));
-                const headers = window.AppConfig.getAuthHeaders();
-
-                const response = await fetch(url, {
-                    method: 'DELETE',
-                    headers: headers
-                });
-
-                const result = await response.json();
+                // 走统一请求层：自动注入token与loading
+                const result = await window.AppConfig.request(url, { method: 'DELETE' });
 
                 if (result.code === 200) {
                     closeDialog();
@@ -701,6 +689,10 @@ class UdfManagement extends HTMLElement {
     }
 
     async downloadUdf(fileName) {
+        // blob下载需读取响应流，走不了统一request，手动配对全局loading
+        if (window.showGlobalLoading) {
+            window.showGlobalLoading('正在下载文件...');
+        }
         try {
             const url = window.AppConfig.getApiUrl('udf', 'download').replace('{fileName}', encodeURIComponent(fileName));
             const headers = window.AppConfig.getAuthHeaders();
@@ -728,6 +720,10 @@ class UdfManagement extends HTMLElement {
         } catch (error) {
             console.error('下载UDF文件失败:', error);
             this.showMessage('下载失败，请重试', 'error');
+        } finally {
+            if (window.hideGlobalLoading) {
+                window.hideGlobalLoading();
+            }
         }
     }
 

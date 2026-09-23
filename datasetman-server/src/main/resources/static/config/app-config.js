@@ -262,10 +262,12 @@ window.AppConfig = {
     
     // 统一API调用方法
     async request(url, options = {}) {
+        // loading=false 表示该请求不触发全局loading（如登录、token验证等认证类请求）
+        const { loading = true, ...fetchOptions } = options;
         const config = {
             method: 'GET',
             headers: this.getAuthHeaders(),
-            ...options
+            ...fetchOptions
         };
 
         // 如果是登录或刷新接口，不需要token
@@ -282,6 +284,11 @@ window.AppConfig = {
 
         // 将signal添加到config中
         config.signal = controller.signal;
+
+        // 请求层统一loading：请求中显示全局遮罩（覆盖401刷新重试全过程）
+        if (loading && typeof window.showGlobalLoading === 'function') {
+            window.showGlobalLoading('正在处理请求...', false);
+        }
 
         try {
             const response = await fetch(url, config);
@@ -368,6 +375,10 @@ window.AppConfig = {
         } finally {
             // 确保清除timeout
             clearTimeout(timeoutId);
+            // 请求层统一loading：无论成功失败都计数-1
+            if (loading && typeof window.hideGlobalLoading === 'function') {
+                window.hideGlobalLoading();
+            }
         }
     },
 
@@ -399,6 +410,20 @@ window.AppConfig = {
 
     // POST请求（返回二进制数据）
     async postBinary(module, endpoint, data = {}) {
+        // 请求层统一loading
+        if (typeof window.showGlobalLoading === 'function') {
+            window.showGlobalLoading('正在处理请求...', false);
+        }
+        try {
+            return await this._postBinary(module, endpoint, data);
+        } finally {
+            if (typeof window.hideGlobalLoading === 'function') {
+                window.hideGlobalLoading();
+            }
+        }
+    },
+
+    async _postBinary(module, endpoint, data = {}) {
         const url = this.getApiUrl(module, endpoint);
         const headers = this.getAuthHeaders();
         headers['Content-Type'] = 'application/json';
@@ -537,7 +562,7 @@ window.AppConfig = {
         try {
             const response = await this.request(
                 this.api.baseURL + this.endpoints.auth.verify,
-                { method: 'GET' }
+                { method: 'GET', loading: false }
             );
             return response && response.success;
         } catch (error) {
@@ -594,7 +619,8 @@ window.AppConfig = {
                 this.api.baseURL + this.endpoints.auth.login,
                 {
                     method: 'POST',
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password }),
+                    loading: false
                 }
             );
 
@@ -618,7 +644,7 @@ window.AppConfig = {
             if (this.getToken()) {
                 await this.request(
                     this.api.baseURL + this.endpoints.auth.logout,
-                    { method: 'POST' }
+                    { method: 'POST', loading: false }
                 );
             }
         } catch (error) {
@@ -642,6 +668,11 @@ window.AppConfig = {
         
         // 文件上传不能设置Content-Type，让浏览器自动设置
         delete headers['Content-Type'];
+
+        // 请求层统一loading
+        if (typeof window.showGlobalLoading === 'function') {
+            window.showGlobalLoading('正在处理请求...', false);
+        }
 
         try {
             const response = await fetch(url, {
@@ -724,6 +755,11 @@ window.AppConfig = {
         } catch (error) {
             console.error('文件上传失败:', error);
             throw error;
+        } finally {
+            // 请求层统一loading：无论成功失败都计数-1
+            if (typeof window.hideGlobalLoading === 'function') {
+                window.hideGlobalLoading();
+            }
         }
     },
 
@@ -731,6 +767,11 @@ window.AppConfig = {
     async download(module, endpoint, data, filename, useUrlParams = false) {
         let url = this.getApiUrl(module, endpoint);
         const headers = this.getAuthHeaders();
+
+        // 请求层统一loading
+        if (typeof window.showGlobalLoading === 'function') {
+            window.showGlobalLoading('正在处理请求...', false);
+        }
 
         try {
             let requestOptions = {
@@ -814,6 +855,11 @@ window.AppConfig = {
         } catch (error) {
             console.error('文件下载失败:', error);
             throw error;
+        } finally {
+            // 请求层统一loading：无论成功失败都计数-1
+            if (typeof window.hideGlobalLoading === 'function') {
+                window.hideGlobalLoading();
+            }
         }
     },
     

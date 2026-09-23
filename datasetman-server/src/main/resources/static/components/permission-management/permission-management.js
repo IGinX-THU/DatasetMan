@@ -429,11 +429,8 @@ class PermissionManagement extends HTMLElement {
     async deletePermission(tablePrefix) {
         try {
             const url = `${window.AppConfig.api.baseURL}/api/data-permission/delete/${encodeURIComponent(tablePrefix)}`;
-            const response = await fetch(url, {
-                method: 'DELETE',
-                headers: window.AppConfig.getAuthHeaders()
-            });
-            const result = await response.json();
+            // 走统一请求层：自动注入token与loading
+            const result = await window.AppConfig.request(url, { method: 'DELETE' });
             if (result.success) {
                 this.showToast(result.message || '删除成功');
                 await this.loadList();
