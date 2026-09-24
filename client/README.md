@@ -37,7 +37,7 @@ import com.tsinghua.thrift.api.ApiService;
 
 public class DatasetManClient {
     public static void main(String[] args) {
-        TTransport transport = new TSocket("localhost", 9090);
+        TTransport transport = new TSocket("localhost", 9091);
         try {
             transport.open();
             
@@ -108,7 +108,7 @@ import org.apache.thrift.TException;
 
 public class Example {
     public static void main(String[] args) {
-        TTransport transport = new TSocket("localhost", 9090);
+        TTransport transport = new TSocket("localhost", 9091);
         try {
             transport.open();
             
@@ -133,14 +133,14 @@ public class Example {
 
 ## 连接配置
 
-默认情况下，Thrift 服务器运行在 `localhost:9090`。您可以配置连接：
+默认情况下，Thrift 服务器运行在 `localhost:9091`。您可以配置连接：
 
 ```java
 // 自定义主机和端口
 TTransport transport = new TSocket("your-host", your-port);
 
 // 设置超时
-TSocket socket = new TSocket("localhost", 9090);
+TSocket socket = new TSocket("localhost", 9091);
 socket.setTimeout(5000); // 5 秒超时
 TTransport transport = socket;
 ```

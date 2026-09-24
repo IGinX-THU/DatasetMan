@@ -430,6 +430,13 @@ struct QualityAssessmentEntity {
     16: optional string owner,
 }
 
+struct SqlSnippetRequest {
+    1: optional i64 id,
+    2: string name,
+    3: optional list<string> sqlList,
+    4: optional string description,
+}
+
 // ========== API服务接口 - 匹配所有Controller的方法 ==========
 service ApiService {
     // ========== 数据源接口 - 匹配DataSourceController ==========
@@ -710,4 +717,42 @@ service ApiService {
 
     // GET /api/quality-assessment/report?id=x -> 自动生成的评估报告
     Result getQualityReportById(1: i64 id),
+
+    // ========== 数据源档案接口 - 对齐RESTful新增能力 ==========
+
+    // GET /api/datasource/archives -> 已注册数据源档案列表
+    Result listDataSourceArchives(),
+
+    // POST /api/datasource/archive/update -> 更新数据源数据模态
+    Result updateDataSourceModality(1: string name, 2: string dataModality),
+
+    // ========== 数据集版本档案接口 - 对齐RESTful新增能力 ==========
+
+    // POST /api/dataset/preview -> 预览数据集存储路径（版本号由后端规划）
+    Result previewDataset(1: DatasetCreateRequest request),
+
+    // PUT /api/dataset/version/toggle -> 启用/禁用数据集版本（data返回是否已禁用）
+    Result toggleDatasetVersion(1: i64 versionId),
+
+    // PUT /api/dataset/version/update -> 更新数据集版本档案
+    Result updateDatasetVersion(1: i64 versionId, 2: optional string remark, 3: optional string dataModality, 4: optional string category, 5: optional string tags),
+
+    // ========== 函数说明接口 - 对齐RESTful新增能力 ==========
+
+    // POST /api/function/archive/update -> 更新函数说明（type: transform/udf）
+    Result updateFunctionDesc(1: string name, 2: string type, 3: string desc),
+
+    // ========== SQL脚本管理接口 - 匹配SqlSnippetController ==========
+
+    // POST /api/sql-snippet/save -> 保存SQL脚本（新建或编辑）
+    Result saveSqlSnippet(1: SqlSnippetRequest request),
+
+    // GET /api/sql-snippet/list?name=x -> SQL脚本列表（支持名称模糊查询）
+    Result listSqlSnippets(1: optional string name),
+
+    // GET /api/sql-snippet/metas?id=x -> SQL脚本详情
+    Result getSqlSnippet(1: i64 id),
+
+    // DELETE /api/sql-snippet/delete?id=x -> 删除SQL脚本
+    Result deleteSqlSnippet(1: i64 id),
 }

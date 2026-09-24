@@ -627,6 +627,88 @@ class Iface(object):
         """
         pass
 
+    def listDataSourceArchives(self):
+        pass
+
+    def updateDataSourceModality(self, name, dataModality):
+        """
+        Parameters:
+         - name
+         - dataModality
+
+        """
+        pass
+
+    def previewDataset(self, request):
+        """
+        Parameters:
+         - request
+
+        """
+        pass
+
+    def toggleDatasetVersion(self, versionId):
+        """
+        Parameters:
+         - versionId
+
+        """
+        pass
+
+    def updateDatasetVersion(self, versionId, remark, dataModality, category, tags):
+        """
+        Parameters:
+         - versionId
+         - remark
+         - dataModality
+         - category
+         - tags
+
+        """
+        pass
+
+    def updateFunctionDesc(self, name, type, desc):
+        """
+        Parameters:
+         - name
+         - type
+         - desc
+
+        """
+        pass
+
+    def saveSqlSnippet(self, request):
+        """
+        Parameters:
+         - request
+
+        """
+        pass
+
+    def listSqlSnippets(self, name):
+        """
+        Parameters:
+         - name
+
+        """
+        pass
+
+    def getSqlSnippet(self, id):
+        """
+        Parameters:
+         - id
+
+        """
+        pass
+
+    def deleteSqlSnippet(self, id):
+        """
+        Parameters:
+         - id
+
+        """
+        pass
+
 
 class Client(Iface):
     def __init__(self, iprot, oprot=None):
@@ -3321,6 +3403,334 @@ class Client(Iface):
             return result.success
         raise TApplicationException(TApplicationException.MISSING_RESULT, "getQualityReportById failed: unknown result")
 
+    def listDataSourceArchives(self):
+        self.send_listDataSourceArchives()
+        return self.recv_listDataSourceArchives()
+
+    def send_listDataSourceArchives(self):
+        self._oprot.writeMessageBegin('listDataSourceArchives', TMessageType.CALL, self._seqid)
+        args = listDataSourceArchives_args()
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_listDataSourceArchives(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = listDataSourceArchives_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "listDataSourceArchives failed: unknown result")
+
+    def updateDataSourceModality(self, name, dataModality):
+        """
+        Parameters:
+         - name
+         - dataModality
+
+        """
+        self.send_updateDataSourceModality(name, dataModality)
+        return self.recv_updateDataSourceModality()
+
+    def send_updateDataSourceModality(self, name, dataModality):
+        self._oprot.writeMessageBegin('updateDataSourceModality', TMessageType.CALL, self._seqid)
+        args = updateDataSourceModality_args()
+        args.name = name
+        args.dataModality = dataModality
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_updateDataSourceModality(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = updateDataSourceModality_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "updateDataSourceModality failed: unknown result")
+
+    def previewDataset(self, request):
+        """
+        Parameters:
+         - request
+
+        """
+        self.send_previewDataset(request)
+        return self.recv_previewDataset()
+
+    def send_previewDataset(self, request):
+        self._oprot.writeMessageBegin('previewDataset', TMessageType.CALL, self._seqid)
+        args = previewDataset_args()
+        args.request = request
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_previewDataset(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = previewDataset_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "previewDataset failed: unknown result")
+
+    def toggleDatasetVersion(self, versionId):
+        """
+        Parameters:
+         - versionId
+
+        """
+        self.send_toggleDatasetVersion(versionId)
+        return self.recv_toggleDatasetVersion()
+
+    def send_toggleDatasetVersion(self, versionId):
+        self._oprot.writeMessageBegin('toggleDatasetVersion', TMessageType.CALL, self._seqid)
+        args = toggleDatasetVersion_args()
+        args.versionId = versionId
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_toggleDatasetVersion(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = toggleDatasetVersion_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "toggleDatasetVersion failed: unknown result")
+
+    def updateDatasetVersion(self, versionId, remark, dataModality, category, tags):
+        """
+        Parameters:
+         - versionId
+         - remark
+         - dataModality
+         - category
+         - tags
+
+        """
+        self.send_updateDatasetVersion(versionId, remark, dataModality, category, tags)
+        return self.recv_updateDatasetVersion()
+
+    def send_updateDatasetVersion(self, versionId, remark, dataModality, category, tags):
+        self._oprot.writeMessageBegin('updateDatasetVersion', TMessageType.CALL, self._seqid)
+        args = updateDatasetVersion_args()
+        args.versionId = versionId
+        args.remark = remark
+        args.dataModality = dataModality
+        args.category = category
+        args.tags = tags
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_updateDatasetVersion(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = updateDatasetVersion_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "updateDatasetVersion failed: unknown result")
+
+    def updateFunctionDesc(self, name, type, desc):
+        """
+        Parameters:
+         - name
+         - type
+         - desc
+
+        """
+        self.send_updateFunctionDesc(name, type, desc)
+        return self.recv_updateFunctionDesc()
+
+    def send_updateFunctionDesc(self, name, type, desc):
+        self._oprot.writeMessageBegin('updateFunctionDesc', TMessageType.CALL, self._seqid)
+        args = updateFunctionDesc_args()
+        args.name = name
+        args.type = type
+        args.desc = desc
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_updateFunctionDesc(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = updateFunctionDesc_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "updateFunctionDesc failed: unknown result")
+
+    def saveSqlSnippet(self, request):
+        """
+        Parameters:
+         - request
+
+        """
+        self.send_saveSqlSnippet(request)
+        return self.recv_saveSqlSnippet()
+
+    def send_saveSqlSnippet(self, request):
+        self._oprot.writeMessageBegin('saveSqlSnippet', TMessageType.CALL, self._seqid)
+        args = saveSqlSnippet_args()
+        args.request = request
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_saveSqlSnippet(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = saveSqlSnippet_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "saveSqlSnippet failed: unknown result")
+
+    def listSqlSnippets(self, name):
+        """
+        Parameters:
+         - name
+
+        """
+        self.send_listSqlSnippets(name)
+        return self.recv_listSqlSnippets()
+
+    def send_listSqlSnippets(self, name):
+        self._oprot.writeMessageBegin('listSqlSnippets', TMessageType.CALL, self._seqid)
+        args = listSqlSnippets_args()
+        args.name = name
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_listSqlSnippets(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = listSqlSnippets_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "listSqlSnippets failed: unknown result")
+
+    def getSqlSnippet(self, id):
+        """
+        Parameters:
+         - id
+
+        """
+        self.send_getSqlSnippet(id)
+        return self.recv_getSqlSnippet()
+
+    def send_getSqlSnippet(self, id):
+        self._oprot.writeMessageBegin('getSqlSnippet', TMessageType.CALL, self._seqid)
+        args = getSqlSnippet_args()
+        args.id = id
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_getSqlSnippet(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = getSqlSnippet_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "getSqlSnippet failed: unknown result")
+
+    def deleteSqlSnippet(self, id):
+        """
+        Parameters:
+         - id
+
+        """
+        self.send_deleteSqlSnippet(id)
+        return self.recv_deleteSqlSnippet()
+
+    def send_deleteSqlSnippet(self, id):
+        self._oprot.writeMessageBegin('deleteSqlSnippet', TMessageType.CALL, self._seqid)
+        args = deleteSqlSnippet_args()
+        args.id = id
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_deleteSqlSnippet(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = deleteSqlSnippet_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "deleteSqlSnippet failed: unknown result")
+
 
 class Processor(Iface, TProcessor):
     def __init__(self, handler):
@@ -3413,6 +3823,16 @@ class Processor(Iface, TProcessor):
         self._processMap["getQualityDimensions"] = Processor.process_getQualityDimensions
         self._processMap["autoDetectQuality"] = Processor.process_autoDetectQuality
         self._processMap["getQualityReportById"] = Processor.process_getQualityReportById
+        self._processMap["listDataSourceArchives"] = Processor.process_listDataSourceArchives
+        self._processMap["updateDataSourceModality"] = Processor.process_updateDataSourceModality
+        self._processMap["previewDataset"] = Processor.process_previewDataset
+        self._processMap["toggleDatasetVersion"] = Processor.process_toggleDatasetVersion
+        self._processMap["updateDatasetVersion"] = Processor.process_updateDatasetVersion
+        self._processMap["updateFunctionDesc"] = Processor.process_updateFunctionDesc
+        self._processMap["saveSqlSnippet"] = Processor.process_saveSqlSnippet
+        self._processMap["listSqlSnippets"] = Processor.process_listSqlSnippets
+        self._processMap["getSqlSnippet"] = Processor.process_getSqlSnippet
+        self._processMap["deleteSqlSnippet"] = Processor.process_deleteSqlSnippet
         self._on_message_begin = None
 
     def on_message_begin(self, func):
@@ -5432,6 +5852,236 @@ class Processor(Iface, TProcessor):
             msg_type = TMessageType.EXCEPTION
             result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
         oprot.writeMessageBegin("getQualityReportById", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_listDataSourceArchives(self, seqid, iprot, oprot):
+        args = listDataSourceArchives_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = listDataSourceArchives_result()
+        try:
+            result.success = self._handler.listDataSourceArchives()
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("listDataSourceArchives", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_updateDataSourceModality(self, seqid, iprot, oprot):
+        args = updateDataSourceModality_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = updateDataSourceModality_result()
+        try:
+            result.success = self._handler.updateDataSourceModality(args.name, args.dataModality)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("updateDataSourceModality", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_previewDataset(self, seqid, iprot, oprot):
+        args = previewDataset_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = previewDataset_result()
+        try:
+            result.success = self._handler.previewDataset(args.request)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("previewDataset", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_toggleDatasetVersion(self, seqid, iprot, oprot):
+        args = toggleDatasetVersion_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = toggleDatasetVersion_result()
+        try:
+            result.success = self._handler.toggleDatasetVersion(args.versionId)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("toggleDatasetVersion", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_updateDatasetVersion(self, seqid, iprot, oprot):
+        args = updateDatasetVersion_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = updateDatasetVersion_result()
+        try:
+            result.success = self._handler.updateDatasetVersion(args.versionId, args.remark, args.dataModality, args.category, args.tags)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("updateDatasetVersion", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_updateFunctionDesc(self, seqid, iprot, oprot):
+        args = updateFunctionDesc_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = updateFunctionDesc_result()
+        try:
+            result.success = self._handler.updateFunctionDesc(args.name, args.type, args.desc)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("updateFunctionDesc", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_saveSqlSnippet(self, seqid, iprot, oprot):
+        args = saveSqlSnippet_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = saveSqlSnippet_result()
+        try:
+            result.success = self._handler.saveSqlSnippet(args.request)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("saveSqlSnippet", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_listSqlSnippets(self, seqid, iprot, oprot):
+        args = listSqlSnippets_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = listSqlSnippets_result()
+        try:
+            result.success = self._handler.listSqlSnippets(args.name)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("listSqlSnippets", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_getSqlSnippet(self, seqid, iprot, oprot):
+        args = getSqlSnippet_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = getSqlSnippet_result()
+        try:
+            result.success = self._handler.getSqlSnippet(args.id)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("getSqlSnippet", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_deleteSqlSnippet(self, seqid, iprot, oprot):
+        args = deleteSqlSnippet_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = deleteSqlSnippet_result()
+        try:
+            result.success = self._handler.deleteSqlSnippet(args.id)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("deleteSqlSnippet", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
         oprot.trans.flush()
@@ -16354,6 +17004,1353 @@ class getQualityReportById_result(object):
         return not (self == other)
 all_structs.append(getQualityReportById_result)
 getQualityReportById_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class listDataSourceArchives_args(object):
+    thrift_spec = None
+
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('listDataSourceArchives_args')
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(listDataSourceArchives_args)
+listDataSourceArchives_args.thrift_spec = (
+)
+
+
+class listDataSourceArchives_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('listDataSourceArchives_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(listDataSourceArchives_result)
+listDataSourceArchives_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class updateDataSourceModality_args(object):
+    """
+    Attributes:
+     - name
+     - dataModality
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, name = None, dataModality = None,):
+        self.name = name
+        self.dataModality = dataModality
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.dataModality = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('updateDataSourceModality_args')
+        if self.name is not None:
+            oprot.writeFieldBegin('name', TType.STRING, 1)
+            oprot.writeString(self.name.encode('utf-8') if sys.version_info[0] == 2 else self.name)
+            oprot.writeFieldEnd()
+        if self.dataModality is not None:
+            oprot.writeFieldBegin('dataModality', TType.STRING, 2)
+            oprot.writeString(self.dataModality.encode('utf-8') if sys.version_info[0] == 2 else self.dataModality)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(updateDataSourceModality_args)
+updateDataSourceModality_args.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'name', 'UTF8', None, ),  # 1
+    (2, TType.STRING, 'dataModality', 'UTF8', None, ),  # 2
+)
+
+
+class updateDataSourceModality_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('updateDataSourceModality_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(updateDataSourceModality_result)
+updateDataSourceModality_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class previewDataset_args(object):
+    """
+    Attributes:
+     - request
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, request = None,):
+        self.request = request
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.request = DatasetCreateRequest()
+                    self.request.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('previewDataset_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 1)
+            self.request.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(previewDataset_args)
+previewDataset_args.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'request', [DatasetCreateRequest, None], None, ),  # 1
+)
+
+
+class previewDataset_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('previewDataset_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(previewDataset_result)
+previewDataset_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class toggleDatasetVersion_args(object):
+    """
+    Attributes:
+     - versionId
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, versionId = None,):
+        self.versionId = versionId
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.versionId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('toggleDatasetVersion_args')
+        if self.versionId is not None:
+            oprot.writeFieldBegin('versionId', TType.I64, 1)
+            oprot.writeI64(self.versionId)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(toggleDatasetVersion_args)
+toggleDatasetVersion_args.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'versionId', None, None, ),  # 1
+)
+
+
+class toggleDatasetVersion_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('toggleDatasetVersion_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(toggleDatasetVersion_result)
+toggleDatasetVersion_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class updateDatasetVersion_args(object):
+    """
+    Attributes:
+     - versionId
+     - remark
+     - dataModality
+     - category
+     - tags
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, versionId = None, remark = None, dataModality = None, category = None, tags = None,):
+        self.versionId = versionId
+        self.remark = remark
+        self.dataModality = dataModality
+        self.category = category
+        self.tags = tags
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.versionId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.remark = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.dataModality = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.category = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.STRING:
+                    self.tags = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('updateDatasetVersion_args')
+        if self.versionId is not None:
+            oprot.writeFieldBegin('versionId', TType.I64, 1)
+            oprot.writeI64(self.versionId)
+            oprot.writeFieldEnd()
+        if self.remark is not None:
+            oprot.writeFieldBegin('remark', TType.STRING, 2)
+            oprot.writeString(self.remark.encode('utf-8') if sys.version_info[0] == 2 else self.remark)
+            oprot.writeFieldEnd()
+        if self.dataModality is not None:
+            oprot.writeFieldBegin('dataModality', TType.STRING, 3)
+            oprot.writeString(self.dataModality.encode('utf-8') if sys.version_info[0] == 2 else self.dataModality)
+            oprot.writeFieldEnd()
+        if self.category is not None:
+            oprot.writeFieldBegin('category', TType.STRING, 4)
+            oprot.writeString(self.category.encode('utf-8') if sys.version_info[0] == 2 else self.category)
+            oprot.writeFieldEnd()
+        if self.tags is not None:
+            oprot.writeFieldBegin('tags', TType.STRING, 5)
+            oprot.writeString(self.tags.encode('utf-8') if sys.version_info[0] == 2 else self.tags)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(updateDatasetVersion_args)
+updateDatasetVersion_args.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'versionId', None, None, ),  # 1
+    (2, TType.STRING, 'remark', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'dataModality', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'category', 'UTF8', None, ),  # 4
+    (5, TType.STRING, 'tags', 'UTF8', None, ),  # 5
+)
+
+
+class updateDatasetVersion_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('updateDatasetVersion_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(updateDatasetVersion_result)
+updateDatasetVersion_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class updateFunctionDesc_args(object):
+    """
+    Attributes:
+     - name
+     - type
+     - desc
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, name = None, type = None, desc = None,):
+        self.name = name
+        self.type = type
+        self.desc = desc
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.type = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.desc = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('updateFunctionDesc_args')
+        if self.name is not None:
+            oprot.writeFieldBegin('name', TType.STRING, 1)
+            oprot.writeString(self.name.encode('utf-8') if sys.version_info[0] == 2 else self.name)
+            oprot.writeFieldEnd()
+        if self.type is not None:
+            oprot.writeFieldBegin('type', TType.STRING, 2)
+            oprot.writeString(self.type.encode('utf-8') if sys.version_info[0] == 2 else self.type)
+            oprot.writeFieldEnd()
+        if self.desc is not None:
+            oprot.writeFieldBegin('desc', TType.STRING, 3)
+            oprot.writeString(self.desc.encode('utf-8') if sys.version_info[0] == 2 else self.desc)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(updateFunctionDesc_args)
+updateFunctionDesc_args.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'name', 'UTF8', None, ),  # 1
+    (2, TType.STRING, 'type', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'desc', 'UTF8', None, ),  # 3
+)
+
+
+class updateFunctionDesc_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('updateFunctionDesc_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(updateFunctionDesc_result)
+updateFunctionDesc_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class saveSqlSnippet_args(object):
+    """
+    Attributes:
+     - request
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, request = None,):
+        self.request = request
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.request = SqlSnippetRequest()
+                    self.request.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('saveSqlSnippet_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 1)
+            self.request.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(saveSqlSnippet_args)
+saveSqlSnippet_args.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'request', [SqlSnippetRequest, None], None, ),  # 1
+)
+
+
+class saveSqlSnippet_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('saveSqlSnippet_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(saveSqlSnippet_result)
+saveSqlSnippet_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class listSqlSnippets_args(object):
+    """
+    Attributes:
+     - name
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, name = None,):
+        self.name = name
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('listSqlSnippets_args')
+        if self.name is not None:
+            oprot.writeFieldBegin('name', TType.STRING, 1)
+            oprot.writeString(self.name.encode('utf-8') if sys.version_info[0] == 2 else self.name)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(listSqlSnippets_args)
+listSqlSnippets_args.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'name', 'UTF8', None, ),  # 1
+)
+
+
+class listSqlSnippets_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('listSqlSnippets_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(listSqlSnippets_result)
+listSqlSnippets_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class getSqlSnippet_args(object):
+    """
+    Attributes:
+     - id
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, id = None,):
+        self.id = id
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('getSqlSnippet_args')
+        if self.id is not None:
+            oprot.writeFieldBegin('id', TType.I64, 1)
+            oprot.writeI64(self.id)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(getSqlSnippet_args)
+getSqlSnippet_args.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'id', None, None, ),  # 1
+)
+
+
+class getSqlSnippet_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('getSqlSnippet_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(getSqlSnippet_result)
+getSqlSnippet_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class deleteSqlSnippet_args(object):
+    """
+    Attributes:
+     - id
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, id = None,):
+        self.id = id
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('deleteSqlSnippet_args')
+        if self.id is not None:
+            oprot.writeFieldBegin('id', TType.I64, 1)
+            oprot.writeI64(self.id)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(deleteSqlSnippet_args)
+deleteSqlSnippet_args.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'id', None, None, ),  # 1
+)
+
+
+class deleteSqlSnippet_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('deleteSqlSnippet_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(deleteSqlSnippet_result)
+deleteSqlSnippet_result.thrift_spec = (
     (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
 )
 fix_spec(all_structs)

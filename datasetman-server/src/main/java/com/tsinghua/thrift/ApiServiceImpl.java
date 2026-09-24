@@ -94,6 +94,12 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
     @Autowired
     private QualityDetectionService qualityDetectionService;
 
+    @Autowired
+    private com.tsinghua.service.SqlSnippetService sqlSnippetService;
+
+    @Autowired
+    private com.tsinghua.service.FunctionArchiveService functionArchiveService;
+
     // ========== Data Source Interface - Match DataSourceController ==========
 
     @Override
@@ -404,21 +410,7 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
     public com.tsinghua.thrift.api.Result createDataset(com.tsinghua.thrift.api.DatasetCreateRequest request) throws TException {
         try {
             log.info("Thrift RPC: Create dataset version");
-            com.tsinghua.dto.DatasetCreateRequest dto = new com.tsinghua.dto.DatasetCreateRequest();
-            dto.setDatasetName(request.getDatasetName());
-            dto.setProvenanceType(request.getProvenanceType());
-            if (request.isSetSourcePath()) dto.setSourcePath(request.getSourcePath());
-            if (request.isSetImportFileName()) dto.setImportFileName(request.getImportFileName());
-            if (request.isSetImportFileBase64()) dto.setImportFileBase64(request.getImportFileBase64());
-            if (request.isSetImportKeyColumn()) dto.setImportKeyColumn(request.getImportKeyColumn());
-            if (request.isSetSqlSnippetId()) dto.setSqlSnippetId(request.getSqlSnippetId());
-            if (request.isSetUpstreamVersionIds()) dto.setUpstreamVersionIds(request.getUpstreamVersionIds());
-            if (request.isSetUdfNames()) dto.setUdfNames(request.getUdfNames());
-            if (request.isSetTransformCompareCreateTime()) dto.setTransformCompareCreateTime(request.getTransformCompareCreateTime());
-            if (request.isSetDescription()) dto.setDescription(request.getDescription());
-            if (request.isSetDataModality()) dto.setDataModality(request.getDataModality());
-            if (request.isSetProject()) dto.setProject(request.getProject());
-            if (request.isSetRemark()) dto.setRemark(request.getRemark());
+            com.tsinghua.dto.DatasetCreateRequest dto = convertToDatasetCreateRequest(request);
             com.tsinghua.entity.DatasetVersionEntity entity = datasetCreationService.create(dto);
             String jsonData = convertEntityToJson(entity);
             com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "创建成功");
@@ -1675,6 +1667,37 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
         return dto;
     }
 
+    private com.tsinghua.dto.DatasetCreateRequest convertToDatasetCreateRequest(com.tsinghua.thrift.api.DatasetCreateRequest thriftRequest) {
+        com.tsinghua.dto.DatasetCreateRequest dto = new com.tsinghua.dto.DatasetCreateRequest();
+        dto.setDatasetName(thriftRequest.getDatasetName());
+        dto.setProvenanceType(thriftRequest.getProvenanceType());
+        if (thriftRequest.isSetSourcePath()) dto.setSourcePath(thriftRequest.getSourcePath());
+        if (thriftRequest.isSetImportFileName()) dto.setImportFileName(thriftRequest.getImportFileName());
+        if (thriftRequest.isSetImportFileBase64()) dto.setImportFileBase64(thriftRequest.getImportFileBase64());
+        if (thriftRequest.isSetImportKeyColumn()) dto.setImportKeyColumn(thriftRequest.getImportKeyColumn());
+        if (thriftRequest.isSetSqlSnippetId()) dto.setSqlSnippetId(thriftRequest.getSqlSnippetId());
+        if (thriftRequest.isSetUpstreamVersionIds()) dto.setUpstreamVersionIds(thriftRequest.getUpstreamVersionIds());
+        if (thriftRequest.isSetUdfNames()) dto.setUdfNames(thriftRequest.getUdfNames());
+        if (thriftRequest.isSetTransformCompareCreateTime()) dto.setTransformCompareCreateTime(thriftRequest.getTransformCompareCreateTime());
+        if (thriftRequest.isSetDescription()) dto.setDescription(thriftRequest.getDescription());
+        if (thriftRequest.isSetDataModality()) dto.setDataModality(thriftRequest.getDataModality());
+        if (thriftRequest.isSetProject()) dto.setProject(thriftRequest.getProject());
+        if (thriftRequest.isSetRemark()) dto.setRemark(thriftRequest.getRemark());
+        if (thriftRequest.isSetCategory()) dto.setCategory(thriftRequest.getCategory());
+        if (thriftRequest.isSetTags()) dto.setTags(thriftRequest.getTags());
+        if (thriftRequest.isSetVersionNo()) dto.setVersionNo(thriftRequest.getVersionNo());
+        return dto;
+    }
+
+    private com.tsinghua.dto.SqlSnippetRequest convertToSqlSnippetRequest(com.tsinghua.thrift.api.SqlSnippetRequest thriftRequest) {
+        com.tsinghua.dto.SqlSnippetRequest dto = new com.tsinghua.dto.SqlSnippetRequest();
+        if (thriftRequest.isSetId()) dto.setId(thriftRequest.getId());
+        dto.setName(thriftRequest.getName());
+        if (thriftRequest.isSetSqlList()) dto.setSqlList(thriftRequest.getSqlList());
+        if (thriftRequest.isSetDescription()) dto.setDescription(thriftRequest.getDescription());
+        return dto;
+    }
+
     // JSON conversion utility methods
     private String convertEntityToJson(Object entity) throws Exception {
         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -1900,6 +1923,165 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
             return result;
         } catch (Exception e) {
             return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    // ========== 数据源档案接口 ==========
+
+    @Override
+    public com.tsinghua.thrift.api.Result listDataSourceArchives() throws TException {
+        try {
+            log.info("Thrift RPC: List data source archives");
+            java.util.List<com.tsinghua.entity.DataArchiveEntity> archives = dataSourceService.dataSourceArchives();
+            String jsonData = convertListToJson(archives);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: List data source archives failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result updateDataSourceModality(String name, String dataModality) throws TException {
+        try {
+            log.info("Thrift RPC: Update data source modality: {}", name);
+            if (name == null || name.trim().isEmpty()) {
+                return new com.tsinghua.thrift.api.Result(false, "数据源标识不能为空");
+            }
+            dataSourceService.updateDataSourceModality(name.trim(), dataModality == null ? "" : dataModality);
+            return new com.tsinghua.thrift.api.Result(true, "保存成功");
+        } catch (Exception e) {
+            log.error("Thrift RPC: Update data source modality failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Update failed: " + e.getMessage());
+        }
+    }
+
+    // ========== 数据集版本档案接口 ==========
+
+    @Override
+    public com.tsinghua.thrift.api.Result previewDataset(com.tsinghua.thrift.api.DatasetCreateRequest request) throws TException {
+        try {
+            log.info("Thrift RPC: Preview dataset storage path");
+            com.tsinghua.dto.DatasetCreateRequest dto = convertToDatasetCreateRequest(request);
+            com.tsinghua.dto.DatasetPathPreviewDTO preview = datasetCreationService.preview(dto);
+            String jsonData = convertEntityToJson(preview);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Preview dataset storage path failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Preview failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result toggleDatasetVersion(long versionId) throws TException {
+        try {
+            log.info("Thrift RPC: Toggle dataset version: {}", versionId);
+            boolean disabled = datasetVersionService.toggleVersion(versionId);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, disabled ? "已禁用" : "已启用");
+            result.setData(String.valueOf(disabled));
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Toggle dataset version failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Toggle failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result updateDatasetVersion(long versionId, String remark, String dataModality, String category, String tags) throws TException {
+        try {
+            log.info("Thrift RPC: Update dataset version archive: {}", versionId);
+            datasetVersionService.updateVersion(versionId, remark, dataModality, category, tags);
+            return new com.tsinghua.thrift.api.Result(true, "更新成功");
+        } catch (Exception e) {
+            log.error("Thrift RPC: Update dataset version archive failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Update failed: " + e.getMessage());
+        }
+    }
+
+    // ========== 函数说明接口 ==========
+
+    @Override
+    public com.tsinghua.thrift.api.Result updateFunctionDesc(String name, String type, String desc) throws TException {
+        try {
+            log.info("Thrift RPC: Update function desc: {}", name);
+            if (name == null || name.trim().isEmpty()) {
+                return new com.tsinghua.thrift.api.Result(false, "函数名称不能为空");
+            }
+            String archiveType = "udf".equalsIgnoreCase(type) ? "udf" : "transform";
+            functionArchiveService.updateDesc(name.trim(), archiveType, desc == null ? "" : desc);
+            return new com.tsinghua.thrift.api.Result(true, "保存成功");
+        } catch (Exception e) {
+            log.error("Thrift RPC: Update function desc failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Update failed: " + e.getMessage());
+        }
+    }
+
+    // ========== SQL脚本管理接口 ==========
+
+    @Override
+    public com.tsinghua.thrift.api.Result saveSqlSnippet(com.tsinghua.thrift.api.SqlSnippetRequest request) throws TException {
+        try {
+            log.info("Thrift RPC: Save sql snippet: {}", request.getName());
+            if (request.getName() == null || request.getName().trim().isEmpty()) {
+                return new com.tsinghua.thrift.api.Result(false, "SQL脚本名称不能为空");
+            }
+            com.tsinghua.entity.SqlSnippetEntity entity = sqlSnippetService.saveSnippet(convertToSqlSnippetRequest(request));
+            String jsonData = convertEntityToJson(entity);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "保存成功");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Save sql snippet failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Save failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result listSqlSnippets(String name) throws TException {
+        try {
+            log.info("Thrift RPC: List sql snippets: {}", name);
+            java.util.List<com.tsinghua.entity.SqlSnippetEntity> list = sqlSnippetService.listSnippets(name);
+            String jsonData = convertListToJson(list);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: List sql snippets failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result getSqlSnippet(long id) throws TException {
+        try {
+            log.info("Thrift RPC: Get sql snippet: {}", id);
+            com.tsinghua.entity.SqlSnippetEntity entity = sqlSnippetService.queryById(id);
+            if (entity == null) {
+                return new com.tsinghua.thrift.api.Result(false, "未找到SQL脚本: " + id);
+            }
+            String jsonData = convertEntityToJson(entity);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Get sql snippet failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result deleteSqlSnippet(long id) throws TException {
+        try {
+            log.info("Thrift RPC: Delete sql snippet: {}", id);
+            sqlSnippetService.deleteSnippet(id);
+            return new com.tsinghua.thrift.api.Result(true, "删除成功");
+        } catch (Exception e) {
+            log.error("Thrift RPC: Delete sql snippet failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Delete failed: " + e.getMessage());
         }
     }
 }
