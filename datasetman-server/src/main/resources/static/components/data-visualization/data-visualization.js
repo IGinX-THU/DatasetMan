@@ -91,9 +91,10 @@ class DataVisualization extends HTMLElement {
                     </div>
                     <div class="chart-container" id="chartContainer">
                         <!-- ECharts图表将在这里渲染 -->
+                        <div id="chartOverlay" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:10; background:#fff; justify-content:center; align-items:center;"></div>
                     </div>
                 </div>
-                
+
                 <div class="operations-section">
                     <div class="operations-header">
                         <h4 class="operations-title">操作</h4>
@@ -1118,11 +1119,21 @@ class DataVisualization extends HTMLElement {
 
     // 显示覆盖层
     showChartOverlay(content) {
-        const overlay = this.shadowRoot.getElementById('chartOverlay');
-        if (overlay) {
-            overlay.innerHTML = content;
-            overlay.style.display = 'flex';
+        let overlay = this.shadowRoot.getElementById('chartOverlay');
+        if (!overlay) {
+            // 模板未包含chartOverlay时（如fallback模板或旧缓存模板）动态补建，确保提示能显示
+            const container = this.shadowRoot.getElementById('chartContainer');
+            if (!container) return;
+            overlay = document.createElement('div');
+            overlay.id = 'chartOverlay';
+            overlay.style.cssText = 'position:absolute; top:0; left:0; right:0; bottom:0; z-index:10; background:#fff; display:none; justify-content:center; align-items:center;';
+            container.appendChild(overlay);
         }
+        // 提示内容水平垂直居中
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        overlay.innerHTML = content;
+        overlay.style.display = 'flex';
     }
 
     // 隐藏覆盖层
