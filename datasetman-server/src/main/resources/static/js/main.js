@@ -1165,11 +1165,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const newVersionId = savedData?.id || savedData?.createTime;
             if (datasetHistory && newVersionId) {
                 datasetDialog.hide();
-                showComponent('datasetHistory', {
-                    versionId: newVersionId,
-                    datasetName: savedData?.datasetName,
-                    storagePath: savedData?.storagePath
-                });
+                // 触发右侧数据集树对应版本节点的点击事件进入详情页（复用节点点击的高亮、展开与左侧树联动逻辑）
+                const tree = document.getElementById('datasetTree');
+                const node = tree && tree.querySelector(`.tree-node[data-version-id="${newVersionId}"]`);
+                if (node) {
+                    node.click();
+                } else {
+                    // 树中未找到时兜底直接打开详情页
+                    showComponent('datasetHistory', {
+                        versionId: newVersionId,
+                        datasetName: savedData?.datasetName,
+                        storagePath: savedData?.storagePath
+                    });
+                }
             }
         });
     }
