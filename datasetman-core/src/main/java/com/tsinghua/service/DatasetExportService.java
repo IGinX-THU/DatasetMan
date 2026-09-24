@@ -75,7 +75,8 @@ public class DatasetExportService {
         String datasetName = version.getDatasetName();
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        try (ZipOutputStream zip = new ZipOutputStream(bos)) {
+        // 显式指定UTF-8，保证中文条目名（如"质量评估报告.pdf"）不乱码
+        try (ZipOutputStream zip = new ZipOutputStream(bos, StandardCharsets.UTF_8)) {
             // 1. 当前版本数据：文件型数据集按文件原始字节导出（与文件数据视图下载一致），
             //    其余按表导出 CSV
             if (isFileDataset(version)) {
@@ -271,7 +272,10 @@ public class DatasetExportService {
             );
             
             writer = new OutputStreamWriter(bos, "UTF-8");
-            
+
+            // 写入UTF-8 BOM，Excel打开CSV时才能正确识别中文
+            writer.write('\uFEFF');
+
             // 表头：key + 去掉表前缀的列名
             IginXHeader header = table.getHeader();
             if (header.hasTimestamp()) {
