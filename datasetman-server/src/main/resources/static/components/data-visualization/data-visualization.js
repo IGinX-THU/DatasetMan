@@ -2839,6 +2839,10 @@ class DataVisualization extends HTMLElement {
         const selectedPointsArray = Array.from(this.selectedPoints);
         const actualColumns = this.actualDataColumns || selectedPointsArray; // 优先使用实际数据列
 
+        // 原始时间戳括号小字的统一样式（浅色小字，避免干扰主内容）
+        const rawTsStyle = 'color:#999;font-size:12px;margin-left:4px;white-space:nowrap;';
+        const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
         pageData.forEach((record, index) => {
             const tr = document.createElement('tr');
 
@@ -2846,9 +2850,9 @@ class DataVisualization extends HTMLElement {
             const timeTd = document.createElement('td');
             const originalKey = record.key;
             const parsedTimestamp = record.timestamp;
-            
+
             // 根据时间单位转换时间戳
-            let displayContent = originalKey;
+            let displayContent = escapeHtml(originalKey);
             let displayTimestamp = parsedTimestamp;
             
             if (parsedTimestamp != null && !isNaN(parsedTimestamp)) {
@@ -2876,9 +2880,10 @@ class DataVisualization extends HTMLElement {
                 // 尝试转换为日期
                 const date = new Date(displayTimestamp);
                 if (!isNaN(date.getTime())) {
-                    displayContent = date.toLocaleString();
+                    // 格式化日期后用浅色小字括号保留原始时间戳，便于定位原始数据
+                    displayContent = `${date.toLocaleString()}<span style="${rawTsStyle}">(${escapeHtml(originalKey)})</span>`;
                 } else {
-                    displayContent = originalKey; // 转换失败，显示原始值
+                    displayContent = escapeHtml(originalKey); // 转换失败，显示原始值
                 }
             }
             
@@ -2889,7 +2894,8 @@ class DataVisualization extends HTMLElement {
             actualColumns.forEach(column => {
                 const td = document.createElement('td');
                 let value = record[column] !== undefined ? record[column] : record.values && record.values[column] !== undefined ? record.values[column] : '-';
-                
+                let valueIsHtml = false; // value含浅色小字括号时走innerHTML写入
+
                 // 对window_start和window_end列进行时间转换显示
                 if (column === 'window_start' && record.window_start_timestamp !== undefined) {
                     // 根据时间单位转换时间戳
@@ -2916,7 +2922,8 @@ class DataVisualization extends HTMLElement {
                     
                     const date = new Date(displayTimestamp);
                     if (!isNaN(date.getTime())) {
-                        value = date.toLocaleString();
+                        value = `${date.toLocaleString()}<span style="${rawTsStyle}">(${escapeHtml(record.window_start_timestamp)})</span>`;
+                        valueIsHtml = true;
                     } else {
                         value = record.window_start_timestamp; // 转换失败，显示原始值
                     }
@@ -2945,15 +2952,20 @@ class DataVisualization extends HTMLElement {
                     
                     const date = new Date(displayTimestamp);
                     if (!isNaN(date.getTime())) {
-                        value = date.toLocaleString();
+                        value = `${date.toLocaleString()}<span style="${rawTsStyle}">(${escapeHtml(record.window_end_timestamp)})</span>`;
+                        valueIsHtml = true;
                     } else {
                         value = record.window_end_timestamp; // 转换失败，显示原始值
                     }
                 } else if (typeof value === 'number') {
                     value = value.toFixed(2);
                 }
-                
-                td.textContent = value;
+
+                if (valueIsHtml) {
+                    td.innerHTML = value;
+                } else {
+                    td.textContent = value;
+                }
                 tr.appendChild(td);
             });
 
