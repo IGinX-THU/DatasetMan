@@ -266,6 +266,75 @@ class EvaluationCriteria extends HTMLElement {
         }
     }
 
+    showDeleteConfirm(criteria) {
+        const criteriaName = criteria && criteria.name ? criteria.name : '';
+        const dialogHtml = `
+            <div class="dialog-mask" style="
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            ">
+                <div class="dialog-content" style="
+                    background: white;
+                    border-radius: 8px;
+                    padding: 24px;
+                    max-width: 400px;
+                    width: 90%;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                ">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2329;">确认删除</h3>
+                    <p style="margin: 0 0 24px 0; color: #646a73; line-height: 1.5;">
+                        确定要删除评价准则 "${criteriaName}" 吗？<br><br>
+                        <span style="color: #f5222d;">此操作不可恢复！</span>
+                    </p>
+                    <div class="dialog-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button type="button" class="cancel-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #c9cdd4;
+                            border-radius: 4px;
+                            background: white;
+                            color: #1f2329;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">取消</button>
+                        <button type="button" class="confirm-btn" style="
+                            padding: 8px 16px;
+                            border: 1px solid #f5222d;
+                            border-radius: 4px;
+                            background: #f5222d;
+                            color: white;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">确认删除</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 移除已存在的弹窗，避免叠加
+        document.querySelectorAll('.dialog-mask').forEach(d => {
+            if (d.parentNode) d.parentNode.removeChild(d);
+        });
+
+        const dialog = document.createElement('div');
+        dialog.innerHTML = dialogHtml;
+        document.body.appendChild(dialog);
+
+        const closeDialog = () => {
+            if (dialog.parentNode) document.body.removeChild(dialog);
+        };
+
+        dialog.querySelector('.cancel-btn').addEventListener('click', closeDialog);
+        dialog.querySelector('.confirm-btn').addEventListener('click', () => {
+            closeDialog();
+            this.deleteCriteria(criteria.id || criteria.createTime);
+        });
+    }
+
     async deleteCriteria(id) {
         try {
             if (window.AppConfig && typeof window.AppConfig.delete === 'function') {
