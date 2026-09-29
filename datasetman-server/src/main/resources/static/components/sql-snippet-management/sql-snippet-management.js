@@ -586,11 +586,7 @@ class SqlSnippetManagement extends HTMLElement {
         if (uploadSqlBtn) uploadSqlBtn.addEventListener('click', () => sqlFileInput.click());
         if (sqlFileInput) sqlFileInput.addEventListener('change', (e) => this.handleSqlFileUpload(e));
 
-        if (overlay) {
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) this.closeModal();
-            });
-        }
+        // 点击遮罩不关闭弹窗，避免误触丢失已填写内容；仅通过关闭/取消按钮关闭
     }
 
     async show() {
