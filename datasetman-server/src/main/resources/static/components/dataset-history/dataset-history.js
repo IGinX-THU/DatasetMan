@@ -497,7 +497,8 @@ class DatasetHistory extends HTMLElement {
         });
 
         // 3. 初始化 ECharts
-        // 按箭头方向从上往下分层，力导向分支排斥不重叠
+        // 按箭头方向从上往下分层，力导向分支排斥不重叠；
+        // 互相不可达的独立 DAG 由 computeLayeredLayout 分布到主图四周角落
         const layout = this.computeLayeredLayout(echartsNodes, echartsLinks);
         const positions = layout.positions;
         echartsNodes.forEach(n => {
@@ -508,12 +509,11 @@ class DatasetHistory extends HTMLElement {
             }
         });
 
-        // 孤立 version 节点（无任何边）锁定 computeLayeredLayout 位置，
-        // 防止被力导向 repulsion 斥力推出画布或打乱分层
-        const connectedIds = new Set();
-        echartsLinks.forEach(l => { connectedIds.add(l.source); connectedIds.add(l.target); });
+        // 独立 DAG（非主分量）的节点整体锁定布局位置：
+        // 防止力导向把角落里的分量拉回中心与主图重新重叠，或被 repulsion 斥力推出画布
+        const detachedIds = layout.detachedIds || new Set();
         echartsNodes.forEach(n => {
-            if (n.nodeType === 'version' && !connectedIds.has(n.id)) {
+            if (detachedIds.has(n.id)) {
                 n.fixed = true;
             }
         });
@@ -797,90 +797,203 @@ class DatasetHistory extends HTMLElement {
     /**
      * 分层布局：按有向边 from→to 分层，从上往下排列。
      * y 按层（depth），x 在层内均匀分布，力导向从初始位置微调避免重叠。
-     * 返回 { positions: Map<nodeId, {x, y, layer}>, layers: {layer: [nodeId, ...]} }
+     * 互相不可达的独立 DAG（弱连通分量）各自独立分层后，
+     * 围绕主图（focus 所在分量）分布在四周角落，避免不同 DAG 叠在一起。
+     * 返回 { positions: Map<nodeId, {x, y, layer}>, layers: {layer: [nodeId, ...]}, detachedIds: Set<nodeId> }
      */
     computeLayeredLayout(echartsNodes, echartsLinks) {
         const nodeIds = echartsNodes.map(n => n.id);
         const idSet = new Set(nodeIds);
 
-        // 构建有向邻接表
+        // 邻接表：有向用于分层，无向用于划分连通分量
         const outgoing = new Map();
         const incoming = new Map();
-        nodeIds.forEach(id => { outgoing.set(id, new Set()); incoming.set(id, new Set()); });
+        const undirected = new Map();
+        nodeIds.forEach(id => {
+            outgoing.set(id, new Set());
+            incoming.set(id, new Set());
+            undirected.set(id, new Set());
+        });
         echartsLinks.forEach(l => {
             if (idSet.has(l.source) && idSet.has(l.target)) {
                 outgoing.get(l.source).add(l.target);
                 incoming.get(l.target).add(l.source);
+                undirected.get(l.source).add(l.target);
+                undirected.get(l.target).add(l.source);
             }
         });
 
-        // 找 focus 节点作为根
-        const focusNode = echartsNodes.find(n => n.nodeType === 'version' && n.versionData && n.versionData.focus);
-        const rootId = focusNode ? focusNode.id : nodeIds[0];
-
-        // 从 focus 节点出发，向下游 BFS（layer 递增，往下），向上游 BFS（layer 递减，往上）
-        const layerMap = new Map();
-        layerMap.set(rootId, 0);
-
-        const downQueue = [rootId];
-        while (downQueue.length) {
-            const cur = downQueue.shift();
-            const curLayer = layerMap.get(cur);
-            outgoing.get(cur).forEach(nb => {
-                if (!layerMap.has(nb)) {
-                    layerMap.set(nb, curLayer + 1);
-                    downQueue.push(nb);
-                }
-            });
-        }
-
-        const upQueue = [rootId];
-        while (upQueue.length) {
-            const cur = upQueue.shift();
-            const curLayer = layerMap.get(cur);
-            incoming.get(cur).forEach(nb => {
-                if (!layerMap.has(nb)) {
-                    layerMap.set(nb, curLayer - 1);
-                    upQueue.push(nb);
-                }
-            });
-        }
-
-        // 未被 BFS 到的孤立节点
-        const maxLayer = Math.max(0, ...layerMap.values());
-        const minLayer = Math.min(0, ...layerMap.values());
+        // 划分弱连通分量：每个互相不可达的独立 DAG 一个分量
+        const compIndexOf = new Map();
+        const components = [];
         nodeIds.forEach(id => {
-            if (!layerMap.has(id)) layerMap.set(id, maxLayer + 1);
+            if (compIndexOf.has(id)) return;
+            const comp = { ids: [], rect: null };
+            const queue = [id];
+            compIndexOf.set(id, components.length);
+            while (queue.length) {
+                const cur = queue.shift();
+                comp.ids.push(cur);
+                undirected.get(cur).forEach(nb => {
+                    if (!compIndexOf.has(nb)) {
+                        compIndexOf.set(nb, components.length);
+                        queue.push(nb);
+                    }
+                });
+            }
+            components.push(comp);
         });
 
-        // 按层分组
-        const layers = {};
-        layerMap.forEach((layer, id) => {
-            if (!layers[layer]) layers[layer] = [];
-            layers[layer].push(id);
-        });
+        // focus 所在分量为主动态图；无 focus 时取节点最多的分量
+        const focusNode = echartsNodes.find(n => n.nodeType === 'version' && n.versionData && n.versionData.focus);
+        const focusId = focusNode ? focusNode.id : null;
+        const mainComp = focusId != null
+            ? components[compIndexOf.get(focusId)]
+            : components.reduce((a, b) => (b.ids.length > a.ids.length ? b : a), components[0]);
 
-        // 计算坐标：y 按层（从上到下），x 在层内均匀分布
-        const positions = new Map();
         const rowHeight = 160;  // 层间距（垂直）
         const colWidth = 200;   // 同层节点间距（水平）
-        const sortedLayers = Object.keys(layers).map(Number).sort((a, b) => a - b);
-        const maxCount = Math.max(...Object.values(layers).map(arr => arr.length));
-        const centerX = Math.max(500, maxCount * colWidth / 2 + 200);
+        const positions = new Map();
+        const layers = {};
 
-        sortedLayers.forEach(layer => {
-            const ids = layers[layer];
-            const count = ids.length;
-            ids.forEach((id, idx) => {
-                // x: 层内均匀分布，居中
-                const x = (idx - (count - 1) / 2) * colWidth + centerX;
-                // y: 按层从上到下
-                const y = (layer - minLayer) * rowHeight + 150;
-                positions.set(id, { x, y, layer });
+        // 单个分量独立分层：以分量内根节点为基准，向下游 BFS（层递增）、向上游 BFS（层递减）
+        const layoutComponent = (comp) => {
+            const ids = comp.ids;
+            // 根：优先 focus，其次无入边的源头节点，否则任取一个
+            const root = (comp === mainComp && focusId != null) ? focusId
+                : (ids.find(id => incoming.get(id).size === 0) || ids[0]);
+
+            const layerMap = new Map();
+            layerMap.set(root, 0);
+
+            const downQueue = [root];
+            while (downQueue.length) {
+                const cur = downQueue.shift();
+                const curLayer = layerMap.get(cur);
+                outgoing.get(cur).forEach(nb => {
+                    if (!layerMap.has(nb)) {
+                        layerMap.set(nb, curLayer + 1);
+                        downQueue.push(nb);
+                    }
+                });
+            }
+
+            const upQueue = [root];
+            while (upQueue.length) {
+                const cur = upQueue.shift();
+                const curLayer = layerMap.get(cur);
+                incoming.get(cur).forEach(nb => {
+                    if (!layerMap.has(nb)) {
+                        layerMap.set(nb, curLayer - 1);
+                        upQueue.push(nb);
+                    }
+                });
+            }
+
+            // 分量内仍未被 BFS 覆盖到的节点（环等特殊结构）
+            const maxLayer = Math.max(0, ...layerMap.values());
+            const minLayer = Math.min(0, ...layerMap.values());
+            ids.forEach(id => {
+                if (!layerMap.has(id)) layerMap.set(id, maxLayer + 1);
+            });
+
+            // 按层分组
+            const compLayers = {};
+            layerMap.forEach((layer, id) => {
+                if (!compLayers[layer]) compLayers[layer] = [];
+                compLayers[layer].push(id);
+            });
+
+            // 局部坐标：x 层内均匀分布（居中于 0），y 按层从上到下
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            Object.keys(compLayers).map(Number).sort((a, b) => a - b).forEach(layer => {
+                const idsInLayer = compLayers[layer];
+                idsInLayer.forEach((id, idx) => {
+                    const x = (idx - (idsInLayer.length - 1) / 2) * colWidth;
+                    const y = (layer - minLayer) * rowHeight;
+                    positions.set(id, { x, y, layer });
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                });
+            });
+            comp.rect = { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY };
+
+            Object.keys(compLayers).forEach(k => {
+                const key = Number(k);
+                layers[key] = (layers[key] || []).concat(compLayers[key]);
+            });
+        };
+
+        components.forEach(layoutComponent);
+
+        // 主分量保持局部坐标不动，其余分量绕其分布在四周角落
+        const mainRect = mainComp.rect;
+        const GAP = 220;      // 分量与主图包围盒之间的基础间距
+        const MARGIN = 100;   // 分量两两之间的最小空隙
+        const placed = [{ minX: mainRect.minX, maxX: mainRect.maxX, minY: mainRect.minY, maxY: mainRect.maxY }];
+        // 角落优先：右上、右下、左下、左上，之后依次东、西、北、南（放不下自动往外圈推）
+        const slots = [
+            { dx: 1, dy: -1 }, { dx: 1, dy: 1 }, { dx: -1, dy: 1 }, { dx: -1, dy: -1 },
+            { dx: 1, dy: 0 }, { dx: -1, dy: 0 }, { dx: 0, dy: -1 }, { dx: 0, dy: 1 }
+        ];
+
+        const detachedIds = new Set();
+        // 大的独立 DAG 先挑角落
+        const secondaries = components
+            .filter(c => c !== mainComp)
+            .sort((a, b) => b.ids.length - a.ids.length);
+
+        secondaries.forEach((comp, i) => {
+            const rect = comp.rect;
+            const w = rect.width;
+            const h = rect.height;
+            const L = mainRect.minX - GAP, R = mainRect.maxX + GAP;
+            const T = mainRect.minY - GAP, B = mainRect.maxY + GAP;
+            const slot = slots[i % slots.length];
+
+            // 初始中心：沿 slot 方向贴着主分量外扩边界放置
+            const cx = slot.dx > 0 ? R + w / 2 : slot.dx < 0 ? L - w / 2 : (L + R) / 2;
+            const cy = slot.dy > 0 ? B + h / 2 : slot.dy < 0 ? T - h / 2 : (T + B) / 2;
+            const r = { minX: cx - w / 2, maxX: cx + w / 2, minY: cy - h / 2, maxY: cy + h / 2 };
+
+            // 与已放置分量重叠时，沿两中心连线方向逐步外推，直到互不重叠
+            const step = 60;
+            for (let iter = 0; iter < 300; iter++) {
+                let moved = false;
+                for (const p of placed) {
+                    const overlapping = r.minX - MARGIN < p.maxX && r.maxX + MARGIN > p.minX
+                        && r.minY - MARGIN < p.maxY && r.maxY + MARGIN > p.minY;
+                    if (!overlapping) continue;
+                    let ddx = (r.minX + r.maxX) / 2 - (p.minX + p.maxX) / 2;
+                    let ddy = (r.minY + r.maxY) / 2 - (p.minY + p.maxY) / 2;
+                    if (Math.abs(ddx) < 1 && Math.abs(ddy) < 1) { ddx = slot.dx || 1; ddy = slot.dy; }
+                    const len = Math.max(1, Math.hypot(ddx, ddy));
+                    r.minX += ddx / len * step;
+                    r.maxX += ddx / len * step;
+                    r.minY += ddy / len * step;
+                    r.maxY += ddy / len * step;
+                    moved = true;
+                }
+                if (!moved) break;
+            }
+            placed.push(r);
+
+            // 分量局部坐标 -> 全局坐标（按摆放后的中心平移）
+            const fcx = (r.minX + r.maxX) / 2;
+            const fcy = (r.minY + r.maxY) / 2;
+            const ocx = (rect.minX + rect.maxX) / 2;
+            const ocy = (rect.minY + rect.maxY) / 2;
+            comp.ids.forEach(id => {
+                const pos = positions.get(id);
+                pos.x += fcx - ocx;
+                pos.y += fcy - ocy;
+                detachedIds.add(id);
             });
         });
 
-        return { positions, layers };
+        return { positions, layers, detachedIds };
     }
 
     /** 从 derivationConfig 中提取操作节点的展示信息 */
