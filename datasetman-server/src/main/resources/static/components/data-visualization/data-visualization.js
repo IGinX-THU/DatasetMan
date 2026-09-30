@@ -447,6 +447,16 @@ class DataVisualization extends HTMLElement {
 
         // 如果不保持查询条件，自动设置默认时间
         if (!keepQueryConditions) {
+            // 切换节点时重置降采样函数与时间间隔到刚进页面的初始状态（模板默认选中项，当前为FIRST_VALUE），避免残留上个节点手动切换的值
+            const aggregationSelect = this.shadowRoot.getElementById('aggregationFunction');
+            if (aggregationSelect) {
+                const defaultOption = aggregationSelect.querySelector('option[selected]');
+                aggregationSelect.value = defaultOption ? defaultOption.value : '';
+            }
+            const precisionInput = this.shadowRoot.getElementById('precision');
+            if (precisionInput) {
+                precisionInput.value = '';
+            }
             await this.setDefaultTimeRange();
         }
 

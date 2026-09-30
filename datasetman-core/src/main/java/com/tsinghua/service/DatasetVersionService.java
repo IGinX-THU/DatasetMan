@@ -287,6 +287,7 @@ public class DatasetVersionService {
     public List<DatasetVersionEntity> queryVersionPage(com.tsinghua.dto.DatasetListQueryRequest request) {
         StringBuilder sql = new StringBuilder("SELECT * FROM ").append(VERSION_PREFIX).append(" WHERE 1=1");
         sql.append(buildListFilters(request));
+        sql.append(buildPermissionFilter());
         sql.append(" ORDER BY createTime DESC")
            .append(" LIMIT ").append(request.getPageSize())
            .append(" OFFSET ").append((request.getPageNum() - 1) * request.getPageSize())
@@ -298,7 +299,9 @@ public class DatasetVersionService {
     public long countVersionPage(com.tsinghua.dto.DatasetListQueryRequest request) {
         try {
             StringBuilder sql = new StringBuilder("SELECT COUNT(1) FROM ").append(VERSION_PREFIX).append(" WHERE 1=1");
-            sql.append(buildListFilters(request)).append(";");
+            sql.append(buildListFilters(request));
+            sql.append(buildPermissionFilter());
+            sql.append(";");
             SessionExecuteSqlResult res = iginxSession.executeSql(sql.toString());
             Object v = res.getValues().get(0).get(0);
             return v == null ? 0 : Long.parseLong(v.toString());
@@ -306,6 +309,19 @@ public class DatasetVersionService {
             log.error("统计数据集版本总数失败", e);
             return 0;
         }
+    }
+
+    /** 数据权限过滤：管理员可见全部，普通用户仅可见自己创建（owner 为当前用户）的版本 */
+    private String buildPermissionFilter() {
+        if (AuthUtil.isAdmin()) {
+            return "";
+        }
+        String user = AuthUtil.getCurrentUsername();
+        if (user == null || user.trim().isEmpty()) {
+            // 无法识别用户时按无可访问数据处理
+            return " AND owner = '__no_permission__'";
+        }
+        return " AND owner = '" + escape(user) + "'";
     }
 
     private String buildListFilters(com.tsinghua.dto.DatasetListQueryRequest request) {

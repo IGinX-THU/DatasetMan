@@ -135,7 +135,7 @@ class QualityAssessment extends HTMLElement {
             const result = await window.AppConfig.post('evaluationCriteria', 'query', { pageNum: 1, pageSize: 100 });
             const list = (result.success || result.code === 200) ? (result.data || []) : [];
             const current = select.value;
-            select.innerHTML = '<option value="">默认权重（各20%）</option>'
+            select.innerHTML = '<option value="">平均权重</option>'
                 + list.map(c => `<option value="${c.id || c.createTime}">${this.escapeHtml(c.name || '')}</option>`).join('');
             if (current) select.value = current;
         } catch (error) {
@@ -411,7 +411,7 @@ class QualityAssessment extends HTMLElement {
                 ${sampleInfo}
                 <div class="qa-dqi-card" style="display:flex;">
                     <div>
-                        <div class="qa-dqi-label">综合得分（权重加权，默认各20%）</div>
+                        <div class="qa-dqi-label">综合得分（权重加权，默认平均各25%）</div>
                         <div class="qa-dqi-value">${report.score ?? report.dqi}</div>
                     </div>
                     <div style="margin-left:24px;align-self:center;">
