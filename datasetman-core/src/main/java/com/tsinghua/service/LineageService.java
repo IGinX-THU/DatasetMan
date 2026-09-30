@@ -1,6 +1,7 @@
 package com.tsinghua.service;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.tsinghua.auth.util.AuthUtil;
 import com.tsinghua.dto.DatasetChangeProcessDTO;
 import com.tsinghua.dto.LineageGraphDTO;
 import com.tsinghua.entity.DatasetLineageEntity;
@@ -133,13 +134,20 @@ public class LineageService {
             }
         }
 
+        Set<Long> visibleIds = new HashSet<>();
         for (Long id : visited) {
             DatasetVersionEntity v = datasetVersionService.queryVersion(id);
-            if (v != null) {
+            // owner 权限隔离：非管理员只能看到自己创建的版本节点
+            if (v != null && hasOwnerPermission(v)) {
                 graph.getNodes().add(toNode(v, id.equals(versionId)));
+                visibleIds.add(id);
             }
         }
         for (DatasetLineageEntity e : edges) {
+            // 两端都可见的边才返回，避免泄露无权限版本的关联信息
+            if (!visibleIds.contains(e.getFromVersionId()) || !visibleIds.contains(e.getToVersionId())) {
+                continue;
+            }
             LineageGraphDTO.Edge edge = new LineageGraphDTO.Edge();
             edge.setFrom(e.getFromVersionId());
             edge.setTo(e.getToVersionId());
@@ -154,7 +162,9 @@ public class LineageService {
      * 某个逻辑数据集的变化过程表格：每一行是一个版本，含上游引用与变换配方。
      */
     public List<DatasetChangeProcessDTO> getChangeProcess(String datasetName) {
-        List<DatasetVersionEntity> versions = datasetVersionService.listVersions(datasetName, true);
+        List<DatasetVersionEntity> versions = datasetVersionService.listVersions(datasetName, true).stream()
+                .filter(this::hasOwnerPermission)
+                .collect(Collectors.toList());
         Map<Long, DatasetVersionEntity> cache = new HashMap<>();
         versions.forEach(v -> cache.put(versionKey(v), v));
 
@@ -196,8 +206,19 @@ public class LineageService {
         return rows;
     }
 
-    private LineageGraphDTO.Node toNode(DatasetVersionEntity v, boolean focus) {
-        LineageGraphDTO.Node node = new LineageGraphDTO.Node();
+    /** owner 权限判断：管理员可见全部，普通用户仅可见自己创建的版本 */
+    private boolean hasOwnerPermission(DatasetVersionEntity v) {
+        if (v == null) {
+            return false;
+        }
+        if (AuthUtil.isAdmin()) {
+            return true;
+        }
+        String user = AuthUtil.getCurrentUsername();
+        return user != null && user.equals(v.getOwner());
+    }
+
+    private LineageGraphDTO.Node toNode(DatasetVersionEntity v, boolean focus) {        LineageGraphDTO.Node node = new LineageGraphDTO.Node();
         node.setVersionId(versionKey(v));
         node.setDatasetName(v.getDatasetName());
         node.setVersionNo(v.getVersionNo());
