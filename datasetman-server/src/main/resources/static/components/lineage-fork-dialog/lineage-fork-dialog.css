@@ -1,0 +1,262 @@
+.fork-dialog-mask {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 3500;
+    align-items: center;
+    justify-content: center;
+}
+
+.fork-dialog-mask.show {
+    display: flex;
+}
+
+.fork-dialog {
+    background: #fff;
+    border-radius: 10px;
+    width: 760px;
+    max-width: 92vw;
+    max-height: 86vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.25);
+    overflow: hidden;
+}
+
+.fork-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #fff7ed;
+}
+
+.fork-dialog-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #9a3412;
+}
+
+.fork-dialog-close {
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    cursor: pointer;
+    color: #9a3412;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    border-radius: 4px;
+}
+
+.fork-dialog-close:hover {
+    background: #ffedd5;
+}
+
+.fork-dialog-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    font-size: 13px;
+    color: #374151;
+}
+
+.fork-notice {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    line-height: 1.7;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.fork-step {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+.fork-step-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    background: #fafafa;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.fork-step-no {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #f97316;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.fork-step-name {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.fork-step-version {
+    color: #6b7280;
+}
+
+.fork-step-plan {
+    margin-left: auto;
+    color: #c2410c;
+    font-size: 12px;
+}
+
+.fork-step-body {
+    padding: 10px 14px;
+}
+
+.fork-step-body textarea {
+    width: 100%;
+    min-height: 110px;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    line-height: 1.6;
+    box-sizing: border-box;
+    resize: vertical;
+}
+
+.fork-step-body textarea:focus {
+    outline: none;
+    border-color: #f97316;
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.15);
+}
+
+.fork-step-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.fork-task-list {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: #475569;
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.badge.SOURCE { background: #dbeafe; color: #1d4ed8; }
+.badge.SQL_QUERY, .badge.SELECT, .badge.SELECT_UDF { background: #cffafe; color: #0e7490; }
+.badge.TRANSFORM, .badge.TRANSFORM_SQL { background: #ede9fe; color: #6d28d9; }
+
+.fork-progress-title {
+    font-weight: 600;
+    margin: 6px 0 10px;
+    color: #1f2937;
+}
+
+.fork-progress-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+}
+
+.fork-progress-step .status-icon {
+    width: 18px;
+    text-align: center;
+}
+
+.fork-progress-step.PENDING .status-icon { color: #cbd5e1; }
+.fork-progress-step.RUNNING .status-icon { color: #f97316; }
+.fork-progress-step.SUCCESS .status-icon { color: #16a34a; }
+.fork-progress-step.FAILED .status-icon { color: #dc2626; }
+
+.fork-progress-step.RUNNING { background: #fff7ed; border-color: #fdba74; }
+.fork-progress-step.SUCCESS { background: #f0fdf4; border-color: #bbf7d0; }
+.fork-progress-step.FAILED { background: #fef2f2; border-color: #fecaca; }
+
+.fork-progress-status {
+    margin-left: auto;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.fork-progress-step.FAILED .fork-progress-status { color: #dc2626; }
+
+.fork-progress-message {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #b91c1c;
+    word-break: break-all;
+}
+
+.fork-progress-message.ok {
+    color: #15803d;
+}
+
+.fork-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 20px;
+    border-top: 1px solid #e5e7eb;
+    background: #fafafa;
+}
+
+.fork-btn {
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+}
+
+.fork-btn:hover {
+    border-color: #f97316;
+    color: #c2410c;
+}
+
+.fork-btn.primary {
+    background: #f97316;
+    border-color: #f97316;
+    color: #fff;
+}
+
+.fork-btn.primary:hover {
+    background: #ea580c;
+    color: #fff;
+}
+
+.fork-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
