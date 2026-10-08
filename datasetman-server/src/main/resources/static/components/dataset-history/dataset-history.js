@@ -514,13 +514,13 @@ class DatasetHistory extends HTMLElement {
         // 主图包围盒与中心（数据坐标），供 autoZoomToFit 保证主图完整可见并以其为视觉中心
         this._mainRect = layout.mainRect || null;
         this._mainCenterPos = layout.mainCenter || null;
-        if (detachedIds.size > 0) {
-            // 多分量（存在互相不可达的独立 DAG）：全部节点锁定 computeLayeredLayout 的位置。
-            // 角落分量锁死，防止被力导向拉回中心与主图重叠；主图也整体锁死——
-            // 重力虽已关闭，但弹簧会把主图撑大（边的松弛长度大于分层间距）、
-            // 角落分量的斥力会把主图推歪，导致 autoZoomToFit 适配后节点再次漂出视口。
-            // 全锁定后布局完全确定（主图分层居中 + 角落分量环布），分层间距本身
-            // 大于节点尺寸与标签，不会重叠；稳定检测立刻通过，视口适配一次到位。
+        // 大图（存在互相不可达的独立 DAG，或节点总数较多时）一律锁定分层布局位置：
+        // 力导向在大图上斥力各向同性，会把分层初始化搅成放射状，
+        // 节点散逸出视口、只留下操作节点悬在中心，完全不可读
+        const useDeterministicLayout = detachedIds.size > 0 || echartsNodes.length > 20;
+        if (useDeterministicLayout) {
+            // 全部节点锁定 computeLayeredLayout 的位置，布局完全确定：
+            // 主图分层排布（超宽层自动折行）+ 角落分量环布，稳定检测立刻通过，视口适配一次到位
             echartsNodes.forEach(n => { n.fixed = true; });
 
             // 估算 autoZoomToFit 的缩放比：节点符号是固定像素、不随视图缩放，
@@ -618,11 +618,10 @@ class DatasetHistory extends HTMLElement {
             edgeLength = [100, Math.min(400, 200 + nodeCount * 30)];
             gravity = Math.max(0.0005, 0.02 - nodeCount * 0.0008);
         }
-        // 存在不可达的独立 DAG 时关闭重力：ECharts 力导向的重力以全部节点包围盒中心为目标
-        // （含四周角落里锁定的分量），会把自由的主图持续拽向角落，直到贴近才被斥力拦住，
-        // 导致主图节点贴上甚至叠上角落的孤立节点（如禁用置灰版本）。
-        // 无重力时主图只受内部弹簧与斥力作用，只会被角落分量推离，不会再贴近。
-        if (detachedIds.size > 0) {
+        // 大图（确定性布局）时关闭重力并锁定位置，力导向不再参与：
+        // ECharts 力导向的重力以全部节点包围盒中心为目标，会把自由的主图
+        // 持续拽向角落或中心，叠加高斥力后布局完全失控
+        if (useDeterministicLayout) {
             gravity = 0;
         }
         
@@ -776,7 +775,7 @@ class DatasetHistory extends HTMLElement {
         const cs = seriesModel.coordinateSystem;
         const width = chart.getWidth();
         const height = chart.getHeight();
-        const padding = 20; // 边距
+        const padding = 36; // 边距：容纳边缘节点的符号半径与下方标签外伸
 
         // 同时记录布局坐标与屏幕像素坐标的包围盒
         let lMinX = Infinity, lMaxX = -Infinity, lMinY = Infinity, lMaxY = -Infinity;
