@@ -140,6 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'permissionManagement',
             'datasetHistory',
             'datasetDialog',
+            'lineageForkDialog',
             'transformJob',
             'transformCompare',
             'transformManagement',
@@ -1176,6 +1177,33 @@ document.addEventListener('DOMContentLoaded', function() {
                         versionId: newVersionId,
                         datasetName: savedData?.datasetName,
                         storagePath: savedData?.storagePath
+                    });
+                }
+            }
+        });
+    }
+
+    // 6.6 监听血缘路径重跑完成事件：刷新两侧树并打开新叶子版本（复用 dataset-created 的处理模式）
+    const lineageForkDialog = document.getElementById('lineageForkDialog');
+    if (lineageForkDialog) {
+        lineageForkDialog.addEventListener('lineage-fork-completed', async function(e) {
+            console.log('血缘路径重跑完成:', e.detail);
+            const leaf = e.detail && e.detail.leafVersion;
+            if (window.loadDataSourceTree) await window.loadDataSourceTree();
+            if (window.loadDatasetTree) await window.loadDatasetTree();
+            const datasetHistory = document.getElementById('datasetHistory');
+            const newVersionId = leaf && (leaf.id || leaf.createTime);
+            if (datasetHistory && newVersionId) {
+                // 触发右侧数据集树对应版本节点点击进入详情页（旁系血缘下可看到新旧两棵版本树）
+                const tree = document.getElementById('datasetTree');
+                const node = tree && tree.querySelector(`.tree-node[data-version-id="${newVersionId}"]`);
+                if (node) {
+                    node.click();
+                } else {
+                    showComponent('datasetHistory', {
+                        versionId: newVersionId,
+                        datasetName: leaf ? leaf.datasetName : undefined,
+                        storagePath: leaf ? leaf.storagePath : undefined
                     });
                 }
             }

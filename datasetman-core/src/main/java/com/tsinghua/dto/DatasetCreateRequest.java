@@ -25,6 +25,10 @@ public class DatasetCreateRequest {
     // 2. SQL_QUERY 对应参数
     private Long sqlSnippetId;
     private List<Long> upstreamVersionIds;
+    /** 路径重跑：SQL 物化时 ${upstream} 的绑定上游（缺省回退 upstreamVersionIds），与登记的上游列表解耦 */
+    private List<Long> executionUpstreamVersionIds;
+    /** 路径重跑：true 时新版本登记为无上游的独立根，不自动挂接同名最新版本 */
+    private Boolean explicitRoot;
     private List<String> udfNames;
     /** SQL 语句与上游版本的绑定：{ upstreamVersionId(as String) -> [sqlIndex, ...] } */
     private java.util.Map<String, List<Integer>> upstreamSqlBindings;

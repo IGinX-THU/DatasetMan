@@ -32,6 +32,9 @@ public class DatasetVersionRegisterRequest {
     @ApiModelProperty(value = "上游版本ID列表；首个为主上游")
     private List<Long> upstreamVersionIds;
 
+    @ApiModelProperty(value = "是否显式独立根版本：true 时空上游也不自动挂接同名最新版本（路径重跑的起始 SQL 节点用）")
+    private Boolean explicitRoot;
+
     @ApiModelProperty(value = "变换配方：sqlSnippetId / udfNames / transformJobId / sourceId / tablePrefix 等")
     private Map<String, Object> derivationConfig;
 

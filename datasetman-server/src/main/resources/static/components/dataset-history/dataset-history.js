@@ -6,6 +6,9 @@ class DatasetHistory extends HTMLElement {
         this.changes = [];
         this.graph = { nodes: [], edges: [] };
         this.sideLineage = true; // 始终显示旁系血缘
+        this.forkMode = false;   // 路径重跑选择模式
+        this.forkChain = [];     // 已选路径版本ID（有序）
+        this._echartsNodesCache = [];
         this.attachShadow({ mode: 'open' });
     }
 
@@ -50,6 +53,10 @@ class DatasetHistory extends HTMLElement {
                 .node { cursor:pointer; } .node circle { stroke:#fff; stroke-width:3; } .node.focus circle { stroke:#111827; stroke-width:4; }
                 .node text { font-size:11px; fill:#374151; text-anchor:middle; }
                 .empty { padding:40px; color:#9ca3af; text-align:center; }
+                .fork-bar { display:none; align-items:center; gap:8px; flex-wrap:wrap; padding:8px 12px; margin-bottom:12px; background:#fff7ed; border:1px solid #fdba74; border-radius:6px; font-size:13px; color:#9a3412; }
+                .fork-chain { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+                .fork-chip { background:#ffedd5; border:1px solid #fdba74; border-radius:10px; padding:2px 8px; font-size:12px; white-space:nowrap; }
+                .fork-arrow { color:#c2410c; font-weight:600; }
 
                 /* 血缘图谱节点详情弹窗 */
                 .lineage-popup-mask {
@@ -130,7 +137,15 @@ class DatasetHistory extends HTMLElement {
                 </div>
                 <div class="card">
                     <div class="header"><h3>血缘图谱</h3></div>
-                    <div class="toolbar"><label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="checkbox" id="sideLineageToggle" checked>显示旁系血缘</label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button></div>
+                    <div class="toolbar"><label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="checkbox" id="sideLineageToggle" checked>显示旁系血缘</label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button><button id="forkPath">路径重跑</button></div>
+                    <div class="fork-bar" id="forkBar">
+                        <span id="forkBarText"></span>
+                        <span id="forkBarChain" class="fork-chain"></span>
+                        <span style="flex:1;"></span>
+                        <button class="primary" id="forkStart" disabled>开始重跑</button>
+                        <button id="forkClear">清除</button>
+                        <button id="forkExit">退出选择</button>
+                    </div>
                     <div class="graph" id="graph"></div>
                 </div>
             </div>
@@ -158,6 +173,10 @@ class DatasetHistory extends HTMLElement {
         this.shadowRoot.querySelector('#zoomOut').addEventListener('click', () => this.zoomBy(0.8));
         this.shadowRoot.querySelector('#resetView').addEventListener('click', () => this.resetView());
         this.shadowRoot.querySelector('#sideLineageToggle').addEventListener('change', () => this.loadGraph());
+        this.shadowRoot.querySelector('#forkPath').addEventListener('click', () => this.toggleForkMode());
+        this.shadowRoot.querySelector('#forkStart').addEventListener('click', () => this.startForkRun());
+        this.shadowRoot.querySelector('#forkClear').addEventListener('click', () => this.clearForkSelection());
+        this.shadowRoot.querySelector('#forkExit').addEventListener('click', () => this.exitForkMode());
 
         this.shadowRoot.querySelector('#newVersion').addEventListener('click', () => {
             this.dispatchEvent(new CustomEvent('edit-dataset', { bubbles:true, composed:true, detail:this.version }));
@@ -168,6 +187,7 @@ class DatasetHistory extends HTMLElement {
 
     async show(selection) {
         this.setAttribute('show', '');
+        this.exitForkMode();
         this.selection = typeof selection === 'object' ? selection : { storagePath: selection };
         try {
             if (!this.selection.versionId) {
@@ -602,6 +622,19 @@ class DatasetHistory extends HTMLElement {
         }
 
         const chart = window.echarts.init(container);
+
+        // 缓存节点与原始描边样式，供路径重跑选择态高亮/还原
+        echartsNodes.forEach(n => {
+            if (n.nodeType === 'version' && n.itemStyle) {
+                n._baseStyle = {
+                    borderColor: n.itemStyle.borderColor,
+                    borderWidth: n.itemStyle.borderWidth,
+                    shadowBlur: n.itemStyle.shadowBlur,
+                    shadowColor: n.itemStyle.shadowColor
+                };
+            }
+        });
+        this._echartsNodesCache = echartsNodes;
         
         // 根据节点数量动态调整力导向参数，避免节点多时挤成一团
         // 只在节点数 > 10 时才调整，节点少时使用原始默认参数
@@ -666,10 +699,16 @@ class DatasetHistory extends HTMLElement {
         };
         chart.setOption(option);
 
-        // 点击节点 -> 弹出详情弹窗（版本节点同时高亮对应行）
+        // 点击节点 -> 路径重跑选择模式下构建重跑链；否则弹出详情弹窗（版本节点同时高亮对应行）
         chart.on('click', (params) => {
             if (params.dataType !== 'node') return;
             const d = params.data;
+            if (this.forkMode) {
+                if (d.nodeType === 'version') {
+                    this.handleForkNodeClick(d.versionData);
+                }
+                return;
+            }
             if (d.nodeType === 'version') {
                 const v = d.versionData;
                 const vid = v.versionId || v.createTime;
@@ -1404,6 +1443,147 @@ class DatasetHistory extends HTMLElement {
         // 重置 = 恢复进入页面时的初始状态：按缓存数据重建图谱（重新分层布局并重跑力导向），
         // 与刷新页面的图谱完全一致，且不会重复请求后端
         this.renderGraph();
+    }
+
+    // ==================== 血缘路径重跑（分叉新版本树） ====================
+
+    toggleForkMode() {
+        if (this.forkMode) {
+            this.exitForkMode();
+            return;
+        }
+        this.forkMode = true;
+        this.forkChain = [];
+        this.shadowRoot.querySelector('#forkBar').style.display = 'flex';
+        const btn = this.shadowRoot.querySelector('#forkPath');
+        if (btn) btn.classList.add('primary');
+        this.updateForkBar();
+    }
+
+    exitForkMode() {
+        this.forkMode = false;
+        this.forkChain = [];
+        const bar = this.shadowRoot.querySelector('#forkBar');
+        if (bar) bar.style.display = 'none';
+        const btn = this.shadowRoot.querySelector('#forkPath');
+        if (btn) btn.classList.remove('primary');
+        this.applyForkHighlight();
+    }
+
+    clearForkSelection() {
+        this.forkChain = [];
+        this.updateForkBar();
+        this.applyForkHighlight();
+    }
+
+    isForkStartType(t) {
+        return t === 'SOURCE' || t === 'SQL_QUERY' || t === 'SELECT' || t === 'SELECT_UDF';
+    }
+
+    isForkStepType(t) {
+        return t === 'SQL_QUERY' || t === 'SELECT' || t === 'SELECT_UDF'
+            || t === 'TRANSFORM' || t === 'TRANSFORM_SQL';
+    }
+
+    /** 路径选择：首节点为分叉起点，后续节点必须与上一节点有直接下游血缘；重复点击末尾节点 = 回退一步 */
+    handleForkNodeClick(v) {
+        if (!v) return;
+        const vid = Number(v.versionId || v.createTime);
+        if (this.forkChain.length === 0) {
+            if (!this.isForkStartType(v.provenanceType)) {
+                this.showToast('起始节点须为「数据源挂载」或「SQL查询」版本', 'error');
+                return;
+            }
+            this.forkChain.push(vid);
+        } else {
+            const last = this.forkChain[this.forkChain.length - 1];
+            if (vid === last) {
+                this.forkChain.pop();
+            } else if (this.forkChain.includes(vid)) {
+                this.showToast('该节点已在所选路径中', 'error');
+                return;
+            } else if (this.isForkAdjacent(last, vid)) {
+                if (!this.isForkStepType(v.provenanceType)) {
+                    this.showToast('该节点类型不支持作为路径下游（仅 SQL/Transform 可重跑）', 'error');
+                    return;
+                }
+                this.forkChain.push(vid);
+            } else {
+                this.showToast('必须沿血缘下游依次选择相邻节点', 'error');
+                return;
+            }
+        }
+        this.updateForkBar();
+        this.applyForkHighlight();
+    }
+
+    isForkAdjacent(prevVid, vid) {
+        const edges = (this.graph && this.graph.edges) || [];
+        return edges.some(e => Number(e.from) === Number(prevVid) && Number(e.to) === Number(vid));
+    }
+
+    updateForkBar() {
+        const nodes = (this.graph && this.graph.nodes) || [];
+        const byVid = new Map(nodes.map(n => [Number(n.versionId || n.createTime), n]));
+        const chainHtml = this.forkChain.map(vid => {
+            const n = byVid.get(Number(vid));
+            return `<span class="fork-chip">${this.escape(n ? `${n.datasetName}/${n.versionNo}` : vid)}</span>`;
+        }).join('<span class="fork-arrow">→</span>');
+        this.shadowRoot.querySelector('#forkBarChain').innerHTML = chainHtml;
+        this.shadowRoot.querySelector('#forkBarText').textContent = this.forkChain.length === 0
+            ? '路径重跑模式：请点击起始版本节点（数据源挂载或 SQL 查询），再沿下游依次点选'
+            : `已选 ${this.forkChain.length} 个节点，可继续点选下游，或再次点击末尾节点回退`;
+        this.shadowRoot.querySelector('#forkStart').disabled = this.forkChain.length === 0;
+    }
+
+    /** 打开重跑对话框：传入路径各节点的元数据（含 derivationConfig 快照） */
+    startForkRun() {
+        if (!this.forkChain.length) return;
+        const nodes = (this.graph && this.graph.nodes) || [];
+        const byVid = new Map(nodes.map(n => [Number(n.versionId || n.createTime), n]));
+        const steps = this.forkChain.map(vid => {
+            const n = byVid.get(Number(vid));
+            return {
+                versionId: vid,
+                datasetName: n ? n.datasetName : '',
+                versionNo: n ? n.versionNo : '',
+                provenanceType: n ? n.provenanceType : '',
+                provenanceLabel: n ? (n.provenanceLabel || n.provenanceType) : '',
+                derivationConfig: (n && n.derivationConfig) || {}
+            };
+        });
+        const dlg = document.getElementById('lineageForkDialog');
+        if (!dlg) {
+            this.showToast('路径重跑组件未加载', 'error');
+            return;
+        }
+        dlg.show({ steps });
+    }
+
+    /** 选中路径节点橙色描边高亮；未选中时还原原始样式 */
+    applyForkHighlight() {
+        const container = this.shadowRoot.querySelector('#graph');
+        const chart = container && container._chart;
+        const cache = this._echartsNodesCache || [];
+        if (!chart || chart.isDisposed() || !cache.length) return;
+        const selected = new Set((this.forkChain || []).map(Number));
+        const data = cache.map(n => {
+            if (n.nodeType !== 'version' || !n._baseStyle) return n;
+            const vid = n.versionData ? Number(n.versionData.versionId || n.versionData.createTime) : null;
+            if (this.forkMode && vid != null && selected.has(vid)) {
+                n.itemStyle.borderColor = '#f97316';
+                n.itemStyle.borderWidth = 4;
+                n.itemStyle.shadowBlur = 12;
+                n.itemStyle.shadowColor = '#f97316';
+            } else {
+                n.itemStyle.borderColor = n._baseStyle.borderColor;
+                n.itemStyle.borderWidth = n._baseStyle.borderWidth;
+                n.itemStyle.shadowBlur = n._baseStyle.shadowBlur;
+                n.itemStyle.shadowColor = n._baseStyle.shadowColor;
+            }
+            return n;
+        });
+        chart.setOption({ series: [{ data }] });
     }
 
     highlight(versionId) {

@@ -85,6 +85,7 @@ public class DatasetCreationService {
         registration.setDatasetName(request.getDatasetName());
         registration.setProvenanceType(type.name());
         registration.setUpstreamVersionIds(request.getUpstreamVersionIds());
+        registration.setExplicitRoot(request.getExplicitRoot());
         registration.setDescription(request.getDescription());
         registration.setDataModality(request.getDataModality());
         registration.setProject(request.getProject());
@@ -151,7 +152,11 @@ public class DatasetCreationService {
             }
 
             storagePath = nextStoragePath(request.getDatasetName(), request.getVersionNo());
-            MaterializeResult result = materializeSql(rawSqlList, request.getUpstreamVersionIds(), storagePath);
+            // 路径重跑场景：SQL 执行绑定的上游（${upstream}）可与登记的上游列表解耦，
+            // 例如起始节点重跑时数据仍读原上游，但登记为无父级的独立根
+            List<Long> bindUpstreamIds = request.getExecutionUpstreamVersionIds() != null
+                    ? request.getExecutionUpstreamVersionIds() : request.getUpstreamVersionIds();
+            MaterializeResult result = materializeSql(rawSqlList, bindUpstreamIds, storagePath);
             registration.setRowCount(result.rowCount);
             registration.setSchemaJson(com.alibaba.fastjson2.JSONArray.toJSONString(result.paths));
         } else {

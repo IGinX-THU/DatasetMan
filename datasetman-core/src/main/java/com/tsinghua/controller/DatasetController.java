@@ -51,6 +51,9 @@ public class DatasetController {
     private LineageService lineageService;
 
     @Autowired
+    private com.tsinghua.service.LineageForkService lineageForkService;
+
+    @Autowired
     private DatasetCategoryService datasetCategoryService;
 
     @Autowired
@@ -155,6 +158,29 @@ public class DatasetController {
             @RequestParam("versionId") Long versionId,
             @RequestParam(value = "sideLineage", defaultValue = "true") boolean sideLineage) {
         return Result.success(lineageService.getLineageGraph(versionId, sideLineage));
+    }
+
+    @ApiOperation("血缘路径重跑：沿选中路径分叉生成同名数据集的新版本树")
+    @PostMapping("/lineage/fork")
+    @RequirePermission(Permission.CREATE)
+    @OperationLog(value = "血缘路径重跑", type = OperationLog.OperationType.CREATE)
+    public Result<com.tsinghua.dto.LineageForkRunDTO> forkLineage(@Validated @RequestBody com.tsinghua.dto.LineageForkRequest request) {
+        try {
+            return Result.success(lineageForkService.startFork(request));
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @ApiOperation("血缘路径重跑运行状态查询")
+    @GetMapping("/lineage/fork/status")
+    @RequirePermission(Permission.READ)
+    public Result<com.tsinghua.dto.LineageForkRunDTO> forkLineageStatus(@RequestParam("runId") Long runId) {
+        com.tsinghua.dto.LineageForkRunDTO run = lineageForkService.getRun(runId);
+        if (run == null) {
+            return Result.error("重跑记录不存在或无权查看");
+        }
+        return Result.success(run);
     }
 
     @ApiOperation("删除数据集版本")

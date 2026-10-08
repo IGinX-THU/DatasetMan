@@ -135,6 +135,8 @@ window.AppConfig = {
             versionMetas: '/api/dataset/version/metas',
             changes: '/api/dataset/changes',
             lineage: '/api/dataset/lineage',
+            lineageFork: '/api/dataset/lineage/fork',
+            lineageForkStatus: '/api/dataset/lineage/fork/status',
             versionDelete: '/api/dataset/version/delete',
             versionToggle: '/api/dataset/version/toggle',
             versionUpdate: '/api/dataset/version/update',

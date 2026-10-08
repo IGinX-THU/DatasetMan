@@ -67,10 +67,10 @@ public class DatasetVersionService {
         String operator = OperationLogAspect.getCurrentUser();
         String clientIp = OperationLogAspect.getClientIp();
 
-        // 默认主上游 = 本数据集最新版本（SOURCE 类型除外）
+        // 默认主上游 = 本数据集最新版本（SOURCE 类型除外；显式独立根除外，如路径重跑的起始 SQL 节点）
         List<Long> upstreams = request.getUpstreamVersionIds() == null
                 ? new ArrayList<>() : new ArrayList<>(request.getUpstreamVersionIds());
-        if (upstreams.isEmpty() && type != ProvenanceType.SOURCE) {
+        if (upstreams.isEmpty() && type != ProvenanceType.SOURCE && !Boolean.TRUE.equals(request.getExplicitRoot())) {
             DatasetVersionEntity latest = latestVersion(request.getDatasetName());
             if (latest != null) {
                 upstreams.add(latest.getId());
