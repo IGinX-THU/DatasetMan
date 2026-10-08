@@ -509,14 +509,56 @@ class DatasetHistory extends HTMLElement {
             }
         });
 
-        // 独立 DAG（非主分量）的节点整体锁定布局位置：
-        // 防止力导向把角落里的分量拉回中心与主图重新重叠，或被 repulsion 斥力推出画布
         const detachedIds = layout.detachedIds || new Set();
-        echartsNodes.forEach(n => {
-            if (detachedIds.has(n.id)) {
-                n.fixed = true;
+        this._multiCompLayout = detachedIds.size > 0;
+        // 主图包围盒与中心（数据坐标），供 autoZoomToFit 保证主图完整可见并以其为视觉中心
+        this._mainRect = layout.mainRect || null;
+        this._mainCenterPos = layout.mainCenter || null;
+        if (detachedIds.size > 0) {
+            // 多分量（存在互相不可达的独立 DAG）：全部节点锁定 computeLayeredLayout 的位置。
+            // 角落分量锁死，防止被力导向拉回中心与主图重叠；主图也整体锁死——
+            // 重力虽已关闭，但弹簧会把主图撑大（边的松弛长度大于分层间距）、
+            // 角落分量的斥力会把主图推歪，导致 autoZoomToFit 适配后节点再次漂出视口。
+            // 全锁定后布局完全确定（主图分层居中 + 角落分量环布），分层间距本身
+            // 大于节点尺寸与标签，不会重叠；稳定检测立刻通过，视口适配一次到位。
+            echartsNodes.forEach(n => { n.fixed = true; });
+
+            // 估算 autoZoomToFit 的缩放比：节点符号是固定像素、不随视图缩放，
+            // 缩放比过低时按比例预先缩小符号与字号，保证缩放后屏幕间距仍大于符号尺寸
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            positions.forEach(p => {
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.y > maxY) maxY = p.y;
+            });
+            const extentW = (maxX - minX) + 160;  // 外扩量容纳节点符号与标签
+            const extentH = (maxY - minY) + 200;
+            const viewW = container.clientWidth || 1394;
+            const viewH = container.clientHeight || 1000;
+            // 与 autoZoomToFit 的目标缩放保持同一口径：可读性下限 0.55，但不超过主图完整可见的缩放
+            let fitZoom = Math.min((viewW - 40) / extentW, (viewH - 40) / extentH, 1);
+            fitZoom = Math.max(fitZoom, 0.55);
+            if (this._mainRect) {
+                const mainW = Math.max(1, this._mainRect.maxX - this._mainRect.minX) + 160;
+                const mainH = Math.max(1, this._mainRect.maxY - this._mainRect.minY) + 200;
+                const fitMain = Math.min((viewW - 40) / mainW, (viewH - 40) / mainH, 1);
+                fitZoom = Math.min(fitZoom, fitMain);
             }
-        });
+            if (fitZoom < 0.6) {
+                const symbolScale = Math.max(0.55, fitZoom / 0.6);
+                echartsNodes.forEach(n => {
+                    if (typeof n.symbolSize === 'number') {
+                        n.symbolSize = Math.max(8, Math.round(n.symbolSize * symbolScale));
+                    } else if (Array.isArray(n.symbolSize)) {
+                        n.symbolSize = n.symbolSize.map(s => Math.max(8, Math.round(s * symbolScale)));
+                    }
+                    if (n.label && n.label.fontSize) {
+                        n.label.fontSize = Math.max(8, Math.round(n.label.fontSize * symbolScale));
+                    }
+                });
+            }
+        }
 
         // 画布尺寸固定，复杂关系图只通过 ECharts 内部缩放适配，不撑大页面
         container.style.height = '';
@@ -575,6 +617,13 @@ class DatasetHistory extends HTMLElement {
             repulsion = Math.max(400, nodeCount * 120);
             edgeLength = [100, Math.min(400, 200 + nodeCount * 30)];
             gravity = Math.max(0.0005, 0.02 - nodeCount * 0.0008);
+        }
+        // 存在不可达的独立 DAG 时关闭重力：ECharts 力导向的重力以全部节点包围盒中心为目标
+        // （含四周角落里锁定的分量），会把自由的主图持续拽向角落，直到贴近才被斥力拦住，
+        // 导致主图节点贴上甚至叠上角落的孤立节点（如禁用置灰版本）。
+        // 无重力时主图只受内部弹簧与斥力作用，只会被角落分量推离，不会再贴近。
+        if (detachedIds.size > 0) {
+            gravity = 0;
         }
         
         const option = {
@@ -710,8 +759,11 @@ class DatasetHistory extends HTMLElement {
     }
 
     /**
-     * 自动适配视口：先尝试平移，平移解决不了再缩放
-     * 会循环检测直到所有节点都在视口内或达到最大缩小次数
+     * 自动适配视口。多分量图设可读性缩放下限（0.55）：整图缩得过小时节点与文字都无法辨认，
+     * 宁可让边缘角落分量暂时超出视口（可漫游/缩放按钮查看），初始视图以主图为视觉中心。
+     * 注意：ECharts 会在初始化/重设 option 时把节点包围盒自动 contain-fit 进画布，
+     * 该缩放比例无法从坐标系对象上读取，只能用「像素包围盒 / 布局包围盒」实测得到；
+     * 缩放调整必须用 graphRoam（原地生效），setOption 改 zoom 会重建坐标系导致状态丢失。
      */
     autoZoomToFit(maxZoomCount = 5) {
         const container = this.shadowRoot.querySelector('#graph');
@@ -720,77 +772,96 @@ class DatasetHistory extends HTMLElement {
 
         const seriesModel = chart.getModel().getSeriesByIndex(0);
         if (!seriesModel || !seriesModel.coordinateSystem) return;
-        
+
         const cs = seriesModel.coordinateSystem;
         const width = chart.getWidth();
         const height = chart.getHeight();
         const padding = 20; // 边距
-        
-        // 计算所有节点的包围盒
-        let minX = Infinity, maxX = -Infinity;
-        let minY = Infinity, maxY = -Infinity;
+
+        // 同时记录布局坐标与屏幕像素坐标的包围盒
+        let lMinX = Infinity, lMaxX = -Infinity, lMinY = Infinity, lMaxY = -Infinity;
+        let pMinX = Infinity, pMaxX = -Infinity, pMinY = Infinity, pMaxY = -Infinity;
         let nodeCount = 0;
-        
+
         seriesModel.getGraph().eachNode(node => {
             const layout = node.getLayout();
             if (!layout) return;
-            
+
             const pixel = cs.dataToPoint(layout);
             if (!pixel) return;
-            
+
             nodeCount++;
-            const x = pixel[0];
-            const y = pixel[1];
-            
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
+            const lx = layout[0], ly = layout[1];
+            const px = pixel[0], py = pixel[1];
+
+            if (lx < lMinX) lMinX = lx;
+            if (lx > lMaxX) lMaxX = lx;
+            if (ly < lMinY) lMinY = ly;
+            if (ly > lMaxY) lMaxY = ly;
+            if (px < pMinX) pMinX = px;
+            if (px > pMaxX) pMaxX = px;
+            if (py < pMinY) pMinY = py;
+            if (py > pMaxY) pMaxY = py;
         });
-        
+
         if (nodeCount === 0) return;
-        
-        // 计算包围盒中心和视口中心
-        const bboxCenterX = (minX + maxX) / 2;
-        const bboxCenterY = (minY + maxY) / 2;
-        const viewportCenterX = width / 2;
-        const viewportCenterY = height / 2;
-        
-        // 计算需要的平移量
-        const dx = viewportCenterX - bboxCenterX;
-        const dy = viewportCenterY - bboxCenterY;
-        
-        // 检查平移后是否所有节点都在视口内
-        const availableWidth = width - padding * 2;
-        const availableHeight = height - padding * 2;
-        const bboxWidth = maxX - minX;
-        const bboxHeight = maxY - minY;
-        
-        const canFitByPan = bboxWidth <= availableWidth && bboxHeight <= availableHeight;
-        
-        if (canFitByPan) {
-            // 只需要平移
-            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-                chart.dispatchAction({
-                    type: 'graphRoam',
-                    seriesIndex: 0,
-                    dx: dx,
-                    dy: dy
-                });
+
+        const layoutW = Math.max(1, lMaxX - lMinX);
+        const layoutH = Math.max(1, lMaxY - lMinY);
+        const pxW = Math.max(1, pMaxX - pMinX);
+        const pxH = Math.max(1, pMaxY - pMinY);
+
+        // 当前整图缩放 = 像素包围盒 / 布局包围盒
+        const curTotal = Math.min(pxW / layoutW, pxH / layoutH);
+
+        // 目标缩放：恰好装进视口（不超过 1，即小图不放大），多分量图不低于可读性下限；
+        // 但下限不超过「主图恰好完整可见」的缩放——主图必须完整呈现在视口内，
+        // 只有四周的角落分量允许越出视口（可漫游/缩放查看）
+        let target = Math.min((width - padding * 2) / layoutW, (height - padding * 2) / layoutH, 1);
+        const minZoom = this._multiCompLayout ? 0.55 : 0.2;
+        if (target < minZoom) {
+            target = minZoom;
+        }
+        if (this._multiCompLayout && this._mainRect) {
+            // 主图包围盒外扩一些余量，容纳边缘节点的符号半径与下方标签，保证完整可见
+            const mainW = Math.max(1, this._mainRect.maxX - this._mainRect.minX) + 150;
+            const mainH = Math.max(1, this._mainRect.maxY - this._mainRect.minY) + 150;
+            const fitMain = Math.min((width - padding * 2) / mainW, (height - padding * 2) / mainH, 1);
+            if (target > fitMain) {
+                target = fitMain;
             }
-        } else if (maxZoomCount > 0) {
-            // 需要缩放，先平移到中心，再缩放
-            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-                chart.dispatchAction({
-                    type: 'graphRoam',
-                    seriesIndex: 0,
-                    dx: dx,
-                    dy: dy
-                });
+        }
+
+        const ratio = target / curTotal;
+        if (Math.abs(ratio - 1) > 0.02) {
+            chart.dispatchAction({
+                type: 'graphRoam',
+                seriesIndex: 0,
+                zoom: ratio,
+                originX: width / 2,
+                originY: height / 2
+            });
+        }
+
+        // 平移：多分量图以主图包围盒中心为视觉中心，单分量图仍以整体包围盒为中心
+        let centerX = (pMinX + pMaxX) / 2;
+        let centerY = (pMinY + pMaxY) / 2;
+        if (this._multiCompLayout && this._mainCenterPos) {
+            const mc = cs.dataToPoint([this._mainCenterPos.x, this._mainCenterPos.y]);
+            if (mc) {
+                centerX = mc[0];
+                centerY = mc[1];
             }
-            // 缩放后布局会再次变化，重新启动布局稳定检测
-            this.zoomBy(0.8);
-            setTimeout(() => this._checkLayoutStable(chart, maxZoomCount - 1), 100);
+        }
+        const dx = width / 2 - centerX;
+        const dy = height / 2 - centerY;
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+            chart.dispatchAction({
+                type: 'graphRoam',
+                seriesIndex: 0,
+                dx: dx,
+                dy: dy
+            });
         }
     }
 
@@ -851,7 +922,11 @@ class DatasetHistory extends HTMLElement {
             ? components[compIndexOf.get(focusId)]
             : components.reduce((a, b) => (b.ids.length > a.ids.length ? b : a), components[0]);
 
-        const rowHeight = 160;  // 层间距（垂直）
+        // 多分量时收紧行距与角落间距，控制整体包围盒大小：
+        // 布局越大 autoZoomToFit 的缩放比越小，而节点符号是固定像素不随视图缩放，
+        // 缩放比过低时相邻节点会在屏幕上相互挤叠
+        const multiComp = components.length > 1;
+        const rowHeight = multiComp ? 120 : 160;  // 层间距（垂直）
         const colWidth = 200;   // 同层节点间距（水平）
         const positions = new Map();
         const layers = {};
@@ -892,7 +967,6 @@ class DatasetHistory extends HTMLElement {
 
             // 分量内仍未被 BFS 覆盖到的节点（环等特殊结构）
             const maxLayer = Math.max(0, ...layerMap.values());
-            const minLayer = Math.min(0, ...layerMap.values());
             ids.forEach(id => {
                 if (!layerMap.has(id)) layerMap.set(id, maxLayer + 1);
             });
@@ -904,19 +978,29 @@ class DatasetHistory extends HTMLElement {
                 compLayers[layer].push(id);
             });
 
-            // 局部坐标：x 层内均匀分布（居中于 0），y 按层从上到下
+            // 局部坐标：x 行内均匀分布（居中于 0），y 按层从上到下。
+            // 超宽层自动折行（每行最多 maxPerRow 个节点）：真实数据里一次合流/分叉
+            // 可能让同一层有几十个节点，不折行会把包围盒撑得极宽，
+            // 视口适配后缩放比过小，所有节点都缩得无法辨认
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            const maxPerRow = 6;
+            let yCursor = 0;
             Object.keys(compLayers).map(Number).sort((a, b) => a - b).forEach(layer => {
                 const idsInLayer = compLayers[layer];
+                const rowCount = Math.ceil(idsInLayer.length / maxPerRow);
                 idsInLayer.forEach((id, idx) => {
-                    const x = (idx - (idsInLayer.length - 1) / 2) * colWidth;
-                    const y = (layer - minLayer) * rowHeight;
+                    const row = Math.floor(idx / maxPerRow);
+                    const col = idx % maxPerRow;
+                    const inRow = Math.min(maxPerRow, idsInLayer.length - row * maxPerRow);
+                    const x = (col - (inRow - 1) / 2) * colWidth;
+                    const y = yCursor + row * rowHeight;
                     positions.set(id, { x, y, layer });
                     if (x < minX) minX = x;
                     if (x > maxX) maxX = x;
                     if (y < minY) minY = y;
                     if (y > maxY) maxY = y;
                 });
+                yCursor += rowCount * rowHeight;
             });
             comp.rect = { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY };
 
@@ -930,8 +1014,8 @@ class DatasetHistory extends HTMLElement {
 
         // 主分量保持局部坐标不动，其余分量绕其分布在四周角落
         const mainRect = mainComp.rect;
-        const GAP = 220;      // 分量与主图包围盒之间的基础间距
-        const MARGIN = 100;   // 分量两两之间的最小空隙
+        const GAP = 180;      // 分量与主图包围盒之间的基础间距
+        const MARGIN = 110;   // 分量两两之间的最小空隙（需容纳节点符号与标签外扩）
         const placed = [{ minX: mainRect.minX, maxX: mainRect.maxX, minY: mainRect.minY, maxY: mainRect.maxY }];
         // 角落优先：右上、右下、左下、左上，之后依次东、西、北、南（放不下自动往外圈推）
         const slots = [
@@ -993,7 +1077,11 @@ class DatasetHistory extends HTMLElement {
             });
         });
 
-        return { positions, layers, detachedIds };
+        return {
+            positions, layers, detachedIds,
+            mainCenter: { x: (mainRect.minX + mainRect.maxX) / 2, y: (mainRect.minY + mainRect.maxY) / 2 },
+            mainRect: { minX: mainRect.minX, maxX: mainRect.maxX, minY: mainRect.minY, maxY: mainRect.maxY }
+        };
     }
 
     /** 从 derivationConfig 中提取操作节点的展示信息 */
