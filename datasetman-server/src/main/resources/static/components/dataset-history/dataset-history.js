@@ -5,7 +5,7 @@ class DatasetHistory extends HTMLElement {
         this.version = null;
         this.changes = [];
         this.graph = { nodes: [], edges: [] };
-        this.sideLineage = true; // 始终显示旁系血缘
+        this.sideLineage = false; // 旁系血缘默认不显示，可在工具栏开启
         this.forkMode = false;   // 路径重跑选择模式
         this.forkChain = [];     // 已选路径版本ID（有序）
         this._echartsNodesCache = [];
@@ -137,7 +137,7 @@ class DatasetHistory extends HTMLElement {
                 </div>
                 <div class="card">
                     <div class="header"><h3>血缘图谱</h3></div>
-                    <div class="toolbar"><label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="checkbox" id="sideLineageToggle" checked>显示旁系血缘</label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button><button id="forkPath">路径重跑</button></div>
+                    <div class="toolbar"><label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="checkbox" id="sideLineageToggle">显示旁系血缘</label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button><button id="forkPath">编辑</button></div>
                     <div class="fork-bar" id="forkBar">
                         <span id="forkBarText"></span>
                         <span id="forkBarChain" class="fork-chain"></span>
@@ -307,7 +307,7 @@ class DatasetHistory extends HTMLElement {
             this.renderGraph();
             return;
         }
-        const sideLineage = this.shadowRoot.querySelector('#sideLineageToggle')?.checked ?? true;
+        const sideLineage = this.shadowRoot.querySelector('#sideLineageToggle')?.checked ?? false;
         const result = await window.AppConfig.get('dataset', 'lineage', { versionId:vid, sideLineage });
         this.graph = ((result.success || result.code === 200) && result.data) ? result.data : { nodes:[], edges:[] };
         this.renderGraph();
@@ -1477,44 +1477,85 @@ class DatasetHistory extends HTMLElement {
     }
 
     isForkStartType(t) {
-        return t === 'SOURCE' || t === 'SQL_QUERY' || t === 'SELECT' || t === 'SELECT_UDF';
+        // 起始节点不限类型：SOURCE 重新挂载、SQL/Transform 原样重跑（独立根）、IMPORT 用 SELECT * 转化重跑
+        return !!t;
     }
 
-    isForkStepType(t) {
-        return t === 'SQL_QUERY' || t === 'SELECT' || t === 'SELECT_UDF'
-            || t === 'TRANSFORM' || t === 'TRANSFORM_SQL';
-    }
-
-    /** 路径选择：首节点为分叉起点，后续节点必须与上一节点有直接下游血缘；重复点击末尾节点 = 回退一步 */
+    /** 路径选择：首节点为分叉起点；之后点击任意下游节点——若链尾到该节点只有一条路径则自动补全，
+     *  多条路径时需依次点击相邻节点，重复点击末尾节点 = 回退一步 */
     handleForkNodeClick(v) {
         if (!v) return;
         const vid = Number(v.versionId || v.createTime);
         if (this.forkChain.length === 0) {
             if (!this.isForkStartType(v.provenanceType)) {
-                this.showToast('起始节点须为「数据源挂载」或「SQL查询」版本', 'error');
+                this.showToast('该节点缺少产出方式，无法作为起始节点', 'error');
                 return;
             }
             this.forkChain.push(vid);
+            this.updateForkBar();
+            this.applyForkHighlight();
+            return;
+        }
+        const last = this.forkChain[this.forkChain.length - 1];
+        if (vid === last) {
+            this.forkChain.pop();
+        } else if (this.forkChain.includes(vid)) {
+            this.showToast('该节点已在所选路径中', 'error');
+            return;
         } else {
-            const last = this.forkChain[this.forkChain.length - 1];
-            if (vid === last) {
-                this.forkChain.pop();
-            } else if (this.forkChain.includes(vid)) {
-                this.showToast('该节点已在所选路径中', 'error');
-                return;
-            } else if (this.isForkAdjacent(last, vid)) {
-                if (!this.isForkStepType(v.provenanceType)) {
-                    this.showToast('该节点类型不支持作为路径下游（仅 SQL/Transform 可重跑）', 'error');
+            const paths = this.findDownstreamPaths(last, vid);
+            if (paths.length === 1) {
+                // 唯一路径：自动补全中间节点
+                this.forkChain.push(...paths[0].slice(1));
+            } else if (paths.length > 1) {
+                if (this.isForkAdjacent(last, vid)) {
+                    // 直接相邻：视为明确选择，追加单节点
+                    this.forkChain.push(vid);
+                } else {
+                    this.showToast(`链尾到该节点存在 ${paths.length} 条路径，请沿下游依次点选相邻节点`, 'error');
                     return;
                 }
-                this.forkChain.push(vid);
             } else {
-                this.showToast('必须沿血缘下游依次选择相邻节点', 'error');
-                return;
+                if (this.isForkAdjacent(last, vid)) {
+                    this.forkChain.push(vid);
+                } else {
+                    this.showToast('该节点不在链尾的下游方向，请沿血缘下游选择', 'error');
+                    return;
+                }
             }
         }
         this.updateForkBar();
         this.applyForkHighlight();
+    }
+
+    /** 枚举血缘图中 from 到 to 的下游简单路径（DAG，带数量上限保护） */
+    findDownstreamPaths(fromVid, toVid, maxPaths = 50) {
+        const edges = (this.graph && this.graph.edges) || [];
+        const outgoing = new Map();
+        edges.forEach(e => {
+            const f = Number(e.from), t = Number(e.to);
+            if (!outgoing.has(f)) outgoing.set(f, []);
+            outgoing.get(f).push(t);
+        });
+        const paths = [];
+        const path = [Number(fromVid)];
+        const target = Number(toVid);
+        const dfs = (cur) => {
+            if (paths.length >= maxPaths) return;
+            if (cur === target) {
+                paths.push(path.slice());
+                return;
+            }
+            for (const nb of (outgoing.get(cur) || [])) {
+                if (path.includes(nb)) continue; // 简单路径，防环
+                path.push(nb);
+                dfs(nb);
+                path.pop();
+                if (paths.length >= maxPaths) return;
+            }
+        };
+        dfs(Number(fromVid));
+        return paths;
     }
 
     isForkAdjacent(prevVid, vid) {
@@ -1531,8 +1572,8 @@ class DatasetHistory extends HTMLElement {
         }).join('<span class="fork-arrow">→</span>');
         this.shadowRoot.querySelector('#forkBarChain').innerHTML = chainHtml;
         this.shadowRoot.querySelector('#forkBarText').textContent = this.forkChain.length === 0
-            ? '路径重跑模式：请点击起始版本节点（数据源挂载或 SQL 查询），再沿下游依次点选'
-            : `已选 ${this.forkChain.length} 个节点，可继续点选下游，或再次点击末尾节点回退`;
+            ? '路径重跑模式：点击任意版本节点作为起始（任意类型均可），再点击下游终点节点即可自动补全唯一路径'
+            : `已选 ${this.forkChain.length} 个节点，可继续点击下游终点自动补全，或再次点击末尾节点回退`;
         this.shadowRoot.querySelector('#forkStart').disabled = this.forkChain.length === 0;
     }
 
@@ -1547,6 +1588,7 @@ class DatasetHistory extends HTMLElement {
                 versionId: vid,
                 datasetName: n ? n.datasetName : '',
                 versionNo: n ? n.versionNo : '',
+                storagePath: n ? (n.storagePath || '') : '',
                 provenanceType: n ? n.provenanceType : '',
                 provenanceLabel: n ? (n.provenanceLabel || n.provenanceType) : '',
                 derivationConfig: (n && n.derivationConfig) || {}

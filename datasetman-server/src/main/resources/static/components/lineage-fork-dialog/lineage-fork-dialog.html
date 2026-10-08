@@ -7,9 +7,9 @@
         <div class="fork-dialog-body">
             <div class="fork-notice">
                 沿所选路径逐节点重跑：路径上每个数据集都在同名数据集下生成新版本，形成独立的新版本树。
-                起始节点为数据源挂载时重新挂载新版本；为 SQL 查询时重查生成无父级的独立新版本。
-                中间 SQL/Transform 节点中的表名将替换为新生成的版本存储路径；重跑所需的 SQL 脚本与 Transform
-                编排会另存为新记录（名称带 <code>_fork</code> 后缀），不会修改原脚本与原编排。
+                起始节点支持任意类型——数据源挂载重新挂载新版本；SQL/Transform 按原输入重跑并生成无父级的独立新版本；
+                导入数据自动转化为 SELECT * 查询重跑。中间 SQL/Transform 节点中的表名将替换为新生成的版本存储路径；
+                重跑所需的 SQL 脚本与 Transform 编排会另存为新记录（名称带 <code>_fork</code> 后缀），不会修改原脚本与原编排。
             </div>
             <div id="forkSteps"></div>
             <div id="forkProgress" style="display:none;">

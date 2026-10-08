@@ -161,21 +161,13 @@ public class LineageForkService {
         }
 
         for (int i = 0; i < path.size(); i++) {
-            ProvenanceType type = provenanceOf(path.get(i));
-            if (i == 0) {
-                if (type != ProvenanceType.SOURCE && type != ProvenanceType.SQL_QUERY) {
-                    throw new IllegalArgumentException("分叉起始节点仅支持数据源挂载或 SQL 查询，当前: " + type.getLabel());
-                }
-            } else {
-                if (type != ProvenanceType.SQL_QUERY && type != ProvenanceType.TRANSFORM) {
-                    throw new IllegalArgumentException("路径中间节点仅支持 SQL 查询或 Transform 变换，当前: " + type.getLabel());
-                }
-                if (!isAdjacent(path.get(i - 1), path.get(i))) {
-                    throw new IllegalArgumentException("所选路径不连续："
-                            + path.get(i - 1).getDatasetName() + "/" + path.get(i - 1).getVersionNo()
-                            + " 与 " + path.get(i).getDatasetName() + "/" + path.get(i).getVersionNo()
-                            + " 之间不存在直接血缘");
-                }
+            // 起点与终点不限类型（任意版本节点均可）；仅校验产出方式可识别 + 相邻节点间存在直接血缘
+            provenanceOf(path.get(i));
+            if (i > 0 && !isAdjacent(path.get(i - 1), path.get(i))) {
+                throw new IllegalArgumentException("所选路径不连续："
+                        + path.get(i - 1).getDatasetName() + "/" + path.get(i - 1).getVersionNo()
+                        + " 与 " + path.get(i).getDatasetName() + "/" + path.get(i).getVersionNo()
+                        + " 之间不存在直接血缘");
             }
         }
         return path;
@@ -286,17 +278,43 @@ public class LineageForkService {
         // 版本号提前规划并查重，避免同名数据集同秒冲突导致存储路径/版本ID碰撞
         request.setVersionNo(nextAvailableVersionNo(origin.getDatasetName()));
 
-        // 上游重映射：路径上的旧上游 -> 新版本；路径外的辅助引用保持原版本
+        // 上游重映射：起始节点一律登记为独立根（无上游，执行仍读原输入数据）；
+        // 中间节点把路径上的旧上游替换为新版本，路径外的辅助引用保持原版本
         List<Long> remappedUpstreams = new ArrayList<>();
-        if (!isStart || type != ProvenanceType.SQL_QUERY) {
+        if (!isStart) {
             for (Long uid : datasetVersionService.parseUpstreamIds(origin)) {
                 remappedUpstreams.add(idMap.getOrDefault(uid, uid));
             }
         }
 
         if (type == ProvenanceType.SOURCE) {
-            // 新挂载一个版本：同源路径重新登记（无上游，独立根）
+            // 新挂载一个版本：同源路径重新登记，不复制数据；作为下游节点时保留重映射的上游链位
             request.setSourcePath(origin.getStoragePath());
+            if (!isStart) {
+                request.setUpstreamVersionIds(remappedUpstreams);
+            }
+            return datasetCreationService.create(request);
+        }
+
+        if (type == ProvenanceType.IMPORT) {
+            // 导入数据无法重传文件：用 SELECT * 从原存储路径读取物化；起始为独立根，下游保留重映射链位
+            List<String> sqlList = new ArrayList<>();
+            sqlList.add("select * from " + origin.getStoragePath());
+            List<String> edited = stepEdits != null ? stepEdits.get(versionKey(origin)) : null;
+            if (edited != null && !edited.isEmpty()) {
+                sqlList = new ArrayList<>(edited);
+            }
+            sqlList = normalizeSqlStatements(sqlList);
+            request.setProvenanceType(ProvenanceType.SQL_QUERY.name());
+            if (isStart) {
+                request.setExplicitRoot(true);
+                request.setUpstreamVersionIds(new ArrayList<>());
+            } else {
+                request.setUpstreamVersionIds(remappedUpstreams);
+            }
+            request.setRemark(request.getRemark() + "（导入数据经 SELECT * 转化）");
+            SqlSnippetEntity snippet = cloneSqlSnippet(origin, cfg, sqlList);
+            request.setSqlSnippetId(snippet.getId());
             return datasetCreationService.create(request);
         }
 
@@ -335,7 +353,13 @@ public class LineageForkService {
             // 克隆 Transform 编排：任务 SQL 引用克隆片段、导出文件换新名、清空调度，提交后等待作业完成
             TransformCompareEntity compare = cloneTransformCompare(origin, cfg, pathReplacements, idMap);
             request.setTransformCompareCreateTime(compare.getCreateTime());
-            request.setUpstreamVersionIds(remappedUpstreams);
+            if (isStart) {
+                // 起始 Transform 节点：无父级独立根，任务 SQL 按原输入路径原样重跑
+                request.setExplicitRoot(true);
+                request.setUpstreamVersionIds(new ArrayList<>());
+            } else {
+                request.setUpstreamVersionIds(remappedUpstreams);
+            }
             DatasetVersionEntity created = datasetCreationService.create(request);
             waitForTransformJob(created);
             return created;

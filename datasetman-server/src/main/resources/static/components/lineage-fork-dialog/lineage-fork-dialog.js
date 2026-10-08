@@ -75,7 +75,13 @@ class LineageForkDialog extends HTMLElement {
             const isStart = i === 0;
             const plan = this.stepPlan(s, isStart);
             let body = '';
-            if (this.isSqlType(s.provenanceType)) {
+            if (s.provenanceType === 'IMPORT') {
+                const sqlText = `select * from ${s.storagePath || '原导入路径'};`;
+                const initial = this.escape(sqlText);
+                body = `
+                    <textarea data-step-index="${i}" data-sql="1" data-initial="${initial}" spellcheck="false">${initial}</textarea>
+                    <div class="fork-step-hint">导入数据无法重传文件，将以上述 SELECT * 语句从原导入路径读取并物化为新版本（可编辑）；后端会另存为新的 SQL 脚本。</div>`;
+            } else if (this.isSqlType(s.provenanceType)) {
                 const sqlText = this.extractSqlList(s.derivationConfig).join('\n');
                 const initial = this.escape(sqlText);
                 body = `
@@ -104,10 +110,11 @@ class LineageForkDialog extends HTMLElement {
 
     stepPlan(s, isStart) {
         if (s.provenanceType === 'SOURCE') return '重新挂载 → 新挂载版本（独立根）';
+        if (s.provenanceType === 'IMPORT') return isStart ? 'SELECT * 转化 → SQL 查询新版本（无父级独立根）' : 'SELECT * 转化 → SQL 查询新版本';
         if (this.isSqlType(s.provenanceType)) {
             return isStart ? '重跑 SQL → 新版本（无父级独立根）' : '重跑 SQL → 新版本（上游指向本次生成的新版本）';
         }
-        return '重新提交 Transform → 新版本';
+        return isStart ? '重新提交 Transform → 新版本（无父级独立根，按原输入重跑）' : '重新提交 Transform → 新版本（上游指向本次生成的新版本）';
     }
 
     isSqlType(t) {
