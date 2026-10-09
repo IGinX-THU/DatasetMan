@@ -24,127 +24,113 @@ public class LineageService {
     @Autowired
     private DatasetVersionService datasetVersionService;
 
+    @Autowired
+    private com.tsinghua.auth.service.DataPermissionService dataPermissionService;
+
     /**
-     * 以某个版本为中心，向上追溯全部上游、向下展开全部下游，构成图谱。
+     * 以某个版本为中心，在「可见子图」上向上追溯全部上游、向下展开全部下游，构成图谱。
      *
-     * @param versionId   聚焦版本
-     * @param sideLineage 是否包含旁系血缘：true 时显示同数据集名的所有独立版本树；false 时只显示当前版本连通的树
+     * 节点可见性按其 storagePath 的数据权限（与版本树同一套 ACL）判定：管理员可见全部，
+     * 普通用户仅可见 storagePath 在已授权前缀内的版本；已禁用版本保留（图谱置灰展示）。
+     * 旁系血缘语义：不可达即不入图 —— 无论是图结构上不可达，还是权限导致的不可达，
+     * 无权限的桥接节点不会把另一侧的子图带进结果。
+     *
+     * @param versionId   聚焦版本（恒可见）
+     * @param sideLineage 是否包含旁系血缘：true 时把同数据集名的所有可见版本也作为遍历起点（含独立版本树）
      */
     public LineageGraphDTO getLineageGraph(Long versionId, boolean sideLineage) {
         LineageGraphDTO graph = new LineageGraphDTO();
         graph.setFocusVersionId(versionId);
 
-        DatasetVersionEntity focus = datasetVersionService.queryVersion(versionId);
+        // 全量载入后按 storagePath 数据权限过滤（与版本树同一套 ACL，但保留已禁用版本）
+        List<DatasetVersionEntity> all = datasetVersionService.listAllVersions();
+        boolean admin = AuthUtil.isAdmin();
+        Set<String> accessibleTables = null;
+        if (!admin) {
+            List<String> tables = dataPermissionService.getCurrentUserAccessibleTables();
+            accessibleTables = (tables == null || tables.isEmpty()) ? Collections.emptySet() : new HashSet<>(tables);
+        }
+        Map<Long, DatasetVersionEntity> versionMap = new HashMap<>();
+        for (DatasetVersionEntity v : all) {
+            Long key = versionKey(v);
+            if (key == null) continue;
+            if (!admin && !accessibleTables.contains(v.getStoragePath())) continue;
+            versionMap.put(key, v);
+        }
+        // 焦点兜底：焦点恒可见（含 id 与 createTime 不一致等历史场景）
+        DatasetVersionEntity focus = versionMap.get(versionId);
+        if (focus == null) {
+            focus = datasetVersionService.queryVersion(versionId);
+            if (focus != null) {
+                versionMap.put(versionKey(focus), focus);
+            }
+        }
         if (focus == null) {
             return graph;
         }
+        Set<Long> visibleIds = new HashSet<>(versionMap.keySet());
 
-        // 1. 从血缘边表获取连通的边
+        // 血缘边索引：边表 + 按版本的 upstreamVersionIds 兜底补边（后者覆盖边表脏数据/缺失）
         List<DatasetLineageEntity> allEdges = datasetVersionService.listAllEdges();
-
         Map<Long, List<DatasetLineageEntity>> byFrom = new HashMap<>();
         Map<Long, List<DatasetLineageEntity>> byTo = new HashMap<>();
+        for (DatasetVersionEntity v : versionMap.values()) {
+            List<Long> upstreamIds = datasetVersionService.parseUpstreamIds(v);
+            Long to = versionKey(v);
+            for (int i = 0; i < upstreamIds.size(); i++) {
+                Long uid = upstreamIds.get(i);
+                if (uid == null) continue;
+                boolean duplicated = allEdges.stream().anyMatch(e ->
+                        uid.equals(e.getFromVersionId()) && to.equals(e.getToVersionId()));
+                if (duplicated) continue;
+                DatasetLineageEntity supplemental = new DatasetLineageEntity();
+                supplemental.setFromVersionId(uid);
+                supplemental.setToVersionId(to);
+                supplemental.setRelationType(label(v.getProvenanceType()));
+                supplemental.setPrimary(i == 0);
+                allEdges.add(supplemental);
+            }
+        }
         for (DatasetLineageEntity e : allEdges) {
             if (e.getFromVersionId() != null) byFrom.computeIfAbsent(e.getFromVersionId(), k -> new ArrayList<>()).add(e);
             if (e.getToVersionId() != null) byTo.computeIfAbsent(e.getToVersionId(), k -> new ArrayList<>()).add(e);
         }
 
-        // BFS 双向遍历，收集连通的版本与边
+        // 在可见子图上从焦点双向 BFS；sideLineage 时同名数据集的可见版本也作为遍历起点
         Set<Long> visited = new LinkedHashSet<>();
         Set<DatasetLineageEntity> edges = new LinkedHashSet<>();
         Deque<Long> queue = new ArrayDeque<>();
-        queue.add(versionId);
         visited.add(versionId);
+        queue.add(versionId);
+        if (sideLineage && focus.getDatasetName() != null) {
+            for (Map.Entry<Long, DatasetVersionEntity> entry : versionMap.entrySet()) {
+                if (focus.getDatasetName().equals(entry.getValue().getDatasetName()) && visited.add(entry.getKey())) {
+                    queue.add(entry.getKey());
+                }
+            }
+        }
         while (!queue.isEmpty()) {
             Long cur = queue.poll();
             for (DatasetLineageEntity e : byTo.getOrDefault(cur, Collections.emptyList())) {
                 edges.add(e);
-                if (e.getFromVersionId() != null && visited.add(e.getFromVersionId())) queue.add(e.getFromVersionId());
+                Long from = e.getFromVersionId();
+                if (from != null && visibleIds.contains(from) && visited.add(from)) queue.add(from);
             }
             for (DatasetLineageEntity e : byFrom.getOrDefault(cur, Collections.emptyList())) {
                 edges.add(e);
-                if (e.getToVersionId() != null && visited.add(e.getToVersionId())) queue.add(e.getToVersionId());
+                Long to = e.getToVersionId();
+                if (to != null && visibleIds.contains(to) && visited.add(to)) queue.add(to);
             }
         }
 
-        // 2. 补充：从版本的 upstreamVersionIds 补全血缘边（兼容边表缺失、脏边或 IginX 读回异常的情况）
-        //    焦点版本重新入队：即使 BFS 未连通（如历史脏边指向不存在的版本ID），也能补出焦点与其上游的边
-        queue.add(versionId);
-        while (!queue.isEmpty()) {
-            Long id = queue.poll();
-            DatasetVersionEntity v = datasetVersionService.queryVersion(id);
-            if (v == null) continue;
-            List<Long> upstreamIds = datasetVersionService.parseUpstreamIds(v);
-            for (Long uid : upstreamIds) {
-                if (uid == null) continue;
-                boolean alreadyExists = edges.stream().anyMatch(e ->
-                        uid.equals(e.getFromVersionId()) && id.equals(e.getToVersionId()));
-                if (!alreadyExists) {
-                    DatasetLineageEntity supplemental = new DatasetLineageEntity();
-                    supplemental.setFromVersionId(uid);
-                    supplemental.setToVersionId(id);
-                    supplemental.setRelationType(label(v.getProvenanceType()));
-                    supplemental.setPrimary(uid.equals(upstreamIds.get(0)));
-                    edges.add(supplemental);
-                }
-                if (visited.add(uid)) queue.add(uid);
-            }
-        }
-
-        // 3. 旁系血缘：把同数据集名的所有版本都加进来（含独立的版本树），并加入队列继续收集它们的边
-        //    注意：IginX 读回的实体 id 字段可能为 null，系统统一用 createTime 作为版本标识符
-        if (sideLineage && focus.getDatasetName() != null) {
-            for (DatasetVersionEntity v : datasetVersionService.listVersions(focus.getDatasetName(), true)) {
-                Long vid = versionKey(v);
-                if (vid != null && visited.add(vid)) {
-                    queue.add(vid);
-                }
-            }
-        }
-
-        // 4. 为旁系版本继续收集血缘边（复用步骤 2 的逻辑）
-        while (!queue.isEmpty()) {
-            Long id = queue.poll();
-            DatasetVersionEntity v = datasetVersionService.queryVersion(id);
-            if (v == null) continue;
-            // 从血缘边表收集
-            for (DatasetLineageEntity e : byTo.getOrDefault(id, Collections.emptyList())) {
-                edges.add(e);
-                if (e.getFromVersionId() != null && visited.add(e.getFromVersionId())) queue.add(e.getFromVersionId());
-            }
-            for (DatasetLineageEntity e : byFrom.getOrDefault(id, Collections.emptyList())) {
-                edges.add(e);
-                if (e.getToVersionId() != null && visited.add(e.getToVersionId())) queue.add(e.getToVersionId());
-            }
-            // 从 upstreamVersionIds 补充血缘边
-            List<Long> upstreamIds = datasetVersionService.parseUpstreamIds(v);
-            for (Long uid : upstreamIds) {
-                if (uid == null) continue;
-                boolean alreadyExists = edges.stream().anyMatch(e ->
-                        uid.equals(e.getFromVersionId()) && id.equals(e.getToVersionId()));
-                if (!alreadyExists) {
-                    DatasetLineageEntity supplemental = new DatasetLineageEntity();
-                    supplemental.setFromVersionId(uid);
-                    supplemental.setToVersionId(id);
-                    supplemental.setRelationType(label(v.getProvenanceType()));
-                    supplemental.setPrimary(uid.equals(upstreamIds.get(0)));
-                    edges.add(supplemental);
-                }
-                if (visited.add(uid)) queue.add(uid);
-            }
-        }
-
-        Set<Long> visibleIds = new HashSet<>();
+        // visited 中的节点全部存在于版本树数据源，直接输出；边两端必然可见
         for (Long id : visited) {
-            DatasetVersionEntity v = datasetVersionService.queryVersion(id);
-            // owner 权限隔离：非管理员只能看到自己创建的版本节点
-            if (v != null && hasOwnerPermission(v)) {
+            DatasetVersionEntity v = versionMap.get(id);
+            if (v != null) {
                 graph.getNodes().add(toNode(v, id.equals(versionId)));
-                visibleIds.add(id);
             }
         }
         for (DatasetLineageEntity e : edges) {
-            // 两端都可见的边才返回，避免泄露无权限版本的关联信息
             if (!visibleIds.contains(e.getFromVersionId()) || !visibleIds.contains(e.getToVersionId())) {
                 continue;
             }
@@ -206,12 +192,18 @@ public class LineageService {
         return rows;
     }
 
-    /** owner 权限判断：管理员可见全部，普通用户仅可见自己创建的版本 */
+    /**
+     * owner 权限判断：管理员可见全部；owner 为空的历史数据视为公共可见；
+     * 其余仅创建者本人可见。
+     */
     private boolean hasOwnerPermission(DatasetVersionEntity v) {
         if (v == null) {
             return false;
         }
         if (AuthUtil.isAdmin()) {
+            return true;
+        }
+        if (v.getOwner() == null || v.getOwner().trim().isEmpty()) {
             return true;
         }
         String user = AuthUtil.getCurrentUsername();

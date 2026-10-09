@@ -231,9 +231,17 @@ public class DatasetVersionService {
         return versions.isEmpty() ? null : versions.get(0);
     }
 
-    /** 全部未删除版本，并按当前用户数据权限过滤（供右侧树使用） */
-    public List<DatasetVersionEntity> listAllAccessibleVersions() {
+    /**
+     * 全部版本（含已软删，不做权限过滤），一次性载入内存供血缘遍历构建可见性索引，
+     * 避免遍历中对每个版本单独查询 IginX。
+     */
+    public List<DatasetVersionEntity> listAllVersions() {
         String sql = String.format("select * from %s;", VERSION_PREFIX);
+        return query(sql, DatasetVersionEntity::new, VERSION_PREFIX);
+    }
+
+    /** 全部未删除版本，并按当前用户数据权限过滤（供右侧树使用） */
+    public List<DatasetVersionEntity> listAllAccessibleVersions() {        String sql = String.format("select * from %s;", VERSION_PREFIX);
         List<DatasetVersionEntity> all = query(sql, DatasetVersionEntity::new, VERSION_PREFIX).stream()
                 .filter(v -> !v.isDeleted())
                 .collect(Collectors.toList());
