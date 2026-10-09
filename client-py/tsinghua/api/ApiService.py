@@ -183,6 +183,22 @@ class Iface(object):
         """
         pass
 
+    def forkLineage(self, request):
+        """
+        Parameters:
+         - request
+
+        """
+        pass
+
+    def getLineageForkStatus(self, runId):
+        """
+        Parameters:
+         - runId
+
+        """
+        pass
+
     def deleteDatasetVersion(self, versionId):
         """
         Parameters:
@@ -1406,6 +1422,70 @@ class Client(Iface):
         if result.success is not None:
             return result.success
         raise TApplicationException(TApplicationException.MISSING_RESULT, "getDatasetLineage failed: unknown result")
+
+    def forkLineage(self, request):
+        """
+        Parameters:
+         - request
+
+        """
+        self.send_forkLineage(request)
+        return self.recv_forkLineage()
+
+    def send_forkLineage(self, request):
+        self._oprot.writeMessageBegin('forkLineage', TMessageType.CALL, self._seqid)
+        args = forkLineage_args()
+        args.request = request
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_forkLineage(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = forkLineage_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "forkLineage failed: unknown result")
+
+    def getLineageForkStatus(self, runId):
+        """
+        Parameters:
+         - runId
+
+        """
+        self.send_getLineageForkStatus(runId)
+        return self.recv_getLineageForkStatus()
+
+    def send_getLineageForkStatus(self, runId):
+        self._oprot.writeMessageBegin('getLineageForkStatus', TMessageType.CALL, self._seqid)
+        args = getLineageForkStatus_args()
+        args.runId = runId
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_getLineageForkStatus(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = getLineageForkStatus_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "getLineageForkStatus failed: unknown result")
 
     def deleteDatasetVersion(self, versionId):
         """
@@ -3758,6 +3838,8 @@ class Processor(Iface, TProcessor):
         self._processMap["getDatasetVersionMeta"] = Processor.process_getDatasetVersionMeta
         self._processMap["getDatasetChanges"] = Processor.process_getDatasetChanges
         self._processMap["getDatasetLineage"] = Processor.process_getDatasetLineage
+        self._processMap["forkLineage"] = Processor.process_forkLineage
+        self._processMap["getLineageForkStatus"] = Processor.process_getLineageForkStatus
         self._processMap["deleteDatasetVersion"] = Processor.process_deleteDatasetVersion
         self._processMap["registerTransform"] = Processor.process_registerTransform
         self._processMap["deleteFunction"] = Processor.process_deleteFunction
@@ -4357,6 +4439,52 @@ class Processor(Iface, TProcessor):
             msg_type = TMessageType.EXCEPTION
             result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
         oprot.writeMessageBegin("getDatasetLineage", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_forkLineage(self, seqid, iprot, oprot):
+        args = forkLineage_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = forkLineage_result()
+        try:
+            result.success = self._handler.forkLineage(args.request)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("forkLineage", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_getLineageForkStatus(self, seqid, iprot, oprot):
+        args = getLineageForkStatus_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = getLineageForkStatus_result()
+        try:
+            result.success = self._handler.getLineageForkStatus(args.runId)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("getLineageForkStatus", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
         oprot.trans.flush()
@@ -8878,6 +9006,263 @@ class getDatasetLineage_result(object):
         return not (self == other)
 all_structs.append(getDatasetLineage_result)
 getDatasetLineage_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class forkLineage_args(object):
+    """
+    Attributes:
+     - request
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, request = None,):
+        self.request = request
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.request = LineageForkRequest()
+                    self.request.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('forkLineage_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 1)
+            self.request.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(forkLineage_args)
+forkLineage_args.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'request', [LineageForkRequest, None], None, ),  # 1
+)
+
+
+class forkLineage_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('forkLineage_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(forkLineage_result)
+forkLineage_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
+)
+
+
+class getLineageForkStatus_args(object):
+    """
+    Attributes:
+     - runId
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, runId = None,):
+        self.runId = runId
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.runId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('getLineageForkStatus_args')
+        if self.runId is not None:
+            oprot.writeFieldBegin('runId', TType.I64, 1)
+            oprot.writeI64(self.runId)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(getLineageForkStatus_args)
+getLineageForkStatus_args.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'runId', None, None, ),  # 1
+)
+
+
+class getLineageForkStatus_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = Result()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('getLineageForkStatus_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(getLineageForkStatus_result)
+getLineageForkStatus_result.thrift_spec = (
     (0, TType.STRUCT, 'success', [Result, None], None, ),  # 0
 )
 

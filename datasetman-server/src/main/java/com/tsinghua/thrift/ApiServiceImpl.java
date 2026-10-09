@@ -56,6 +56,9 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
     private LineageService lineageService;
 
     @Autowired
+    private LineageForkService lineageForkService;
+
+    @Autowired
     private FunctionService functionService;
 
     @Autowired
@@ -478,6 +481,62 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
             return result;
         } catch (Exception e) {
             log.error("Thrift RPC: Get dataset lineage failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * POST /api/dataset/lineage/fork -> forkLineage(LineageForkRequest)
+     * 异步执行路径重跑，data 为 LineageForkRunDTO JSON（含 runId，供 getLineageForkStatus 轮询）
+     */
+    @Override
+    public com.tsinghua.thrift.api.Result forkLineage(com.tsinghua.thrift.api.LineageForkRequest request) throws TException {
+        try {
+            if (request == null) {
+                return new com.tsinghua.thrift.api.Result(false, "请求不能为空");
+            }
+            log.info("Thrift RPC: Fork lineage path: forkVersionId={}, path={}",
+                    request.getForkVersionId(), request.getPathVersionIds());
+
+            com.tsinghua.dto.LineageForkRequest dto = new com.tsinghua.dto.LineageForkRequest();
+            dto.setForkVersionId(request.getForkVersionId());
+            dto.setPathVersionIds(request.getPathVersionIds());
+            if (request.getStepEdits() != null) {
+                dto.setStepEdits(new java.util.HashMap<>(request.getStepEdits()));
+            }
+
+            com.tsinghua.dto.LineageForkRunDTO run = lineageForkService.startFork(dto);
+            String jsonData = convertEntityToJson(run);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "操作成功");
+            result.setData(jsonData);
+            return result;
+        } catch (IllegalArgumentException e) {
+            log.warn("Thrift RPC: Fork lineage path rejected: {}", e.getMessage());
+            return new com.tsinghua.thrift.api.Result(false, e.getMessage());
+        } catch (Exception e) {
+            log.error("Thrift RPC: Fork lineage path failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "路径重跑失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * GET /api/dataset/lineage/fork/status -> forkLineageStatus(runId)
+     * data 为 LineageForkRunDTO JSON（分步进度）
+     */
+    @Override
+    public com.tsinghua.thrift.api.Result getLineageForkStatus(long runId) throws TException {
+        try {
+            log.info("Thrift RPC: Get lineage fork status: {}", runId);
+            com.tsinghua.dto.LineageForkRunDTO run = lineageForkService.getRun(runId);
+            if (run == null) {
+                return new com.tsinghua.thrift.api.Result(false, "重跑记录不存在或无权查看");
+            }
+            String jsonData = convertEntityToJson(run);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "Query successful");
+            result.setData(jsonData);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Get lineage fork status failed", e);
             return new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
         }
     }

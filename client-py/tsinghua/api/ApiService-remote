@@ -46,6 +46,8 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('  Result getDatasetVersionMeta(i64 versionId)')
     print('  Result getDatasetChanges(string datasetName)')
     print('  Result getDatasetLineage(i64 versionId, bool sideLineage)')
+    print('  Result forkLineage(LineageForkRequest request)')
+    print('  Result getLineageForkStatus(i64 runId)')
     print('  Result deleteDatasetVersion(i64 versionId)')
     print('  Result registerTransform(string file, string name, string className)')
     print('  Result deleteFunction(string name)')
@@ -331,6 +333,18 @@ elif cmd == 'getDatasetLineage':
         print('getDatasetLineage requires 2 args')
         sys.exit(1)
     pp.pprint(client.getDatasetLineage(eval(args[0]), eval(args[1]),))
+
+elif cmd == 'forkLineage':
+    if len(args) != 1:
+        print('forkLineage requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.forkLineage(eval(args[0]),))
+
+elif cmd == 'getLineageForkStatus':
+    if len(args) != 1:
+        print('getLineageForkStatus requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.getLineageForkStatus(eval(args[0]),))
 
 elif cmd == 'deleteDatasetVersion':
     if len(args) != 1:

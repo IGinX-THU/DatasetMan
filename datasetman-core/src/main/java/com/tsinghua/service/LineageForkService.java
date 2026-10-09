@@ -177,6 +177,10 @@ public class LineageForkService {
         if (AuthUtil.isAdmin()) {
             return;
         }
+        // 历史数据（owner 为空）视为公共可操作，与血缘可见性语义一致
+        if (v.getOwner() == null || v.getOwner().trim().isEmpty()) {
+            return;
+        }
         String user = AuthUtil.getCurrentUsername();
         if (user == null || !user.equals(v.getOwner())) {
             throw new IllegalArgumentException("无权重跑数据集 " + v.getDatasetName() + "/" + v.getVersionNo() + "（仅创建者或管理员可操作）");

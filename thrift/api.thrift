@@ -221,6 +221,39 @@ struct LineageGraphDTO {
     3: optional i64 focusVersionId,
 }
 
+// 血缘路径重跑请求 - 匹配 LineageForkRequest
+// pathVersionIds: 完整路径的版本ID有序列表（含 forkVersionId 在首位，相邻版本间须存在血缘边）
+// stepEdits:      可选，各步骤重跑时编辑后的 SQL 语句列表（key=原版本ID），未提供的步骤沿用原 SQL（含表名替换）
+struct LineageForkRequest {
+    1: i64 forkVersionId,
+    2: list<i64> pathVersionIds,
+    3: optional map<i64, list<string>> stepEdits,
+}
+
+// 血缘路径重跑步骤状态 - 匹配 LineageForkRunDTO.Step
+struct LineageForkStep {
+    1: optional i64 originVersionId,
+    2: optional string datasetName,
+    3: optional string originVersionNo,
+    4: optional string provenanceType,
+    5: optional i64 newVersionId,
+    6: optional string newVersionNo,
+    7: optional string status,      // PENDING / RUNNING / SUCCESS / FAILED
+    8: optional string message,
+}
+
+// 血缘路径重跑运行状态 - 匹配 LineageForkRunDTO
+// forkLineage / getLineageForkStatus 返回的 Result.data 即本结构的 JSON
+struct LineageForkRunDTO {
+    1: optional i64 runId,
+    2: optional string status,      // RUNNING / SUCCESS / FAILED
+    3: optional string operator,
+    4: optional i32 totalSteps,
+    5: optional i32 currentStepIndex,
+    6: optional string message,
+    7: optional list<LineageForkStep> steps,
+}
+
 struct DatasetVersionTreeDTO {
     1: string id,
     2: string name,
@@ -507,7 +540,13 @@ service ApiService {
     
     // GET /api/dataset/lineage -> lineage(versionId, sideLineage)
     Result getDatasetLineage(1: i64 versionId, 2: bool sideLineage),
-    
+
+    // POST /api/dataset/lineage/fork -> forkLineage(LineageForkRequest) 异步执行，data 为 LineageForkRunDTO JSON（含 runId）
+    Result forkLineage(1: LineageForkRequest request),
+
+    // GET /api/dataset/lineage/fork/status -> forkLineageStatus(runId) data 为 LineageForkRunDTO JSON
+    Result getLineageForkStatus(1: i64 runId),
+
     // DELETE /api/dataset/version/delete -> deleteVersion(versionId)
     Result deleteDatasetVersion(1: i64 versionId),
 

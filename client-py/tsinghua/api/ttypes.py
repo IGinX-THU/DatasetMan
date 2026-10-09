@@ -2677,6 +2677,383 @@ class LineageGraphDTO(object):
         return not (self == other)
 
 
+class LineageForkRequest(object):
+    """
+    Attributes:
+     - forkVersionId
+     - pathVersionIds
+     - stepEdits
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, forkVersionId = None, pathVersionIds = None, stepEdits = None,):
+        self.forkVersionId = forkVersionId
+        self.pathVersionIds = pathVersionIds
+        self.stepEdits = stepEdits
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.forkVersionId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.LIST:
+                    self.pathVersionIds = []
+                    (_etype96, _size93) = iprot.readListBegin()
+                    for _i97 in range(_size93):
+                        _elem98 = iprot.readI64()
+                        self.pathVersionIds.append(_elem98)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.MAP:
+                    self.stepEdits = {}
+                    (_ktype100, _vtype101, _size99) = iprot.readMapBegin()
+                    for _i103 in range(_size99):
+                        _key104 = iprot.readI64()
+                        _val105 = []
+                        (_etype109, _size106) = iprot.readListBegin()
+                        for _i110 in range(_size106):
+                            _elem111 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                            _val105.append(_elem111)
+                        iprot.readListEnd()
+                        self.stepEdits[_key104] = _val105
+                    iprot.readMapEnd()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('LineageForkRequest')
+        if self.forkVersionId is not None:
+            oprot.writeFieldBegin('forkVersionId', TType.I64, 1)
+            oprot.writeI64(self.forkVersionId)
+            oprot.writeFieldEnd()
+        if self.pathVersionIds is not None:
+            oprot.writeFieldBegin('pathVersionIds', TType.LIST, 2)
+            oprot.writeListBegin(TType.I64, len(self.pathVersionIds))
+            for iter112 in self.pathVersionIds:
+                oprot.writeI64(iter112)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        if self.stepEdits is not None:
+            oprot.writeFieldBegin('stepEdits', TType.MAP, 3)
+            oprot.writeMapBegin(TType.I64, TType.LIST, len(self.stepEdits))
+            for kiter113, viter114 in self.stepEdits.items():
+                oprot.writeI64(kiter113)
+                oprot.writeListBegin(TType.STRING, len(viter114))
+                for iter115 in viter114:
+                    oprot.writeString(iter115.encode('utf-8') if sys.version_info[0] == 2 else iter115)
+                oprot.writeListEnd()
+            oprot.writeMapEnd()
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class LineageForkStep(object):
+    """
+    Attributes:
+     - originVersionId
+     - datasetName
+     - originVersionNo
+     - provenanceType
+     - newVersionId
+     - newVersionNo
+     - status
+     - message
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, originVersionId = None, datasetName = None, originVersionNo = None, provenanceType = None, newVersionId = None, newVersionNo = None, status = None, message = None,):
+        self.originVersionId = originVersionId
+        self.datasetName = datasetName
+        self.originVersionNo = originVersionNo
+        self.provenanceType = provenanceType
+        self.newVersionId = newVersionId
+        self.newVersionNo = newVersionNo
+        self.status = status
+        self.message = message
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.originVersionId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.datasetName = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.originVersionNo = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.provenanceType = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.I64:
+                    self.newVersionId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.STRING:
+                    self.newVersionNo = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 7:
+                if ftype == TType.STRING:
+                    self.status = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 8:
+                if ftype == TType.STRING:
+                    self.message = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('LineageForkStep')
+        if self.originVersionId is not None:
+            oprot.writeFieldBegin('originVersionId', TType.I64, 1)
+            oprot.writeI64(self.originVersionId)
+            oprot.writeFieldEnd()
+        if self.datasetName is not None:
+            oprot.writeFieldBegin('datasetName', TType.STRING, 2)
+            oprot.writeString(self.datasetName.encode('utf-8') if sys.version_info[0] == 2 else self.datasetName)
+            oprot.writeFieldEnd()
+        if self.originVersionNo is not None:
+            oprot.writeFieldBegin('originVersionNo', TType.STRING, 3)
+            oprot.writeString(self.originVersionNo.encode('utf-8') if sys.version_info[0] == 2 else self.originVersionNo)
+            oprot.writeFieldEnd()
+        if self.provenanceType is not None:
+            oprot.writeFieldBegin('provenanceType', TType.STRING, 4)
+            oprot.writeString(self.provenanceType.encode('utf-8') if sys.version_info[0] == 2 else self.provenanceType)
+            oprot.writeFieldEnd()
+        if self.newVersionId is not None:
+            oprot.writeFieldBegin('newVersionId', TType.I64, 5)
+            oprot.writeI64(self.newVersionId)
+            oprot.writeFieldEnd()
+        if self.newVersionNo is not None:
+            oprot.writeFieldBegin('newVersionNo', TType.STRING, 6)
+            oprot.writeString(self.newVersionNo.encode('utf-8') if sys.version_info[0] == 2 else self.newVersionNo)
+            oprot.writeFieldEnd()
+        if self.status is not None:
+            oprot.writeFieldBegin('status', TType.STRING, 7)
+            oprot.writeString(self.status.encode('utf-8') if sys.version_info[0] == 2 else self.status)
+            oprot.writeFieldEnd()
+        if self.message is not None:
+            oprot.writeFieldBegin('message', TType.STRING, 8)
+            oprot.writeString(self.message.encode('utf-8') if sys.version_info[0] == 2 else self.message)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class LineageForkRunDTO(object):
+    """
+    Attributes:
+     - runId
+     - status
+     - operator
+     - totalSteps
+     - currentStepIndex
+     - message
+     - steps
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, runId = None, status = None, operator = None, totalSteps = None, currentStepIndex = None, message = None, steps = None,):
+        self.runId = runId
+        self.status = status
+        self.operator = operator
+        self.totalSteps = totalSteps
+        self.currentStepIndex = currentStepIndex
+        self.message = message
+        self.steps = steps
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.runId = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.status = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.operator = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.I32:
+                    self.totalSteps = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.I32:
+                    self.currentStepIndex = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.STRING:
+                    self.message = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 7:
+                if ftype == TType.LIST:
+                    self.steps = []
+                    (_etype119, _size116) = iprot.readListBegin()
+                    for _i120 in range(_size116):
+                        _elem121 = LineageForkStep()
+                        _elem121.read(iprot)
+                        self.steps.append(_elem121)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('LineageForkRunDTO')
+        if self.runId is not None:
+            oprot.writeFieldBegin('runId', TType.I64, 1)
+            oprot.writeI64(self.runId)
+            oprot.writeFieldEnd()
+        if self.status is not None:
+            oprot.writeFieldBegin('status', TType.STRING, 2)
+            oprot.writeString(self.status.encode('utf-8') if sys.version_info[0] == 2 else self.status)
+            oprot.writeFieldEnd()
+        if self.operator is not None:
+            oprot.writeFieldBegin('operator', TType.STRING, 3)
+            oprot.writeString(self.operator.encode('utf-8') if sys.version_info[0] == 2 else self.operator)
+            oprot.writeFieldEnd()
+        if self.totalSteps is not None:
+            oprot.writeFieldBegin('totalSteps', TType.I32, 4)
+            oprot.writeI32(self.totalSteps)
+            oprot.writeFieldEnd()
+        if self.currentStepIndex is not None:
+            oprot.writeFieldBegin('currentStepIndex', TType.I32, 5)
+            oprot.writeI32(self.currentStepIndex)
+            oprot.writeFieldEnd()
+        if self.message is not None:
+            oprot.writeFieldBegin('message', TType.STRING, 6)
+            oprot.writeString(self.message.encode('utf-8') if sys.version_info[0] == 2 else self.message)
+            oprot.writeFieldEnd()
+        if self.steps is not None:
+            oprot.writeFieldBegin('steps', TType.LIST, 7)
+            oprot.writeListBegin(TType.STRUCT, len(self.steps))
+            for iter122 in self.steps:
+                iter122.write(oprot)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
 class DatasetVersionTreeDTO(object):
     """
     Attributes:
@@ -2778,11 +3155,11 @@ class DatasetVersionTreeDTO(object):
             elif fid == 12:
                 if ftype == TType.LIST:
                     self.children = []
-                    (_etype96, _size93) = iprot.readListBegin()
-                    for _i97 in range(_size93):
-                        _elem98 = DatasetVersionTreeDTO()
-                        _elem98.read(iprot)
-                        self.children.append(_elem98)
+                    (_etype126, _size123) = iprot.readListBegin()
+                    for _i127 in range(_size123):
+                        _elem128 = DatasetVersionTreeDTO()
+                        _elem128.read(iprot)
+                        self.children.append(_elem128)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -2844,8 +3221,8 @@ class DatasetVersionTreeDTO(object):
         if self.children is not None:
             oprot.writeFieldBegin('children', TType.LIST, 12)
             oprot.writeListBegin(TType.STRUCT, len(self.children))
-            for iter99 in self.children:
-                iter99.write(oprot)
+            for iter129 in self.children:
+                iter129.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -3140,11 +3517,11 @@ class TransformJobRequest(object):
             elif fid == 3:
                 if ftype == TType.LIST:
                     self.taskList = []
-                    (_etype103, _size100) = iprot.readListBegin()
-                    for _i104 in range(_size100):
-                        _elem105 = TaskInfoDto()
-                        _elem105.read(iprot)
-                        self.taskList.append(_elem105)
+                    (_etype133, _size130) = iprot.readListBegin()
+                    for _i134 in range(_size130):
+                        _elem135 = TaskInfoDto()
+                        _elem135.read(iprot)
+                        self.taskList.append(_elem135)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -3190,8 +3567,8 @@ class TransformJobRequest(object):
         if self.taskList is not None:
             oprot.writeFieldBegin('taskList', TType.LIST, 3)
             oprot.writeListBegin(TType.STRUCT, len(self.taskList))
-            for iter106 in self.taskList:
-                iter106.write(oprot)
+            for iter136 in self.taskList:
+                iter136.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.exportType is not None:
@@ -5258,10 +5635,10 @@ class SqlSnippetRequest(object):
             elif fid == 3:
                 if ftype == TType.LIST:
                     self.sqlList = []
-                    (_etype110, _size107) = iprot.readListBegin()
-                    for _i111 in range(_size107):
-                        _elem112 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        self.sqlList.append(_elem112)
+                    (_etype140, _size137) = iprot.readListBegin()
+                    for _i141 in range(_size137):
+                        _elem142 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        self.sqlList.append(_elem142)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -5292,8 +5669,8 @@ class SqlSnippetRequest(object):
         if self.sqlList is not None:
             oprot.writeFieldBegin('sqlList', TType.LIST, 3)
             oprot.writeListBegin(TType.STRING, len(self.sqlList))
-            for iter113 in self.sqlList:
-                oprot.writeString(iter113.encode('utf-8') if sys.version_info[0] == 2 else iter113)
+            for iter143 in self.sqlList:
+                oprot.writeString(iter143.encode('utf-8') if sys.version_info[0] == 2 else iter143)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.description is not None:
@@ -5539,6 +5916,36 @@ LineageGraphDTO.thrift_spec = (
     (1, TType.LIST, 'nodes', (TType.STRUCT, [LineageNode, None], False), None, ),  # 1
     (2, TType.LIST, 'edges', (TType.STRUCT, [LineageEdge, None], False), None, ),  # 2
     (3, TType.I64, 'focusVersionId', None, None, ),  # 3
+)
+all_structs.append(LineageForkRequest)
+LineageForkRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'forkVersionId', None, None, ),  # 1
+    (2, TType.LIST, 'pathVersionIds', (TType.I64, None, False), None, ),  # 2
+    (3, TType.MAP, 'stepEdits', (TType.I64, None, TType.LIST, (TType.STRING, 'UTF8', False), False), None, ),  # 3
+)
+all_structs.append(LineageForkStep)
+LineageForkStep.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'originVersionId', None, None, ),  # 1
+    (2, TType.STRING, 'datasetName', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'originVersionNo', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'provenanceType', 'UTF8', None, ),  # 4
+    (5, TType.I64, 'newVersionId', None, None, ),  # 5
+    (6, TType.STRING, 'newVersionNo', 'UTF8', None, ),  # 6
+    (7, TType.STRING, 'status', 'UTF8', None, ),  # 7
+    (8, TType.STRING, 'message', 'UTF8', None, ),  # 8
+)
+all_structs.append(LineageForkRunDTO)
+LineageForkRunDTO.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'runId', None, None, ),  # 1
+    (2, TType.STRING, 'status', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'operator', 'UTF8', None, ),  # 3
+    (4, TType.I32, 'totalSteps', None, None, ),  # 4
+    (5, TType.I32, 'currentStepIndex', None, None, ),  # 5
+    (6, TType.STRING, 'message', 'UTF8', None, ),  # 6
+    (7, TType.LIST, 'steps', (TType.STRUCT, [LineageForkStep, None], False), None, ),  # 7
 )
 all_structs.append(DatasetVersionTreeDTO)
 DatasetVersionTreeDTO.thrift_spec = (
