@@ -249,12 +249,14 @@ class FileSystemBrowser extends HTMLElement {
         const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
         const textExtensions = ['txt', 'csv', 'json', 'xml', 'html', 'htm', 'md', 'log', 'css', 'js', 'java', 'py', 'sql'];
         const documentExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+        const cadExtensions = ['dxf'];
         const isImage = imageExtensions.includes(fileExtension);
         const isVideo = videoExtensions.includes(fileExtension);
         const isAudio = audioExtensions.includes(fileExtension);
         const isText = textExtensions.includes(fileExtension);
         const isDocument = documentExtensions.includes(fileExtension);
-        const isPreviewable = isImage || isVideo || isAudio || isText;
+        const isCad = cadExtensions.includes(fileExtension);
+        const isPreviewable = isImage || isVideo || isAudio || isText || isCad;
 
         if (isPreviewable) {
             // 创建预览内容
@@ -429,6 +431,24 @@ class FileSystemBrowser extends HTMLElement {
                     `;
                 };
                 reader.readAsText(blob);
+            } else if (isCad) {
+                // CAD 图纸（DXF）：解析图元渲染为 SVG 预览
+                const readAsArray = (blob instanceof Blob) ? blob.arrayBuffer()
+                    : Promise.resolve((blob instanceof ArrayBuffer) ? blob : blob.buffer);
+                readAsArray.then(arrayBuffer => {
+                    this.renderDxfPreview(new Uint8Array(arrayBuffer), fileName);
+                }).catch(error => {
+                    console.error('CAD图纸数据读取失败:', error);
+                    fileGrid.innerHTML = `
+                        <div class="file-preview">
+                            <div class="preview-content">
+                                <div style="color: #999; text-align: center; padding: 20px;">
+                                    CAD图纸读取失败: ${error.message}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
             }
         } else if (isDocument) {
             // 文档文件，转换为Uint8Array后调用相应的预览方法
@@ -570,12 +590,14 @@ class FileSystemBrowser extends HTMLElement {
         const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
         const textExtensions = ['txt', 'csv', 'json', 'xml', 'html', 'htm', 'md', 'log', 'css', 'js', 'java', 'py', 'sql'];
         const documentExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+        const cadExtensions = ['dxf'];
         const isImage = imageExtensions.includes(fileExtension);
         const isVideo = videoExtensions.includes(fileExtension);
         const isAudio = audioExtensions.includes(fileExtension);
         const isText = textExtensions.includes(fileExtension);
         const isDocument = documentExtensions.includes(fileExtension);
-        const isPreviewable = isImage || isVideo || isAudio || isText;
+        const isCad = cadExtensions.includes(fileExtension);
+        const isPreviewable = isImage || isVideo || isAudio || isText || isCad;
 
         if (isPreviewable && records.length > 0) {
             // 显示文件预览
@@ -611,6 +633,8 @@ class FileSystemBrowser extends HTMLElement {
                 this.renderAudioPreview(binaryData, fileName);
             } else if (isText) {
                 this.renderTextPreview(binaryData, fileName);
+            } else if (isCad) {
+                this.renderDxfPreview(this.base64ToUint8Array(binaryData), fileName);
             }
         } else if (isDocument && records.length > 0) {
             // 文档文件，提供下载提示
@@ -1507,6 +1531,234 @@ class FileSystemBrowser extends HTMLElement {
         } catch (error) {
             console.error('图片数据转换失败:', error);
             fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">图片数据格式错误: ' + error.message + '</div>';
+        }
+    }
+
+    // ===== CAD 图纸（DXF）预览 =====
+
+    aciColor(index) {
+        // AutoCAD 颜色索引（ACI）常用色映射，其余按索引散布到色环
+        const map = { 0: '#1A1A1A', 1: '#E53935', 2: '#FDD835', 3: '#43A047', 4: '#00ACC1', 5: '#1E88E5', 6: '#8E24AA', 7: '#1A1A1A', 8: '#757575', 9: '#BDBDBD' };
+        const idx = Math.abs(parseInt(index, 10) || 7);
+        if (map[idx] !== undefined) return map[idx];
+        return `hsl(${(idx * 47) % 360}, 55%, 38%)`;
+    }
+
+    escapeXml(text) {
+        return String(text).replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
+    }
+
+    parseDxf(text) {
+        // DXF 按组码对组织：奇数行组码、偶数行值。解析 TABLES 的图层颜色与
+        // ENTITIES 的常用图元（LINE/CIRCLE/ARC/TEXT/MTEXT/POINT/POLYLINE+VERTEX/LWPOLYLINE/SPLINE）
+        const lines = String(text).split(/\r\n|\r|\n/);
+        const groups = [];
+        for (let i = 0; i + 1 < lines.length; i += 2) {
+            groups.push([lines[i].trim(), lines[i + 1]]);
+        }
+        const num = v => parseFloat(v);
+        const layers = {};
+        const entities = [];
+        const unsupported = {};
+        let i = 0;
+        let curPolyline = null;
+        while (i < groups.length) {
+            if (groups[i][0] === '0' && String(groups[i][1]).trim() === 'SECTION') {
+                let j = i + 1;
+                while (j < groups.length && groups[j][0] !== '2') j++;
+                const section = j < groups.length ? String(groups[j][1]).trim().toUpperCase() : '';
+                i = j + 1;
+                if (section === 'ENTITIES') {
+                    while (i < groups.length && !(groups[i][0] === '0' && String(groups[i][1]).trim() === 'ENDSEC')) {
+                        if (groups[i][0] !== '0') { i++; continue; }
+                        const type = String(groups[i][1]).trim().toUpperCase();
+                        const props = {};
+                        const xs = [], ys = [];
+                        let k = i + 1;
+                        while (k < groups.length && groups[k][0] !== '0') {
+                            const [c, raw] = groups[k];
+                            if (c === '10') xs.push(num(raw));
+                            else if (c === '20') ys.push(num(raw));
+                            else if (!(c in props)) props[c] = raw;
+                            k++;
+                        }
+                        i = k;
+                        if (type === 'VERTEX' && curPolyline) {
+                            curPolyline.points.push([xs[0], ys[0]]);
+                            continue;
+                        }
+                        if (type === 'SEQEND') { curPolyline = null; continue; }
+                        const layer = String(props['8'] || '0').trim();
+                        const color = this.aciColor(props['62'] !== undefined ? props['62'] : (layers[layer] !== undefined ? layers[layer] : 7));
+                        if (type === 'LINE') {
+                            entities.push({ type, color, x1: xs[0], y1: ys[0], x2: num(props['11']), y2: num(props['21']) });
+                        } else if (type === 'CIRCLE') {
+                            entities.push({ type, color, x: xs[0], y: ys[0], r: num(props['40']) });
+                        } else if (type === 'ARC') {
+                            entities.push({ type, color, x: xs[0], y: ys[0], r: num(props['40']), a1: num(props['50']) || 0, a2: num(props['51']) || 0 });
+                        } else if (type === 'TEXT' || type === 'MTEXT') {
+                            const content = String(props['1'] || '').replace(/\\[A-Za-z]+[^;\\]*;/g, '').replace(/[{}]/g, '');
+                            entities.push({ type: 'TEXT', color, x: xs[0], y: ys[0], h: num(props['40']) || 0, rot: num(props['50']) || 0, text: content });
+                        } else if (type === 'POINT') {
+                            entities.push({ type, color, x: xs[0], y: ys[0] });
+                        } else if (type === 'POLYLINE') {
+                            const e = { type, color, points: [], closed: (parseInt(props['70'], 10) || 0) & 1 };
+                            entities.push(e);
+                            curPolyline = e;
+                        } else if (type === 'LWPOLYLINE' || type === 'SPLINE') {
+                            // LWPOLYLINE 重复组码 10/20；SPLINE 用控制点折线近似
+                            if (xs.length >= 2) {
+                                const pts = [];
+                                for (let p = 0; p < Math.min(xs.length, ys.length); p++) pts.push([xs[p], ys[p]]);
+                                entities.push({ type: 'POLYLINE', color, points: pts, closed: type === 'LWPOLYLINE' && ((parseInt(props['70'], 10) || 0) & 1) });
+                            }
+                        } else {
+                            unsupported[type] = (unsupported[type] || 0) + 1;
+                        }
+                    }
+                    i++;
+                } else if (section === 'TABLES') {
+                    let curLayer = null;
+                    while (i < groups.length && !(groups[i][0] === '0' && String(groups[i][1]).trim() === 'ENDSEC')) {
+                        const [c, raw] = groups[i];
+                        const t = String(raw).trim();
+                        if (c === '0') {
+                            curLayer = (t === 'LAYER') ? { name: '', color: 7 } : null;
+                        } else if (curLayer) {
+                            if (c === '2') curLayer.name = t;
+                            else if (c === '62') curLayer.color = Math.abs(parseInt(raw, 10) || 7);
+                        }
+                        if (curLayer && curLayer.name) layers[curLayer.name] = curLayer.color;
+                        i++;
+                    }
+                    i++;
+                } else {
+                    while (i < groups.length && !(groups[i][0] === '0' && String(groups[i][1]).trim() === 'ENDSEC')) i++;
+                    i++;
+                }
+            } else {
+                i++;
+            }
+        }
+        return { entities, unsupported };
+    }
+
+    buildDxfSvg(parsed) {
+        const xs = [], ys = [];
+        for (const e of parsed.entities) {
+            if (e.type === 'LINE') { xs.push(e.x1, e.x2); ys.push(e.y1, e.y2); }
+            else if (e.type === 'CIRCLE' || e.type === 'ARC') { xs.push(e.x - e.r, e.x + e.r); ys.push(e.y - e.r, e.y + e.r); }
+            else if (e.type === 'TEXT') { xs.push(e.x, e.x + e.text.length * (e.h || 1)); ys.push(e.y, e.y + (e.h || 1)); }
+            else if (e.type === 'POINT') { xs.push(e.x); ys.push(e.y); }
+            else if (e.type === 'POLYLINE') { for (const p of e.points) { xs.push(p[0]); ys.push(p[1]); } }
+        }
+        const clean = arr => arr.filter(isFinite);
+        if (!clean(xs).length || !clean(ys).length) return null;
+        const minX = Math.min(...clean(xs)), maxX = Math.max(...clean(xs));
+        const minY = Math.min(...clean(ys)), maxY = Math.max(...clean(ys));
+        const w = Math.max(maxX - minX, 1e-6), h = Math.max(maxY - minY, 1e-6);
+        const vbX = minX - w * 0.05, vbY = minY - h * 0.05, vbW = w * 1.1, vbH = h * 1.1;
+        const f = n => Math.round(n * 1000) / 1000;
+        const shapes = [], texts = [];
+        for (const e of parsed.entities) {
+            const st = `stroke="${e.color}"`;
+            if (e.type === 'LINE') {
+                shapes.push(`<line x1="${f(e.x1)}" y1="${f(e.y1)}" x2="${f(e.x2)}" y2="${f(e.y2)}" ${st}/>`);
+            } else if (e.type === 'CIRCLE') {
+                shapes.push(`<circle cx="${f(e.x)}" cy="${f(e.y)}" r="${f(e.r)}" ${st}/>`);
+            } else if (e.type === 'ARC') {
+                let delta = e.a2 - e.a1;
+                while (delta <= 0) delta += 360;
+                if (delta >= 360) {
+                    shapes.push(`<circle cx="${f(e.x)}" cy="${f(e.y)}" r="${f(e.r)}" ${st}/>`);
+                } else {
+                    const x1 = e.x + e.r * Math.cos(e.a1 * Math.PI / 180), y1 = e.y + e.r * Math.sin(e.a1 * Math.PI / 180);
+                    const x2 = e.x + e.r * Math.cos(e.a2 * Math.PI / 180), y2 = e.y + e.r * Math.sin(e.a2 * Math.PI / 180);
+                    // DXF 圆弧从 a1 逆时针到 a2（组码坐标内角度递增），对应 SVG sweep-flag=1
+                    shapes.push(`<path d="M ${f(x1)} ${f(y1)} A ${f(e.r)} ${f(e.r)} 0 ${delta > 180 ? 1 : 0} 1 ${f(x2)} ${f(y2)}" ${st}/>`);
+                }
+            } else if (e.type === 'POLYLINE') {
+                if (e.points.length >= 2) {
+                    const pts = e.points.map(p => `${f(p[0])},${f(p[1])}`).join(' ');
+                    shapes.push(e.closed ? `<polygon points="${pts}" ${st}/>` : `<polyline points="${pts}" ${st}/>`);
+                }
+            } else if (e.type === 'POINT') {
+                shapes.push(`<circle cx="${f(e.x)}" cy="${f(e.y)}" r="${f(vbW / 300)}" fill="${e.color}" stroke="none"/>`);
+            } else if (e.type === 'TEXT' && e.text) {
+                const anchorX = f(e.x), anchorY = f((minY + maxY) - e.y);
+                const rot = e.rot ? ` transform="rotate(${f(-e.rot)} ${anchorX} ${anchorY})"` : '';
+                texts.push(`<text x="${anchorX}" y="${anchorY}" font-size="${f(e.h || vbH / 50)}" fill="${e.color}" stroke="none"${rot}>${this.escapeXml(e.text)}</text>`);
+            }
+        }
+        // DXF 的 Y 轴向上：整体翻转后与屏幕坐标系一致；文字在翻转组外按换算坐标放置
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${f(vbX)} ${f(vbY)} ${f(vbW)} ${f(vbH)}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto;display:block;">
+            <style>line,path,circle,polyline,polygon{vector-effect:non-scaling-stroke;stroke-width:1.4px}</style>
+            <rect x="${f(vbX)}" y="${f(vbY)}" width="${f(vbW)}" height="${f(vbH)}" fill="#ffffff"/>
+            <g fill="none" transform="scale(1,-1) translate(0,${f(-(minY + maxY))})">${shapes.join('')}</g>
+            ${texts.join('')}
+        </svg>`;
+    }
+
+    renderDxfPreview(uint8Array, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        let text;
+        try {
+            text = new TextDecoder('utf-8').decode(uint8Array);
+            if (text.includes('\uFFFD')) {
+                try { text = new TextDecoder('gbk').decode(uint8Array); } catch (e) { /* 保持 utf-8 结果 */ }
+            }
+        } catch (e) {
+            text = '';
+            for (let i = 0; i < uint8Array.length; i++) text += String.fromCharCode(uint8Array[i]);
+        }
+
+        const blob = new Blob([uint8Array], { type: 'application/dxf' });
+        this.currentImageUrl = URL.createObjectURL(blob);
+        this.currentFileName = fileName;
+
+        try {
+            const parsed = this.parseDxf(text);
+            const svg = this.buildDxfSvg(parsed);
+            const counter = {};
+            parsed.entities.forEach(e => { counter[e.type] = (counter[e.type] || 0) + 1; });
+            const stats = Object.keys(counter).sort().map(k => `${k}×${counter[k]}`).join('、');
+            const unsupportedInfo = Object.keys(parsed.unsupported).length
+                ? `；未渲染实体：${Object.entries(parsed.unsupported).map(([k, n]) => `${k}×${n}`).join('、')}` : '';
+            fileGrid.classList.add('has-preview');
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${fileName}</span>
+                    </div>
+                    <div class="preview-content">
+                        <div style="width: 100%; border: 1px solid #e0e0e0; background: #fff; border-radius: 4px; overflow: hidden;">
+                            <div style="width: 100%; max-height: 600px; overflow: auto;">
+                                ${svg || '<div style="padding: 40px; text-align: center; color: #999;">未解析到可显示的图元</div>'}
+                            </div>
+                        </div>
+                        <div style="margin-top: 8px; font-size: 12px; color: #888;">CAD图纸（DXF）预览 — 图元：${stats || '无'}${unsupportedInfo}</div>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            console.error('CAD图纸渲染失败:', error);
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${fileName}</span>
+                    </div>
+                    <div class="preview-content">
+                        <div class="document-preview-info">
+                            <p>CAD图纸渲染失败: ${error.message}</p>
+                            <button class="download-btn" id="downloadDxfBtn">下载文件</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            const btn = fileGrid.querySelector('#downloadDxfBtn');
+            if (btn) btn.addEventListener('click', () => this.downloadSelected());
         }
     }
 
