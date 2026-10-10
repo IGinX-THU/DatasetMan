@@ -485,6 +485,12 @@ service ApiService {
     // GET /api/datasource/tree -> tree()
     Result getDataSourceTree(),
 
+    // POST /api/datasource/meta-props/upload -> upload(file, fileName)
+    Result uploadMetaProps(1: binary file, 2: string fileName),
+
+    // GET /api/datasource/meta-props/template -> download template
+    binary downloadMetaPropsTemplate(),
+
     // ========== 数据查询接口 - 匹配DataTableController ==========
     // POST /api/data/query -> queryData(DataQueryRequest)
     Result queryData(1: DataQueryRequest request),

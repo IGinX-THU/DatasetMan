@@ -19547,6 +19547,12 @@ type ApiService interface {
 	ListDataSources(ctx context.Context) (_r *Result_, _err error)
 	GetDataSourceTree(ctx context.Context) (_r *Result_, _err error)
 	// Parameters:
+	//  - File
+	//  - FileName
+	// 
+	UploadMetaProps(ctx context.Context, file []byte, fileName string) (_r *Result_, _err error)
+	DownloadMetaPropsTemplate(ctx context.Context) (_r []byte, _err error)
+	// Parameters:
 	//  - Request
 	// 
 	QueryData(ctx context.Context, request *DataQueryRequest) (_r *Result_, _err error)
@@ -19993,20 +19999,53 @@ func (p *ApiServiceClient) GetDataSourceTree(ctx context.Context) (_r *Result_, 
 }
 
 // Parameters:
-//  - Request
+//  - File
+//  - FileName
 // 
-func (p *ApiServiceClient) QueryData(ctx context.Context, request *DataQueryRequest) (_r *Result_, _err error) {
-	var _args58 ApiServiceQueryDataArgs
-	_args58.Request = request
-	var _result60 ApiServiceQueryDataResult
+func (p *ApiServiceClient) UploadMetaProps(ctx context.Context, file []byte, fileName string) (_r *Result_, _err error) {
+	var _args58 ApiServiceUploadMetaPropsArgs
+	_args58.File = file
+	_args58.FileName = fileName
+	var _result60 ApiServiceUploadMetaPropsResult
 	var _meta59 thrift.ResponseMeta
-	_meta59, _err = p.Client_().Call(ctx, "queryData", &_args58, &_result60)
+	_meta59, _err = p.Client_().Call(ctx, "uploadMetaProps", &_args58, &_result60)
 	p.SetLastResponseMeta_(_meta59)
 	if _err != nil {
 		return
 	}
 	if _ret61 := _result60.GetSuccess(); _ret61 != nil {
 		return _ret61, nil
+	}
+	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "uploadMetaProps failed: unknown result")
+}
+
+func (p *ApiServiceClient) DownloadMetaPropsTemplate(ctx context.Context) (_r []byte, _err error) {
+	var _args62 ApiServiceDownloadMetaPropsTemplateArgs
+	var _result64 ApiServiceDownloadMetaPropsTemplateResult
+	var _meta63 thrift.ResponseMeta
+	_meta63, _err = p.Client_().Call(ctx, "downloadMetaPropsTemplate", &_args62, &_result64)
+	p.SetLastResponseMeta_(_meta63)
+	if _err != nil {
+		return
+	}
+	return _result64.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Request
+// 
+func (p *ApiServiceClient) QueryData(ctx context.Context, request *DataQueryRequest) (_r *Result_, _err error) {
+	var _args65 ApiServiceQueryDataArgs
+	_args65.Request = request
+	var _result67 ApiServiceQueryDataResult
+	var _meta66 thrift.ResponseMeta
+	_meta66, _err = p.Client_().Call(ctx, "queryData", &_args65, &_result67)
+	p.SetLastResponseMeta_(_meta66)
+	if _err != nil {
+		return
+	}
+	if _ret68 := _result67.GetSuccess(); _ret68 != nil {
+		return _ret68, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "queryData failed: unknown result")
 }
@@ -20015,17 +20054,17 @@ func (p *ApiServiceClient) QueryData(ctx context.Context, request *DataQueryRequ
 //  - Request
 // 
 func (p *ApiServiceClient) QueryFileData(ctx context.Context, request *DataQueryRequest) (_r *Result_, _err error) {
-	var _args62 ApiServiceQueryFileDataArgs
-	_args62.Request = request
-	var _result64 ApiServiceQueryFileDataResult
-	var _meta63 thrift.ResponseMeta
-	_meta63, _err = p.Client_().Call(ctx, "queryFileData", &_args62, &_result64)
-	p.SetLastResponseMeta_(_meta63)
+	var _args69 ApiServiceQueryFileDataArgs
+	_args69.Request = request
+	var _result71 ApiServiceQueryFileDataResult
+	var _meta70 thrift.ResponseMeta
+	_meta70, _err = p.Client_().Call(ctx, "queryFileData", &_args69, &_result71)
+	p.SetLastResponseMeta_(_meta70)
 	if _err != nil {
 		return
 	}
-	if _ret65 := _result64.GetSuccess(); _ret65 != nil {
-		return _ret65, nil
+	if _ret72 := _result71.GetSuccess(); _ret72 != nil {
+		return _ret72, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "queryFileData failed: unknown result")
 }
@@ -20035,18 +20074,18 @@ func (p *ApiServiceClient) QueryFileData(ctx context.Context, request *DataQuery
 //  - File
 // 
 func (p *ApiServiceClient) ImportData(ctx context.Context, config *DataImportRequest, file []byte) (_r *Result_, _err error) {
-	var _args66 ApiServiceImportDataArgs
-	_args66.Config = config
-	_args66.File = file
-	var _result68 ApiServiceImportDataResult
-	var _meta67 thrift.ResponseMeta
-	_meta67, _err = p.Client_().Call(ctx, "importData", &_args66, &_result68)
-	p.SetLastResponseMeta_(_meta67)
+	var _args73 ApiServiceImportDataArgs
+	_args73.Config = config
+	_args73.File = file
+	var _result75 ApiServiceImportDataResult
+	var _meta74 thrift.ResponseMeta
+	_meta74, _err = p.Client_().Call(ctx, "importData", &_args73, &_result75)
+	p.SetLastResponseMeta_(_meta74)
 	if _err != nil {
 		return
 	}
-	if _ret69 := _result68.GetSuccess(); _ret69 != nil {
-		return _ret69, nil
+	if _ret76 := _result75.GetSuccess(); _ret76 != nil {
+		return _ret76, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "importData failed: unknown result")
 }
@@ -20055,33 +20094,33 @@ func (p *ApiServiceClient) ImportData(ctx context.Context, config *DataImportReq
 //  - Request
 // 
 func (p *ApiServiceClient) ExportData(ctx context.Context, request *DataQueryRequest) (_r []byte, _err error) {
-	var _args70 ApiServiceExportDataArgs
-	_args70.Request = request
-	var _result72 ApiServiceExportDataResult
-	var _meta71 thrift.ResponseMeta
-	_meta71, _err = p.Client_().Call(ctx, "exportData", &_args70, &_result72)
-	p.SetLastResponseMeta_(_meta71)
+	var _args77 ApiServiceExportDataArgs
+	_args77.Request = request
+	var _result79 ApiServiceExportDataResult
+	var _meta78 thrift.ResponseMeta
+	_meta78, _err = p.Client_().Call(ctx, "exportData", &_args77, &_result79)
+	p.SetLastResponseMeta_(_meta78)
 	if _err != nil {
 		return
 	}
-	return _result72.GetSuccess(), nil
+	return _result79.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Request
 // 
 func (p *ApiServiceClient) DeleteData(ctx context.Context, request *DataQueryRequest) (_r *Result_, _err error) {
-	var _args73 ApiServiceDeleteDataArgs
-	_args73.Request = request
-	var _result75 ApiServiceDeleteDataResult
-	var _meta74 thrift.ResponseMeta
-	_meta74, _err = p.Client_().Call(ctx, "deleteData", &_args73, &_result75)
-	p.SetLastResponseMeta_(_meta74)
+	var _args80 ApiServiceDeleteDataArgs
+	_args80.Request = request
+	var _result82 ApiServiceDeleteDataResult
+	var _meta81 thrift.ResponseMeta
+	_meta81, _err = p.Client_().Call(ctx, "deleteData", &_args80, &_result82)
+	p.SetLastResponseMeta_(_meta81)
 	if _err != nil {
 		return
 	}
-	if _ret76 := _result75.GetSuccess(); _ret76 != nil {
-		return _ret76, nil
+	if _ret83 := _result82.GetSuccess(); _ret83 != nil {
+		return _ret83, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "deleteData failed: unknown result")
 }
@@ -20090,17 +20129,17 @@ func (p *ApiServiceClient) DeleteData(ctx context.Context, request *DataQueryReq
 //  - Request
 // 
 func (p *ApiServiceClient) GetTimeRange(ctx context.Context, request *TimeRangeRequest) (_r *Result_, _err error) {
-	var _args77 ApiServiceGetTimeRangeArgs
-	_args77.Request = request
-	var _result79 ApiServiceGetTimeRangeResult
-	var _meta78 thrift.ResponseMeta
-	_meta78, _err = p.Client_().Call(ctx, "getTimeRange", &_args77, &_result79)
-	p.SetLastResponseMeta_(_meta78)
+	var _args84 ApiServiceGetTimeRangeArgs
+	_args84.Request = request
+	var _result86 ApiServiceGetTimeRangeResult
+	var _meta85 thrift.ResponseMeta
+	_meta85, _err = p.Client_().Call(ctx, "getTimeRange", &_args84, &_result86)
+	p.SetLastResponseMeta_(_meta85)
 	if _err != nil {
 		return
 	}
-	if _ret80 := _result79.GetSuccess(); _ret80 != nil {
-		return _ret80, nil
+	if _ret87 := _result86.GetSuccess(); _ret87 != nil {
+		return _ret87, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getTimeRange failed: unknown result")
 }
@@ -20109,17 +20148,17 @@ func (p *ApiServiceClient) GetTimeRange(ctx context.Context, request *TimeRangeR
 //  - Request
 // 
 func (p *ApiServiceClient) QueryRelationalData(ctx context.Context, request *RelationalQueryRequest) (_r *Result_, _err error) {
-	var _args81 ApiServiceQueryRelationalDataArgs
-	_args81.Request = request
-	var _result83 ApiServiceQueryRelationalDataResult
-	var _meta82 thrift.ResponseMeta
-	_meta82, _err = p.Client_().Call(ctx, "queryRelationalData", &_args81, &_result83)
-	p.SetLastResponseMeta_(_meta82)
+	var _args88 ApiServiceQueryRelationalDataArgs
+	_args88.Request = request
+	var _result90 ApiServiceQueryRelationalDataResult
+	var _meta89 thrift.ResponseMeta
+	_meta89, _err = p.Client_().Call(ctx, "queryRelationalData", &_args88, &_result90)
+	p.SetLastResponseMeta_(_meta89)
 	if _err != nil {
 		return
 	}
-	if _ret84 := _result83.GetSuccess(); _ret84 != nil {
-		return _ret84, nil
+	if _ret91 := _result90.GetSuccess(); _ret91 != nil {
+		return _ret91, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "queryRelationalData failed: unknown result")
 }
@@ -20128,17 +20167,17 @@ func (p *ApiServiceClient) QueryRelationalData(ctx context.Context, request *Rel
 //  - Request
 // 
 func (p *ApiServiceClient) CountRelationalData(ctx context.Context, request *RelationalQueryRequest) (_r *Result_, _err error) {
-	var _args85 ApiServiceCountRelationalDataArgs
-	_args85.Request = request
-	var _result87 ApiServiceCountRelationalDataResult
-	var _meta86 thrift.ResponseMeta
-	_meta86, _err = p.Client_().Call(ctx, "countRelationalData", &_args85, &_result87)
-	p.SetLastResponseMeta_(_meta86)
+	var _args92 ApiServiceCountRelationalDataArgs
+	_args92.Request = request
+	var _result94 ApiServiceCountRelationalDataResult
+	var _meta93 thrift.ResponseMeta
+	_meta93, _err = p.Client_().Call(ctx, "countRelationalData", &_args92, &_result94)
+	p.SetLastResponseMeta_(_meta93)
 	if _err != nil {
 		return
 	}
-	if _ret88 := _result87.GetSuccess(); _ret88 != nil {
-		return _ret88, nil
+	if _ret95 := _result94.GetSuccess(); _ret95 != nil {
+		return _ret95, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "countRelationalData failed: unknown result")
 }
@@ -20147,33 +20186,33 @@ func (p *ApiServiceClient) CountRelationalData(ctx context.Context, request *Rel
 //  - Request
 // 
 func (p *ApiServiceClient) ExportRelationalDataToExcel(ctx context.Context, request *RelationalQueryRequest) (_r []byte, _err error) {
-	var _args89 ApiServiceExportRelationalDataToExcelArgs
-	_args89.Request = request
-	var _result91 ApiServiceExportRelationalDataToExcelResult
-	var _meta90 thrift.ResponseMeta
-	_meta90, _err = p.Client_().Call(ctx, "exportRelationalDataToExcel", &_args89, &_result91)
-	p.SetLastResponseMeta_(_meta90)
+	var _args96 ApiServiceExportRelationalDataToExcelArgs
+	_args96.Request = request
+	var _result98 ApiServiceExportRelationalDataToExcelResult
+	var _meta97 thrift.ResponseMeta
+	_meta97, _err = p.Client_().Call(ctx, "exportRelationalDataToExcel", &_args96, &_result98)
+	p.SetLastResponseMeta_(_meta97)
 	if _err != nil {
 		return
 	}
-	return _result91.GetSuccess(), nil
+	return _result98.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Sql
 // 
 func (p *ApiServiceClient) TestSQL(ctx context.Context, sql string) (_r *Result_, _err error) {
-	var _args92 ApiServiceTestSQLArgs
-	_args92.Sql = sql
-	var _result94 ApiServiceTestSQLResult
-	var _meta93 thrift.ResponseMeta
-	_meta93, _err = p.Client_().Call(ctx, "testSQL", &_args92, &_result94)
-	p.SetLastResponseMeta_(_meta93)
+	var _args99 ApiServiceTestSQLArgs
+	_args99.Sql = sql
+	var _result101 ApiServiceTestSQLResult
+	var _meta100 thrift.ResponseMeta
+	_meta100, _err = p.Client_().Call(ctx, "testSQL", &_args99, &_result101)
+	p.SetLastResponseMeta_(_meta100)
 	if _err != nil {
 		return
 	}
-	if _ret95 := _result94.GetSuccess(); _ret95 != nil {
-		return _ret95, nil
+	if _ret102 := _result101.GetSuccess(); _ret102 != nil {
+		return _ret102, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "testSQL failed: unknown result")
 }
@@ -20182,17 +20221,17 @@ func (p *ApiServiceClient) TestSQL(ctx context.Context, sql string) (_r *Result_
 //  - Request
 // 
 func (p *ApiServiceClient) SaveDataset(ctx context.Context, request *DatasetRequest) (_r *Result_, _err error) {
-	var _args96 ApiServiceSaveDatasetArgs
-	_args96.Request = request
-	var _result98 ApiServiceSaveDatasetResult
-	var _meta97 thrift.ResponseMeta
-	_meta97, _err = p.Client_().Call(ctx, "saveDataset", &_args96, &_result98)
-	p.SetLastResponseMeta_(_meta97)
+	var _args103 ApiServiceSaveDatasetArgs
+	_args103.Request = request
+	var _result105 ApiServiceSaveDatasetResult
+	var _meta104 thrift.ResponseMeta
+	_meta104, _err = p.Client_().Call(ctx, "saveDataset", &_args103, &_result105)
+	p.SetLastResponseMeta_(_meta104)
 	if _err != nil {
 		return
 	}
-	if _ret99 := _result98.GetSuccess(); _ret99 != nil {
-		return _ret99, nil
+	if _ret106 := _result105.GetSuccess(); _ret106 != nil {
+		return _ret106, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "saveDataset failed: unknown result")
 }
@@ -20201,17 +20240,17 @@ func (p *ApiServiceClient) SaveDataset(ctx context.Context, request *DatasetRequ
 //  - Path
 // 
 func (p *ApiServiceClient) QueryMeta(ctx context.Context, path string) (_r *Result_, _err error) {
-	var _args100 ApiServiceQueryMetaArgs
-	_args100.Path = path
-	var _result102 ApiServiceQueryMetaResult
-	var _meta101 thrift.ResponseMeta
-	_meta101, _err = p.Client_().Call(ctx, "queryMeta", &_args100, &_result102)
-	p.SetLastResponseMeta_(_meta101)
+	var _args107 ApiServiceQueryMetaArgs
+	_args107.Path = path
+	var _result109 ApiServiceQueryMetaResult
+	var _meta108 thrift.ResponseMeta
+	_meta108, _err = p.Client_().Call(ctx, "queryMeta", &_args107, &_result109)
+	p.SetLastResponseMeta_(_meta108)
 	if _err != nil {
 		return
 	}
-	if _ret103 := _result102.GetSuccess(); _ret103 != nil {
-		return _ret103, nil
+	if _ret110 := _result109.GetSuccess(); _ret110 != nil {
+		return _ret110, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "queryMeta failed: unknown result")
 }
@@ -20220,17 +20259,17 @@ func (p *ApiServiceClient) QueryMeta(ctx context.Context, path string) (_r *Resu
 //  - Path
 // 
 func (p *ApiServiceClient) DeleteDataset(ctx context.Context, path string) (_r *Result_, _err error) {
-	var _args104 ApiServiceDeleteDatasetArgs
-	_args104.Path = path
-	var _result106 ApiServiceDeleteDatasetResult
-	var _meta105 thrift.ResponseMeta
-	_meta105, _err = p.Client_().Call(ctx, "deleteDataset", &_args104, &_result106)
-	p.SetLastResponseMeta_(_meta105)
+	var _args111 ApiServiceDeleteDatasetArgs
+	_args111.Path = path
+	var _result113 ApiServiceDeleteDatasetResult
+	var _meta112 thrift.ResponseMeta
+	_meta112, _err = p.Client_().Call(ctx, "deleteDataset", &_args111, &_result113)
+	p.SetLastResponseMeta_(_meta112)
 	if _err != nil {
 		return
 	}
-	if _ret107 := _result106.GetSuccess(); _ret107 != nil {
-		return _ret107, nil
+	if _ret114 := _result113.GetSuccess(); _ret114 != nil {
+		return _ret114, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "deleteDataset failed: unknown result")
 }
@@ -20239,32 +20278,32 @@ func (p *ApiServiceClient) DeleteDataset(ctx context.Context, path string) (_r *
 //  - Request
 // 
 func (p *ApiServiceClient) CreateDataset(ctx context.Context, request *DatasetCreateRequest) (_r *Result_, _err error) {
-	var _args108 ApiServiceCreateDatasetArgs
-	_args108.Request = request
-	var _result110 ApiServiceCreateDatasetResult
-	var _meta109 thrift.ResponseMeta
-	_meta109, _err = p.Client_().Call(ctx, "createDataset", &_args108, &_result110)
-	p.SetLastResponseMeta_(_meta109)
+	var _args115 ApiServiceCreateDatasetArgs
+	_args115.Request = request
+	var _result117 ApiServiceCreateDatasetResult
+	var _meta116 thrift.ResponseMeta
+	_meta116, _err = p.Client_().Call(ctx, "createDataset", &_args115, &_result117)
+	p.SetLastResponseMeta_(_meta116)
 	if _err != nil {
 		return
 	}
-	if _ret111 := _result110.GetSuccess(); _ret111 != nil {
-		return _ret111, nil
+	if _ret118 := _result117.GetSuccess(); _ret118 != nil {
+		return _ret118, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "createDataset failed: unknown result")
 }
 
 func (p *ApiServiceClient) GetDatasetTree(ctx context.Context) (_r *Result_, _err error) {
-	var _args112 ApiServiceGetDatasetTreeArgs
-	var _result114 ApiServiceGetDatasetTreeResult
-	var _meta113 thrift.ResponseMeta
-	_meta113, _err = p.Client_().Call(ctx, "getDatasetTree", &_args112, &_result114)
-	p.SetLastResponseMeta_(_meta113)
+	var _args119 ApiServiceGetDatasetTreeArgs
+	var _result121 ApiServiceGetDatasetTreeResult
+	var _meta120 thrift.ResponseMeta
+	_meta120, _err = p.Client_().Call(ctx, "getDatasetTree", &_args119, &_result121)
+	p.SetLastResponseMeta_(_meta120)
 	if _err != nil {
 		return
 	}
-	if _ret115 := _result114.GetSuccess(); _ret115 != nil {
-		return _ret115, nil
+	if _ret122 := _result121.GetSuccess(); _ret122 != nil {
+		return _ret122, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getDatasetTree failed: unknown result")
 }
@@ -20273,17 +20312,17 @@ func (p *ApiServiceClient) GetDatasetTree(ctx context.Context) (_r *Result_, _er
 //  - VersionId
 // 
 func (p *ApiServiceClient) GetDatasetVersionMeta(ctx context.Context, versionId int64) (_r *Result_, _err error) {
-	var _args116 ApiServiceGetDatasetVersionMetaArgs
-	_args116.VersionId = versionId
-	var _result118 ApiServiceGetDatasetVersionMetaResult
-	var _meta117 thrift.ResponseMeta
-	_meta117, _err = p.Client_().Call(ctx, "getDatasetVersionMeta", &_args116, &_result118)
-	p.SetLastResponseMeta_(_meta117)
+	var _args123 ApiServiceGetDatasetVersionMetaArgs
+	_args123.VersionId = versionId
+	var _result125 ApiServiceGetDatasetVersionMetaResult
+	var _meta124 thrift.ResponseMeta
+	_meta124, _err = p.Client_().Call(ctx, "getDatasetVersionMeta", &_args123, &_result125)
+	p.SetLastResponseMeta_(_meta124)
 	if _err != nil {
 		return
 	}
-	if _ret119 := _result118.GetSuccess(); _ret119 != nil {
-		return _ret119, nil
+	if _ret126 := _result125.GetSuccess(); _ret126 != nil {
+		return _ret126, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getDatasetVersionMeta failed: unknown result")
 }
@@ -20292,17 +20331,17 @@ func (p *ApiServiceClient) GetDatasetVersionMeta(ctx context.Context, versionId 
 //  - DatasetName
 // 
 func (p *ApiServiceClient) GetDatasetChanges(ctx context.Context, datasetName string) (_r *Result_, _err error) {
-	var _args120 ApiServiceGetDatasetChangesArgs
-	_args120.DatasetName = datasetName
-	var _result122 ApiServiceGetDatasetChangesResult
-	var _meta121 thrift.ResponseMeta
-	_meta121, _err = p.Client_().Call(ctx, "getDatasetChanges", &_args120, &_result122)
-	p.SetLastResponseMeta_(_meta121)
+	var _args127 ApiServiceGetDatasetChangesArgs
+	_args127.DatasetName = datasetName
+	var _result129 ApiServiceGetDatasetChangesResult
+	var _meta128 thrift.ResponseMeta
+	_meta128, _err = p.Client_().Call(ctx, "getDatasetChanges", &_args127, &_result129)
+	p.SetLastResponseMeta_(_meta128)
 	if _err != nil {
 		return
 	}
-	if _ret123 := _result122.GetSuccess(); _ret123 != nil {
-		return _ret123, nil
+	if _ret130 := _result129.GetSuccess(); _ret130 != nil {
+		return _ret130, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getDatasetChanges failed: unknown result")
 }
@@ -20312,18 +20351,18 @@ func (p *ApiServiceClient) GetDatasetChanges(ctx context.Context, datasetName st
 //  - SideLineage
 // 
 func (p *ApiServiceClient) GetDatasetLineage(ctx context.Context, versionId int64, sideLineage bool) (_r *Result_, _err error) {
-	var _args124 ApiServiceGetDatasetLineageArgs
-	_args124.VersionId = versionId
-	_args124.SideLineage = sideLineage
-	var _result126 ApiServiceGetDatasetLineageResult
-	var _meta125 thrift.ResponseMeta
-	_meta125, _err = p.Client_().Call(ctx, "getDatasetLineage", &_args124, &_result126)
-	p.SetLastResponseMeta_(_meta125)
+	var _args131 ApiServiceGetDatasetLineageArgs
+	_args131.VersionId = versionId
+	_args131.SideLineage = sideLineage
+	var _result133 ApiServiceGetDatasetLineageResult
+	var _meta132 thrift.ResponseMeta
+	_meta132, _err = p.Client_().Call(ctx, "getDatasetLineage", &_args131, &_result133)
+	p.SetLastResponseMeta_(_meta132)
 	if _err != nil {
 		return
 	}
-	if _ret127 := _result126.GetSuccess(); _ret127 != nil {
-		return _ret127, nil
+	if _ret134 := _result133.GetSuccess(); _ret134 != nil {
+		return _ret134, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getDatasetLineage failed: unknown result")
 }
@@ -20332,17 +20371,17 @@ func (p *ApiServiceClient) GetDatasetLineage(ctx context.Context, versionId int6
 //  - Request
 // 
 func (p *ApiServiceClient) ForkLineage(ctx context.Context, request *LineageForkRequest) (_r *Result_, _err error) {
-	var _args128 ApiServiceForkLineageArgs
-	_args128.Request = request
-	var _result130 ApiServiceForkLineageResult
-	var _meta129 thrift.ResponseMeta
-	_meta129, _err = p.Client_().Call(ctx, "forkLineage", &_args128, &_result130)
-	p.SetLastResponseMeta_(_meta129)
+	var _args135 ApiServiceForkLineageArgs
+	_args135.Request = request
+	var _result137 ApiServiceForkLineageResult
+	var _meta136 thrift.ResponseMeta
+	_meta136, _err = p.Client_().Call(ctx, "forkLineage", &_args135, &_result137)
+	p.SetLastResponseMeta_(_meta136)
 	if _err != nil {
 		return
 	}
-	if _ret131 := _result130.GetSuccess(); _ret131 != nil {
-		return _ret131, nil
+	if _ret138 := _result137.GetSuccess(); _ret138 != nil {
+		return _ret138, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "forkLineage failed: unknown result")
 }
@@ -20351,17 +20390,17 @@ func (p *ApiServiceClient) ForkLineage(ctx context.Context, request *LineageFork
 //  - RunId
 // 
 func (p *ApiServiceClient) GetLineageForkStatus(ctx context.Context, runId int64) (_r *Result_, _err error) {
-	var _args132 ApiServiceGetLineageForkStatusArgs
-	_args132.RunId = runId
-	var _result134 ApiServiceGetLineageForkStatusResult
-	var _meta133 thrift.ResponseMeta
-	_meta133, _err = p.Client_().Call(ctx, "getLineageForkStatus", &_args132, &_result134)
-	p.SetLastResponseMeta_(_meta133)
+	var _args139 ApiServiceGetLineageForkStatusArgs
+	_args139.RunId = runId
+	var _result141 ApiServiceGetLineageForkStatusResult
+	var _meta140 thrift.ResponseMeta
+	_meta140, _err = p.Client_().Call(ctx, "getLineageForkStatus", &_args139, &_result141)
+	p.SetLastResponseMeta_(_meta140)
 	if _err != nil {
 		return
 	}
-	if _ret135 := _result134.GetSuccess(); _ret135 != nil {
-		return _ret135, nil
+	if _ret142 := _result141.GetSuccess(); _ret142 != nil {
+		return _ret142, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getLineageForkStatus failed: unknown result")
 }
@@ -20370,17 +20409,17 @@ func (p *ApiServiceClient) GetLineageForkStatus(ctx context.Context, runId int64
 //  - VersionId
 // 
 func (p *ApiServiceClient) DeleteDatasetVersion(ctx context.Context, versionId int64) (_r *Result_, _err error) {
-	var _args136 ApiServiceDeleteDatasetVersionArgs
-	_args136.VersionId = versionId
-	var _result138 ApiServiceDeleteDatasetVersionResult
-	var _meta137 thrift.ResponseMeta
-	_meta137, _err = p.Client_().Call(ctx, "deleteDatasetVersion", &_args136, &_result138)
-	p.SetLastResponseMeta_(_meta137)
+	var _args143 ApiServiceDeleteDatasetVersionArgs
+	_args143.VersionId = versionId
+	var _result145 ApiServiceDeleteDatasetVersionResult
+	var _meta144 thrift.ResponseMeta
+	_meta144, _err = p.Client_().Call(ctx, "deleteDatasetVersion", &_args143, &_result145)
+	p.SetLastResponseMeta_(_meta144)
 	if _err != nil {
 		return
 	}
-	if _ret139 := _result138.GetSuccess(); _ret139 != nil {
-		return _ret139, nil
+	if _ret146 := _result145.GetSuccess(); _ret146 != nil {
+		return _ret146, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "deleteDatasetVersion failed: unknown result")
 }
@@ -20391,19 +20430,19 @@ func (p *ApiServiceClient) DeleteDatasetVersion(ctx context.Context, versionId i
 //  - ClassName
 // 
 func (p *ApiServiceClient) RegisterTransform(ctx context.Context, file []byte, name string, className string) (_r *Result_, _err error) {
-	var _args140 ApiServiceRegisterTransformArgs
-	_args140.File = file
-	_args140.Name = name
-	_args140.ClassName = className
-	var _result142 ApiServiceRegisterTransformResult
-	var _meta141 thrift.ResponseMeta
-	_meta141, _err = p.Client_().Call(ctx, "registerTransform", &_args140, &_result142)
-	p.SetLastResponseMeta_(_meta141)
+	var _args147 ApiServiceRegisterTransformArgs
+	_args147.File = file
+	_args147.Name = name
+	_args147.ClassName = className
+	var _result149 ApiServiceRegisterTransformResult
+	var _meta148 thrift.ResponseMeta
+	_meta148, _err = p.Client_().Call(ctx, "registerTransform", &_args147, &_result149)
+	p.SetLastResponseMeta_(_meta148)
 	if _err != nil {
 		return
 	}
-	if _ret143 := _result142.GetSuccess(); _ret143 != nil {
-		return _ret143, nil
+	if _ret150 := _result149.GetSuccess(); _ret150 != nil {
+		return _ret150, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "registerTransform failed: unknown result")
 }
@@ -20412,17 +20451,17 @@ func (p *ApiServiceClient) RegisterTransform(ctx context.Context, file []byte, n
 //  - Name
 // 
 func (p *ApiServiceClient) DeleteFunction(ctx context.Context, name string) (_r *Result_, _err error) {
-	var _args144 ApiServiceDeleteFunctionArgs
-	_args144.Name = name
-	var _result146 ApiServiceDeleteFunctionResult
-	var _meta145 thrift.ResponseMeta
-	_meta145, _err = p.Client_().Call(ctx, "deleteFunction", &_args144, &_result146)
-	p.SetLastResponseMeta_(_meta145)
+	var _args151 ApiServiceDeleteFunctionArgs
+	_args151.Name = name
+	var _result153 ApiServiceDeleteFunctionResult
+	var _meta152 thrift.ResponseMeta
+	_meta152, _err = p.Client_().Call(ctx, "deleteFunction", &_args151, &_result153)
+	p.SetLastResponseMeta_(_meta152)
 	if _err != nil {
 		return
 	}
-	if _ret147 := _result146.GetSuccess(); _ret147 != nil {
-		return _ret147, nil
+	if _ret154 := _result153.GetSuccess(); _ret154 != nil {
+		return _ret154, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "deleteFunction failed: unknown result")
 }
@@ -20431,17 +20470,17 @@ func (p *ApiServiceClient) DeleteFunction(ctx context.Context, name string) (_r 
 //  - Type
 // 
 func (p *ApiServiceClient) ListFunctions(ctx context.Context, type_a1 string) (_r *Result_, _err error) {
-	var _args148 ApiServiceListFunctionsArgs
-	_args148.Type = type_a1
-	var _result150 ApiServiceListFunctionsResult
-	var _meta149 thrift.ResponseMeta
-	_meta149, _err = p.Client_().Call(ctx, "listFunctions", &_args148, &_result150)
-	p.SetLastResponseMeta_(_meta149)
+	var _args155 ApiServiceListFunctionsArgs
+	_args155.Type = type_a1
+	var _result157 ApiServiceListFunctionsResult
+	var _meta156 thrift.ResponseMeta
+	_meta156, _err = p.Client_().Call(ctx, "listFunctions", &_args155, &_result157)
+	p.SetLastResponseMeta_(_meta156)
 	if _err != nil {
 		return
 	}
-	if _ret151 := _result150.GetSuccess(); _ret151 != nil {
-		return _ret151, nil
+	if _ret158 := _result157.GetSuccess(); _ret158 != nil {
+		return _ret158, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "listFunctions failed: unknown result")
 }
@@ -20453,20 +20492,20 @@ func (p *ApiServiceClient) ListFunctions(ctx context.Context, type_a1 string) (_
 //  - UdfType
 // 
 func (p *ApiServiceClient) RegisterUDF(ctx context.Context, file []byte, name string, className string, udfType string) (_r *Result_, _err error) {
-	var _args152 ApiServiceRegisterUDFArgs
-	_args152.File = file
-	_args152.Name = name
-	_args152.ClassName = className
-	_args152.UdfType = udfType
-	var _result154 ApiServiceRegisterUDFResult
-	var _meta153 thrift.ResponseMeta
-	_meta153, _err = p.Client_().Call(ctx, "registerUDF", &_args152, &_result154)
-	p.SetLastResponseMeta_(_meta153)
+	var _args159 ApiServiceRegisterUDFArgs
+	_args159.File = file
+	_args159.Name = name
+	_args159.ClassName = className
+	_args159.UdfType = udfType
+	var _result161 ApiServiceRegisterUDFResult
+	var _meta160 thrift.ResponseMeta
+	_meta160, _err = p.Client_().Call(ctx, "registerUDF", &_args159, &_result161)
+	p.SetLastResponseMeta_(_meta160)
 	if _err != nil {
 		return
 	}
-	if _ret155 := _result154.GetSuccess(); _ret155 != nil {
-		return _ret155, nil
+	if _ret162 := _result161.GetSuccess(); _ret162 != nil {
+		return _ret162, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "registerUDF failed: unknown result")
 }
@@ -20476,34 +20515,34 @@ func (p *ApiServiceClient) RegisterUDF(ctx context.Context, file []byte, name st
 //  - FileName
 // 
 func (p *ApiServiceClient) DownloadFunction(ctx context.Context, type_a1 string, fileName string) (_r []byte, _err error) {
-	var _args156 ApiServiceDownloadFunctionArgs
-	_args156.Type = type_a1
-	_args156.FileName = fileName
-	var _result158 ApiServiceDownloadFunctionResult
-	var _meta157 thrift.ResponseMeta
-	_meta157, _err = p.Client_().Call(ctx, "downloadFunction", &_args156, &_result158)
-	p.SetLastResponseMeta_(_meta157)
+	var _args163 ApiServiceDownloadFunctionArgs
+	_args163.Type = type_a1
+	_args163.FileName = fileName
+	var _result165 ApiServiceDownloadFunctionResult
+	var _meta164 thrift.ResponseMeta
+	_meta164, _err = p.Client_().Call(ctx, "downloadFunction", &_args163, &_result165)
+	p.SetLastResponseMeta_(_meta164)
 	if _err != nil {
 		return
 	}
-	return _result158.GetSuccess(), nil
+	return _result165.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Request
 // 
 func (p *ApiServiceClient) SaveTransformCompare(ctx context.Context, request *TransformJobRequest) (_r *Result_, _err error) {
-	var _args159 ApiServiceSaveTransformCompareArgs
-	_args159.Request = request
-	var _result161 ApiServiceSaveTransformCompareResult
-	var _meta160 thrift.ResponseMeta
-	_meta160, _err = p.Client_().Call(ctx, "saveTransformCompare", &_args159, &_result161)
-	p.SetLastResponseMeta_(_meta160)
+	var _args166 ApiServiceSaveTransformCompareArgs
+	_args166.Request = request
+	var _result168 ApiServiceSaveTransformCompareResult
+	var _meta167 thrift.ResponseMeta
+	_meta167, _err = p.Client_().Call(ctx, "saveTransformCompare", &_args166, &_result168)
+	p.SetLastResponseMeta_(_meta167)
 	if _err != nil {
 		return
 	}
-	if _ret162 := _result161.GetSuccess(); _ret162 != nil {
-		return _ret162, nil
+	if _ret169 := _result168.GetSuccess(); _ret169 != nil {
+		return _ret169, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "saveTransformCompare failed: unknown result")
 }
@@ -20512,17 +20551,17 @@ func (p *ApiServiceClient) SaveTransformCompare(ctx context.Context, request *Tr
 //  - Request
 // 
 func (p *ApiServiceClient) QueryTransformCompares(ctx context.Context, request *TransformJobQueryRequest) (_r *Result_, _err error) {
-	var _args163 ApiServiceQueryTransformComparesArgs
-	_args163.Request = request
-	var _result165 ApiServiceQueryTransformComparesResult
-	var _meta164 thrift.ResponseMeta
-	_meta164, _err = p.Client_().Call(ctx, "queryTransformCompares", &_args163, &_result165)
-	p.SetLastResponseMeta_(_meta164)
+	var _args170 ApiServiceQueryTransformComparesArgs
+	_args170.Request = request
+	var _result172 ApiServiceQueryTransformComparesResult
+	var _meta171 thrift.ResponseMeta
+	_meta171, _err = p.Client_().Call(ctx, "queryTransformCompares", &_args170, &_result172)
+	p.SetLastResponseMeta_(_meta171)
 	if _err != nil {
 		return
 	}
-	if _ret166 := _result165.GetSuccess(); _ret166 != nil {
-		return _ret166, nil
+	if _ret173 := _result172.GetSuccess(); _ret173 != nil {
+		return _ret173, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "queryTransformCompares failed: unknown result")
 }
@@ -20531,17 +20570,17 @@ func (p *ApiServiceClient) QueryTransformCompares(ctx context.Context, request *
 //  - Request
 // 
 func (p *ApiServiceClient) CountTransformCompares(ctx context.Context, request *TransformJobQueryRequest) (_r *Result_, _err error) {
-	var _args167 ApiServiceCountTransformComparesArgs
-	_args167.Request = request
-	var _result169 ApiServiceCountTransformComparesResult
-	var _meta168 thrift.ResponseMeta
-	_meta168, _err = p.Client_().Call(ctx, "countTransformCompares", &_args167, &_result169)
-	p.SetLastResponseMeta_(_meta168)
+	var _args174 ApiServiceCountTransformComparesArgs
+	_args174.Request = request
+	var _result176 ApiServiceCountTransformComparesResult
+	var _meta175 thrift.ResponseMeta
+	_meta175, _err = p.Client_().Call(ctx, "countTransformCompares", &_args174, &_result176)
+	p.SetLastResponseMeta_(_meta175)
 	if _err != nil {
 		return
 	}
-	if _ret170 := _result169.GetSuccess(); _ret170 != nil {
-		return _ret170, nil
+	if _ret177 := _result176.GetSuccess(); _ret177 != nil {
+		return _ret177, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "countTransformCompares failed: unknown result")
 }
@@ -20550,17 +20589,17 @@ func (p *ApiServiceClient) CountTransformCompares(ctx context.Context, request *
 //  - CreateTime
 // 
 func (p *ApiServiceClient) GetTransformCompare(ctx context.Context, createTime int64) (_r *Result_, _err error) {
-	var _args171 ApiServiceGetTransformCompareArgs
-	_args171.CreateTime = createTime
-	var _result173 ApiServiceGetTransformCompareResult
-	var _meta172 thrift.ResponseMeta
-	_meta172, _err = p.Client_().Call(ctx, "getTransformCompare", &_args171, &_result173)
-	p.SetLastResponseMeta_(_meta172)
+	var _args178 ApiServiceGetTransformCompareArgs
+	_args178.CreateTime = createTime
+	var _result180 ApiServiceGetTransformCompareResult
+	var _meta179 thrift.ResponseMeta
+	_meta179, _err = p.Client_().Call(ctx, "getTransformCompare", &_args178, &_result180)
+	p.SetLastResponseMeta_(_meta179)
 	if _err != nil {
 		return
 	}
-	if _ret174 := _result173.GetSuccess(); _ret174 != nil {
-		return _ret174, nil
+	if _ret181 := _result180.GetSuccess(); _ret181 != nil {
+		return _ret181, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getTransformCompare failed: unknown result")
 }
@@ -20569,17 +20608,17 @@ func (p *ApiServiceClient) GetTransformCompare(ctx context.Context, createTime i
 //  - CreateTime
 // 
 func (p *ApiServiceClient) DeleteTransformCompare(ctx context.Context, createTime int64) (_r *Result_, _err error) {
-	var _args175 ApiServiceDeleteTransformCompareArgs
-	_args175.CreateTime = createTime
-	var _result177 ApiServiceDeleteTransformCompareResult
-	var _meta176 thrift.ResponseMeta
-	_meta176, _err = p.Client_().Call(ctx, "deleteTransformCompare", &_args175, &_result177)
-	p.SetLastResponseMeta_(_meta176)
+	var _args182 ApiServiceDeleteTransformCompareArgs
+	_args182.CreateTime = createTime
+	var _result184 ApiServiceDeleteTransformCompareResult
+	var _meta183 thrift.ResponseMeta
+	_meta183, _err = p.Client_().Call(ctx, "deleteTransformCompare", &_args182, &_result184)
+	p.SetLastResponseMeta_(_meta183)
 	if _err != nil {
 		return
 	}
-	if _ret178 := _result177.GetSuccess(); _ret178 != nil {
-		return _ret178, nil
+	if _ret185 := _result184.GetSuccess(); _ret185 != nil {
+		return _ret185, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "deleteTransformCompare failed: unknown result")
 }
@@ -20588,17 +20627,17 @@ func (p *ApiServiceClient) DeleteTransformCompare(ctx context.Context, createTim
 //  - Request
 // 
 func (p *ApiServiceClient) QueryTransformJobs(ctx context.Context, request *TransformJobQueryRequest) (_r *Result_, _err error) {
-	var _args179 ApiServiceQueryTransformJobsArgs
-	_args179.Request = request
-	var _result181 ApiServiceQueryTransformJobsResult
-	var _meta180 thrift.ResponseMeta
-	_meta180, _err = p.Client_().Call(ctx, "queryTransformJobs", &_args179, &_result181)
-	p.SetLastResponseMeta_(_meta180)
+	var _args186 ApiServiceQueryTransformJobsArgs
+	_args186.Request = request
+	var _result188 ApiServiceQueryTransformJobsResult
+	var _meta187 thrift.ResponseMeta
+	_meta187, _err = p.Client_().Call(ctx, "queryTransformJobs", &_args186, &_result188)
+	p.SetLastResponseMeta_(_meta187)
 	if _err != nil {
 		return
 	}
-	if _ret182 := _result181.GetSuccess(); _ret182 != nil {
-		return _ret182, nil
+	if _ret189 := _result188.GetSuccess(); _ret189 != nil {
+		return _ret189, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "queryTransformJobs failed: unknown result")
 }
@@ -20607,17 +20646,17 @@ func (p *ApiServiceClient) QueryTransformJobs(ctx context.Context, request *Tran
 //  - Request
 // 
 func (p *ApiServiceClient) CountTransformJobs(ctx context.Context, request *TransformJobQueryRequest) (_r *Result_, _err error) {
-	var _args183 ApiServiceCountTransformJobsArgs
-	_args183.Request = request
-	var _result185 ApiServiceCountTransformJobsResult
-	var _meta184 thrift.ResponseMeta
-	_meta184, _err = p.Client_().Call(ctx, "countTransformJobs", &_args183, &_result185)
-	p.SetLastResponseMeta_(_meta184)
+	var _args190 ApiServiceCountTransformJobsArgs
+	_args190.Request = request
+	var _result192 ApiServiceCountTransformJobsResult
+	var _meta191 thrift.ResponseMeta
+	_meta191, _err = p.Client_().Call(ctx, "countTransformJobs", &_args190, &_result192)
+	p.SetLastResponseMeta_(_meta191)
 	if _err != nil {
 		return
 	}
-	if _ret186 := _result185.GetSuccess(); _ret186 != nil {
-		return _ret186, nil
+	if _ret193 := _result192.GetSuccess(); _ret193 != nil {
+		return _ret193, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "countTransformJobs failed: unknown result")
 }
@@ -20626,17 +20665,17 @@ func (p *ApiServiceClient) CountTransformJobs(ctx context.Context, request *Tran
 //  - JobId
 // 
 func (p *ApiServiceClient) GetTransformJob(ctx context.Context, jobId string) (_r *Result_, _err error) {
-	var _args187 ApiServiceGetTransformJobArgs
-	_args187.JobId = jobId
-	var _result189 ApiServiceGetTransformJobResult
-	var _meta188 thrift.ResponseMeta
-	_meta188, _err = p.Client_().Call(ctx, "getTransformJob", &_args187, &_result189)
-	p.SetLastResponseMeta_(_meta188)
+	var _args194 ApiServiceGetTransformJobArgs
+	_args194.JobId = jobId
+	var _result196 ApiServiceGetTransformJobResult
+	var _meta195 thrift.ResponseMeta
+	_meta195, _err = p.Client_().Call(ctx, "getTransformJob", &_args194, &_result196)
+	p.SetLastResponseMeta_(_meta195)
 	if _err != nil {
 		return
 	}
-	if _ret190 := _result189.GetSuccess(); _ret190 != nil {
-		return _ret190, nil
+	if _ret197 := _result196.GetSuccess(); _ret197 != nil {
+		return _ret197, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getTransformJob failed: unknown result")
 }
@@ -20645,17 +20684,17 @@ func (p *ApiServiceClient) GetTransformJob(ctx context.Context, jobId string) (_
 //  - CreateTime
 // 
 func (p *ApiServiceClient) CommitTransformJob(ctx context.Context, createTime int64) (_r *Result_, _err error) {
-	var _args191 ApiServiceCommitTransformJobArgs
-	_args191.CreateTime = createTime
-	var _result193 ApiServiceCommitTransformJobResult
-	var _meta192 thrift.ResponseMeta
-	_meta192, _err = p.Client_().Call(ctx, "commitTransformJob", &_args191, &_result193)
-	p.SetLastResponseMeta_(_meta192)
+	var _args198 ApiServiceCommitTransformJobArgs
+	_args198.CreateTime = createTime
+	var _result200 ApiServiceCommitTransformJobResult
+	var _meta199 thrift.ResponseMeta
+	_meta199, _err = p.Client_().Call(ctx, "commitTransformJob", &_args198, &_result200)
+	p.SetLastResponseMeta_(_meta199)
 	if _err != nil {
 		return
 	}
-	if _ret194 := _result193.GetSuccess(); _ret194 != nil {
-		return _ret194, nil
+	if _ret201 := _result200.GetSuccess(); _ret201 != nil {
+		return _ret201, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "commitTransformJob failed: unknown result")
 }
@@ -20664,17 +20703,17 @@ func (p *ApiServiceClient) CommitTransformJob(ctx context.Context, createTime in
 //  - JobId
 // 
 func (p *ApiServiceClient) GetTransformJobStatus(ctx context.Context, jobId string) (_r *Result_, _err error) {
-	var _args195 ApiServiceGetTransformJobStatusArgs
-	_args195.JobId = jobId
-	var _result197 ApiServiceGetTransformJobStatusResult
-	var _meta196 thrift.ResponseMeta
-	_meta196, _err = p.Client_().Call(ctx, "getTransformJobStatus", &_args195, &_result197)
-	p.SetLastResponseMeta_(_meta196)
+	var _args202 ApiServiceGetTransformJobStatusArgs
+	_args202.JobId = jobId
+	var _result204 ApiServiceGetTransformJobStatusResult
+	var _meta203 thrift.ResponseMeta
+	_meta203, _err = p.Client_().Call(ctx, "getTransformJobStatus", &_args202, &_result204)
+	p.SetLastResponseMeta_(_meta203)
 	if _err != nil {
 		return
 	}
-	if _ret198 := _result197.GetSuccess(); _ret198 != nil {
-		return _ret198, nil
+	if _ret205 := _result204.GetSuccess(); _ret205 != nil {
+		return _ret205, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getTransformJobStatus failed: unknown result")
 }
@@ -20683,17 +20722,17 @@ func (p *ApiServiceClient) GetTransformJobStatus(ctx context.Context, jobId stri
 //  - JobId
 // 
 func (p *ApiServiceClient) CancelTransformJob(ctx context.Context, jobId string) (_r *Result_, _err error) {
-	var _args199 ApiServiceCancelTransformJobArgs
-	_args199.JobId = jobId
-	var _result201 ApiServiceCancelTransformJobResult
-	var _meta200 thrift.ResponseMeta
-	_meta200, _err = p.Client_().Call(ctx, "cancelTransformJob", &_args199, &_result201)
-	p.SetLastResponseMeta_(_meta200)
+	var _args206 ApiServiceCancelTransformJobArgs
+	_args206.JobId = jobId
+	var _result208 ApiServiceCancelTransformJobResult
+	var _meta207 thrift.ResponseMeta
+	_meta207, _err = p.Client_().Call(ctx, "cancelTransformJob", &_args206, &_result208)
+	p.SetLastResponseMeta_(_meta207)
 	if _err != nil {
 		return
 	}
-	if _ret202 := _result201.GetSuccess(); _ret202 != nil {
-		return _ret202, nil
+	if _ret209 := _result208.GetSuccess(); _ret209 != nil {
+		return _ret209, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "cancelTransformJob failed: unknown result")
 }
@@ -20703,39 +20742,12 @@ func (p *ApiServiceClient) CancelTransformJob(ctx context.Context, jobId string)
 //  - SideLineage
 // 
 func (p *ApiServiceClient) GetTransformJobBloodline(ctx context.Context, datasetPath string, sideLineage bool) (_r *Result_, _err error) {
-	var _args203 ApiServiceGetTransformJobBloodlineArgs
-	_args203.DatasetPath = datasetPath
-	_args203.SideLineage = sideLineage
-	var _result205 ApiServiceGetTransformJobBloodlineResult
-	var _meta204 thrift.ResponseMeta
-	_meta204, _err = p.Client_().Call(ctx, "getTransformJobBloodline", &_args203, &_result205)
-	p.SetLastResponseMeta_(_meta204)
-	if _err != nil {
-		return
-	}
-	if _ret206 := _result205.GetSuccess(); _ret206 != nil {
-		return _ret206, nil
-	}
-	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getTransformJobBloodline failed: unknown result")
-}
-
-func (p *ApiServiceClient) GetUserManualFile(ctx context.Context) (_r []byte, _err error) {
-	var _args207 ApiServiceGetUserManualFileArgs
-	var _result209 ApiServiceGetUserManualFileResult
-	var _meta208 thrift.ResponseMeta
-	_meta208, _err = p.Client_().Call(ctx, "getUserManualFile", &_args207, &_result209)
-	p.SetLastResponseMeta_(_meta208)
-	if _err != nil {
-		return
-	}
-	return _result209.GetSuccess(), nil
-}
-
-func (p *ApiServiceClient) GenerateJavaCode(ctx context.Context) (_r *Result_, _err error) {
-	var _args210 ApiServiceGenerateJavaCodeArgs
-	var _result212 ApiServiceGenerateJavaCodeResult
+	var _args210 ApiServiceGetTransformJobBloodlineArgs
+	_args210.DatasetPath = datasetPath
+	_args210.SideLineage = sideLineage
+	var _result212 ApiServiceGetTransformJobBloodlineResult
 	var _meta211 thrift.ResponseMeta
-	_meta211, _err = p.Client_().Call(ctx, "generateJavaCode", &_args210, &_result212)
+	_meta211, _err = p.Client_().Call(ctx, "getTransformJobBloodline", &_args210, &_result212)
 	p.SetLastResponseMeta_(_meta211)
 	if _err != nil {
 		return
@@ -20743,95 +20755,122 @@ func (p *ApiServiceClient) GenerateJavaCode(ctx context.Context) (_r *Result_, _
 	if _ret213 := _result212.GetSuccess(); _ret213 != nil {
 		return _ret213, nil
 	}
-	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "generateJavaCode failed: unknown result")
+	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getTransformJobBloodline failed: unknown result")
 }
 
-func (p *ApiServiceClient) GenerateGoCode(ctx context.Context) (_r *Result_, _err error) {
-	var _args214 ApiServiceGenerateGoCodeArgs
-	var _result216 ApiServiceGenerateGoCodeResult
+func (p *ApiServiceClient) GetUserManualFile(ctx context.Context) (_r []byte, _err error) {
+	var _args214 ApiServiceGetUserManualFileArgs
+	var _result216 ApiServiceGetUserManualFileResult
 	var _meta215 thrift.ResponseMeta
-	_meta215, _err = p.Client_().Call(ctx, "generateGoCode", &_args214, &_result216)
+	_meta215, _err = p.Client_().Call(ctx, "getUserManualFile", &_args214, &_result216)
 	p.SetLastResponseMeta_(_meta215)
 	if _err != nil {
 		return
 	}
-	if _ret217 := _result216.GetSuccess(); _ret217 != nil {
-		return _ret217, nil
+	return _result216.GetSuccess(), nil
+}
+
+func (p *ApiServiceClient) GenerateJavaCode(ctx context.Context) (_r *Result_, _err error) {
+	var _args217 ApiServiceGenerateJavaCodeArgs
+	var _result219 ApiServiceGenerateJavaCodeResult
+	var _meta218 thrift.ResponseMeta
+	_meta218, _err = p.Client_().Call(ctx, "generateJavaCode", &_args217, &_result219)
+	p.SetLastResponseMeta_(_meta218)
+	if _err != nil {
+		return
+	}
+	if _ret220 := _result219.GetSuccess(); _ret220 != nil {
+		return _ret220, nil
+	}
+	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "generateJavaCode failed: unknown result")
+}
+
+func (p *ApiServiceClient) GenerateGoCode(ctx context.Context) (_r *Result_, _err error) {
+	var _args221 ApiServiceGenerateGoCodeArgs
+	var _result223 ApiServiceGenerateGoCodeResult
+	var _meta222 thrift.ResponseMeta
+	_meta222, _err = p.Client_().Call(ctx, "generateGoCode", &_args221, &_result223)
+	p.SetLastResponseMeta_(_meta222)
+	if _err != nil {
+		return
+	}
+	if _ret224 := _result223.GetSuccess(); _ret224 != nil {
+		return _ret224, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "generateGoCode failed: unknown result")
 }
 
 func (p *ApiServiceClient) GeneratePythonCode(ctx context.Context) (_r *Result_, _err error) {
-	var _args218 ApiServiceGeneratePythonCodeArgs
-	var _result220 ApiServiceGeneratePythonCodeResult
-	var _meta219 thrift.ResponseMeta
-	_meta219, _err = p.Client_().Call(ctx, "generatePythonCode", &_args218, &_result220)
-	p.SetLastResponseMeta_(_meta219)
+	var _args225 ApiServiceGeneratePythonCodeArgs
+	var _result227 ApiServiceGeneratePythonCodeResult
+	var _meta226 thrift.ResponseMeta
+	_meta226, _err = p.Client_().Call(ctx, "generatePythonCode", &_args225, &_result227)
+	p.SetLastResponseMeta_(_meta226)
 	if _err != nil {
 		return
 	}
-	if _ret221 := _result220.GetSuccess(); _ret221 != nil {
-		return _ret221, nil
+	if _ret228 := _result227.GetSuccess(); _ret228 != nil {
+		return _ret228, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "generatePythonCode failed: unknown result")
 }
 
 func (p *ApiServiceClient) GenerateRestfulApiCode(ctx context.Context) (_r *Result_, _err error) {
-	var _args222 ApiServiceGenerateRestfulApiCodeArgs
-	var _result224 ApiServiceGenerateRestfulApiCodeResult
-	var _meta223 thrift.ResponseMeta
-	_meta223, _err = p.Client_().Call(ctx, "generateRestfulApiCode", &_args222, &_result224)
-	p.SetLastResponseMeta_(_meta223)
+	var _args229 ApiServiceGenerateRestfulApiCodeArgs
+	var _result231 ApiServiceGenerateRestfulApiCodeResult
+	var _meta230 thrift.ResponseMeta
+	_meta230, _err = p.Client_().Call(ctx, "generateRestfulApiCode", &_args229, &_result231)
+	p.SetLastResponseMeta_(_meta230)
 	if _err != nil {
 		return
 	}
-	if _ret225 := _result224.GetSuccess(); _ret225 != nil {
-		return _ret225, nil
+	if _ret232 := _result231.GetSuccess(); _ret232 != nil {
+		return _ret232, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "generateRestfulApiCode failed: unknown result")
 }
 
 func (p *ApiServiceClient) GenerateAllCode(ctx context.Context) (_r *Result_, _err error) {
-	var _args226 ApiServiceGenerateAllCodeArgs
-	var _result228 ApiServiceGenerateAllCodeResult
-	var _meta227 thrift.ResponseMeta
-	_meta227, _err = p.Client_().Call(ctx, "generateAllCode", &_args226, &_result228)
-	p.SetLastResponseMeta_(_meta227)
+	var _args233 ApiServiceGenerateAllCodeArgs
+	var _result235 ApiServiceGenerateAllCodeResult
+	var _meta234 thrift.ResponseMeta
+	_meta234, _err = p.Client_().Call(ctx, "generateAllCode", &_args233, &_result235)
+	p.SetLastResponseMeta_(_meta234)
 	if _err != nil {
 		return
 	}
-	if _ret229 := _result228.GetSuccess(); _ret229 != nil {
-		return _ret229, nil
+	if _ret236 := _result235.GetSuccess(); _ret236 != nil {
+		return _ret236, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "generateAllCode failed: unknown result")
 }
 
 func (p *ApiServiceClient) GetGenerationStatus(ctx context.Context) (_r *Result_, _err error) {
-	var _args230 ApiServiceGetGenerationStatusArgs
-	var _result232 ApiServiceGetGenerationStatusResult
-	var _meta231 thrift.ResponseMeta
-	_meta231, _err = p.Client_().Call(ctx, "getGenerationStatus", &_args230, &_result232)
-	p.SetLastResponseMeta_(_meta231)
+	var _args237 ApiServiceGetGenerationStatusArgs
+	var _result239 ApiServiceGetGenerationStatusResult
+	var _meta238 thrift.ResponseMeta
+	_meta238, _err = p.Client_().Call(ctx, "getGenerationStatus", &_args237, &_result239)
+	p.SetLastResponseMeta_(_meta238)
 	if _err != nil {
 		return
 	}
-	if _ret233 := _result232.GetSuccess(); _ret233 != nil {
-		return _ret233, nil
+	if _ret240 := _result239.GetSuccess(); _ret240 != nil {
+		return _ret240, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getGenerationStatus failed: unknown result")
 }
 
 func (p *ApiServiceClient) ValidateThriftFile(ctx context.Context) (_r *Result_, _err error) {
-	var _args234 ApiServiceValidateThriftFileArgs
-	var _result236 ApiServiceValidateThriftFileResult
-	var _meta235 thrift.ResponseMeta
-	_meta235, _err = p.Client_().Call(ctx, "validateThriftFile", &_args234, &_result236)
-	p.SetLastResponseMeta_(_meta235)
+	var _args241 ApiServiceValidateThriftFileArgs
+	var _result243 ApiServiceValidateThriftFileResult
+	var _meta242 thrift.ResponseMeta
+	_meta242, _err = p.Client_().Call(ctx, "validateThriftFile", &_args241, &_result243)
+	p.SetLastResponseMeta_(_meta242)
 	if _err != nil {
 		return
 	}
-	if _ret237 := _result236.GetSuccess(); _ret237 != nil {
-		return _ret237, nil
+	if _ret244 := _result243.GetSuccess(); _ret244 != nil {
+		return _ret244, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "validateThriftFile failed: unknown result")
 }
@@ -20840,17 +20879,17 @@ func (p *ApiServiceClient) ValidateThriftFile(ctx context.Context) (_r *Result_,
 //  - Request
 // 
 func (p *ApiServiceClient) Login(ctx context.Context, request *LoginRequest) (_r *Result_, _err error) {
-	var _args238 ApiServiceLoginArgs
-	_args238.Request = request
-	var _result240 ApiServiceLoginResult
-	var _meta239 thrift.ResponseMeta
-	_meta239, _err = p.Client_().Call(ctx, "login", &_args238, &_result240)
-	p.SetLastResponseMeta_(_meta239)
+	var _args245 ApiServiceLoginArgs
+	_args245.Request = request
+	var _result247 ApiServiceLoginResult
+	var _meta246 thrift.ResponseMeta
+	_meta246, _err = p.Client_().Call(ctx, "login", &_args245, &_result247)
+	p.SetLastResponseMeta_(_meta246)
 	if _err != nil {
 		return
 	}
-	if _ret241 := _result240.GetSuccess(); _ret241 != nil {
-		return _ret241, nil
+	if _ret248 := _result247.GetSuccess(); _ret248 != nil {
+		return _ret248, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "login failed: unknown result")
 }
@@ -20859,62 +20898,62 @@ func (p *ApiServiceClient) Login(ctx context.Context, request *LoginRequest) (_r
 //  - Request
 // 
 func (p *ApiServiceClient) RefreshToken(ctx context.Context, request *RefreshTokenRequest) (_r *Result_, _err error) {
-	var _args242 ApiServiceRefreshTokenArgs
-	_args242.Request = request
-	var _result244 ApiServiceRefreshTokenResult
-	var _meta243 thrift.ResponseMeta
-	_meta243, _err = p.Client_().Call(ctx, "refreshToken", &_args242, &_result244)
-	p.SetLastResponseMeta_(_meta243)
+	var _args249 ApiServiceRefreshTokenArgs
+	_args249.Request = request
+	var _result251 ApiServiceRefreshTokenResult
+	var _meta250 thrift.ResponseMeta
+	_meta250, _err = p.Client_().Call(ctx, "refreshToken", &_args249, &_result251)
+	p.SetLastResponseMeta_(_meta250)
 	if _err != nil {
 		return
 	}
-	if _ret245 := _result244.GetSuccess(); _ret245 != nil {
-		return _ret245, nil
+	if _ret252 := _result251.GetSuccess(); _ret252 != nil {
+		return _ret252, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "refreshToken failed: unknown result")
 }
 
 func (p *ApiServiceClient) VerifyToken(ctx context.Context) (_r *Result_, _err error) {
-	var _args246 ApiServiceVerifyTokenArgs
-	var _result248 ApiServiceVerifyTokenResult
-	var _meta247 thrift.ResponseMeta
-	_meta247, _err = p.Client_().Call(ctx, "verifyToken", &_args246, &_result248)
-	p.SetLastResponseMeta_(_meta247)
+	var _args253 ApiServiceVerifyTokenArgs
+	var _result255 ApiServiceVerifyTokenResult
+	var _meta254 thrift.ResponseMeta
+	_meta254, _err = p.Client_().Call(ctx, "verifyToken", &_args253, &_result255)
+	p.SetLastResponseMeta_(_meta254)
 	if _err != nil {
 		return
 	}
-	if _ret249 := _result248.GetSuccess(); _ret249 != nil {
-		return _ret249, nil
+	if _ret256 := _result255.GetSuccess(); _ret256 != nil {
+		return _ret256, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "verifyToken failed: unknown result")
 }
 
 func (p *ApiServiceClient) Logout(ctx context.Context) (_r *Result_, _err error) {
-	var _args250 ApiServiceLogoutArgs
-	var _result252 ApiServiceLogoutResult
-	var _meta251 thrift.ResponseMeta
-	_meta251, _err = p.Client_().Call(ctx, "logout", &_args250, &_result252)
-	p.SetLastResponseMeta_(_meta251)
+	var _args257 ApiServiceLogoutArgs
+	var _result259 ApiServiceLogoutResult
+	var _meta258 thrift.ResponseMeta
+	_meta258, _err = p.Client_().Call(ctx, "logout", &_args257, &_result259)
+	p.SetLastResponseMeta_(_meta258)
 	if _err != nil {
 		return
 	}
-	if _ret253 := _result252.GetSuccess(); _ret253 != nil {
-		return _ret253, nil
+	if _ret260 := _result259.GetSuccess(); _ret260 != nil {
+		return _ret260, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "logout failed: unknown result")
 }
 
 func (p *ApiServiceClient) GetCurrentAuthUser(ctx context.Context) (_r *Result_, _err error) {
-	var _args254 ApiServiceGetCurrentAuthUserArgs
-	var _result256 ApiServiceGetCurrentAuthUserResult
-	var _meta255 thrift.ResponseMeta
-	_meta255, _err = p.Client_().Call(ctx, "getCurrentAuthUser", &_args254, &_result256)
-	p.SetLastResponseMeta_(_meta255)
+	var _args261 ApiServiceGetCurrentAuthUserArgs
+	var _result263 ApiServiceGetCurrentAuthUserResult
+	var _meta262 thrift.ResponseMeta
+	_meta262, _err = p.Client_().Call(ctx, "getCurrentAuthUser", &_args261, &_result263)
+	p.SetLastResponseMeta_(_meta262)
 	if _err != nil {
 		return
 	}
-	if _ret257 := _result256.GetSuccess(); _ret257 != nil {
-		return _ret257, nil
+	if _ret264 := _result263.GetSuccess(); _ret264 != nil {
+		return _ret264, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getCurrentAuthUser failed: unknown result")
 }
@@ -20923,17 +20962,17 @@ func (p *ApiServiceClient) GetCurrentAuthUser(ctx context.Context) (_r *Result_,
 //  - User
 // 
 func (p *ApiServiceClient) SaveUser(ctx context.Context, user *UserEntity) (_r *Result_, _err error) {
-	var _args258 ApiServiceSaveUserArgs
-	_args258.User = user
-	var _result260 ApiServiceSaveUserResult
-	var _meta259 thrift.ResponseMeta
-	_meta259, _err = p.Client_().Call(ctx, "saveUser", &_args258, &_result260)
-	p.SetLastResponseMeta_(_meta259)
+	var _args265 ApiServiceSaveUserArgs
+	_args265.User = user
+	var _result267 ApiServiceSaveUserResult
+	var _meta266 thrift.ResponseMeta
+	_meta266, _err = p.Client_().Call(ctx, "saveUser", &_args265, &_result267)
+	p.SetLastResponseMeta_(_meta266)
 	if _err != nil {
 		return
 	}
-	if _ret261 := _result260.GetSuccess(); _ret261 != nil {
-		return _ret261, nil
+	if _ret268 := _result267.GetSuccess(); _ret268 != nil {
+		return _ret268, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "saveUser failed: unknown result")
 }
@@ -20942,17 +20981,17 @@ func (p *ApiServiceClient) SaveUser(ctx context.Context, user *UserEntity) (_r *
 //  - Request
 // 
 func (p *ApiServiceClient) QueryUsers(ctx context.Context, request *UserQueryRequest) (_r *Result_, _err error) {
-	var _args262 ApiServiceQueryUsersArgs
-	_args262.Request = request
-	var _result264 ApiServiceQueryUsersResult
-	var _meta263 thrift.ResponseMeta
-	_meta263, _err = p.Client_().Call(ctx, "queryUsers", &_args262, &_result264)
-	p.SetLastResponseMeta_(_meta263)
+	var _args269 ApiServiceQueryUsersArgs
+	_args269.Request = request
+	var _result271 ApiServiceQueryUsersResult
+	var _meta270 thrift.ResponseMeta
+	_meta270, _err = p.Client_().Call(ctx, "queryUsers", &_args269, &_result271)
+	p.SetLastResponseMeta_(_meta270)
 	if _err != nil {
 		return
 	}
-	if _ret265 := _result264.GetSuccess(); _ret265 != nil {
-		return _ret265, nil
+	if _ret272 := _result271.GetSuccess(); _ret272 != nil {
+		return _ret272, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "queryUsers failed: unknown result")
 }
@@ -20961,32 +21000,32 @@ func (p *ApiServiceClient) QueryUsers(ctx context.Context, request *UserQueryReq
 //  - Request
 // 
 func (p *ApiServiceClient) CountUsers(ctx context.Context, request *UserQueryRequest) (_r *Result_, _err error) {
-	var _args266 ApiServiceCountUsersArgs
-	_args266.Request = request
-	var _result268 ApiServiceCountUsersResult
-	var _meta267 thrift.ResponseMeta
-	_meta267, _err = p.Client_().Call(ctx, "countUsers", &_args266, &_result268)
-	p.SetLastResponseMeta_(_meta267)
+	var _args273 ApiServiceCountUsersArgs
+	_args273.Request = request
+	var _result275 ApiServiceCountUsersResult
+	var _meta274 thrift.ResponseMeta
+	_meta274, _err = p.Client_().Call(ctx, "countUsers", &_args273, &_result275)
+	p.SetLastResponseMeta_(_meta274)
 	if _err != nil {
 		return
 	}
-	if _ret269 := _result268.GetSuccess(); _ret269 != nil {
-		return _ret269, nil
+	if _ret276 := _result275.GetSuccess(); _ret276 != nil {
+		return _ret276, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "countUsers failed: unknown result")
 }
 
 func (p *ApiServiceClient) AllUsers(ctx context.Context) (_r *Result_, _err error) {
-	var _args270 ApiServiceAllUsersArgs
-	var _result272 ApiServiceAllUsersResult
-	var _meta271 thrift.ResponseMeta
-	_meta271, _err = p.Client_().Call(ctx, "allUsers", &_args270, &_result272)
-	p.SetLastResponseMeta_(_meta271)
+	var _args277 ApiServiceAllUsersArgs
+	var _result279 ApiServiceAllUsersResult
+	var _meta278 thrift.ResponseMeta
+	_meta278, _err = p.Client_().Call(ctx, "allUsers", &_args277, &_result279)
+	p.SetLastResponseMeta_(_meta278)
 	if _err != nil {
 		return
 	}
-	if _ret273 := _result272.GetSuccess(); _ret273 != nil {
-		return _ret273, nil
+	if _ret280 := _result279.GetSuccess(); _ret280 != nil {
+		return _ret280, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "allUsers failed: unknown result")
 }
@@ -20995,17 +21034,17 @@ func (p *ApiServiceClient) AllUsers(ctx context.Context) (_r *Result_, _err erro
 //  - Username
 // 
 func (p *ApiServiceClient) QueryUser(ctx context.Context, username string) (_r *Result_, _err error) {
-	var _args274 ApiServiceQueryUserArgs
-	_args274.Username = username
-	var _result276 ApiServiceQueryUserResult
-	var _meta275 thrift.ResponseMeta
-	_meta275, _err = p.Client_().Call(ctx, "queryUser", &_args274, &_result276)
-	p.SetLastResponseMeta_(_meta275)
+	var _args281 ApiServiceQueryUserArgs
+	_args281.Username = username
+	var _result283 ApiServiceQueryUserResult
+	var _meta282 thrift.ResponseMeta
+	_meta282, _err = p.Client_().Call(ctx, "queryUser", &_args281, &_result283)
+	p.SetLastResponseMeta_(_meta282)
 	if _err != nil {
 		return
 	}
-	if _ret277 := _result276.GetSuccess(); _ret277 != nil {
-		return _ret277, nil
+	if _ret284 := _result283.GetSuccess(); _ret284 != nil {
+		return _ret284, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "queryUser failed: unknown result")
 }
@@ -21014,17 +21053,17 @@ func (p *ApiServiceClient) QueryUser(ctx context.Context, username string) (_r *
 //  - Username
 // 
 func (p *ApiServiceClient) DeleteUser(ctx context.Context, username string) (_r *Result_, _err error) {
-	var _args278 ApiServiceDeleteUserArgs
-	_args278.Username = username
-	var _result280 ApiServiceDeleteUserResult
-	var _meta279 thrift.ResponseMeta
-	_meta279, _err = p.Client_().Call(ctx, "deleteUser", &_args278, &_result280)
-	p.SetLastResponseMeta_(_meta279)
+	var _args285 ApiServiceDeleteUserArgs
+	_args285.Username = username
+	var _result287 ApiServiceDeleteUserResult
+	var _meta286 thrift.ResponseMeta
+	_meta286, _err = p.Client_().Call(ctx, "deleteUser", &_args285, &_result287)
+	p.SetLastResponseMeta_(_meta286)
 	if _err != nil {
 		return
 	}
-	if _ret281 := _result280.GetSuccess(); _ret281 != nil {
-		return _ret281, nil
+	if _ret288 := _result287.GetSuccess(); _ret288 != nil {
+		return _ret288, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "deleteUser failed: unknown result")
 }
@@ -21033,32 +21072,32 @@ func (p *ApiServiceClient) DeleteUser(ctx context.Context, username string) (_r 
 //  - User
 // 
 func (p *ApiServiceClient) UpdateUser(ctx context.Context, user *UserEntity) (_r *Result_, _err error) {
-	var _args282 ApiServiceUpdateUserArgs
-	_args282.User = user
-	var _result284 ApiServiceUpdateUserResult
-	var _meta283 thrift.ResponseMeta
-	_meta283, _err = p.Client_().Call(ctx, "updateUser", &_args282, &_result284)
-	p.SetLastResponseMeta_(_meta283)
+	var _args289 ApiServiceUpdateUserArgs
+	_args289.User = user
+	var _result291 ApiServiceUpdateUserResult
+	var _meta290 thrift.ResponseMeta
+	_meta290, _err = p.Client_().Call(ctx, "updateUser", &_args289, &_result291)
+	p.SetLastResponseMeta_(_meta290)
 	if _err != nil {
 		return
 	}
-	if _ret285 := _result284.GetSuccess(); _ret285 != nil {
-		return _ret285, nil
+	if _ret292 := _result291.GetSuccess(); _ret292 != nil {
+		return _ret292, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "updateUser failed: unknown result")
 }
 
 func (p *ApiServiceClient) GetRoles(ctx context.Context) (_r *Result_, _err error) {
-	var _args286 ApiServiceGetRolesArgs
-	var _result288 ApiServiceGetRolesResult
-	var _meta287 thrift.ResponseMeta
-	_meta287, _err = p.Client_().Call(ctx, "getRoles", &_args286, &_result288)
-	p.SetLastResponseMeta_(_meta287)
+	var _args293 ApiServiceGetRolesArgs
+	var _result295 ApiServiceGetRolesResult
+	var _meta294 thrift.ResponseMeta
+	_meta294, _err = p.Client_().Call(ctx, "getRoles", &_args293, &_result295)
+	p.SetLastResponseMeta_(_meta294)
 	if _err != nil {
 		return
 	}
-	if _ret289 := _result288.GetSuccess(); _ret289 != nil {
-		return _ret289, nil
+	if _ret296 := _result295.GetSuccess(); _ret296 != nil {
+		return _ret296, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getRoles failed: unknown result")
 }
@@ -21067,47 +21106,47 @@ func (p *ApiServiceClient) GetRoles(ctx context.Context) (_r *Result_, _err erro
 //  - Request
 // 
 func (p *ApiServiceClient) ChangePassword(ctx context.Context, request *ChangePasswordRequest) (_r *Result_, _err error) {
-	var _args290 ApiServiceChangePasswordArgs
-	_args290.Request = request
-	var _result292 ApiServiceChangePasswordResult
-	var _meta291 thrift.ResponseMeta
-	_meta291, _err = p.Client_().Call(ctx, "changePassword", &_args290, &_result292)
-	p.SetLastResponseMeta_(_meta291)
+	var _args297 ApiServiceChangePasswordArgs
+	_args297.Request = request
+	var _result299 ApiServiceChangePasswordResult
+	var _meta298 thrift.ResponseMeta
+	_meta298, _err = p.Client_().Call(ctx, "changePassword", &_args297, &_result299)
+	p.SetLastResponseMeta_(_meta298)
 	if _err != nil {
 		return
 	}
-	if _ret293 := _result292.GetSuccess(); _ret293 != nil {
-		return _ret293, nil
+	if _ret300 := _result299.GetSuccess(); _ret300 != nil {
+		return _ret300, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "changePassword failed: unknown result")
 }
 
 func (p *ApiServiceClient) GetCurrentUser(ctx context.Context) (_r *Result_, _err error) {
-	var _args294 ApiServiceGetCurrentUserArgs
-	var _result296 ApiServiceGetCurrentUserResult
-	var _meta295 thrift.ResponseMeta
-	_meta295, _err = p.Client_().Call(ctx, "getCurrentUser", &_args294, &_result296)
-	p.SetLastResponseMeta_(_meta295)
+	var _args301 ApiServiceGetCurrentUserArgs
+	var _result303 ApiServiceGetCurrentUserResult
+	var _meta302 thrift.ResponseMeta
+	_meta302, _err = p.Client_().Call(ctx, "getCurrentUser", &_args301, &_result303)
+	p.SetLastResponseMeta_(_meta302)
 	if _err != nil {
 		return
 	}
-	if _ret297 := _result296.GetSuccess(); _ret297 != nil {
-		return _ret297, nil
+	if _ret304 := _result303.GetSuccess(); _ret304 != nil {
+		return _ret304, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getCurrentUser failed: unknown result")
 }
 
 func (p *ApiServiceClient) ListOwnerTables(ctx context.Context) (_r *Result_, _err error) {
-	var _args298 ApiServiceListOwnerTablesArgs
-	var _result300 ApiServiceListOwnerTablesResult
-	var _meta299 thrift.ResponseMeta
-	_meta299, _err = p.Client_().Call(ctx, "listOwnerTables", &_args298, &_result300)
-	p.SetLastResponseMeta_(_meta299)
+	var _args305 ApiServiceListOwnerTablesArgs
+	var _result307 ApiServiceListOwnerTablesResult
+	var _meta306 thrift.ResponseMeta
+	_meta306, _err = p.Client_().Call(ctx, "listOwnerTables", &_args305, &_result307)
+	p.SetLastResponseMeta_(_meta306)
 	if _err != nil {
 		return
 	}
-	if _ret301 := _result300.GetSuccess(); _ret301 != nil {
-		return _ret301, nil
+	if _ret308 := _result307.GetSuccess(); _ret308 != nil {
+		return _ret308, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "listOwnerTables failed: unknown result")
 }
@@ -21116,17 +21155,17 @@ func (p *ApiServiceClient) ListOwnerTables(ctx context.Context) (_r *Result_, _e
 //  - Request
 // 
 func (p *ApiServiceClient) QueryDataPermissions(ctx context.Context, request *DataPermissionQueryRequest) (_r *Result_, _err error) {
-	var _args302 ApiServiceQueryDataPermissionsArgs
-	_args302.Request = request
-	var _result304 ApiServiceQueryDataPermissionsResult
-	var _meta303 thrift.ResponseMeta
-	_meta303, _err = p.Client_().Call(ctx, "queryDataPermissions", &_args302, &_result304)
-	p.SetLastResponseMeta_(_meta303)
+	var _args309 ApiServiceQueryDataPermissionsArgs
+	_args309.Request = request
+	var _result311 ApiServiceQueryDataPermissionsResult
+	var _meta310 thrift.ResponseMeta
+	_meta310, _err = p.Client_().Call(ctx, "queryDataPermissions", &_args309, &_result311)
+	p.SetLastResponseMeta_(_meta310)
 	if _err != nil {
 		return
 	}
-	if _ret305 := _result304.GetSuccess(); _ret305 != nil {
-		return _ret305, nil
+	if _ret312 := _result311.GetSuccess(); _ret312 != nil {
+		return _ret312, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "queryDataPermissions failed: unknown result")
 }
@@ -21135,17 +21174,17 @@ func (p *ApiServiceClient) QueryDataPermissions(ctx context.Context, request *Da
 //  - Request
 // 
 func (p *ApiServiceClient) CountDataPermissions(ctx context.Context, request *DataPermissionQueryRequest) (_r *Result_, _err error) {
-	var _args306 ApiServiceCountDataPermissionsArgs
-	_args306.Request = request
-	var _result308 ApiServiceCountDataPermissionsResult
-	var _meta307 thrift.ResponseMeta
-	_meta307, _err = p.Client_().Call(ctx, "countDataPermissions", &_args306, &_result308)
-	p.SetLastResponseMeta_(_meta307)
+	var _args313 ApiServiceCountDataPermissionsArgs
+	_args313.Request = request
+	var _result315 ApiServiceCountDataPermissionsResult
+	var _meta314 thrift.ResponseMeta
+	_meta314, _err = p.Client_().Call(ctx, "countDataPermissions", &_args313, &_result315)
+	p.SetLastResponseMeta_(_meta314)
 	if _err != nil {
 		return
 	}
-	if _ret309 := _result308.GetSuccess(); _ret309 != nil {
-		return _ret309, nil
+	if _ret316 := _result315.GetSuccess(); _ret316 != nil {
+		return _ret316, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "countDataPermissions failed: unknown result")
 }
@@ -21154,17 +21193,17 @@ func (p *ApiServiceClient) CountDataPermissions(ctx context.Context, request *Da
 //  - Request
 // 
 func (p *ApiServiceClient) UpdateDataPermission(ctx context.Context, request *DataPermissionUpdateRequest) (_r *Result_, _err error) {
-	var _args310 ApiServiceUpdateDataPermissionArgs
-	_args310.Request = request
-	var _result312 ApiServiceUpdateDataPermissionResult
-	var _meta311 thrift.ResponseMeta
-	_meta311, _err = p.Client_().Call(ctx, "updateDataPermission", &_args310, &_result312)
-	p.SetLastResponseMeta_(_meta311)
+	var _args317 ApiServiceUpdateDataPermissionArgs
+	_args317.Request = request
+	var _result319 ApiServiceUpdateDataPermissionResult
+	var _meta318 thrift.ResponseMeta
+	_meta318, _err = p.Client_().Call(ctx, "updateDataPermission", &_args317, &_result319)
+	p.SetLastResponseMeta_(_meta318)
 	if _err != nil {
 		return
 	}
-	if _ret313 := _result312.GetSuccess(); _ret313 != nil {
-		return _ret313, nil
+	if _ret320 := _result319.GetSuccess(); _ret320 != nil {
+		return _ret320, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "updateDataPermission failed: unknown result")
 }
@@ -21173,17 +21212,17 @@ func (p *ApiServiceClient) UpdateDataPermission(ctx context.Context, request *Da
 //  - Request
 // 
 func (p *ApiServiceClient) SaveEvaluationCriteria(ctx context.Context, request *EvaluationCriteriaRequest) (_r *Result_, _err error) {
-	var _args314 ApiServiceSaveEvaluationCriteriaArgs
-	_args314.Request = request
-	var _result316 ApiServiceSaveEvaluationCriteriaResult
-	var _meta315 thrift.ResponseMeta
-	_meta315, _err = p.Client_().Call(ctx, "saveEvaluationCriteria", &_args314, &_result316)
-	p.SetLastResponseMeta_(_meta315)
+	var _args321 ApiServiceSaveEvaluationCriteriaArgs
+	_args321.Request = request
+	var _result323 ApiServiceSaveEvaluationCriteriaResult
+	var _meta322 thrift.ResponseMeta
+	_meta322, _err = p.Client_().Call(ctx, "saveEvaluationCriteria", &_args321, &_result323)
+	p.SetLastResponseMeta_(_meta322)
 	if _err != nil {
 		return
 	}
-	if _ret317 := _result316.GetSuccess(); _ret317 != nil {
-		return _ret317, nil
+	if _ret324 := _result323.GetSuccess(); _ret324 != nil {
+		return _ret324, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "saveEvaluationCriteria failed: unknown result")
 }
@@ -21192,17 +21231,17 @@ func (p *ApiServiceClient) SaveEvaluationCriteria(ctx context.Context, request *
 //  - Request
 // 
 func (p *ApiServiceClient) QueryEvaluationCriteria(ctx context.Context, request *EvaluationCriteriaQueryRequest) (_r *Result_, _err error) {
-	var _args318 ApiServiceQueryEvaluationCriteriaArgs
-	_args318.Request = request
-	var _result320 ApiServiceQueryEvaluationCriteriaResult
-	var _meta319 thrift.ResponseMeta
-	_meta319, _err = p.Client_().Call(ctx, "queryEvaluationCriteria", &_args318, &_result320)
-	p.SetLastResponseMeta_(_meta319)
+	var _args325 ApiServiceQueryEvaluationCriteriaArgs
+	_args325.Request = request
+	var _result327 ApiServiceQueryEvaluationCriteriaResult
+	var _meta326 thrift.ResponseMeta
+	_meta326, _err = p.Client_().Call(ctx, "queryEvaluationCriteria", &_args325, &_result327)
+	p.SetLastResponseMeta_(_meta326)
 	if _err != nil {
 		return
 	}
-	if _ret321 := _result320.GetSuccess(); _ret321 != nil {
-		return _ret321, nil
+	if _ret328 := _result327.GetSuccess(); _ret328 != nil {
+		return _ret328, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "queryEvaluationCriteria failed: unknown result")
 }
@@ -21211,17 +21250,17 @@ func (p *ApiServiceClient) QueryEvaluationCriteria(ctx context.Context, request 
 //  - Request
 // 
 func (p *ApiServiceClient) CountEvaluationCriteria(ctx context.Context, request *EvaluationCriteriaQueryRequest) (_r *Result_, _err error) {
-	var _args322 ApiServiceCountEvaluationCriteriaArgs
-	_args322.Request = request
-	var _result324 ApiServiceCountEvaluationCriteriaResult
-	var _meta323 thrift.ResponseMeta
-	_meta323, _err = p.Client_().Call(ctx, "countEvaluationCriteria", &_args322, &_result324)
-	p.SetLastResponseMeta_(_meta323)
+	var _args329 ApiServiceCountEvaluationCriteriaArgs
+	_args329.Request = request
+	var _result331 ApiServiceCountEvaluationCriteriaResult
+	var _meta330 thrift.ResponseMeta
+	_meta330, _err = p.Client_().Call(ctx, "countEvaluationCriteria", &_args329, &_result331)
+	p.SetLastResponseMeta_(_meta330)
 	if _err != nil {
 		return
 	}
-	if _ret325 := _result324.GetSuccess(); _ret325 != nil {
-		return _ret325, nil
+	if _ret332 := _result331.GetSuccess(); _ret332 != nil {
+		return _ret332, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "countEvaluationCriteria failed: unknown result")
 }
@@ -21230,17 +21269,17 @@ func (p *ApiServiceClient) CountEvaluationCriteria(ctx context.Context, request 
 //  - ID
 // 
 func (p *ApiServiceClient) GetEvaluationCriteria(ctx context.Context, id int64) (_r *Result_, _err error) {
-	var _args326 ApiServiceGetEvaluationCriteriaArgs
-	_args326.ID = id
-	var _result328 ApiServiceGetEvaluationCriteriaResult
-	var _meta327 thrift.ResponseMeta
-	_meta327, _err = p.Client_().Call(ctx, "getEvaluationCriteria", &_args326, &_result328)
-	p.SetLastResponseMeta_(_meta327)
+	var _args333 ApiServiceGetEvaluationCriteriaArgs
+	_args333.ID = id
+	var _result335 ApiServiceGetEvaluationCriteriaResult
+	var _meta334 thrift.ResponseMeta
+	_meta334, _err = p.Client_().Call(ctx, "getEvaluationCriteria", &_args333, &_result335)
+	p.SetLastResponseMeta_(_meta334)
 	if _err != nil {
 		return
 	}
-	if _ret329 := _result328.GetSuccess(); _ret329 != nil {
-		return _ret329, nil
+	if _ret336 := _result335.GetSuccess(); _ret336 != nil {
+		return _ret336, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getEvaluationCriteria failed: unknown result")
 }
@@ -21249,17 +21288,17 @@ func (p *ApiServiceClient) GetEvaluationCriteria(ctx context.Context, id int64) 
 //  - ID
 // 
 func (p *ApiServiceClient) DeleteEvaluationCriteria(ctx context.Context, id int64) (_r *Result_, _err error) {
-	var _args330 ApiServiceDeleteEvaluationCriteriaArgs
-	_args330.ID = id
-	var _result332 ApiServiceDeleteEvaluationCriteriaResult
-	var _meta331 thrift.ResponseMeta
-	_meta331, _err = p.Client_().Call(ctx, "deleteEvaluationCriteria", &_args330, &_result332)
-	p.SetLastResponseMeta_(_meta331)
+	var _args337 ApiServiceDeleteEvaluationCriteriaArgs
+	_args337.ID = id
+	var _result339 ApiServiceDeleteEvaluationCriteriaResult
+	var _meta338 thrift.ResponseMeta
+	_meta338, _err = p.Client_().Call(ctx, "deleteEvaluationCriteria", &_args337, &_result339)
+	p.SetLastResponseMeta_(_meta338)
 	if _err != nil {
 		return
 	}
-	if _ret333 := _result332.GetSuccess(); _ret333 != nil {
-		return _ret333, nil
+	if _ret340 := _result339.GetSuccess(); _ret340 != nil {
+		return _ret340, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "deleteEvaluationCriteria failed: unknown result")
 }
@@ -21268,17 +21307,17 @@ func (p *ApiServiceClient) DeleteEvaluationCriteria(ctx context.Context, id int6
 //  - Request
 // 
 func (p *ApiServiceClient) SaveQualityAssessment(ctx context.Context, request *QualityAssessmentRequest) (_r *Result_, _err error) {
-	var _args334 ApiServiceSaveQualityAssessmentArgs
-	_args334.Request = request
-	var _result336 ApiServiceSaveQualityAssessmentResult
-	var _meta335 thrift.ResponseMeta
-	_meta335, _err = p.Client_().Call(ctx, "saveQualityAssessment", &_args334, &_result336)
-	p.SetLastResponseMeta_(_meta335)
+	var _args341 ApiServiceSaveQualityAssessmentArgs
+	_args341.Request = request
+	var _result343 ApiServiceSaveQualityAssessmentResult
+	var _meta342 thrift.ResponseMeta
+	_meta342, _err = p.Client_().Call(ctx, "saveQualityAssessment", &_args341, &_result343)
+	p.SetLastResponseMeta_(_meta342)
 	if _err != nil {
 		return
 	}
-	if _ret337 := _result336.GetSuccess(); _ret337 != nil {
-		return _ret337, nil
+	if _ret344 := _result343.GetSuccess(); _ret344 != nil {
+		return _ret344, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "saveQualityAssessment failed: unknown result")
 }
@@ -21287,17 +21326,17 @@ func (p *ApiServiceClient) SaveQualityAssessment(ctx context.Context, request *Q
 //  - Request
 // 
 func (p *ApiServiceClient) QueryQualityAssessments(ctx context.Context, request *QualityAssessmentQueryRequest) (_r *Result_, _err error) {
-	var _args338 ApiServiceQueryQualityAssessmentsArgs
-	_args338.Request = request
-	var _result340 ApiServiceQueryQualityAssessmentsResult
-	var _meta339 thrift.ResponseMeta
-	_meta339, _err = p.Client_().Call(ctx, "queryQualityAssessments", &_args338, &_result340)
-	p.SetLastResponseMeta_(_meta339)
+	var _args345 ApiServiceQueryQualityAssessmentsArgs
+	_args345.Request = request
+	var _result347 ApiServiceQueryQualityAssessmentsResult
+	var _meta346 thrift.ResponseMeta
+	_meta346, _err = p.Client_().Call(ctx, "queryQualityAssessments", &_args345, &_result347)
+	p.SetLastResponseMeta_(_meta346)
 	if _err != nil {
 		return
 	}
-	if _ret341 := _result340.GetSuccess(); _ret341 != nil {
-		return _ret341, nil
+	if _ret348 := _result347.GetSuccess(); _ret348 != nil {
+		return _ret348, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "queryQualityAssessments failed: unknown result")
 }
@@ -21306,17 +21345,17 @@ func (p *ApiServiceClient) QueryQualityAssessments(ctx context.Context, request 
 //  - Request
 // 
 func (p *ApiServiceClient) CountQualityAssessments(ctx context.Context, request *QualityAssessmentQueryRequest) (_r *Result_, _err error) {
-	var _args342 ApiServiceCountQualityAssessmentsArgs
-	_args342.Request = request
-	var _result344 ApiServiceCountQualityAssessmentsResult
-	var _meta343 thrift.ResponseMeta
-	_meta343, _err = p.Client_().Call(ctx, "countQualityAssessments", &_args342, &_result344)
-	p.SetLastResponseMeta_(_meta343)
+	var _args349 ApiServiceCountQualityAssessmentsArgs
+	_args349.Request = request
+	var _result351 ApiServiceCountQualityAssessmentsResult
+	var _meta350 thrift.ResponseMeta
+	_meta350, _err = p.Client_().Call(ctx, "countQualityAssessments", &_args349, &_result351)
+	p.SetLastResponseMeta_(_meta350)
 	if _err != nil {
 		return
 	}
-	if _ret345 := _result344.GetSuccess(); _ret345 != nil {
-		return _ret345, nil
+	if _ret352 := _result351.GetSuccess(); _ret352 != nil {
+		return _ret352, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "countQualityAssessments failed: unknown result")
 }
@@ -21325,17 +21364,17 @@ func (p *ApiServiceClient) CountQualityAssessments(ctx context.Context, request 
 //  - ID
 // 
 func (p *ApiServiceClient) GetQualityAssessment(ctx context.Context, id int64) (_r *Result_, _err error) {
-	var _args346 ApiServiceGetQualityAssessmentArgs
-	_args346.ID = id
-	var _result348 ApiServiceGetQualityAssessmentResult
-	var _meta347 thrift.ResponseMeta
-	_meta347, _err = p.Client_().Call(ctx, "getQualityAssessment", &_args346, &_result348)
-	p.SetLastResponseMeta_(_meta347)
+	var _args353 ApiServiceGetQualityAssessmentArgs
+	_args353.ID = id
+	var _result355 ApiServiceGetQualityAssessmentResult
+	var _meta354 thrift.ResponseMeta
+	_meta354, _err = p.Client_().Call(ctx, "getQualityAssessment", &_args353, &_result355)
+	p.SetLastResponseMeta_(_meta354)
 	if _err != nil {
 		return
 	}
-	if _ret349 := _result348.GetSuccess(); _ret349 != nil {
-		return _ret349, nil
+	if _ret356 := _result355.GetSuccess(); _ret356 != nil {
+		return _ret356, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getQualityAssessment failed: unknown result")
 }
@@ -21344,17 +21383,17 @@ func (p *ApiServiceClient) GetQualityAssessment(ctx context.Context, id int64) (
 //  - ID
 // 
 func (p *ApiServiceClient) DeleteQualityAssessment(ctx context.Context, id int64) (_r *Result_, _err error) {
-	var _args350 ApiServiceDeleteQualityAssessmentArgs
-	_args350.ID = id
-	var _result352 ApiServiceDeleteQualityAssessmentResult
-	var _meta351 thrift.ResponseMeta
-	_meta351, _err = p.Client_().Call(ctx, "deleteQualityAssessment", &_args350, &_result352)
-	p.SetLastResponseMeta_(_meta351)
+	var _args357 ApiServiceDeleteQualityAssessmentArgs
+	_args357.ID = id
+	var _result359 ApiServiceDeleteQualityAssessmentResult
+	var _meta358 thrift.ResponseMeta
+	_meta358, _err = p.Client_().Call(ctx, "deleteQualityAssessment", &_args357, &_result359)
+	p.SetLastResponseMeta_(_meta358)
 	if _err != nil {
 		return
 	}
-	if _ret353 := _result352.GetSuccess(); _ret353 != nil {
-		return _ret353, nil
+	if _ret360 := _result359.GetSuccess(); _ret360 != nil {
+		return _ret360, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "deleteQualityAssessment failed: unknown result")
 }
@@ -21363,17 +21402,17 @@ func (p *ApiServiceClient) DeleteQualityAssessment(ctx context.Context, id int64
 //  - Request
 // 
 func (p *ApiServiceClient) ListDatasetVersions(ctx context.Context, request *DatasetListQueryRequest) (_r *Result_, _err error) {
-	var _args354 ApiServiceListDatasetVersionsArgs
-	_args354.Request = request
-	var _result356 ApiServiceListDatasetVersionsResult
-	var _meta355 thrift.ResponseMeta
-	_meta355, _err = p.Client_().Call(ctx, "listDatasetVersions", &_args354, &_result356)
-	p.SetLastResponseMeta_(_meta355)
+	var _args361 ApiServiceListDatasetVersionsArgs
+	_args361.Request = request
+	var _result363 ApiServiceListDatasetVersionsResult
+	var _meta362 thrift.ResponseMeta
+	_meta362, _err = p.Client_().Call(ctx, "listDatasetVersions", &_args361, &_result363)
+	p.SetLastResponseMeta_(_meta362)
 	if _err != nil {
 		return
 	}
-	if _ret357 := _result356.GetSuccess(); _ret357 != nil {
-		return _ret357, nil
+	if _ret364 := _result363.GetSuccess(); _ret364 != nil {
+		return _ret364, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "listDatasetVersions failed: unknown result")
 }
@@ -21382,32 +21421,32 @@ func (p *ApiServiceClient) ListDatasetVersions(ctx context.Context, request *Dat
 //  - Request
 // 
 func (p *ApiServiceClient) CountDatasetVersions(ctx context.Context, request *DatasetListQueryRequest) (_r *Result_, _err error) {
-	var _args358 ApiServiceCountDatasetVersionsArgs
-	_args358.Request = request
-	var _result360 ApiServiceCountDatasetVersionsResult
-	var _meta359 thrift.ResponseMeta
-	_meta359, _err = p.Client_().Call(ctx, "countDatasetVersions", &_args358, &_result360)
-	p.SetLastResponseMeta_(_meta359)
+	var _args365 ApiServiceCountDatasetVersionsArgs
+	_args365.Request = request
+	var _result367 ApiServiceCountDatasetVersionsResult
+	var _meta366 thrift.ResponseMeta
+	_meta366, _err = p.Client_().Call(ctx, "countDatasetVersions", &_args365, &_result367)
+	p.SetLastResponseMeta_(_meta366)
 	if _err != nil {
 		return
 	}
-	if _ret361 := _result360.GetSuccess(); _ret361 != nil {
-		return _ret361, nil
+	if _ret368 := _result367.GetSuccess(); _ret368 != nil {
+		return _ret368, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "countDatasetVersions failed: unknown result")
 }
 
 func (p *ApiServiceClient) GetDatasetCategories(ctx context.Context) (_r *Result_, _err error) {
-	var _args362 ApiServiceGetDatasetCategoriesArgs
-	var _result364 ApiServiceGetDatasetCategoriesResult
-	var _meta363 thrift.ResponseMeta
-	_meta363, _err = p.Client_().Call(ctx, "getDatasetCategories", &_args362, &_result364)
-	p.SetLastResponseMeta_(_meta363)
+	var _args369 ApiServiceGetDatasetCategoriesArgs
+	var _result371 ApiServiceGetDatasetCategoriesResult
+	var _meta370 thrift.ResponseMeta
+	_meta370, _err = p.Client_().Call(ctx, "getDatasetCategories", &_args369, &_result371)
+	p.SetLastResponseMeta_(_meta370)
 	if _err != nil {
 		return
 	}
-	if _ret365 := _result364.GetSuccess(); _ret365 != nil {
-		return _ret365, nil
+	if _ret372 := _result371.GetSuccess(); _ret372 != nil {
+		return _ret372, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getDatasetCategories failed: unknown result")
 }
@@ -21416,17 +21455,17 @@ func (p *ApiServiceClient) GetDatasetCategories(ctx context.Context) (_r *Result
 //  - Category
 // 
 func (p *ApiServiceClient) GetDatasetsByCategory(ctx context.Context, category string) (_r *Result_, _err error) {
-	var _args366 ApiServiceGetDatasetsByCategoryArgs
-	_args366.Category = category
-	var _result368 ApiServiceGetDatasetsByCategoryResult
-	var _meta367 thrift.ResponseMeta
-	_meta367, _err = p.Client_().Call(ctx, "getDatasetsByCategory", &_args366, &_result368)
-	p.SetLastResponseMeta_(_meta367)
+	var _args373 ApiServiceGetDatasetsByCategoryArgs
+	_args373.Category = category
+	var _result375 ApiServiceGetDatasetsByCategoryResult
+	var _meta374 thrift.ResponseMeta
+	_meta374, _err = p.Client_().Call(ctx, "getDatasetsByCategory", &_args373, &_result375)
+	p.SetLastResponseMeta_(_meta374)
 	if _err != nil {
 		return
 	}
-	if _ret369 := _result368.GetSuccess(); _ret369 != nil {
-		return _ret369, nil
+	if _ret376 := _result375.GetSuccess(); _ret376 != nil {
+		return _ret376, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getDatasetsByCategory failed: unknown result")
 }
@@ -21435,17 +21474,17 @@ func (p *ApiServiceClient) GetDatasetsByCategory(ctx context.Context, category s
 //  - DatasetName
 // 
 func (p *ApiServiceClient) GetDatasetRelations(ctx context.Context, datasetName string) (_r *Result_, _err error) {
-	var _args370 ApiServiceGetDatasetRelationsArgs
-	_args370.DatasetName = datasetName
-	var _result372 ApiServiceGetDatasetRelationsResult
-	var _meta371 thrift.ResponseMeta
-	_meta371, _err = p.Client_().Call(ctx, "getDatasetRelations", &_args370, &_result372)
-	p.SetLastResponseMeta_(_meta371)
+	var _args377 ApiServiceGetDatasetRelationsArgs
+	_args377.DatasetName = datasetName
+	var _result379 ApiServiceGetDatasetRelationsResult
+	var _meta378 thrift.ResponseMeta
+	_meta378, _err = p.Client_().Call(ctx, "getDatasetRelations", &_args377, &_result379)
+	p.SetLastResponseMeta_(_meta378)
 	if _err != nil {
 		return
 	}
-	if _ret373 := _result372.GetSuccess(); _ret373 != nil {
-		return _ret373, nil
+	if _ret380 := _result379.GetSuccess(); _ret380 != nil {
+		return _ret380, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getDatasetRelations failed: unknown result")
 }
@@ -21454,17 +21493,17 @@ func (p *ApiServiceClient) GetDatasetRelations(ctx context.Context, datasetName 
 //  - VersionId
 // 
 func (p *ApiServiceClient) GetDatasetImpact(ctx context.Context, versionId int64) (_r *Result_, _err error) {
-	var _args374 ApiServiceGetDatasetImpactArgs
-	_args374.VersionId = versionId
-	var _result376 ApiServiceGetDatasetImpactResult
-	var _meta375 thrift.ResponseMeta
-	_meta375, _err = p.Client_().Call(ctx, "getDatasetImpact", &_args374, &_result376)
-	p.SetLastResponseMeta_(_meta375)
+	var _args381 ApiServiceGetDatasetImpactArgs
+	_args381.VersionId = versionId
+	var _result383 ApiServiceGetDatasetImpactResult
+	var _meta382 thrift.ResponseMeta
+	_meta382, _err = p.Client_().Call(ctx, "getDatasetImpact", &_args381, &_result383)
+	p.SetLastResponseMeta_(_meta382)
 	if _err != nil {
 		return
 	}
-	if _ret377 := _result376.GetSuccess(); _ret377 != nil {
-		return _ret377, nil
+	if _ret384 := _result383.GetSuccess(); _ret384 != nil {
+		return _ret384, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getDatasetImpact failed: unknown result")
 }
@@ -21473,32 +21512,32 @@ func (p *ApiServiceClient) GetDatasetImpact(ctx context.Context, versionId int64
 //  - VersionId
 // 
 func (p *ApiServiceClient) ExportDatasetPackage(ctx context.Context, versionId int64) (_r *Result_, _err error) {
-	var _args378 ApiServiceExportDatasetPackageArgs
-	_args378.VersionId = versionId
-	var _result380 ApiServiceExportDatasetPackageResult
-	var _meta379 thrift.ResponseMeta
-	_meta379, _err = p.Client_().Call(ctx, "exportDatasetPackage", &_args378, &_result380)
-	p.SetLastResponseMeta_(_meta379)
+	var _args385 ApiServiceExportDatasetPackageArgs
+	_args385.VersionId = versionId
+	var _result387 ApiServiceExportDatasetPackageResult
+	var _meta386 thrift.ResponseMeta
+	_meta386, _err = p.Client_().Call(ctx, "exportDatasetPackage", &_args385, &_result387)
+	p.SetLastResponseMeta_(_meta386)
 	if _err != nil {
 		return
 	}
-	if _ret381 := _result380.GetSuccess(); _ret381 != nil {
-		return _ret381, nil
+	if _ret388 := _result387.GetSuccess(); _ret388 != nil {
+		return _ret388, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "exportDatasetPackage failed: unknown result")
 }
 
 func (p *ApiServiceClient) GetQualityDimensions(ctx context.Context) (_r *Result_, _err error) {
-	var _args382 ApiServiceGetQualityDimensionsArgs
-	var _result384 ApiServiceGetQualityDimensionsResult
-	var _meta383 thrift.ResponseMeta
-	_meta383, _err = p.Client_().Call(ctx, "getQualityDimensions", &_args382, &_result384)
-	p.SetLastResponseMeta_(_meta383)
+	var _args389 ApiServiceGetQualityDimensionsArgs
+	var _result391 ApiServiceGetQualityDimensionsResult
+	var _meta390 thrift.ResponseMeta
+	_meta390, _err = p.Client_().Call(ctx, "getQualityDimensions", &_args389, &_result391)
+	p.SetLastResponseMeta_(_meta390)
 	if _err != nil {
 		return
 	}
-	if _ret385 := _result384.GetSuccess(); _ret385 != nil {
-		return _ret385, nil
+	if _ret392 := _result391.GetSuccess(); _ret392 != nil {
+		return _ret392, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getQualityDimensions failed: unknown result")
 }
@@ -21509,19 +21548,19 @@ func (p *ApiServiceClient) GetQualityDimensions(ctx context.Context) (_r *Result
 //  - CriteriaId
 // 
 func (p *ApiServiceClient) AutoDetectQuality(ctx context.Context, versionId int64, sampleSize int32, criteriaId int64) (_r *Result_, _err error) {
-	var _args386 ApiServiceAutoDetectQualityArgs
-	_args386.VersionId = versionId
-	_args386.SampleSize = sampleSize
-	_args386.CriteriaId = criteriaId
-	var _result388 ApiServiceAutoDetectQualityResult
-	var _meta387 thrift.ResponseMeta
-	_meta387, _err = p.Client_().Call(ctx, "autoDetectQuality", &_args386, &_result388)
-	p.SetLastResponseMeta_(_meta387)
+	var _args393 ApiServiceAutoDetectQualityArgs
+	_args393.VersionId = versionId
+	_args393.SampleSize = sampleSize
+	_args393.CriteriaId = criteriaId
+	var _result395 ApiServiceAutoDetectQualityResult
+	var _meta394 thrift.ResponseMeta
+	_meta394, _err = p.Client_().Call(ctx, "autoDetectQuality", &_args393, &_result395)
+	p.SetLastResponseMeta_(_meta394)
 	if _err != nil {
 		return
 	}
-	if _ret389 := _result388.GetSuccess(); _ret389 != nil {
-		return _ret389, nil
+	if _ret396 := _result395.GetSuccess(); _ret396 != nil {
+		return _ret396, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "autoDetectQuality failed: unknown result")
 }
@@ -21530,32 +21569,32 @@ func (p *ApiServiceClient) AutoDetectQuality(ctx context.Context, versionId int6
 //  - ID
 // 
 func (p *ApiServiceClient) GetQualityReportById(ctx context.Context, id int64) (_r *Result_, _err error) {
-	var _args390 ApiServiceGetQualityReportByIdArgs
-	_args390.ID = id
-	var _result392 ApiServiceGetQualityReportByIdResult
-	var _meta391 thrift.ResponseMeta
-	_meta391, _err = p.Client_().Call(ctx, "getQualityReportById", &_args390, &_result392)
-	p.SetLastResponseMeta_(_meta391)
+	var _args397 ApiServiceGetQualityReportByIdArgs
+	_args397.ID = id
+	var _result399 ApiServiceGetQualityReportByIdResult
+	var _meta398 thrift.ResponseMeta
+	_meta398, _err = p.Client_().Call(ctx, "getQualityReportById", &_args397, &_result399)
+	p.SetLastResponseMeta_(_meta398)
 	if _err != nil {
 		return
 	}
-	if _ret393 := _result392.GetSuccess(); _ret393 != nil {
-		return _ret393, nil
+	if _ret400 := _result399.GetSuccess(); _ret400 != nil {
+		return _ret400, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getQualityReportById failed: unknown result")
 }
 
 func (p *ApiServiceClient) ListDataSourceArchives(ctx context.Context) (_r *Result_, _err error) {
-	var _args394 ApiServiceListDataSourceArchivesArgs
-	var _result396 ApiServiceListDataSourceArchivesResult
-	var _meta395 thrift.ResponseMeta
-	_meta395, _err = p.Client_().Call(ctx, "listDataSourceArchives", &_args394, &_result396)
-	p.SetLastResponseMeta_(_meta395)
+	var _args401 ApiServiceListDataSourceArchivesArgs
+	var _result403 ApiServiceListDataSourceArchivesResult
+	var _meta402 thrift.ResponseMeta
+	_meta402, _err = p.Client_().Call(ctx, "listDataSourceArchives", &_args401, &_result403)
+	p.SetLastResponseMeta_(_meta402)
 	if _err != nil {
 		return
 	}
-	if _ret397 := _result396.GetSuccess(); _ret397 != nil {
-		return _ret397, nil
+	if _ret404 := _result403.GetSuccess(); _ret404 != nil {
+		return _ret404, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "listDataSourceArchives failed: unknown result")
 }
@@ -21565,18 +21604,18 @@ func (p *ApiServiceClient) ListDataSourceArchives(ctx context.Context) (_r *Resu
 //  - DataModality
 // 
 func (p *ApiServiceClient) UpdateDataSourceModality(ctx context.Context, name string, dataModality string) (_r *Result_, _err error) {
-	var _args398 ApiServiceUpdateDataSourceModalityArgs
-	_args398.Name = name
-	_args398.DataModality = dataModality
-	var _result400 ApiServiceUpdateDataSourceModalityResult
-	var _meta399 thrift.ResponseMeta
-	_meta399, _err = p.Client_().Call(ctx, "updateDataSourceModality", &_args398, &_result400)
-	p.SetLastResponseMeta_(_meta399)
+	var _args405 ApiServiceUpdateDataSourceModalityArgs
+	_args405.Name = name
+	_args405.DataModality = dataModality
+	var _result407 ApiServiceUpdateDataSourceModalityResult
+	var _meta406 thrift.ResponseMeta
+	_meta406, _err = p.Client_().Call(ctx, "updateDataSourceModality", &_args405, &_result407)
+	p.SetLastResponseMeta_(_meta406)
 	if _err != nil {
 		return
 	}
-	if _ret401 := _result400.GetSuccess(); _ret401 != nil {
-		return _ret401, nil
+	if _ret408 := _result407.GetSuccess(); _ret408 != nil {
+		return _ret408, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "updateDataSourceModality failed: unknown result")
 }
@@ -21585,17 +21624,17 @@ func (p *ApiServiceClient) UpdateDataSourceModality(ctx context.Context, name st
 //  - Request
 // 
 func (p *ApiServiceClient) PreviewDataset(ctx context.Context, request *DatasetCreateRequest) (_r *Result_, _err error) {
-	var _args402 ApiServicePreviewDatasetArgs
-	_args402.Request = request
-	var _result404 ApiServicePreviewDatasetResult
-	var _meta403 thrift.ResponseMeta
-	_meta403, _err = p.Client_().Call(ctx, "previewDataset", &_args402, &_result404)
-	p.SetLastResponseMeta_(_meta403)
+	var _args409 ApiServicePreviewDatasetArgs
+	_args409.Request = request
+	var _result411 ApiServicePreviewDatasetResult
+	var _meta410 thrift.ResponseMeta
+	_meta410, _err = p.Client_().Call(ctx, "previewDataset", &_args409, &_result411)
+	p.SetLastResponseMeta_(_meta410)
 	if _err != nil {
 		return
 	}
-	if _ret405 := _result404.GetSuccess(); _ret405 != nil {
-		return _ret405, nil
+	if _ret412 := _result411.GetSuccess(); _ret412 != nil {
+		return _ret412, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "previewDataset failed: unknown result")
 }
@@ -21604,17 +21643,17 @@ func (p *ApiServiceClient) PreviewDataset(ctx context.Context, request *DatasetC
 //  - VersionId
 // 
 func (p *ApiServiceClient) ToggleDatasetVersion(ctx context.Context, versionId int64) (_r *Result_, _err error) {
-	var _args406 ApiServiceToggleDatasetVersionArgs
-	_args406.VersionId = versionId
-	var _result408 ApiServiceToggleDatasetVersionResult
-	var _meta407 thrift.ResponseMeta
-	_meta407, _err = p.Client_().Call(ctx, "toggleDatasetVersion", &_args406, &_result408)
-	p.SetLastResponseMeta_(_meta407)
+	var _args413 ApiServiceToggleDatasetVersionArgs
+	_args413.VersionId = versionId
+	var _result415 ApiServiceToggleDatasetVersionResult
+	var _meta414 thrift.ResponseMeta
+	_meta414, _err = p.Client_().Call(ctx, "toggleDatasetVersion", &_args413, &_result415)
+	p.SetLastResponseMeta_(_meta414)
 	if _err != nil {
 		return
 	}
-	if _ret409 := _result408.GetSuccess(); _ret409 != nil {
-		return _ret409, nil
+	if _ret416 := _result415.GetSuccess(); _ret416 != nil {
+		return _ret416, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "toggleDatasetVersion failed: unknown result")
 }
@@ -21627,21 +21666,21 @@ func (p *ApiServiceClient) ToggleDatasetVersion(ctx context.Context, versionId i
 //  - Tags
 // 
 func (p *ApiServiceClient) UpdateDatasetVersion(ctx context.Context, versionId int64, remark string, dataModality string, category string, tags string) (_r *Result_, _err error) {
-	var _args410 ApiServiceUpdateDatasetVersionArgs
-	_args410.VersionId = versionId
-	_args410.Remark = remark
-	_args410.DataModality = dataModality
-	_args410.Category = category
-	_args410.Tags = tags
-	var _result412 ApiServiceUpdateDatasetVersionResult
-	var _meta411 thrift.ResponseMeta
-	_meta411, _err = p.Client_().Call(ctx, "updateDatasetVersion", &_args410, &_result412)
-	p.SetLastResponseMeta_(_meta411)
+	var _args417 ApiServiceUpdateDatasetVersionArgs
+	_args417.VersionId = versionId
+	_args417.Remark = remark
+	_args417.DataModality = dataModality
+	_args417.Category = category
+	_args417.Tags = tags
+	var _result419 ApiServiceUpdateDatasetVersionResult
+	var _meta418 thrift.ResponseMeta
+	_meta418, _err = p.Client_().Call(ctx, "updateDatasetVersion", &_args417, &_result419)
+	p.SetLastResponseMeta_(_meta418)
 	if _err != nil {
 		return
 	}
-	if _ret413 := _result412.GetSuccess(); _ret413 != nil {
-		return _ret413, nil
+	if _ret420 := _result419.GetSuccess(); _ret420 != nil {
+		return _ret420, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "updateDatasetVersion failed: unknown result")
 }
@@ -21652,19 +21691,19 @@ func (p *ApiServiceClient) UpdateDatasetVersion(ctx context.Context, versionId i
 //  - Desc
 // 
 func (p *ApiServiceClient) UpdateFunctionDesc(ctx context.Context, name string, type_a1 string, desc string) (_r *Result_, _err error) {
-	var _args414 ApiServiceUpdateFunctionDescArgs
-	_args414.Name = name
-	_args414.Type = type_a1
-	_args414.Desc = desc
-	var _result416 ApiServiceUpdateFunctionDescResult
-	var _meta415 thrift.ResponseMeta
-	_meta415, _err = p.Client_().Call(ctx, "updateFunctionDesc", &_args414, &_result416)
-	p.SetLastResponseMeta_(_meta415)
+	var _args421 ApiServiceUpdateFunctionDescArgs
+	_args421.Name = name
+	_args421.Type = type_a1
+	_args421.Desc = desc
+	var _result423 ApiServiceUpdateFunctionDescResult
+	var _meta422 thrift.ResponseMeta
+	_meta422, _err = p.Client_().Call(ctx, "updateFunctionDesc", &_args421, &_result423)
+	p.SetLastResponseMeta_(_meta422)
 	if _err != nil {
 		return
 	}
-	if _ret417 := _result416.GetSuccess(); _ret417 != nil {
-		return _ret417, nil
+	if _ret424 := _result423.GetSuccess(); _ret424 != nil {
+		return _ret424, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "updateFunctionDesc failed: unknown result")
 }
@@ -21673,17 +21712,17 @@ func (p *ApiServiceClient) UpdateFunctionDesc(ctx context.Context, name string, 
 //  - Request
 // 
 func (p *ApiServiceClient) SaveSqlSnippet(ctx context.Context, request *SqlSnippetRequest) (_r *Result_, _err error) {
-	var _args418 ApiServiceSaveSqlSnippetArgs
-	_args418.Request = request
-	var _result420 ApiServiceSaveSqlSnippetResult
-	var _meta419 thrift.ResponseMeta
-	_meta419, _err = p.Client_().Call(ctx, "saveSqlSnippet", &_args418, &_result420)
-	p.SetLastResponseMeta_(_meta419)
+	var _args425 ApiServiceSaveSqlSnippetArgs
+	_args425.Request = request
+	var _result427 ApiServiceSaveSqlSnippetResult
+	var _meta426 thrift.ResponseMeta
+	_meta426, _err = p.Client_().Call(ctx, "saveSqlSnippet", &_args425, &_result427)
+	p.SetLastResponseMeta_(_meta426)
 	if _err != nil {
 		return
 	}
-	if _ret421 := _result420.GetSuccess(); _ret421 != nil {
-		return _ret421, nil
+	if _ret428 := _result427.GetSuccess(); _ret428 != nil {
+		return _ret428, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "saveSqlSnippet failed: unknown result")
 }
@@ -21692,17 +21731,17 @@ func (p *ApiServiceClient) SaveSqlSnippet(ctx context.Context, request *SqlSnipp
 //  - Name
 // 
 func (p *ApiServiceClient) ListSqlSnippets(ctx context.Context, name string) (_r *Result_, _err error) {
-	var _args422 ApiServiceListSqlSnippetsArgs
-	_args422.Name = name
-	var _result424 ApiServiceListSqlSnippetsResult
-	var _meta423 thrift.ResponseMeta
-	_meta423, _err = p.Client_().Call(ctx, "listSqlSnippets", &_args422, &_result424)
-	p.SetLastResponseMeta_(_meta423)
+	var _args429 ApiServiceListSqlSnippetsArgs
+	_args429.Name = name
+	var _result431 ApiServiceListSqlSnippetsResult
+	var _meta430 thrift.ResponseMeta
+	_meta430, _err = p.Client_().Call(ctx, "listSqlSnippets", &_args429, &_result431)
+	p.SetLastResponseMeta_(_meta430)
 	if _err != nil {
 		return
 	}
-	if _ret425 := _result424.GetSuccess(); _ret425 != nil {
-		return _ret425, nil
+	if _ret432 := _result431.GetSuccess(); _ret432 != nil {
+		return _ret432, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "listSqlSnippets failed: unknown result")
 }
@@ -21711,17 +21750,17 @@ func (p *ApiServiceClient) ListSqlSnippets(ctx context.Context, name string) (_r
 //  - ID
 // 
 func (p *ApiServiceClient) GetSqlSnippet(ctx context.Context, id int64) (_r *Result_, _err error) {
-	var _args426 ApiServiceGetSqlSnippetArgs
-	_args426.ID = id
-	var _result428 ApiServiceGetSqlSnippetResult
-	var _meta427 thrift.ResponseMeta
-	_meta427, _err = p.Client_().Call(ctx, "getSqlSnippet", &_args426, &_result428)
-	p.SetLastResponseMeta_(_meta427)
+	var _args433 ApiServiceGetSqlSnippetArgs
+	_args433.ID = id
+	var _result435 ApiServiceGetSqlSnippetResult
+	var _meta434 thrift.ResponseMeta
+	_meta434, _err = p.Client_().Call(ctx, "getSqlSnippet", &_args433, &_result435)
+	p.SetLastResponseMeta_(_meta434)
 	if _err != nil {
 		return
 	}
-	if _ret429 := _result428.GetSuccess(); _ret429 != nil {
-		return _ret429, nil
+	if _ret436 := _result435.GetSuccess(); _ret436 != nil {
+		return _ret436, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "getSqlSnippet failed: unknown result")
 }
@@ -21730,17 +21769,17 @@ func (p *ApiServiceClient) GetSqlSnippet(ctx context.Context, id int64) (_r *Res
 //  - ID
 // 
 func (p *ApiServiceClient) DeleteSqlSnippet(ctx context.Context, id int64) (_r *Result_, _err error) {
-	var _args430 ApiServiceDeleteSqlSnippetArgs
-	_args430.ID = id
-	var _result432 ApiServiceDeleteSqlSnippetResult
-	var _meta431 thrift.ResponseMeta
-	_meta431, _err = p.Client_().Call(ctx, "deleteSqlSnippet", &_args430, &_result432)
-	p.SetLastResponseMeta_(_meta431)
+	var _args437 ApiServiceDeleteSqlSnippetArgs
+	_args437.ID = id
+	var _result439 ApiServiceDeleteSqlSnippetResult
+	var _meta438 thrift.ResponseMeta
+	_meta438, _err = p.Client_().Call(ctx, "deleteSqlSnippet", &_args437, &_result439)
+	p.SetLastResponseMeta_(_meta438)
 	if _err != nil {
 		return
 	}
-	if _ret433 := _result432.GetSuccess(); _ret433 != nil {
-		return _ret433, nil
+	if _ret440 := _result439.GetSuccess(); _ret440 != nil {
+		return _ret440, nil
 	}
 	return nil, thrift.NewTApplicationException(thrift.MISSING_RESULT, "deleteSqlSnippet failed: unknown result")
 }
@@ -21765,107 +21804,109 @@ func (p *ApiServiceProcessor) ProcessorMap() map[string]thrift.TProcessorFunctio
 
 func NewApiServiceProcessor(handler ApiService) *ApiServiceProcessor {
 
-	self434 := &ApiServiceProcessor{handler:handler, processorMap:make(map[string]thrift.TProcessorFunction)}
-	self434.processorMap["registerDataSource"] = &apiServiceProcessorRegisterDataSource{handler:handler}
-	self434.processorMap["removeDataSource"] = &apiServiceProcessorRemoveDataSource{handler:handler}
-	self434.processorMap["listDataSources"] = &apiServiceProcessorListDataSources{handler:handler}
-	self434.processorMap["getDataSourceTree"] = &apiServiceProcessorGetDataSourceTree{handler:handler}
-	self434.processorMap["queryData"] = &apiServiceProcessorQueryData{handler:handler}
-	self434.processorMap["queryFileData"] = &apiServiceProcessorQueryFileData{handler:handler}
-	self434.processorMap["importData"] = &apiServiceProcessorImportData{handler:handler}
-	self434.processorMap["exportData"] = &apiServiceProcessorExportData{handler:handler}
-	self434.processorMap["deleteData"] = &apiServiceProcessorDeleteData{handler:handler}
-	self434.processorMap["getTimeRange"] = &apiServiceProcessorGetTimeRange{handler:handler}
-	self434.processorMap["queryRelationalData"] = &apiServiceProcessorQueryRelationalData{handler:handler}
-	self434.processorMap["countRelationalData"] = &apiServiceProcessorCountRelationalData{handler:handler}
-	self434.processorMap["exportRelationalDataToExcel"] = &apiServiceProcessorExportRelationalDataToExcel{handler:handler}
-	self434.processorMap["testSQL"] = &apiServiceProcessorTestSQL{handler:handler}
-	self434.processorMap["saveDataset"] = &apiServiceProcessorSaveDataset{handler:handler}
-	self434.processorMap["queryMeta"] = &apiServiceProcessorQueryMeta{handler:handler}
-	self434.processorMap["deleteDataset"] = &apiServiceProcessorDeleteDataset{handler:handler}
-	self434.processorMap["createDataset"] = &apiServiceProcessorCreateDataset{handler:handler}
-	self434.processorMap["getDatasetTree"] = &apiServiceProcessorGetDatasetTree{handler:handler}
-	self434.processorMap["getDatasetVersionMeta"] = &apiServiceProcessorGetDatasetVersionMeta{handler:handler}
-	self434.processorMap["getDatasetChanges"] = &apiServiceProcessorGetDatasetChanges{handler:handler}
-	self434.processorMap["getDatasetLineage"] = &apiServiceProcessorGetDatasetLineage{handler:handler}
-	self434.processorMap["forkLineage"] = &apiServiceProcessorForkLineage{handler:handler}
-	self434.processorMap["getLineageForkStatus"] = &apiServiceProcessorGetLineageForkStatus{handler:handler}
-	self434.processorMap["deleteDatasetVersion"] = &apiServiceProcessorDeleteDatasetVersion{handler:handler}
-	self434.processorMap["registerTransform"] = &apiServiceProcessorRegisterTransform{handler:handler}
-	self434.processorMap["deleteFunction"] = &apiServiceProcessorDeleteFunction{handler:handler}
-	self434.processorMap["listFunctions"] = &apiServiceProcessorListFunctions{handler:handler}
-	self434.processorMap["registerUDF"] = &apiServiceProcessorRegisterUDF{handler:handler}
-	self434.processorMap["downloadFunction"] = &apiServiceProcessorDownloadFunction{handler:handler}
-	self434.processorMap["saveTransformCompare"] = &apiServiceProcessorSaveTransformCompare{handler:handler}
-	self434.processorMap["queryTransformCompares"] = &apiServiceProcessorQueryTransformCompares{handler:handler}
-	self434.processorMap["countTransformCompares"] = &apiServiceProcessorCountTransformCompares{handler:handler}
-	self434.processorMap["getTransformCompare"] = &apiServiceProcessorGetTransformCompare{handler:handler}
-	self434.processorMap["deleteTransformCompare"] = &apiServiceProcessorDeleteTransformCompare{handler:handler}
-	self434.processorMap["queryTransformJobs"] = &apiServiceProcessorQueryTransformJobs{handler:handler}
-	self434.processorMap["countTransformJobs"] = &apiServiceProcessorCountTransformJobs{handler:handler}
-	self434.processorMap["getTransformJob"] = &apiServiceProcessorGetTransformJob{handler:handler}
-	self434.processorMap["commitTransformJob"] = &apiServiceProcessorCommitTransformJob{handler:handler}
-	self434.processorMap["getTransformJobStatus"] = &apiServiceProcessorGetTransformJobStatus{handler:handler}
-	self434.processorMap["cancelTransformJob"] = &apiServiceProcessorCancelTransformJob{handler:handler}
-	self434.processorMap["getTransformJobBloodline"] = &apiServiceProcessorGetTransformJobBloodline{handler:handler}
-	self434.processorMap["getUserManualFile"] = &apiServiceProcessorGetUserManualFile{handler:handler}
-	self434.processorMap["generateJavaCode"] = &apiServiceProcessorGenerateJavaCode{handler:handler}
-	self434.processorMap["generateGoCode"] = &apiServiceProcessorGenerateGoCode{handler:handler}
-	self434.processorMap["generatePythonCode"] = &apiServiceProcessorGeneratePythonCode{handler:handler}
-	self434.processorMap["generateRestfulApiCode"] = &apiServiceProcessorGenerateRestfulApiCode{handler:handler}
-	self434.processorMap["generateAllCode"] = &apiServiceProcessorGenerateAllCode{handler:handler}
-	self434.processorMap["getGenerationStatus"] = &apiServiceProcessorGetGenerationStatus{handler:handler}
-	self434.processorMap["validateThriftFile"] = &apiServiceProcessorValidateThriftFile{handler:handler}
-	self434.processorMap["login"] = &apiServiceProcessorLogin{handler:handler}
-	self434.processorMap["refreshToken"] = &apiServiceProcessorRefreshToken{handler:handler}
-	self434.processorMap["verifyToken"] = &apiServiceProcessorVerifyToken{handler:handler}
-	self434.processorMap["logout"] = &apiServiceProcessorLogout{handler:handler}
-	self434.processorMap["getCurrentAuthUser"] = &apiServiceProcessorGetCurrentAuthUser{handler:handler}
-	self434.processorMap["saveUser"] = &apiServiceProcessorSaveUser{handler:handler}
-	self434.processorMap["queryUsers"] = &apiServiceProcessorQueryUsers{handler:handler}
-	self434.processorMap["countUsers"] = &apiServiceProcessorCountUsers{handler:handler}
-	self434.processorMap["allUsers"] = &apiServiceProcessorAllUsers{handler:handler}
-	self434.processorMap["queryUser"] = &apiServiceProcessorQueryUser{handler:handler}
-	self434.processorMap["deleteUser"] = &apiServiceProcessorDeleteUser{handler:handler}
-	self434.processorMap["updateUser"] = &apiServiceProcessorUpdateUser{handler:handler}
-	self434.processorMap["getRoles"] = &apiServiceProcessorGetRoles{handler:handler}
-	self434.processorMap["changePassword"] = &apiServiceProcessorChangePassword{handler:handler}
-	self434.processorMap["getCurrentUser"] = &apiServiceProcessorGetCurrentUser{handler:handler}
-	self434.processorMap["listOwnerTables"] = &apiServiceProcessorListOwnerTables{handler:handler}
-	self434.processorMap["queryDataPermissions"] = &apiServiceProcessorQueryDataPermissions{handler:handler}
-	self434.processorMap["countDataPermissions"] = &apiServiceProcessorCountDataPermissions{handler:handler}
-	self434.processorMap["updateDataPermission"] = &apiServiceProcessorUpdateDataPermission{handler:handler}
-	self434.processorMap["saveEvaluationCriteria"] = &apiServiceProcessorSaveEvaluationCriteria{handler:handler}
-	self434.processorMap["queryEvaluationCriteria"] = &apiServiceProcessorQueryEvaluationCriteria{handler:handler}
-	self434.processorMap["countEvaluationCriteria"] = &apiServiceProcessorCountEvaluationCriteria{handler:handler}
-	self434.processorMap["getEvaluationCriteria"] = &apiServiceProcessorGetEvaluationCriteria{handler:handler}
-	self434.processorMap["deleteEvaluationCriteria"] = &apiServiceProcessorDeleteEvaluationCriteria{handler:handler}
-	self434.processorMap["saveQualityAssessment"] = &apiServiceProcessorSaveQualityAssessment{handler:handler}
-	self434.processorMap["queryQualityAssessments"] = &apiServiceProcessorQueryQualityAssessments{handler:handler}
-	self434.processorMap["countQualityAssessments"] = &apiServiceProcessorCountQualityAssessments{handler:handler}
-	self434.processorMap["getQualityAssessment"] = &apiServiceProcessorGetQualityAssessment{handler:handler}
-	self434.processorMap["deleteQualityAssessment"] = &apiServiceProcessorDeleteQualityAssessment{handler:handler}
-	self434.processorMap["listDatasetVersions"] = &apiServiceProcessorListDatasetVersions{handler:handler}
-	self434.processorMap["countDatasetVersions"] = &apiServiceProcessorCountDatasetVersions{handler:handler}
-	self434.processorMap["getDatasetCategories"] = &apiServiceProcessorGetDatasetCategories{handler:handler}
-	self434.processorMap["getDatasetsByCategory"] = &apiServiceProcessorGetDatasetsByCategory{handler:handler}
-	self434.processorMap["getDatasetRelations"] = &apiServiceProcessorGetDatasetRelations{handler:handler}
-	self434.processorMap["getDatasetImpact"] = &apiServiceProcessorGetDatasetImpact{handler:handler}
-	self434.processorMap["exportDatasetPackage"] = &apiServiceProcessorExportDatasetPackage{handler:handler}
-	self434.processorMap["getQualityDimensions"] = &apiServiceProcessorGetQualityDimensions{handler:handler}
-	self434.processorMap["autoDetectQuality"] = &apiServiceProcessorAutoDetectQuality{handler:handler}
-	self434.processorMap["getQualityReportById"] = &apiServiceProcessorGetQualityReportById{handler:handler}
-	self434.processorMap["listDataSourceArchives"] = &apiServiceProcessorListDataSourceArchives{handler:handler}
-	self434.processorMap["updateDataSourceModality"] = &apiServiceProcessorUpdateDataSourceModality{handler:handler}
-	self434.processorMap["previewDataset"] = &apiServiceProcessorPreviewDataset{handler:handler}
-	self434.processorMap["toggleDatasetVersion"] = &apiServiceProcessorToggleDatasetVersion{handler:handler}
-	self434.processorMap["updateDatasetVersion"] = &apiServiceProcessorUpdateDatasetVersion{handler:handler}
-	self434.processorMap["updateFunctionDesc"] = &apiServiceProcessorUpdateFunctionDesc{handler:handler}
-	self434.processorMap["saveSqlSnippet"] = &apiServiceProcessorSaveSqlSnippet{handler:handler}
-	self434.processorMap["listSqlSnippets"] = &apiServiceProcessorListSqlSnippets{handler:handler}
-	self434.processorMap["getSqlSnippet"] = &apiServiceProcessorGetSqlSnippet{handler:handler}
-	self434.processorMap["deleteSqlSnippet"] = &apiServiceProcessorDeleteSqlSnippet{handler:handler}
-	return self434
+	self441 := &ApiServiceProcessor{handler:handler, processorMap:make(map[string]thrift.TProcessorFunction)}
+	self441.processorMap["registerDataSource"] = &apiServiceProcessorRegisterDataSource{handler:handler}
+	self441.processorMap["removeDataSource"] = &apiServiceProcessorRemoveDataSource{handler:handler}
+	self441.processorMap["listDataSources"] = &apiServiceProcessorListDataSources{handler:handler}
+	self441.processorMap["getDataSourceTree"] = &apiServiceProcessorGetDataSourceTree{handler:handler}
+	self441.processorMap["uploadMetaProps"] = &apiServiceProcessorUploadMetaProps{handler:handler}
+	self441.processorMap["downloadMetaPropsTemplate"] = &apiServiceProcessorDownloadMetaPropsTemplate{handler:handler}
+	self441.processorMap["queryData"] = &apiServiceProcessorQueryData{handler:handler}
+	self441.processorMap["queryFileData"] = &apiServiceProcessorQueryFileData{handler:handler}
+	self441.processorMap["importData"] = &apiServiceProcessorImportData{handler:handler}
+	self441.processorMap["exportData"] = &apiServiceProcessorExportData{handler:handler}
+	self441.processorMap["deleteData"] = &apiServiceProcessorDeleteData{handler:handler}
+	self441.processorMap["getTimeRange"] = &apiServiceProcessorGetTimeRange{handler:handler}
+	self441.processorMap["queryRelationalData"] = &apiServiceProcessorQueryRelationalData{handler:handler}
+	self441.processorMap["countRelationalData"] = &apiServiceProcessorCountRelationalData{handler:handler}
+	self441.processorMap["exportRelationalDataToExcel"] = &apiServiceProcessorExportRelationalDataToExcel{handler:handler}
+	self441.processorMap["testSQL"] = &apiServiceProcessorTestSQL{handler:handler}
+	self441.processorMap["saveDataset"] = &apiServiceProcessorSaveDataset{handler:handler}
+	self441.processorMap["queryMeta"] = &apiServiceProcessorQueryMeta{handler:handler}
+	self441.processorMap["deleteDataset"] = &apiServiceProcessorDeleteDataset{handler:handler}
+	self441.processorMap["createDataset"] = &apiServiceProcessorCreateDataset{handler:handler}
+	self441.processorMap["getDatasetTree"] = &apiServiceProcessorGetDatasetTree{handler:handler}
+	self441.processorMap["getDatasetVersionMeta"] = &apiServiceProcessorGetDatasetVersionMeta{handler:handler}
+	self441.processorMap["getDatasetChanges"] = &apiServiceProcessorGetDatasetChanges{handler:handler}
+	self441.processorMap["getDatasetLineage"] = &apiServiceProcessorGetDatasetLineage{handler:handler}
+	self441.processorMap["forkLineage"] = &apiServiceProcessorForkLineage{handler:handler}
+	self441.processorMap["getLineageForkStatus"] = &apiServiceProcessorGetLineageForkStatus{handler:handler}
+	self441.processorMap["deleteDatasetVersion"] = &apiServiceProcessorDeleteDatasetVersion{handler:handler}
+	self441.processorMap["registerTransform"] = &apiServiceProcessorRegisterTransform{handler:handler}
+	self441.processorMap["deleteFunction"] = &apiServiceProcessorDeleteFunction{handler:handler}
+	self441.processorMap["listFunctions"] = &apiServiceProcessorListFunctions{handler:handler}
+	self441.processorMap["registerUDF"] = &apiServiceProcessorRegisterUDF{handler:handler}
+	self441.processorMap["downloadFunction"] = &apiServiceProcessorDownloadFunction{handler:handler}
+	self441.processorMap["saveTransformCompare"] = &apiServiceProcessorSaveTransformCompare{handler:handler}
+	self441.processorMap["queryTransformCompares"] = &apiServiceProcessorQueryTransformCompares{handler:handler}
+	self441.processorMap["countTransformCompares"] = &apiServiceProcessorCountTransformCompares{handler:handler}
+	self441.processorMap["getTransformCompare"] = &apiServiceProcessorGetTransformCompare{handler:handler}
+	self441.processorMap["deleteTransformCompare"] = &apiServiceProcessorDeleteTransformCompare{handler:handler}
+	self441.processorMap["queryTransformJobs"] = &apiServiceProcessorQueryTransformJobs{handler:handler}
+	self441.processorMap["countTransformJobs"] = &apiServiceProcessorCountTransformJobs{handler:handler}
+	self441.processorMap["getTransformJob"] = &apiServiceProcessorGetTransformJob{handler:handler}
+	self441.processorMap["commitTransformJob"] = &apiServiceProcessorCommitTransformJob{handler:handler}
+	self441.processorMap["getTransformJobStatus"] = &apiServiceProcessorGetTransformJobStatus{handler:handler}
+	self441.processorMap["cancelTransformJob"] = &apiServiceProcessorCancelTransformJob{handler:handler}
+	self441.processorMap["getTransformJobBloodline"] = &apiServiceProcessorGetTransformJobBloodline{handler:handler}
+	self441.processorMap["getUserManualFile"] = &apiServiceProcessorGetUserManualFile{handler:handler}
+	self441.processorMap["generateJavaCode"] = &apiServiceProcessorGenerateJavaCode{handler:handler}
+	self441.processorMap["generateGoCode"] = &apiServiceProcessorGenerateGoCode{handler:handler}
+	self441.processorMap["generatePythonCode"] = &apiServiceProcessorGeneratePythonCode{handler:handler}
+	self441.processorMap["generateRestfulApiCode"] = &apiServiceProcessorGenerateRestfulApiCode{handler:handler}
+	self441.processorMap["generateAllCode"] = &apiServiceProcessorGenerateAllCode{handler:handler}
+	self441.processorMap["getGenerationStatus"] = &apiServiceProcessorGetGenerationStatus{handler:handler}
+	self441.processorMap["validateThriftFile"] = &apiServiceProcessorValidateThriftFile{handler:handler}
+	self441.processorMap["login"] = &apiServiceProcessorLogin{handler:handler}
+	self441.processorMap["refreshToken"] = &apiServiceProcessorRefreshToken{handler:handler}
+	self441.processorMap["verifyToken"] = &apiServiceProcessorVerifyToken{handler:handler}
+	self441.processorMap["logout"] = &apiServiceProcessorLogout{handler:handler}
+	self441.processorMap["getCurrentAuthUser"] = &apiServiceProcessorGetCurrentAuthUser{handler:handler}
+	self441.processorMap["saveUser"] = &apiServiceProcessorSaveUser{handler:handler}
+	self441.processorMap["queryUsers"] = &apiServiceProcessorQueryUsers{handler:handler}
+	self441.processorMap["countUsers"] = &apiServiceProcessorCountUsers{handler:handler}
+	self441.processorMap["allUsers"] = &apiServiceProcessorAllUsers{handler:handler}
+	self441.processorMap["queryUser"] = &apiServiceProcessorQueryUser{handler:handler}
+	self441.processorMap["deleteUser"] = &apiServiceProcessorDeleteUser{handler:handler}
+	self441.processorMap["updateUser"] = &apiServiceProcessorUpdateUser{handler:handler}
+	self441.processorMap["getRoles"] = &apiServiceProcessorGetRoles{handler:handler}
+	self441.processorMap["changePassword"] = &apiServiceProcessorChangePassword{handler:handler}
+	self441.processorMap["getCurrentUser"] = &apiServiceProcessorGetCurrentUser{handler:handler}
+	self441.processorMap["listOwnerTables"] = &apiServiceProcessorListOwnerTables{handler:handler}
+	self441.processorMap["queryDataPermissions"] = &apiServiceProcessorQueryDataPermissions{handler:handler}
+	self441.processorMap["countDataPermissions"] = &apiServiceProcessorCountDataPermissions{handler:handler}
+	self441.processorMap["updateDataPermission"] = &apiServiceProcessorUpdateDataPermission{handler:handler}
+	self441.processorMap["saveEvaluationCriteria"] = &apiServiceProcessorSaveEvaluationCriteria{handler:handler}
+	self441.processorMap["queryEvaluationCriteria"] = &apiServiceProcessorQueryEvaluationCriteria{handler:handler}
+	self441.processorMap["countEvaluationCriteria"] = &apiServiceProcessorCountEvaluationCriteria{handler:handler}
+	self441.processorMap["getEvaluationCriteria"] = &apiServiceProcessorGetEvaluationCriteria{handler:handler}
+	self441.processorMap["deleteEvaluationCriteria"] = &apiServiceProcessorDeleteEvaluationCriteria{handler:handler}
+	self441.processorMap["saveQualityAssessment"] = &apiServiceProcessorSaveQualityAssessment{handler:handler}
+	self441.processorMap["queryQualityAssessments"] = &apiServiceProcessorQueryQualityAssessments{handler:handler}
+	self441.processorMap["countQualityAssessments"] = &apiServiceProcessorCountQualityAssessments{handler:handler}
+	self441.processorMap["getQualityAssessment"] = &apiServiceProcessorGetQualityAssessment{handler:handler}
+	self441.processorMap["deleteQualityAssessment"] = &apiServiceProcessorDeleteQualityAssessment{handler:handler}
+	self441.processorMap["listDatasetVersions"] = &apiServiceProcessorListDatasetVersions{handler:handler}
+	self441.processorMap["countDatasetVersions"] = &apiServiceProcessorCountDatasetVersions{handler:handler}
+	self441.processorMap["getDatasetCategories"] = &apiServiceProcessorGetDatasetCategories{handler:handler}
+	self441.processorMap["getDatasetsByCategory"] = &apiServiceProcessorGetDatasetsByCategory{handler:handler}
+	self441.processorMap["getDatasetRelations"] = &apiServiceProcessorGetDatasetRelations{handler:handler}
+	self441.processorMap["getDatasetImpact"] = &apiServiceProcessorGetDatasetImpact{handler:handler}
+	self441.processorMap["exportDatasetPackage"] = &apiServiceProcessorExportDatasetPackage{handler:handler}
+	self441.processorMap["getQualityDimensions"] = &apiServiceProcessorGetQualityDimensions{handler:handler}
+	self441.processorMap["autoDetectQuality"] = &apiServiceProcessorAutoDetectQuality{handler:handler}
+	self441.processorMap["getQualityReportById"] = &apiServiceProcessorGetQualityReportById{handler:handler}
+	self441.processorMap["listDataSourceArchives"] = &apiServiceProcessorListDataSourceArchives{handler:handler}
+	self441.processorMap["updateDataSourceModality"] = &apiServiceProcessorUpdateDataSourceModality{handler:handler}
+	self441.processorMap["previewDataset"] = &apiServiceProcessorPreviewDataset{handler:handler}
+	self441.processorMap["toggleDatasetVersion"] = &apiServiceProcessorToggleDatasetVersion{handler:handler}
+	self441.processorMap["updateDatasetVersion"] = &apiServiceProcessorUpdateDatasetVersion{handler:handler}
+	self441.processorMap["updateFunctionDesc"] = &apiServiceProcessorUpdateFunctionDesc{handler:handler}
+	self441.processorMap["saveSqlSnippet"] = &apiServiceProcessorSaveSqlSnippet{handler:handler}
+	self441.processorMap["listSqlSnippets"] = &apiServiceProcessorListSqlSnippets{handler:handler}
+	self441.processorMap["getSqlSnippet"] = &apiServiceProcessorGetSqlSnippet{handler:handler}
+	self441.processorMap["deleteSqlSnippet"] = &apiServiceProcessorDeleteSqlSnippet{handler:handler}
+	return self441
 }
 
 func (p *ApiServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -21876,12 +21917,12 @@ func (p *ApiServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.T
 	}
 	iprot.Skip(ctx, thrift.STRUCT)
 	iprot.ReadMessageEnd(ctx)
-	x435 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function " + name)
+	x442 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function " + name)
 	oprot.WriteMessageBegin(ctx, name, thrift.EXCEPTION, seqId)
-	x435.Write(ctx, oprot)
+	x442.Write(ctx, oprot)
 	oprot.WriteMessageEnd(ctx)
 	oprot.Flush(ctx)
-	return false, x435
+	return false, x442
 }
 
 type apiServiceProcessorRegisterDataSource struct {
@@ -21889,7 +21930,7 @@ type apiServiceProcessorRegisterDataSource struct {
 }
 
 func (p *apiServiceProcessorRegisterDataSource) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err436 thrift.TException
+	var _write_err443 thrift.TException
 	args := ApiServiceRegisterDataSourceArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -21946,22 +21987,22 @@ func (p *apiServiceProcessorRegisterDataSource) Process(ctx context.Context, seq
 				}
 			}
 		}
-		_exc437 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing registerDataSource: " + err2.Error())
+		_exc444 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing registerDataSource: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "registerDataSource", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err436 = thrift.WrapTException(err2)
+			_write_err443 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc437.Write(ctx, oprot); _write_err436 == nil && err2 != nil {
-			_write_err436 = thrift.WrapTException(err2)
+		if err2 := _exc444.Write(ctx, oprot); _write_err443 == nil && err2 != nil {
+			_write_err443 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err436 == nil && err2 != nil {
-			_write_err436 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err443 == nil && err2 != nil {
+			_write_err443 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err436 == nil && err2 != nil {
-			_write_err436 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err443 == nil && err2 != nil {
+			_write_err443 = thrift.WrapTException(err2)
 		}
-		if _write_err436 != nil {
+		if _write_err443 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err436,
+				WriteError:    _write_err443,
 				EndpointError: err,
 			}
 		}
@@ -21971,20 +22012,20 @@ func (p *apiServiceProcessorRegisterDataSource) Process(ctx context.Context, seq
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "registerDataSource", thrift.REPLY, seqId); err2 != nil {
-		_write_err436 = thrift.WrapTException(err2)
+		_write_err443 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err436 == nil && err2 != nil {
-		_write_err436 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err443 == nil && err2 != nil {
+		_write_err443 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err436 == nil && err2 != nil {
-		_write_err436 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err443 == nil && err2 != nil {
+		_write_err443 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err436 == nil && err2 != nil {
-		_write_err436 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err443 == nil && err2 != nil {
+		_write_err443 = thrift.WrapTException(err2)
 	}
-	if _write_err436 != nil {
+	if _write_err443 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err436,
+			WriteError:    _write_err443,
 			EndpointError: err,
 		}
 	}
@@ -21996,7 +22037,7 @@ type apiServiceProcessorRemoveDataSource struct {
 }
 
 func (p *apiServiceProcessorRemoveDataSource) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err438 thrift.TException
+	var _write_err445 thrift.TException
 	args := ApiServiceRemoveDataSourceArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -22053,22 +22094,22 @@ func (p *apiServiceProcessorRemoveDataSource) Process(ctx context.Context, seqId
 				}
 			}
 		}
-		_exc439 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing removeDataSource: " + err2.Error())
+		_exc446 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing removeDataSource: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "removeDataSource", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err438 = thrift.WrapTException(err2)
+			_write_err445 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc439.Write(ctx, oprot); _write_err438 == nil && err2 != nil {
-			_write_err438 = thrift.WrapTException(err2)
+		if err2 := _exc446.Write(ctx, oprot); _write_err445 == nil && err2 != nil {
+			_write_err445 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err438 == nil && err2 != nil {
-			_write_err438 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err445 == nil && err2 != nil {
+			_write_err445 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err438 == nil && err2 != nil {
-			_write_err438 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err445 == nil && err2 != nil {
+			_write_err445 = thrift.WrapTException(err2)
 		}
-		if _write_err438 != nil {
+		if _write_err445 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err438,
+				WriteError:    _write_err445,
 				EndpointError: err,
 			}
 		}
@@ -22078,20 +22119,20 @@ func (p *apiServiceProcessorRemoveDataSource) Process(ctx context.Context, seqId
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "removeDataSource", thrift.REPLY, seqId); err2 != nil {
-		_write_err438 = thrift.WrapTException(err2)
+		_write_err445 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err438 == nil && err2 != nil {
-		_write_err438 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err445 == nil && err2 != nil {
+		_write_err445 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err438 == nil && err2 != nil {
-		_write_err438 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err445 == nil && err2 != nil {
+		_write_err445 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err438 == nil && err2 != nil {
-		_write_err438 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err445 == nil && err2 != nil {
+		_write_err445 = thrift.WrapTException(err2)
 	}
-	if _write_err438 != nil {
+	if _write_err445 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err438,
+			WriteError:    _write_err445,
 			EndpointError: err,
 		}
 	}
@@ -22103,7 +22144,7 @@ type apiServiceProcessorListDataSources struct {
 }
 
 func (p *apiServiceProcessorListDataSources) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err440 thrift.TException
+	var _write_err447 thrift.TException
 	args := ApiServiceListDataSourcesArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -22160,22 +22201,22 @@ func (p *apiServiceProcessorListDataSources) Process(ctx context.Context, seqId 
 				}
 			}
 		}
-		_exc441 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing listDataSources: " + err2.Error())
+		_exc448 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing listDataSources: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "listDataSources", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err440 = thrift.WrapTException(err2)
+			_write_err447 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc441.Write(ctx, oprot); _write_err440 == nil && err2 != nil {
-			_write_err440 = thrift.WrapTException(err2)
+		if err2 := _exc448.Write(ctx, oprot); _write_err447 == nil && err2 != nil {
+			_write_err447 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err440 == nil && err2 != nil {
-			_write_err440 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err447 == nil && err2 != nil {
+			_write_err447 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err440 == nil && err2 != nil {
-			_write_err440 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err447 == nil && err2 != nil {
+			_write_err447 = thrift.WrapTException(err2)
 		}
-		if _write_err440 != nil {
+		if _write_err447 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err440,
+				WriteError:    _write_err447,
 				EndpointError: err,
 			}
 		}
@@ -22185,20 +22226,20 @@ func (p *apiServiceProcessorListDataSources) Process(ctx context.Context, seqId 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "listDataSources", thrift.REPLY, seqId); err2 != nil {
-		_write_err440 = thrift.WrapTException(err2)
+		_write_err447 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err440 == nil && err2 != nil {
-		_write_err440 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err447 == nil && err2 != nil {
+		_write_err447 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err440 == nil && err2 != nil {
-		_write_err440 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err447 == nil && err2 != nil {
+		_write_err447 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err440 == nil && err2 != nil {
-		_write_err440 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err447 == nil && err2 != nil {
+		_write_err447 = thrift.WrapTException(err2)
 	}
-	if _write_err440 != nil {
+	if _write_err447 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err440,
+			WriteError:    _write_err447,
 			EndpointError: err,
 		}
 	}
@@ -22210,7 +22251,7 @@ type apiServiceProcessorGetDataSourceTree struct {
 }
 
 func (p *apiServiceProcessorGetDataSourceTree) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err442 thrift.TException
+	var _write_err449 thrift.TException
 	args := ApiServiceGetDataSourceTreeArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -22267,22 +22308,22 @@ func (p *apiServiceProcessorGetDataSourceTree) Process(ctx context.Context, seqI
 				}
 			}
 		}
-		_exc443 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDataSourceTree: " + err2.Error())
+		_exc450 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDataSourceTree: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getDataSourceTree", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err442 = thrift.WrapTException(err2)
+			_write_err449 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc443.Write(ctx, oprot); _write_err442 == nil && err2 != nil {
-			_write_err442 = thrift.WrapTException(err2)
+		if err2 := _exc450.Write(ctx, oprot); _write_err449 == nil && err2 != nil {
+			_write_err449 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err442 == nil && err2 != nil {
-			_write_err442 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err449 == nil && err2 != nil {
+			_write_err449 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err442 == nil && err2 != nil {
-			_write_err442 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err449 == nil && err2 != nil {
+			_write_err449 = thrift.WrapTException(err2)
 		}
-		if _write_err442 != nil {
+		if _write_err449 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err442,
+				WriteError:    _write_err449,
 				EndpointError: err,
 			}
 		}
@@ -22292,20 +22333,234 @@ func (p *apiServiceProcessorGetDataSourceTree) Process(ctx context.Context, seqI
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getDataSourceTree", thrift.REPLY, seqId); err2 != nil {
-		_write_err442 = thrift.WrapTException(err2)
+		_write_err449 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err442 == nil && err2 != nil {
-		_write_err442 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err449 == nil && err2 != nil {
+		_write_err449 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err442 == nil && err2 != nil {
-		_write_err442 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err449 == nil && err2 != nil {
+		_write_err449 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err442 == nil && err2 != nil {
-		_write_err442 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err449 == nil && err2 != nil {
+		_write_err449 = thrift.WrapTException(err2)
 	}
-	if _write_err442 != nil {
+	if _write_err449 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err442,
+			WriteError:    _write_err449,
+			EndpointError: err,
+		}
+	}
+	return true, err
+}
+
+type apiServiceProcessorUploadMetaProps struct {
+	handler ApiService
+}
+
+func (p *apiServiceProcessorUploadMetaProps) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	var _write_err451 thrift.TException
+	args := ApiServiceUploadMetaPropsArgs{}
+	if err2 := args.Read(ctx, iprot); err2 != nil {
+		iprot.ReadMessageEnd(ctx)
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err2.Error())
+		oprot.WriteMessageBegin(ctx, "uploadMetaProps", thrift.EXCEPTION, seqId)
+		x.Write(ctx, oprot)
+		oprot.WriteMessageEnd(ctx)
+		oprot.Flush(ctx)
+		return false, thrift.WrapTException(err2)
+	}
+	iprot.ReadMessageEnd(ctx)
+
+	tickerCancel := func() {}
+	// Start a goroutine to do server side connectivity check.
+	if thrift.ServerConnectivityCheckInterval > 0 {
+		var cancel context.CancelCauseFunc
+		ctx, cancel = context.WithCancelCause(ctx)
+		defer cancel(nil)
+		var tickerCtx context.Context
+		tickerCtx, tickerCancel = context.WithCancel(context.Background())
+		defer tickerCancel()
+		go func(ctx context.Context, cancel context.CancelCauseFunc) {
+			ticker := time.NewTicker(thrift.ServerConnectivityCheckInterval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					if !iprot.Transport().IsOpen() {
+						cancel(thrift.ErrAbandonRequest)
+						return
+					}
+				}
+			}
+		}(tickerCtx, cancel)
+	}
+
+	result := ApiServiceUploadMetaPropsResult{}
+	if retval, err2 := p.handler.UploadMetaProps(ctx, args.File, args.FileName); err2 != nil {
+		tickerCancel()
+		err = thrift.WrapTException(err2)
+		if errors.Is(err2, thrift.ErrAbandonRequest) {
+			return false, &thrift.ProcessorError{
+				WriteError:    thrift.WrapTException(err2),
+				EndpointError: err,
+			}
+		}
+		if errors.Is(err2, context.Canceled) {
+			if err3 := context.Cause(ctx); errors.Is(err3, thrift.ErrAbandonRequest) {
+				return false, &thrift.ProcessorError{
+					WriteError:    thrift.WrapTException(err3),
+					EndpointError: err,
+				}
+			}
+		}
+		_exc452 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing uploadMetaProps: " + err2.Error())
+		if err2 := oprot.WriteMessageBegin(ctx, "uploadMetaProps", thrift.EXCEPTION, seqId); err2 != nil {
+			_write_err451 = thrift.WrapTException(err2)
+		}
+		if err2 := _exc452.Write(ctx, oprot); _write_err451 == nil && err2 != nil {
+			_write_err451 = thrift.WrapTException(err2)
+		}
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err451 == nil && err2 != nil {
+			_write_err451 = thrift.WrapTException(err2)
+		}
+		if err2 := oprot.Flush(ctx); _write_err451 == nil && err2 != nil {
+			_write_err451 = thrift.WrapTException(err2)
+		}
+		if _write_err451 != nil {
+			return false, &thrift.ProcessorError{
+				WriteError:    _write_err451,
+				EndpointError: err,
+			}
+		}
+		return true, err
+	} else {
+		result.Success = retval
+	}
+	tickerCancel()
+	if err2 := oprot.WriteMessageBegin(ctx, "uploadMetaProps", thrift.REPLY, seqId); err2 != nil {
+		_write_err451 = thrift.WrapTException(err2)
+	}
+	if err2 := result.Write(ctx, oprot); _write_err451 == nil && err2 != nil {
+		_write_err451 = thrift.WrapTException(err2)
+	}
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err451 == nil && err2 != nil {
+		_write_err451 = thrift.WrapTException(err2)
+	}
+	if err2 := oprot.Flush(ctx); _write_err451 == nil && err2 != nil {
+		_write_err451 = thrift.WrapTException(err2)
+	}
+	if _write_err451 != nil {
+		return false, &thrift.ProcessorError{
+			WriteError:    _write_err451,
+			EndpointError: err,
+		}
+	}
+	return true, err
+}
+
+type apiServiceProcessorDownloadMetaPropsTemplate struct {
+	handler ApiService
+}
+
+func (p *apiServiceProcessorDownloadMetaPropsTemplate) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	var _write_err453 thrift.TException
+	args := ApiServiceDownloadMetaPropsTemplateArgs{}
+	if err2 := args.Read(ctx, iprot); err2 != nil {
+		iprot.ReadMessageEnd(ctx)
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err2.Error())
+		oprot.WriteMessageBegin(ctx, "downloadMetaPropsTemplate", thrift.EXCEPTION, seqId)
+		x.Write(ctx, oprot)
+		oprot.WriteMessageEnd(ctx)
+		oprot.Flush(ctx)
+		return false, thrift.WrapTException(err2)
+	}
+	iprot.ReadMessageEnd(ctx)
+
+	tickerCancel := func() {}
+	// Start a goroutine to do server side connectivity check.
+	if thrift.ServerConnectivityCheckInterval > 0 {
+		var cancel context.CancelCauseFunc
+		ctx, cancel = context.WithCancelCause(ctx)
+		defer cancel(nil)
+		var tickerCtx context.Context
+		tickerCtx, tickerCancel = context.WithCancel(context.Background())
+		defer tickerCancel()
+		go func(ctx context.Context, cancel context.CancelCauseFunc) {
+			ticker := time.NewTicker(thrift.ServerConnectivityCheckInterval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					if !iprot.Transport().IsOpen() {
+						cancel(thrift.ErrAbandonRequest)
+						return
+					}
+				}
+			}
+		}(tickerCtx, cancel)
+	}
+
+	result := ApiServiceDownloadMetaPropsTemplateResult{}
+	if retval, err2 := p.handler.DownloadMetaPropsTemplate(ctx); err2 != nil {
+		tickerCancel()
+		err = thrift.WrapTException(err2)
+		if errors.Is(err2, thrift.ErrAbandonRequest) {
+			return false, &thrift.ProcessorError{
+				WriteError:    thrift.WrapTException(err2),
+				EndpointError: err,
+			}
+		}
+		if errors.Is(err2, context.Canceled) {
+			if err3 := context.Cause(ctx); errors.Is(err3, thrift.ErrAbandonRequest) {
+				return false, &thrift.ProcessorError{
+					WriteError:    thrift.WrapTException(err3),
+					EndpointError: err,
+				}
+			}
+		}
+		_exc454 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing downloadMetaPropsTemplate: " + err2.Error())
+		if err2 := oprot.WriteMessageBegin(ctx, "downloadMetaPropsTemplate", thrift.EXCEPTION, seqId); err2 != nil {
+			_write_err453 = thrift.WrapTException(err2)
+		}
+		if err2 := _exc454.Write(ctx, oprot); _write_err453 == nil && err2 != nil {
+			_write_err453 = thrift.WrapTException(err2)
+		}
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err453 == nil && err2 != nil {
+			_write_err453 = thrift.WrapTException(err2)
+		}
+		if err2 := oprot.Flush(ctx); _write_err453 == nil && err2 != nil {
+			_write_err453 = thrift.WrapTException(err2)
+		}
+		if _write_err453 != nil {
+			return false, &thrift.ProcessorError{
+				WriteError:    _write_err453,
+				EndpointError: err,
+			}
+		}
+		return true, err
+	} else {
+		result.Success = retval
+	}
+	tickerCancel()
+	if err2 := oprot.WriteMessageBegin(ctx, "downloadMetaPropsTemplate", thrift.REPLY, seqId); err2 != nil {
+		_write_err453 = thrift.WrapTException(err2)
+	}
+	if err2 := result.Write(ctx, oprot); _write_err453 == nil && err2 != nil {
+		_write_err453 = thrift.WrapTException(err2)
+	}
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err453 == nil && err2 != nil {
+		_write_err453 = thrift.WrapTException(err2)
+	}
+	if err2 := oprot.Flush(ctx); _write_err453 == nil && err2 != nil {
+		_write_err453 = thrift.WrapTException(err2)
+	}
+	if _write_err453 != nil {
+		return false, &thrift.ProcessorError{
+			WriteError:    _write_err453,
 			EndpointError: err,
 		}
 	}
@@ -22317,7 +22572,7 @@ type apiServiceProcessorQueryData struct {
 }
 
 func (p *apiServiceProcessorQueryData) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err444 thrift.TException
+	var _write_err455 thrift.TException
 	args := ApiServiceQueryDataArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -22374,22 +22629,22 @@ func (p *apiServiceProcessorQueryData) Process(ctx context.Context, seqId int32,
 				}
 			}
 		}
-		_exc445 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryData: " + err2.Error())
+		_exc456 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryData: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "queryData", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err444 = thrift.WrapTException(err2)
+			_write_err455 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc445.Write(ctx, oprot); _write_err444 == nil && err2 != nil {
-			_write_err444 = thrift.WrapTException(err2)
+		if err2 := _exc456.Write(ctx, oprot); _write_err455 == nil && err2 != nil {
+			_write_err455 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err444 == nil && err2 != nil {
-			_write_err444 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err455 == nil && err2 != nil {
+			_write_err455 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err444 == nil && err2 != nil {
-			_write_err444 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err455 == nil && err2 != nil {
+			_write_err455 = thrift.WrapTException(err2)
 		}
-		if _write_err444 != nil {
+		if _write_err455 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err444,
+				WriteError:    _write_err455,
 				EndpointError: err,
 			}
 		}
@@ -22399,20 +22654,20 @@ func (p *apiServiceProcessorQueryData) Process(ctx context.Context, seqId int32,
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "queryData", thrift.REPLY, seqId); err2 != nil {
-		_write_err444 = thrift.WrapTException(err2)
+		_write_err455 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err444 == nil && err2 != nil {
-		_write_err444 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err455 == nil && err2 != nil {
+		_write_err455 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err444 == nil && err2 != nil {
-		_write_err444 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err455 == nil && err2 != nil {
+		_write_err455 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err444 == nil && err2 != nil {
-		_write_err444 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err455 == nil && err2 != nil {
+		_write_err455 = thrift.WrapTException(err2)
 	}
-	if _write_err444 != nil {
+	if _write_err455 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err444,
+			WriteError:    _write_err455,
 			EndpointError: err,
 		}
 	}
@@ -22424,7 +22679,7 @@ type apiServiceProcessorQueryFileData struct {
 }
 
 func (p *apiServiceProcessorQueryFileData) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err446 thrift.TException
+	var _write_err457 thrift.TException
 	args := ApiServiceQueryFileDataArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -22481,22 +22736,22 @@ func (p *apiServiceProcessorQueryFileData) Process(ctx context.Context, seqId in
 				}
 			}
 		}
-		_exc447 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryFileData: " + err2.Error())
+		_exc458 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryFileData: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "queryFileData", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err446 = thrift.WrapTException(err2)
+			_write_err457 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc447.Write(ctx, oprot); _write_err446 == nil && err2 != nil {
-			_write_err446 = thrift.WrapTException(err2)
+		if err2 := _exc458.Write(ctx, oprot); _write_err457 == nil && err2 != nil {
+			_write_err457 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err446 == nil && err2 != nil {
-			_write_err446 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err457 == nil && err2 != nil {
+			_write_err457 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err446 == nil && err2 != nil {
-			_write_err446 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err457 == nil && err2 != nil {
+			_write_err457 = thrift.WrapTException(err2)
 		}
-		if _write_err446 != nil {
+		if _write_err457 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err446,
+				WriteError:    _write_err457,
 				EndpointError: err,
 			}
 		}
@@ -22506,20 +22761,20 @@ func (p *apiServiceProcessorQueryFileData) Process(ctx context.Context, seqId in
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "queryFileData", thrift.REPLY, seqId); err2 != nil {
-		_write_err446 = thrift.WrapTException(err2)
+		_write_err457 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err446 == nil && err2 != nil {
-		_write_err446 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err457 == nil && err2 != nil {
+		_write_err457 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err446 == nil && err2 != nil {
-		_write_err446 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err457 == nil && err2 != nil {
+		_write_err457 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err446 == nil && err2 != nil {
-		_write_err446 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err457 == nil && err2 != nil {
+		_write_err457 = thrift.WrapTException(err2)
 	}
-	if _write_err446 != nil {
+	if _write_err457 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err446,
+			WriteError:    _write_err457,
 			EndpointError: err,
 		}
 	}
@@ -22531,7 +22786,7 @@ type apiServiceProcessorImportData struct {
 }
 
 func (p *apiServiceProcessorImportData) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err448 thrift.TException
+	var _write_err459 thrift.TException
 	args := ApiServiceImportDataArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -22588,22 +22843,22 @@ func (p *apiServiceProcessorImportData) Process(ctx context.Context, seqId int32
 				}
 			}
 		}
-		_exc449 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing importData: " + err2.Error())
+		_exc460 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing importData: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "importData", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err448 = thrift.WrapTException(err2)
+			_write_err459 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc449.Write(ctx, oprot); _write_err448 == nil && err2 != nil {
-			_write_err448 = thrift.WrapTException(err2)
+		if err2 := _exc460.Write(ctx, oprot); _write_err459 == nil && err2 != nil {
+			_write_err459 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err448 == nil && err2 != nil {
-			_write_err448 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err459 == nil && err2 != nil {
+			_write_err459 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err448 == nil && err2 != nil {
-			_write_err448 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err459 == nil && err2 != nil {
+			_write_err459 = thrift.WrapTException(err2)
 		}
-		if _write_err448 != nil {
+		if _write_err459 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err448,
+				WriteError:    _write_err459,
 				EndpointError: err,
 			}
 		}
@@ -22613,20 +22868,20 @@ func (p *apiServiceProcessorImportData) Process(ctx context.Context, seqId int32
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "importData", thrift.REPLY, seqId); err2 != nil {
-		_write_err448 = thrift.WrapTException(err2)
+		_write_err459 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err448 == nil && err2 != nil {
-		_write_err448 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err459 == nil && err2 != nil {
+		_write_err459 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err448 == nil && err2 != nil {
-		_write_err448 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err459 == nil && err2 != nil {
+		_write_err459 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err448 == nil && err2 != nil {
-		_write_err448 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err459 == nil && err2 != nil {
+		_write_err459 = thrift.WrapTException(err2)
 	}
-	if _write_err448 != nil {
+	if _write_err459 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err448,
+			WriteError:    _write_err459,
 			EndpointError: err,
 		}
 	}
@@ -22638,7 +22893,7 @@ type apiServiceProcessorExportData struct {
 }
 
 func (p *apiServiceProcessorExportData) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err450 thrift.TException
+	var _write_err461 thrift.TException
 	args := ApiServiceExportDataArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -22695,22 +22950,22 @@ func (p *apiServiceProcessorExportData) Process(ctx context.Context, seqId int32
 				}
 			}
 		}
-		_exc451 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing exportData: " + err2.Error())
+		_exc462 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing exportData: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "exportData", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err450 = thrift.WrapTException(err2)
+			_write_err461 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc451.Write(ctx, oprot); _write_err450 == nil && err2 != nil {
-			_write_err450 = thrift.WrapTException(err2)
+		if err2 := _exc462.Write(ctx, oprot); _write_err461 == nil && err2 != nil {
+			_write_err461 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err450 == nil && err2 != nil {
-			_write_err450 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err461 == nil && err2 != nil {
+			_write_err461 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err450 == nil && err2 != nil {
-			_write_err450 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err461 == nil && err2 != nil {
+			_write_err461 = thrift.WrapTException(err2)
 		}
-		if _write_err450 != nil {
+		if _write_err461 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err450,
+				WriteError:    _write_err461,
 				EndpointError: err,
 			}
 		}
@@ -22720,20 +22975,20 @@ func (p *apiServiceProcessorExportData) Process(ctx context.Context, seqId int32
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "exportData", thrift.REPLY, seqId); err2 != nil {
-		_write_err450 = thrift.WrapTException(err2)
+		_write_err461 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err450 == nil && err2 != nil {
-		_write_err450 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err461 == nil && err2 != nil {
+		_write_err461 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err450 == nil && err2 != nil {
-		_write_err450 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err461 == nil && err2 != nil {
+		_write_err461 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err450 == nil && err2 != nil {
-		_write_err450 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err461 == nil && err2 != nil {
+		_write_err461 = thrift.WrapTException(err2)
 	}
-	if _write_err450 != nil {
+	if _write_err461 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err450,
+			WriteError:    _write_err461,
 			EndpointError: err,
 		}
 	}
@@ -22745,7 +23000,7 @@ type apiServiceProcessorDeleteData struct {
 }
 
 func (p *apiServiceProcessorDeleteData) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err452 thrift.TException
+	var _write_err463 thrift.TException
 	args := ApiServiceDeleteDataArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -22802,22 +23057,22 @@ func (p *apiServiceProcessorDeleteData) Process(ctx context.Context, seqId int32
 				}
 			}
 		}
-		_exc453 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteData: " + err2.Error())
+		_exc464 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteData: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "deleteData", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err452 = thrift.WrapTException(err2)
+			_write_err463 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc453.Write(ctx, oprot); _write_err452 == nil && err2 != nil {
-			_write_err452 = thrift.WrapTException(err2)
+		if err2 := _exc464.Write(ctx, oprot); _write_err463 == nil && err2 != nil {
+			_write_err463 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err452 == nil && err2 != nil {
-			_write_err452 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err463 == nil && err2 != nil {
+			_write_err463 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err452 == nil && err2 != nil {
-			_write_err452 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err463 == nil && err2 != nil {
+			_write_err463 = thrift.WrapTException(err2)
 		}
-		if _write_err452 != nil {
+		if _write_err463 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err452,
+				WriteError:    _write_err463,
 				EndpointError: err,
 			}
 		}
@@ -22827,20 +23082,20 @@ func (p *apiServiceProcessorDeleteData) Process(ctx context.Context, seqId int32
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "deleteData", thrift.REPLY, seqId); err2 != nil {
-		_write_err452 = thrift.WrapTException(err2)
+		_write_err463 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err452 == nil && err2 != nil {
-		_write_err452 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err463 == nil && err2 != nil {
+		_write_err463 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err452 == nil && err2 != nil {
-		_write_err452 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err463 == nil && err2 != nil {
+		_write_err463 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err452 == nil && err2 != nil {
-		_write_err452 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err463 == nil && err2 != nil {
+		_write_err463 = thrift.WrapTException(err2)
 	}
-	if _write_err452 != nil {
+	if _write_err463 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err452,
+			WriteError:    _write_err463,
 			EndpointError: err,
 		}
 	}
@@ -22852,7 +23107,7 @@ type apiServiceProcessorGetTimeRange struct {
 }
 
 func (p *apiServiceProcessorGetTimeRange) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err454 thrift.TException
+	var _write_err465 thrift.TException
 	args := ApiServiceGetTimeRangeArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -22909,22 +23164,22 @@ func (p *apiServiceProcessorGetTimeRange) Process(ctx context.Context, seqId int
 				}
 			}
 		}
-		_exc455 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getTimeRange: " + err2.Error())
+		_exc466 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getTimeRange: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getTimeRange", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err454 = thrift.WrapTException(err2)
+			_write_err465 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc455.Write(ctx, oprot); _write_err454 == nil && err2 != nil {
-			_write_err454 = thrift.WrapTException(err2)
+		if err2 := _exc466.Write(ctx, oprot); _write_err465 == nil && err2 != nil {
+			_write_err465 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err454 == nil && err2 != nil {
-			_write_err454 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err465 == nil && err2 != nil {
+			_write_err465 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err454 == nil && err2 != nil {
-			_write_err454 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err465 == nil && err2 != nil {
+			_write_err465 = thrift.WrapTException(err2)
 		}
-		if _write_err454 != nil {
+		if _write_err465 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err454,
+				WriteError:    _write_err465,
 				EndpointError: err,
 			}
 		}
@@ -22934,20 +23189,20 @@ func (p *apiServiceProcessorGetTimeRange) Process(ctx context.Context, seqId int
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getTimeRange", thrift.REPLY, seqId); err2 != nil {
-		_write_err454 = thrift.WrapTException(err2)
+		_write_err465 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err454 == nil && err2 != nil {
-		_write_err454 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err465 == nil && err2 != nil {
+		_write_err465 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err454 == nil && err2 != nil {
-		_write_err454 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err465 == nil && err2 != nil {
+		_write_err465 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err454 == nil && err2 != nil {
-		_write_err454 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err465 == nil && err2 != nil {
+		_write_err465 = thrift.WrapTException(err2)
 	}
-	if _write_err454 != nil {
+	if _write_err465 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err454,
+			WriteError:    _write_err465,
 			EndpointError: err,
 		}
 	}
@@ -22959,7 +23214,7 @@ type apiServiceProcessorQueryRelationalData struct {
 }
 
 func (p *apiServiceProcessorQueryRelationalData) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err456 thrift.TException
+	var _write_err467 thrift.TException
 	args := ApiServiceQueryRelationalDataArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -23016,22 +23271,22 @@ func (p *apiServiceProcessorQueryRelationalData) Process(ctx context.Context, se
 				}
 			}
 		}
-		_exc457 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryRelationalData: " + err2.Error())
+		_exc468 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryRelationalData: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "queryRelationalData", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err456 = thrift.WrapTException(err2)
+			_write_err467 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc457.Write(ctx, oprot); _write_err456 == nil && err2 != nil {
-			_write_err456 = thrift.WrapTException(err2)
+		if err2 := _exc468.Write(ctx, oprot); _write_err467 == nil && err2 != nil {
+			_write_err467 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err456 == nil && err2 != nil {
-			_write_err456 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err467 == nil && err2 != nil {
+			_write_err467 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err456 == nil && err2 != nil {
-			_write_err456 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err467 == nil && err2 != nil {
+			_write_err467 = thrift.WrapTException(err2)
 		}
-		if _write_err456 != nil {
+		if _write_err467 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err456,
+				WriteError:    _write_err467,
 				EndpointError: err,
 			}
 		}
@@ -23041,20 +23296,20 @@ func (p *apiServiceProcessorQueryRelationalData) Process(ctx context.Context, se
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "queryRelationalData", thrift.REPLY, seqId); err2 != nil {
-		_write_err456 = thrift.WrapTException(err2)
+		_write_err467 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err456 == nil && err2 != nil {
-		_write_err456 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err467 == nil && err2 != nil {
+		_write_err467 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err456 == nil && err2 != nil {
-		_write_err456 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err467 == nil && err2 != nil {
+		_write_err467 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err456 == nil && err2 != nil {
-		_write_err456 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err467 == nil && err2 != nil {
+		_write_err467 = thrift.WrapTException(err2)
 	}
-	if _write_err456 != nil {
+	if _write_err467 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err456,
+			WriteError:    _write_err467,
 			EndpointError: err,
 		}
 	}
@@ -23066,7 +23321,7 @@ type apiServiceProcessorCountRelationalData struct {
 }
 
 func (p *apiServiceProcessorCountRelationalData) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err458 thrift.TException
+	var _write_err469 thrift.TException
 	args := ApiServiceCountRelationalDataArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -23123,22 +23378,22 @@ func (p *apiServiceProcessorCountRelationalData) Process(ctx context.Context, se
 				}
 			}
 		}
-		_exc459 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countRelationalData: " + err2.Error())
+		_exc470 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countRelationalData: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "countRelationalData", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err458 = thrift.WrapTException(err2)
+			_write_err469 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc459.Write(ctx, oprot); _write_err458 == nil && err2 != nil {
-			_write_err458 = thrift.WrapTException(err2)
+		if err2 := _exc470.Write(ctx, oprot); _write_err469 == nil && err2 != nil {
+			_write_err469 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err458 == nil && err2 != nil {
-			_write_err458 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err469 == nil && err2 != nil {
+			_write_err469 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err458 == nil && err2 != nil {
-			_write_err458 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err469 == nil && err2 != nil {
+			_write_err469 = thrift.WrapTException(err2)
 		}
-		if _write_err458 != nil {
+		if _write_err469 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err458,
+				WriteError:    _write_err469,
 				EndpointError: err,
 			}
 		}
@@ -23148,20 +23403,20 @@ func (p *apiServiceProcessorCountRelationalData) Process(ctx context.Context, se
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "countRelationalData", thrift.REPLY, seqId); err2 != nil {
-		_write_err458 = thrift.WrapTException(err2)
+		_write_err469 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err458 == nil && err2 != nil {
-		_write_err458 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err469 == nil && err2 != nil {
+		_write_err469 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err458 == nil && err2 != nil {
-		_write_err458 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err469 == nil && err2 != nil {
+		_write_err469 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err458 == nil && err2 != nil {
-		_write_err458 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err469 == nil && err2 != nil {
+		_write_err469 = thrift.WrapTException(err2)
 	}
-	if _write_err458 != nil {
+	if _write_err469 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err458,
+			WriteError:    _write_err469,
 			EndpointError: err,
 		}
 	}
@@ -23173,7 +23428,7 @@ type apiServiceProcessorExportRelationalDataToExcel struct {
 }
 
 func (p *apiServiceProcessorExportRelationalDataToExcel) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err460 thrift.TException
+	var _write_err471 thrift.TException
 	args := ApiServiceExportRelationalDataToExcelArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -23230,22 +23485,22 @@ func (p *apiServiceProcessorExportRelationalDataToExcel) Process(ctx context.Con
 				}
 			}
 		}
-		_exc461 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing exportRelationalDataToExcel: " + err2.Error())
+		_exc472 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing exportRelationalDataToExcel: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "exportRelationalDataToExcel", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err460 = thrift.WrapTException(err2)
+			_write_err471 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc461.Write(ctx, oprot); _write_err460 == nil && err2 != nil {
-			_write_err460 = thrift.WrapTException(err2)
+		if err2 := _exc472.Write(ctx, oprot); _write_err471 == nil && err2 != nil {
+			_write_err471 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err460 == nil && err2 != nil {
-			_write_err460 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err471 == nil && err2 != nil {
+			_write_err471 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err460 == nil && err2 != nil {
-			_write_err460 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err471 == nil && err2 != nil {
+			_write_err471 = thrift.WrapTException(err2)
 		}
-		if _write_err460 != nil {
+		if _write_err471 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err460,
+				WriteError:    _write_err471,
 				EndpointError: err,
 			}
 		}
@@ -23255,20 +23510,20 @@ func (p *apiServiceProcessorExportRelationalDataToExcel) Process(ctx context.Con
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "exportRelationalDataToExcel", thrift.REPLY, seqId); err2 != nil {
-		_write_err460 = thrift.WrapTException(err2)
+		_write_err471 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err460 == nil && err2 != nil {
-		_write_err460 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err471 == nil && err2 != nil {
+		_write_err471 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err460 == nil && err2 != nil {
-		_write_err460 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err471 == nil && err2 != nil {
+		_write_err471 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err460 == nil && err2 != nil {
-		_write_err460 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err471 == nil && err2 != nil {
+		_write_err471 = thrift.WrapTException(err2)
 	}
-	if _write_err460 != nil {
+	if _write_err471 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err460,
+			WriteError:    _write_err471,
 			EndpointError: err,
 		}
 	}
@@ -23280,7 +23535,7 @@ type apiServiceProcessorTestSQL struct {
 }
 
 func (p *apiServiceProcessorTestSQL) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err462 thrift.TException
+	var _write_err473 thrift.TException
 	args := ApiServiceTestSQLArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -23337,22 +23592,22 @@ func (p *apiServiceProcessorTestSQL) Process(ctx context.Context, seqId int32, i
 				}
 			}
 		}
-		_exc463 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing testSQL: " + err2.Error())
+		_exc474 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing testSQL: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "testSQL", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err462 = thrift.WrapTException(err2)
+			_write_err473 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc463.Write(ctx, oprot); _write_err462 == nil && err2 != nil {
-			_write_err462 = thrift.WrapTException(err2)
+		if err2 := _exc474.Write(ctx, oprot); _write_err473 == nil && err2 != nil {
+			_write_err473 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err462 == nil && err2 != nil {
-			_write_err462 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err473 == nil && err2 != nil {
+			_write_err473 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err462 == nil && err2 != nil {
-			_write_err462 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err473 == nil && err2 != nil {
+			_write_err473 = thrift.WrapTException(err2)
 		}
-		if _write_err462 != nil {
+		if _write_err473 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err462,
+				WriteError:    _write_err473,
 				EndpointError: err,
 			}
 		}
@@ -23362,20 +23617,20 @@ func (p *apiServiceProcessorTestSQL) Process(ctx context.Context, seqId int32, i
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "testSQL", thrift.REPLY, seqId); err2 != nil {
-		_write_err462 = thrift.WrapTException(err2)
+		_write_err473 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err462 == nil && err2 != nil {
-		_write_err462 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err473 == nil && err2 != nil {
+		_write_err473 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err462 == nil && err2 != nil {
-		_write_err462 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err473 == nil && err2 != nil {
+		_write_err473 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err462 == nil && err2 != nil {
-		_write_err462 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err473 == nil && err2 != nil {
+		_write_err473 = thrift.WrapTException(err2)
 	}
-	if _write_err462 != nil {
+	if _write_err473 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err462,
+			WriteError:    _write_err473,
 			EndpointError: err,
 		}
 	}
@@ -23387,7 +23642,7 @@ type apiServiceProcessorSaveDataset struct {
 }
 
 func (p *apiServiceProcessorSaveDataset) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err464 thrift.TException
+	var _write_err475 thrift.TException
 	args := ApiServiceSaveDatasetArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -23444,22 +23699,22 @@ func (p *apiServiceProcessorSaveDataset) Process(ctx context.Context, seqId int3
 				}
 			}
 		}
-		_exc465 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing saveDataset: " + err2.Error())
+		_exc476 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing saveDataset: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "saveDataset", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err464 = thrift.WrapTException(err2)
+			_write_err475 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc465.Write(ctx, oprot); _write_err464 == nil && err2 != nil {
-			_write_err464 = thrift.WrapTException(err2)
+		if err2 := _exc476.Write(ctx, oprot); _write_err475 == nil && err2 != nil {
+			_write_err475 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err464 == nil && err2 != nil {
-			_write_err464 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err475 == nil && err2 != nil {
+			_write_err475 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err464 == nil && err2 != nil {
-			_write_err464 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err475 == nil && err2 != nil {
+			_write_err475 = thrift.WrapTException(err2)
 		}
-		if _write_err464 != nil {
+		if _write_err475 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err464,
+				WriteError:    _write_err475,
 				EndpointError: err,
 			}
 		}
@@ -23469,20 +23724,20 @@ func (p *apiServiceProcessorSaveDataset) Process(ctx context.Context, seqId int3
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "saveDataset", thrift.REPLY, seqId); err2 != nil {
-		_write_err464 = thrift.WrapTException(err2)
+		_write_err475 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err464 == nil && err2 != nil {
-		_write_err464 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err475 == nil && err2 != nil {
+		_write_err475 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err464 == nil && err2 != nil {
-		_write_err464 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err475 == nil && err2 != nil {
+		_write_err475 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err464 == nil && err2 != nil {
-		_write_err464 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err475 == nil && err2 != nil {
+		_write_err475 = thrift.WrapTException(err2)
 	}
-	if _write_err464 != nil {
+	if _write_err475 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err464,
+			WriteError:    _write_err475,
 			EndpointError: err,
 		}
 	}
@@ -23494,7 +23749,7 @@ type apiServiceProcessorQueryMeta struct {
 }
 
 func (p *apiServiceProcessorQueryMeta) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err466 thrift.TException
+	var _write_err477 thrift.TException
 	args := ApiServiceQueryMetaArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -23551,22 +23806,22 @@ func (p *apiServiceProcessorQueryMeta) Process(ctx context.Context, seqId int32,
 				}
 			}
 		}
-		_exc467 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryMeta: " + err2.Error())
+		_exc478 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryMeta: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "queryMeta", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err466 = thrift.WrapTException(err2)
+			_write_err477 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc467.Write(ctx, oprot); _write_err466 == nil && err2 != nil {
-			_write_err466 = thrift.WrapTException(err2)
+		if err2 := _exc478.Write(ctx, oprot); _write_err477 == nil && err2 != nil {
+			_write_err477 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err466 == nil && err2 != nil {
-			_write_err466 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err477 == nil && err2 != nil {
+			_write_err477 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err466 == nil && err2 != nil {
-			_write_err466 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err477 == nil && err2 != nil {
+			_write_err477 = thrift.WrapTException(err2)
 		}
-		if _write_err466 != nil {
+		if _write_err477 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err466,
+				WriteError:    _write_err477,
 				EndpointError: err,
 			}
 		}
@@ -23576,20 +23831,20 @@ func (p *apiServiceProcessorQueryMeta) Process(ctx context.Context, seqId int32,
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "queryMeta", thrift.REPLY, seqId); err2 != nil {
-		_write_err466 = thrift.WrapTException(err2)
+		_write_err477 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err466 == nil && err2 != nil {
-		_write_err466 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err477 == nil && err2 != nil {
+		_write_err477 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err466 == nil && err2 != nil {
-		_write_err466 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err477 == nil && err2 != nil {
+		_write_err477 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err466 == nil && err2 != nil {
-		_write_err466 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err477 == nil && err2 != nil {
+		_write_err477 = thrift.WrapTException(err2)
 	}
-	if _write_err466 != nil {
+	if _write_err477 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err466,
+			WriteError:    _write_err477,
 			EndpointError: err,
 		}
 	}
@@ -23601,7 +23856,7 @@ type apiServiceProcessorDeleteDataset struct {
 }
 
 func (p *apiServiceProcessorDeleteDataset) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err468 thrift.TException
+	var _write_err479 thrift.TException
 	args := ApiServiceDeleteDatasetArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -23658,22 +23913,22 @@ func (p *apiServiceProcessorDeleteDataset) Process(ctx context.Context, seqId in
 				}
 			}
 		}
-		_exc469 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteDataset: " + err2.Error())
+		_exc480 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteDataset: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "deleteDataset", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err468 = thrift.WrapTException(err2)
+			_write_err479 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc469.Write(ctx, oprot); _write_err468 == nil && err2 != nil {
-			_write_err468 = thrift.WrapTException(err2)
+		if err2 := _exc480.Write(ctx, oprot); _write_err479 == nil && err2 != nil {
+			_write_err479 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err468 == nil && err2 != nil {
-			_write_err468 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err479 == nil && err2 != nil {
+			_write_err479 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err468 == nil && err2 != nil {
-			_write_err468 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err479 == nil && err2 != nil {
+			_write_err479 = thrift.WrapTException(err2)
 		}
-		if _write_err468 != nil {
+		if _write_err479 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err468,
+				WriteError:    _write_err479,
 				EndpointError: err,
 			}
 		}
@@ -23683,20 +23938,20 @@ func (p *apiServiceProcessorDeleteDataset) Process(ctx context.Context, seqId in
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "deleteDataset", thrift.REPLY, seqId); err2 != nil {
-		_write_err468 = thrift.WrapTException(err2)
+		_write_err479 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err468 == nil && err2 != nil {
-		_write_err468 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err479 == nil && err2 != nil {
+		_write_err479 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err468 == nil && err2 != nil {
-		_write_err468 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err479 == nil && err2 != nil {
+		_write_err479 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err468 == nil && err2 != nil {
-		_write_err468 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err479 == nil && err2 != nil {
+		_write_err479 = thrift.WrapTException(err2)
 	}
-	if _write_err468 != nil {
+	if _write_err479 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err468,
+			WriteError:    _write_err479,
 			EndpointError: err,
 		}
 	}
@@ -23708,7 +23963,7 @@ type apiServiceProcessorCreateDataset struct {
 }
 
 func (p *apiServiceProcessorCreateDataset) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err470 thrift.TException
+	var _write_err481 thrift.TException
 	args := ApiServiceCreateDatasetArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -23765,22 +24020,22 @@ func (p *apiServiceProcessorCreateDataset) Process(ctx context.Context, seqId in
 				}
 			}
 		}
-		_exc471 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing createDataset: " + err2.Error())
+		_exc482 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing createDataset: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "createDataset", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err470 = thrift.WrapTException(err2)
+			_write_err481 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc471.Write(ctx, oprot); _write_err470 == nil && err2 != nil {
-			_write_err470 = thrift.WrapTException(err2)
+		if err2 := _exc482.Write(ctx, oprot); _write_err481 == nil && err2 != nil {
+			_write_err481 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err470 == nil && err2 != nil {
-			_write_err470 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err481 == nil && err2 != nil {
+			_write_err481 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err470 == nil && err2 != nil {
-			_write_err470 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err481 == nil && err2 != nil {
+			_write_err481 = thrift.WrapTException(err2)
 		}
-		if _write_err470 != nil {
+		if _write_err481 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err470,
+				WriteError:    _write_err481,
 				EndpointError: err,
 			}
 		}
@@ -23790,20 +24045,20 @@ func (p *apiServiceProcessorCreateDataset) Process(ctx context.Context, seqId in
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "createDataset", thrift.REPLY, seqId); err2 != nil {
-		_write_err470 = thrift.WrapTException(err2)
+		_write_err481 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err470 == nil && err2 != nil {
-		_write_err470 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err481 == nil && err2 != nil {
+		_write_err481 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err470 == nil && err2 != nil {
-		_write_err470 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err481 == nil && err2 != nil {
+		_write_err481 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err470 == nil && err2 != nil {
-		_write_err470 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err481 == nil && err2 != nil {
+		_write_err481 = thrift.WrapTException(err2)
 	}
-	if _write_err470 != nil {
+	if _write_err481 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err470,
+			WriteError:    _write_err481,
 			EndpointError: err,
 		}
 	}
@@ -23815,7 +24070,7 @@ type apiServiceProcessorGetDatasetTree struct {
 }
 
 func (p *apiServiceProcessorGetDatasetTree) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err472 thrift.TException
+	var _write_err483 thrift.TException
 	args := ApiServiceGetDatasetTreeArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -23872,22 +24127,22 @@ func (p *apiServiceProcessorGetDatasetTree) Process(ctx context.Context, seqId i
 				}
 			}
 		}
-		_exc473 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetTree: " + err2.Error())
+		_exc484 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetTree: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getDatasetTree", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err472 = thrift.WrapTException(err2)
+			_write_err483 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc473.Write(ctx, oprot); _write_err472 == nil && err2 != nil {
-			_write_err472 = thrift.WrapTException(err2)
+		if err2 := _exc484.Write(ctx, oprot); _write_err483 == nil && err2 != nil {
+			_write_err483 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err472 == nil && err2 != nil {
-			_write_err472 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err483 == nil && err2 != nil {
+			_write_err483 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err472 == nil && err2 != nil {
-			_write_err472 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err483 == nil && err2 != nil {
+			_write_err483 = thrift.WrapTException(err2)
 		}
-		if _write_err472 != nil {
+		if _write_err483 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err472,
+				WriteError:    _write_err483,
 				EndpointError: err,
 			}
 		}
@@ -23897,20 +24152,20 @@ func (p *apiServiceProcessorGetDatasetTree) Process(ctx context.Context, seqId i
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getDatasetTree", thrift.REPLY, seqId); err2 != nil {
-		_write_err472 = thrift.WrapTException(err2)
+		_write_err483 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err472 == nil && err2 != nil {
-		_write_err472 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err483 == nil && err2 != nil {
+		_write_err483 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err472 == nil && err2 != nil {
-		_write_err472 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err483 == nil && err2 != nil {
+		_write_err483 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err472 == nil && err2 != nil {
-		_write_err472 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err483 == nil && err2 != nil {
+		_write_err483 = thrift.WrapTException(err2)
 	}
-	if _write_err472 != nil {
+	if _write_err483 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err472,
+			WriteError:    _write_err483,
 			EndpointError: err,
 		}
 	}
@@ -23922,7 +24177,7 @@ type apiServiceProcessorGetDatasetVersionMeta struct {
 }
 
 func (p *apiServiceProcessorGetDatasetVersionMeta) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err474 thrift.TException
+	var _write_err485 thrift.TException
 	args := ApiServiceGetDatasetVersionMetaArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -23979,22 +24234,22 @@ func (p *apiServiceProcessorGetDatasetVersionMeta) Process(ctx context.Context, 
 				}
 			}
 		}
-		_exc475 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetVersionMeta: " + err2.Error())
+		_exc486 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetVersionMeta: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getDatasetVersionMeta", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err474 = thrift.WrapTException(err2)
+			_write_err485 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc475.Write(ctx, oprot); _write_err474 == nil && err2 != nil {
-			_write_err474 = thrift.WrapTException(err2)
+		if err2 := _exc486.Write(ctx, oprot); _write_err485 == nil && err2 != nil {
+			_write_err485 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err474 == nil && err2 != nil {
-			_write_err474 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err485 == nil && err2 != nil {
+			_write_err485 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err474 == nil && err2 != nil {
-			_write_err474 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err485 == nil && err2 != nil {
+			_write_err485 = thrift.WrapTException(err2)
 		}
-		if _write_err474 != nil {
+		if _write_err485 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err474,
+				WriteError:    _write_err485,
 				EndpointError: err,
 			}
 		}
@@ -24004,20 +24259,20 @@ func (p *apiServiceProcessorGetDatasetVersionMeta) Process(ctx context.Context, 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getDatasetVersionMeta", thrift.REPLY, seqId); err2 != nil {
-		_write_err474 = thrift.WrapTException(err2)
+		_write_err485 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err474 == nil && err2 != nil {
-		_write_err474 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err485 == nil && err2 != nil {
+		_write_err485 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err474 == nil && err2 != nil {
-		_write_err474 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err485 == nil && err2 != nil {
+		_write_err485 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err474 == nil && err2 != nil {
-		_write_err474 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err485 == nil && err2 != nil {
+		_write_err485 = thrift.WrapTException(err2)
 	}
-	if _write_err474 != nil {
+	if _write_err485 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err474,
+			WriteError:    _write_err485,
 			EndpointError: err,
 		}
 	}
@@ -24029,7 +24284,7 @@ type apiServiceProcessorGetDatasetChanges struct {
 }
 
 func (p *apiServiceProcessorGetDatasetChanges) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err476 thrift.TException
+	var _write_err487 thrift.TException
 	args := ApiServiceGetDatasetChangesArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -24086,22 +24341,22 @@ func (p *apiServiceProcessorGetDatasetChanges) Process(ctx context.Context, seqI
 				}
 			}
 		}
-		_exc477 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetChanges: " + err2.Error())
+		_exc488 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetChanges: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getDatasetChanges", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err476 = thrift.WrapTException(err2)
+			_write_err487 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc477.Write(ctx, oprot); _write_err476 == nil && err2 != nil {
-			_write_err476 = thrift.WrapTException(err2)
+		if err2 := _exc488.Write(ctx, oprot); _write_err487 == nil && err2 != nil {
+			_write_err487 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err476 == nil && err2 != nil {
-			_write_err476 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err487 == nil && err2 != nil {
+			_write_err487 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err476 == nil && err2 != nil {
-			_write_err476 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err487 == nil && err2 != nil {
+			_write_err487 = thrift.WrapTException(err2)
 		}
-		if _write_err476 != nil {
+		if _write_err487 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err476,
+				WriteError:    _write_err487,
 				EndpointError: err,
 			}
 		}
@@ -24111,20 +24366,20 @@ func (p *apiServiceProcessorGetDatasetChanges) Process(ctx context.Context, seqI
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getDatasetChanges", thrift.REPLY, seqId); err2 != nil {
-		_write_err476 = thrift.WrapTException(err2)
+		_write_err487 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err476 == nil && err2 != nil {
-		_write_err476 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err487 == nil && err2 != nil {
+		_write_err487 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err476 == nil && err2 != nil {
-		_write_err476 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err487 == nil && err2 != nil {
+		_write_err487 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err476 == nil && err2 != nil {
-		_write_err476 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err487 == nil && err2 != nil {
+		_write_err487 = thrift.WrapTException(err2)
 	}
-	if _write_err476 != nil {
+	if _write_err487 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err476,
+			WriteError:    _write_err487,
 			EndpointError: err,
 		}
 	}
@@ -24136,7 +24391,7 @@ type apiServiceProcessorGetDatasetLineage struct {
 }
 
 func (p *apiServiceProcessorGetDatasetLineage) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err478 thrift.TException
+	var _write_err489 thrift.TException
 	args := ApiServiceGetDatasetLineageArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -24193,22 +24448,22 @@ func (p *apiServiceProcessorGetDatasetLineage) Process(ctx context.Context, seqI
 				}
 			}
 		}
-		_exc479 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetLineage: " + err2.Error())
+		_exc490 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetLineage: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getDatasetLineage", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err478 = thrift.WrapTException(err2)
+			_write_err489 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc479.Write(ctx, oprot); _write_err478 == nil && err2 != nil {
-			_write_err478 = thrift.WrapTException(err2)
+		if err2 := _exc490.Write(ctx, oprot); _write_err489 == nil && err2 != nil {
+			_write_err489 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err478 == nil && err2 != nil {
-			_write_err478 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err489 == nil && err2 != nil {
+			_write_err489 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err478 == nil && err2 != nil {
-			_write_err478 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err489 == nil && err2 != nil {
+			_write_err489 = thrift.WrapTException(err2)
 		}
-		if _write_err478 != nil {
+		if _write_err489 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err478,
+				WriteError:    _write_err489,
 				EndpointError: err,
 			}
 		}
@@ -24218,20 +24473,20 @@ func (p *apiServiceProcessorGetDatasetLineage) Process(ctx context.Context, seqI
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getDatasetLineage", thrift.REPLY, seqId); err2 != nil {
-		_write_err478 = thrift.WrapTException(err2)
+		_write_err489 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err478 == nil && err2 != nil {
-		_write_err478 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err489 == nil && err2 != nil {
+		_write_err489 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err478 == nil && err2 != nil {
-		_write_err478 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err489 == nil && err2 != nil {
+		_write_err489 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err478 == nil && err2 != nil {
-		_write_err478 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err489 == nil && err2 != nil {
+		_write_err489 = thrift.WrapTException(err2)
 	}
-	if _write_err478 != nil {
+	if _write_err489 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err478,
+			WriteError:    _write_err489,
 			EndpointError: err,
 		}
 	}
@@ -24243,7 +24498,7 @@ type apiServiceProcessorForkLineage struct {
 }
 
 func (p *apiServiceProcessorForkLineage) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err480 thrift.TException
+	var _write_err491 thrift.TException
 	args := ApiServiceForkLineageArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -24300,22 +24555,22 @@ func (p *apiServiceProcessorForkLineage) Process(ctx context.Context, seqId int3
 				}
 			}
 		}
-		_exc481 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing forkLineage: " + err2.Error())
+		_exc492 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing forkLineage: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "forkLineage", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err480 = thrift.WrapTException(err2)
+			_write_err491 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc481.Write(ctx, oprot); _write_err480 == nil && err2 != nil {
-			_write_err480 = thrift.WrapTException(err2)
+		if err2 := _exc492.Write(ctx, oprot); _write_err491 == nil && err2 != nil {
+			_write_err491 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err480 == nil && err2 != nil {
-			_write_err480 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err491 == nil && err2 != nil {
+			_write_err491 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err480 == nil && err2 != nil {
-			_write_err480 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err491 == nil && err2 != nil {
+			_write_err491 = thrift.WrapTException(err2)
 		}
-		if _write_err480 != nil {
+		if _write_err491 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err480,
+				WriteError:    _write_err491,
 				EndpointError: err,
 			}
 		}
@@ -24325,20 +24580,20 @@ func (p *apiServiceProcessorForkLineage) Process(ctx context.Context, seqId int3
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "forkLineage", thrift.REPLY, seqId); err2 != nil {
-		_write_err480 = thrift.WrapTException(err2)
+		_write_err491 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err480 == nil && err2 != nil {
-		_write_err480 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err491 == nil && err2 != nil {
+		_write_err491 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err480 == nil && err2 != nil {
-		_write_err480 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err491 == nil && err2 != nil {
+		_write_err491 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err480 == nil && err2 != nil {
-		_write_err480 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err491 == nil && err2 != nil {
+		_write_err491 = thrift.WrapTException(err2)
 	}
-	if _write_err480 != nil {
+	if _write_err491 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err480,
+			WriteError:    _write_err491,
 			EndpointError: err,
 		}
 	}
@@ -24350,7 +24605,7 @@ type apiServiceProcessorGetLineageForkStatus struct {
 }
 
 func (p *apiServiceProcessorGetLineageForkStatus) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err482 thrift.TException
+	var _write_err493 thrift.TException
 	args := ApiServiceGetLineageForkStatusArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -24407,22 +24662,22 @@ func (p *apiServiceProcessorGetLineageForkStatus) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc483 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getLineageForkStatus: " + err2.Error())
+		_exc494 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getLineageForkStatus: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getLineageForkStatus", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err482 = thrift.WrapTException(err2)
+			_write_err493 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc483.Write(ctx, oprot); _write_err482 == nil && err2 != nil {
-			_write_err482 = thrift.WrapTException(err2)
+		if err2 := _exc494.Write(ctx, oprot); _write_err493 == nil && err2 != nil {
+			_write_err493 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err482 == nil && err2 != nil {
-			_write_err482 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err493 == nil && err2 != nil {
+			_write_err493 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err482 == nil && err2 != nil {
-			_write_err482 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err493 == nil && err2 != nil {
+			_write_err493 = thrift.WrapTException(err2)
 		}
-		if _write_err482 != nil {
+		if _write_err493 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err482,
+				WriteError:    _write_err493,
 				EndpointError: err,
 			}
 		}
@@ -24432,20 +24687,20 @@ func (p *apiServiceProcessorGetLineageForkStatus) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getLineageForkStatus", thrift.REPLY, seqId); err2 != nil {
-		_write_err482 = thrift.WrapTException(err2)
+		_write_err493 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err482 == nil && err2 != nil {
-		_write_err482 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err493 == nil && err2 != nil {
+		_write_err493 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err482 == nil && err2 != nil {
-		_write_err482 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err493 == nil && err2 != nil {
+		_write_err493 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err482 == nil && err2 != nil {
-		_write_err482 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err493 == nil && err2 != nil {
+		_write_err493 = thrift.WrapTException(err2)
 	}
-	if _write_err482 != nil {
+	if _write_err493 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err482,
+			WriteError:    _write_err493,
 			EndpointError: err,
 		}
 	}
@@ -24457,7 +24712,7 @@ type apiServiceProcessorDeleteDatasetVersion struct {
 }
 
 func (p *apiServiceProcessorDeleteDatasetVersion) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err484 thrift.TException
+	var _write_err495 thrift.TException
 	args := ApiServiceDeleteDatasetVersionArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -24514,22 +24769,22 @@ func (p *apiServiceProcessorDeleteDatasetVersion) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc485 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteDatasetVersion: " + err2.Error())
+		_exc496 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteDatasetVersion: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "deleteDatasetVersion", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err484 = thrift.WrapTException(err2)
+			_write_err495 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc485.Write(ctx, oprot); _write_err484 == nil && err2 != nil {
-			_write_err484 = thrift.WrapTException(err2)
+		if err2 := _exc496.Write(ctx, oprot); _write_err495 == nil && err2 != nil {
+			_write_err495 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err484 == nil && err2 != nil {
-			_write_err484 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err495 == nil && err2 != nil {
+			_write_err495 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err484 == nil && err2 != nil {
-			_write_err484 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err495 == nil && err2 != nil {
+			_write_err495 = thrift.WrapTException(err2)
 		}
-		if _write_err484 != nil {
+		if _write_err495 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err484,
+				WriteError:    _write_err495,
 				EndpointError: err,
 			}
 		}
@@ -24539,20 +24794,20 @@ func (p *apiServiceProcessorDeleteDatasetVersion) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "deleteDatasetVersion", thrift.REPLY, seqId); err2 != nil {
-		_write_err484 = thrift.WrapTException(err2)
+		_write_err495 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err484 == nil && err2 != nil {
-		_write_err484 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err495 == nil && err2 != nil {
+		_write_err495 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err484 == nil && err2 != nil {
-		_write_err484 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err495 == nil && err2 != nil {
+		_write_err495 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err484 == nil && err2 != nil {
-		_write_err484 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err495 == nil && err2 != nil {
+		_write_err495 = thrift.WrapTException(err2)
 	}
-	if _write_err484 != nil {
+	if _write_err495 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err484,
+			WriteError:    _write_err495,
 			EndpointError: err,
 		}
 	}
@@ -24564,7 +24819,7 @@ type apiServiceProcessorRegisterTransform struct {
 }
 
 func (p *apiServiceProcessorRegisterTransform) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err486 thrift.TException
+	var _write_err497 thrift.TException
 	args := ApiServiceRegisterTransformArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -24621,22 +24876,22 @@ func (p *apiServiceProcessorRegisterTransform) Process(ctx context.Context, seqI
 				}
 			}
 		}
-		_exc487 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing registerTransform: " + err2.Error())
+		_exc498 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing registerTransform: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "registerTransform", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err486 = thrift.WrapTException(err2)
+			_write_err497 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc487.Write(ctx, oprot); _write_err486 == nil && err2 != nil {
-			_write_err486 = thrift.WrapTException(err2)
+		if err2 := _exc498.Write(ctx, oprot); _write_err497 == nil && err2 != nil {
+			_write_err497 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err486 == nil && err2 != nil {
-			_write_err486 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err497 == nil && err2 != nil {
+			_write_err497 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err486 == nil && err2 != nil {
-			_write_err486 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err497 == nil && err2 != nil {
+			_write_err497 = thrift.WrapTException(err2)
 		}
-		if _write_err486 != nil {
+		if _write_err497 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err486,
+				WriteError:    _write_err497,
 				EndpointError: err,
 			}
 		}
@@ -24646,20 +24901,20 @@ func (p *apiServiceProcessorRegisterTransform) Process(ctx context.Context, seqI
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "registerTransform", thrift.REPLY, seqId); err2 != nil {
-		_write_err486 = thrift.WrapTException(err2)
+		_write_err497 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err486 == nil && err2 != nil {
-		_write_err486 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err497 == nil && err2 != nil {
+		_write_err497 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err486 == nil && err2 != nil {
-		_write_err486 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err497 == nil && err2 != nil {
+		_write_err497 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err486 == nil && err2 != nil {
-		_write_err486 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err497 == nil && err2 != nil {
+		_write_err497 = thrift.WrapTException(err2)
 	}
-	if _write_err486 != nil {
+	if _write_err497 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err486,
+			WriteError:    _write_err497,
 			EndpointError: err,
 		}
 	}
@@ -24671,7 +24926,7 @@ type apiServiceProcessorDeleteFunction struct {
 }
 
 func (p *apiServiceProcessorDeleteFunction) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err488 thrift.TException
+	var _write_err499 thrift.TException
 	args := ApiServiceDeleteFunctionArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -24728,22 +24983,22 @@ func (p *apiServiceProcessorDeleteFunction) Process(ctx context.Context, seqId i
 				}
 			}
 		}
-		_exc489 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteFunction: " + err2.Error())
+		_exc500 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteFunction: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "deleteFunction", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err488 = thrift.WrapTException(err2)
+			_write_err499 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc489.Write(ctx, oprot); _write_err488 == nil && err2 != nil {
-			_write_err488 = thrift.WrapTException(err2)
+		if err2 := _exc500.Write(ctx, oprot); _write_err499 == nil && err2 != nil {
+			_write_err499 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err488 == nil && err2 != nil {
-			_write_err488 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err499 == nil && err2 != nil {
+			_write_err499 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err488 == nil && err2 != nil {
-			_write_err488 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err499 == nil && err2 != nil {
+			_write_err499 = thrift.WrapTException(err2)
 		}
-		if _write_err488 != nil {
+		if _write_err499 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err488,
+				WriteError:    _write_err499,
 				EndpointError: err,
 			}
 		}
@@ -24753,20 +25008,20 @@ func (p *apiServiceProcessorDeleteFunction) Process(ctx context.Context, seqId i
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "deleteFunction", thrift.REPLY, seqId); err2 != nil {
-		_write_err488 = thrift.WrapTException(err2)
+		_write_err499 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err488 == nil && err2 != nil {
-		_write_err488 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err499 == nil && err2 != nil {
+		_write_err499 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err488 == nil && err2 != nil {
-		_write_err488 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err499 == nil && err2 != nil {
+		_write_err499 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err488 == nil && err2 != nil {
-		_write_err488 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err499 == nil && err2 != nil {
+		_write_err499 = thrift.WrapTException(err2)
 	}
-	if _write_err488 != nil {
+	if _write_err499 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err488,
+			WriteError:    _write_err499,
 			EndpointError: err,
 		}
 	}
@@ -24778,7 +25033,7 @@ type apiServiceProcessorListFunctions struct {
 }
 
 func (p *apiServiceProcessorListFunctions) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err490 thrift.TException
+	var _write_err501 thrift.TException
 	args := ApiServiceListFunctionsArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -24835,22 +25090,22 @@ func (p *apiServiceProcessorListFunctions) Process(ctx context.Context, seqId in
 				}
 			}
 		}
-		_exc491 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing listFunctions: " + err2.Error())
+		_exc502 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing listFunctions: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "listFunctions", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err490 = thrift.WrapTException(err2)
+			_write_err501 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc491.Write(ctx, oprot); _write_err490 == nil && err2 != nil {
-			_write_err490 = thrift.WrapTException(err2)
+		if err2 := _exc502.Write(ctx, oprot); _write_err501 == nil && err2 != nil {
+			_write_err501 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err490 == nil && err2 != nil {
-			_write_err490 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err501 == nil && err2 != nil {
+			_write_err501 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err490 == nil && err2 != nil {
-			_write_err490 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err501 == nil && err2 != nil {
+			_write_err501 = thrift.WrapTException(err2)
 		}
-		if _write_err490 != nil {
+		if _write_err501 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err490,
+				WriteError:    _write_err501,
 				EndpointError: err,
 			}
 		}
@@ -24860,20 +25115,20 @@ func (p *apiServiceProcessorListFunctions) Process(ctx context.Context, seqId in
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "listFunctions", thrift.REPLY, seqId); err2 != nil {
-		_write_err490 = thrift.WrapTException(err2)
+		_write_err501 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err490 == nil && err2 != nil {
-		_write_err490 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err501 == nil && err2 != nil {
+		_write_err501 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err490 == nil && err2 != nil {
-		_write_err490 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err501 == nil && err2 != nil {
+		_write_err501 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err490 == nil && err2 != nil {
-		_write_err490 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err501 == nil && err2 != nil {
+		_write_err501 = thrift.WrapTException(err2)
 	}
-	if _write_err490 != nil {
+	if _write_err501 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err490,
+			WriteError:    _write_err501,
 			EndpointError: err,
 		}
 	}
@@ -24885,7 +25140,7 @@ type apiServiceProcessorRegisterUDF struct {
 }
 
 func (p *apiServiceProcessorRegisterUDF) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err492 thrift.TException
+	var _write_err503 thrift.TException
 	args := ApiServiceRegisterUDFArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -24942,22 +25197,22 @@ func (p *apiServiceProcessorRegisterUDF) Process(ctx context.Context, seqId int3
 				}
 			}
 		}
-		_exc493 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing registerUDF: " + err2.Error())
+		_exc504 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing registerUDF: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "registerUDF", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err492 = thrift.WrapTException(err2)
+			_write_err503 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc493.Write(ctx, oprot); _write_err492 == nil && err2 != nil {
-			_write_err492 = thrift.WrapTException(err2)
+		if err2 := _exc504.Write(ctx, oprot); _write_err503 == nil && err2 != nil {
+			_write_err503 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err492 == nil && err2 != nil {
-			_write_err492 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err503 == nil && err2 != nil {
+			_write_err503 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err492 == nil && err2 != nil {
-			_write_err492 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err503 == nil && err2 != nil {
+			_write_err503 = thrift.WrapTException(err2)
 		}
-		if _write_err492 != nil {
+		if _write_err503 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err492,
+				WriteError:    _write_err503,
 				EndpointError: err,
 			}
 		}
@@ -24967,20 +25222,20 @@ func (p *apiServiceProcessorRegisterUDF) Process(ctx context.Context, seqId int3
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "registerUDF", thrift.REPLY, seqId); err2 != nil {
-		_write_err492 = thrift.WrapTException(err2)
+		_write_err503 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err492 == nil && err2 != nil {
-		_write_err492 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err503 == nil && err2 != nil {
+		_write_err503 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err492 == nil && err2 != nil {
-		_write_err492 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err503 == nil && err2 != nil {
+		_write_err503 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err492 == nil && err2 != nil {
-		_write_err492 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err503 == nil && err2 != nil {
+		_write_err503 = thrift.WrapTException(err2)
 	}
-	if _write_err492 != nil {
+	if _write_err503 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err492,
+			WriteError:    _write_err503,
 			EndpointError: err,
 		}
 	}
@@ -24992,7 +25247,7 @@ type apiServiceProcessorDownloadFunction struct {
 }
 
 func (p *apiServiceProcessorDownloadFunction) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err494 thrift.TException
+	var _write_err505 thrift.TException
 	args := ApiServiceDownloadFunctionArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -25049,22 +25304,22 @@ func (p *apiServiceProcessorDownloadFunction) Process(ctx context.Context, seqId
 				}
 			}
 		}
-		_exc495 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing downloadFunction: " + err2.Error())
+		_exc506 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing downloadFunction: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "downloadFunction", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err494 = thrift.WrapTException(err2)
+			_write_err505 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc495.Write(ctx, oprot); _write_err494 == nil && err2 != nil {
-			_write_err494 = thrift.WrapTException(err2)
+		if err2 := _exc506.Write(ctx, oprot); _write_err505 == nil && err2 != nil {
+			_write_err505 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err494 == nil && err2 != nil {
-			_write_err494 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err505 == nil && err2 != nil {
+			_write_err505 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err494 == nil && err2 != nil {
-			_write_err494 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err505 == nil && err2 != nil {
+			_write_err505 = thrift.WrapTException(err2)
 		}
-		if _write_err494 != nil {
+		if _write_err505 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err494,
+				WriteError:    _write_err505,
 				EndpointError: err,
 			}
 		}
@@ -25074,20 +25329,20 @@ func (p *apiServiceProcessorDownloadFunction) Process(ctx context.Context, seqId
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "downloadFunction", thrift.REPLY, seqId); err2 != nil {
-		_write_err494 = thrift.WrapTException(err2)
+		_write_err505 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err494 == nil && err2 != nil {
-		_write_err494 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err505 == nil && err2 != nil {
+		_write_err505 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err494 == nil && err2 != nil {
-		_write_err494 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err505 == nil && err2 != nil {
+		_write_err505 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err494 == nil && err2 != nil {
-		_write_err494 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err505 == nil && err2 != nil {
+		_write_err505 = thrift.WrapTException(err2)
 	}
-	if _write_err494 != nil {
+	if _write_err505 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err494,
+			WriteError:    _write_err505,
 			EndpointError: err,
 		}
 	}
@@ -25099,7 +25354,7 @@ type apiServiceProcessorSaveTransformCompare struct {
 }
 
 func (p *apiServiceProcessorSaveTransformCompare) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err496 thrift.TException
+	var _write_err507 thrift.TException
 	args := ApiServiceSaveTransformCompareArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -25156,22 +25411,22 @@ func (p *apiServiceProcessorSaveTransformCompare) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc497 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing saveTransformCompare: " + err2.Error())
+		_exc508 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing saveTransformCompare: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "saveTransformCompare", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err496 = thrift.WrapTException(err2)
+			_write_err507 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc497.Write(ctx, oprot); _write_err496 == nil && err2 != nil {
-			_write_err496 = thrift.WrapTException(err2)
+		if err2 := _exc508.Write(ctx, oprot); _write_err507 == nil && err2 != nil {
+			_write_err507 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err496 == nil && err2 != nil {
-			_write_err496 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err507 == nil && err2 != nil {
+			_write_err507 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err496 == nil && err2 != nil {
-			_write_err496 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err507 == nil && err2 != nil {
+			_write_err507 = thrift.WrapTException(err2)
 		}
-		if _write_err496 != nil {
+		if _write_err507 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err496,
+				WriteError:    _write_err507,
 				EndpointError: err,
 			}
 		}
@@ -25181,20 +25436,20 @@ func (p *apiServiceProcessorSaveTransformCompare) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "saveTransformCompare", thrift.REPLY, seqId); err2 != nil {
-		_write_err496 = thrift.WrapTException(err2)
+		_write_err507 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err496 == nil && err2 != nil {
-		_write_err496 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err507 == nil && err2 != nil {
+		_write_err507 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err496 == nil && err2 != nil {
-		_write_err496 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err507 == nil && err2 != nil {
+		_write_err507 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err496 == nil && err2 != nil {
-		_write_err496 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err507 == nil && err2 != nil {
+		_write_err507 = thrift.WrapTException(err2)
 	}
-	if _write_err496 != nil {
+	if _write_err507 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err496,
+			WriteError:    _write_err507,
 			EndpointError: err,
 		}
 	}
@@ -25206,7 +25461,7 @@ type apiServiceProcessorQueryTransformCompares struct {
 }
 
 func (p *apiServiceProcessorQueryTransformCompares) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err498 thrift.TException
+	var _write_err509 thrift.TException
 	args := ApiServiceQueryTransformComparesArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -25263,22 +25518,22 @@ func (p *apiServiceProcessorQueryTransformCompares) Process(ctx context.Context,
 				}
 			}
 		}
-		_exc499 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryTransformCompares: " + err2.Error())
+		_exc510 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryTransformCompares: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "queryTransformCompares", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err498 = thrift.WrapTException(err2)
+			_write_err509 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc499.Write(ctx, oprot); _write_err498 == nil && err2 != nil {
-			_write_err498 = thrift.WrapTException(err2)
+		if err2 := _exc510.Write(ctx, oprot); _write_err509 == nil && err2 != nil {
+			_write_err509 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err498 == nil && err2 != nil {
-			_write_err498 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err509 == nil && err2 != nil {
+			_write_err509 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err498 == nil && err2 != nil {
-			_write_err498 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err509 == nil && err2 != nil {
+			_write_err509 = thrift.WrapTException(err2)
 		}
-		if _write_err498 != nil {
+		if _write_err509 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err498,
+				WriteError:    _write_err509,
 				EndpointError: err,
 			}
 		}
@@ -25288,20 +25543,20 @@ func (p *apiServiceProcessorQueryTransformCompares) Process(ctx context.Context,
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "queryTransformCompares", thrift.REPLY, seqId); err2 != nil {
-		_write_err498 = thrift.WrapTException(err2)
+		_write_err509 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err498 == nil && err2 != nil {
-		_write_err498 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err509 == nil && err2 != nil {
+		_write_err509 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err498 == nil && err2 != nil {
-		_write_err498 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err509 == nil && err2 != nil {
+		_write_err509 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err498 == nil && err2 != nil {
-		_write_err498 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err509 == nil && err2 != nil {
+		_write_err509 = thrift.WrapTException(err2)
 	}
-	if _write_err498 != nil {
+	if _write_err509 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err498,
+			WriteError:    _write_err509,
 			EndpointError: err,
 		}
 	}
@@ -25313,7 +25568,7 @@ type apiServiceProcessorCountTransformCompares struct {
 }
 
 func (p *apiServiceProcessorCountTransformCompares) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err500 thrift.TException
+	var _write_err511 thrift.TException
 	args := ApiServiceCountTransformComparesArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -25370,22 +25625,22 @@ func (p *apiServiceProcessorCountTransformCompares) Process(ctx context.Context,
 				}
 			}
 		}
-		_exc501 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countTransformCompares: " + err2.Error())
+		_exc512 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countTransformCompares: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "countTransformCompares", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err500 = thrift.WrapTException(err2)
+			_write_err511 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc501.Write(ctx, oprot); _write_err500 == nil && err2 != nil {
-			_write_err500 = thrift.WrapTException(err2)
+		if err2 := _exc512.Write(ctx, oprot); _write_err511 == nil && err2 != nil {
+			_write_err511 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err500 == nil && err2 != nil {
-			_write_err500 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err511 == nil && err2 != nil {
+			_write_err511 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err500 == nil && err2 != nil {
-			_write_err500 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err511 == nil && err2 != nil {
+			_write_err511 = thrift.WrapTException(err2)
 		}
-		if _write_err500 != nil {
+		if _write_err511 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err500,
+				WriteError:    _write_err511,
 				EndpointError: err,
 			}
 		}
@@ -25395,20 +25650,20 @@ func (p *apiServiceProcessorCountTransformCompares) Process(ctx context.Context,
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "countTransformCompares", thrift.REPLY, seqId); err2 != nil {
-		_write_err500 = thrift.WrapTException(err2)
+		_write_err511 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err500 == nil && err2 != nil {
-		_write_err500 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err511 == nil && err2 != nil {
+		_write_err511 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err500 == nil && err2 != nil {
-		_write_err500 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err511 == nil && err2 != nil {
+		_write_err511 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err500 == nil && err2 != nil {
-		_write_err500 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err511 == nil && err2 != nil {
+		_write_err511 = thrift.WrapTException(err2)
 	}
-	if _write_err500 != nil {
+	if _write_err511 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err500,
+			WriteError:    _write_err511,
 			EndpointError: err,
 		}
 	}
@@ -25420,7 +25675,7 @@ type apiServiceProcessorGetTransformCompare struct {
 }
 
 func (p *apiServiceProcessorGetTransformCompare) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err502 thrift.TException
+	var _write_err513 thrift.TException
 	args := ApiServiceGetTransformCompareArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -25477,22 +25732,22 @@ func (p *apiServiceProcessorGetTransformCompare) Process(ctx context.Context, se
 				}
 			}
 		}
-		_exc503 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getTransformCompare: " + err2.Error())
+		_exc514 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getTransformCompare: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getTransformCompare", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err502 = thrift.WrapTException(err2)
+			_write_err513 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc503.Write(ctx, oprot); _write_err502 == nil && err2 != nil {
-			_write_err502 = thrift.WrapTException(err2)
+		if err2 := _exc514.Write(ctx, oprot); _write_err513 == nil && err2 != nil {
+			_write_err513 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err502 == nil && err2 != nil {
-			_write_err502 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err513 == nil && err2 != nil {
+			_write_err513 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err502 == nil && err2 != nil {
-			_write_err502 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err513 == nil && err2 != nil {
+			_write_err513 = thrift.WrapTException(err2)
 		}
-		if _write_err502 != nil {
+		if _write_err513 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err502,
+				WriteError:    _write_err513,
 				EndpointError: err,
 			}
 		}
@@ -25502,20 +25757,20 @@ func (p *apiServiceProcessorGetTransformCompare) Process(ctx context.Context, se
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getTransformCompare", thrift.REPLY, seqId); err2 != nil {
-		_write_err502 = thrift.WrapTException(err2)
+		_write_err513 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err502 == nil && err2 != nil {
-		_write_err502 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err513 == nil && err2 != nil {
+		_write_err513 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err502 == nil && err2 != nil {
-		_write_err502 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err513 == nil && err2 != nil {
+		_write_err513 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err502 == nil && err2 != nil {
-		_write_err502 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err513 == nil && err2 != nil {
+		_write_err513 = thrift.WrapTException(err2)
 	}
-	if _write_err502 != nil {
+	if _write_err513 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err502,
+			WriteError:    _write_err513,
 			EndpointError: err,
 		}
 	}
@@ -25527,7 +25782,7 @@ type apiServiceProcessorDeleteTransformCompare struct {
 }
 
 func (p *apiServiceProcessorDeleteTransformCompare) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err504 thrift.TException
+	var _write_err515 thrift.TException
 	args := ApiServiceDeleteTransformCompareArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -25584,22 +25839,22 @@ func (p *apiServiceProcessorDeleteTransformCompare) Process(ctx context.Context,
 				}
 			}
 		}
-		_exc505 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteTransformCompare: " + err2.Error())
+		_exc516 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteTransformCompare: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "deleteTransformCompare", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err504 = thrift.WrapTException(err2)
+			_write_err515 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc505.Write(ctx, oprot); _write_err504 == nil && err2 != nil {
-			_write_err504 = thrift.WrapTException(err2)
+		if err2 := _exc516.Write(ctx, oprot); _write_err515 == nil && err2 != nil {
+			_write_err515 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err504 == nil && err2 != nil {
-			_write_err504 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err515 == nil && err2 != nil {
+			_write_err515 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err504 == nil && err2 != nil {
-			_write_err504 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err515 == nil && err2 != nil {
+			_write_err515 = thrift.WrapTException(err2)
 		}
-		if _write_err504 != nil {
+		if _write_err515 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err504,
+				WriteError:    _write_err515,
 				EndpointError: err,
 			}
 		}
@@ -25609,20 +25864,20 @@ func (p *apiServiceProcessorDeleteTransformCompare) Process(ctx context.Context,
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "deleteTransformCompare", thrift.REPLY, seqId); err2 != nil {
-		_write_err504 = thrift.WrapTException(err2)
+		_write_err515 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err504 == nil && err2 != nil {
-		_write_err504 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err515 == nil && err2 != nil {
+		_write_err515 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err504 == nil && err2 != nil {
-		_write_err504 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err515 == nil && err2 != nil {
+		_write_err515 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err504 == nil && err2 != nil {
-		_write_err504 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err515 == nil && err2 != nil {
+		_write_err515 = thrift.WrapTException(err2)
 	}
-	if _write_err504 != nil {
+	if _write_err515 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err504,
+			WriteError:    _write_err515,
 			EndpointError: err,
 		}
 	}
@@ -25634,7 +25889,7 @@ type apiServiceProcessorQueryTransformJobs struct {
 }
 
 func (p *apiServiceProcessorQueryTransformJobs) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err506 thrift.TException
+	var _write_err517 thrift.TException
 	args := ApiServiceQueryTransformJobsArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -25691,22 +25946,22 @@ func (p *apiServiceProcessorQueryTransformJobs) Process(ctx context.Context, seq
 				}
 			}
 		}
-		_exc507 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryTransformJobs: " + err2.Error())
+		_exc518 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryTransformJobs: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "queryTransformJobs", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err506 = thrift.WrapTException(err2)
+			_write_err517 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc507.Write(ctx, oprot); _write_err506 == nil && err2 != nil {
-			_write_err506 = thrift.WrapTException(err2)
+		if err2 := _exc518.Write(ctx, oprot); _write_err517 == nil && err2 != nil {
+			_write_err517 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err506 == nil && err2 != nil {
-			_write_err506 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err517 == nil && err2 != nil {
+			_write_err517 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err506 == nil && err2 != nil {
-			_write_err506 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err517 == nil && err2 != nil {
+			_write_err517 = thrift.WrapTException(err2)
 		}
-		if _write_err506 != nil {
+		if _write_err517 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err506,
+				WriteError:    _write_err517,
 				EndpointError: err,
 			}
 		}
@@ -25716,20 +25971,20 @@ func (p *apiServiceProcessorQueryTransformJobs) Process(ctx context.Context, seq
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "queryTransformJobs", thrift.REPLY, seqId); err2 != nil {
-		_write_err506 = thrift.WrapTException(err2)
+		_write_err517 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err506 == nil && err2 != nil {
-		_write_err506 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err517 == nil && err2 != nil {
+		_write_err517 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err506 == nil && err2 != nil {
-		_write_err506 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err517 == nil && err2 != nil {
+		_write_err517 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err506 == nil && err2 != nil {
-		_write_err506 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err517 == nil && err2 != nil {
+		_write_err517 = thrift.WrapTException(err2)
 	}
-	if _write_err506 != nil {
+	if _write_err517 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err506,
+			WriteError:    _write_err517,
 			EndpointError: err,
 		}
 	}
@@ -25741,7 +25996,7 @@ type apiServiceProcessorCountTransformJobs struct {
 }
 
 func (p *apiServiceProcessorCountTransformJobs) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err508 thrift.TException
+	var _write_err519 thrift.TException
 	args := ApiServiceCountTransformJobsArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -25798,22 +26053,22 @@ func (p *apiServiceProcessorCountTransformJobs) Process(ctx context.Context, seq
 				}
 			}
 		}
-		_exc509 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countTransformJobs: " + err2.Error())
+		_exc520 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countTransformJobs: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "countTransformJobs", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err508 = thrift.WrapTException(err2)
+			_write_err519 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc509.Write(ctx, oprot); _write_err508 == nil && err2 != nil {
-			_write_err508 = thrift.WrapTException(err2)
+		if err2 := _exc520.Write(ctx, oprot); _write_err519 == nil && err2 != nil {
+			_write_err519 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err508 == nil && err2 != nil {
-			_write_err508 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err519 == nil && err2 != nil {
+			_write_err519 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err508 == nil && err2 != nil {
-			_write_err508 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err519 == nil && err2 != nil {
+			_write_err519 = thrift.WrapTException(err2)
 		}
-		if _write_err508 != nil {
+		if _write_err519 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err508,
+				WriteError:    _write_err519,
 				EndpointError: err,
 			}
 		}
@@ -25823,20 +26078,20 @@ func (p *apiServiceProcessorCountTransformJobs) Process(ctx context.Context, seq
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "countTransformJobs", thrift.REPLY, seqId); err2 != nil {
-		_write_err508 = thrift.WrapTException(err2)
+		_write_err519 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err508 == nil && err2 != nil {
-		_write_err508 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err519 == nil && err2 != nil {
+		_write_err519 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err508 == nil && err2 != nil {
-		_write_err508 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err519 == nil && err2 != nil {
+		_write_err519 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err508 == nil && err2 != nil {
-		_write_err508 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err519 == nil && err2 != nil {
+		_write_err519 = thrift.WrapTException(err2)
 	}
-	if _write_err508 != nil {
+	if _write_err519 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err508,
+			WriteError:    _write_err519,
 			EndpointError: err,
 		}
 	}
@@ -25848,7 +26103,7 @@ type apiServiceProcessorGetTransformJob struct {
 }
 
 func (p *apiServiceProcessorGetTransformJob) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err510 thrift.TException
+	var _write_err521 thrift.TException
 	args := ApiServiceGetTransformJobArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -25905,22 +26160,22 @@ func (p *apiServiceProcessorGetTransformJob) Process(ctx context.Context, seqId 
 				}
 			}
 		}
-		_exc511 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getTransformJob: " + err2.Error())
+		_exc522 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getTransformJob: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getTransformJob", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err510 = thrift.WrapTException(err2)
+			_write_err521 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc511.Write(ctx, oprot); _write_err510 == nil && err2 != nil {
-			_write_err510 = thrift.WrapTException(err2)
+		if err2 := _exc522.Write(ctx, oprot); _write_err521 == nil && err2 != nil {
+			_write_err521 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err510 == nil && err2 != nil {
-			_write_err510 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err521 == nil && err2 != nil {
+			_write_err521 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err510 == nil && err2 != nil {
-			_write_err510 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err521 == nil && err2 != nil {
+			_write_err521 = thrift.WrapTException(err2)
 		}
-		if _write_err510 != nil {
+		if _write_err521 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err510,
+				WriteError:    _write_err521,
 				EndpointError: err,
 			}
 		}
@@ -25930,20 +26185,20 @@ func (p *apiServiceProcessorGetTransformJob) Process(ctx context.Context, seqId 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getTransformJob", thrift.REPLY, seqId); err2 != nil {
-		_write_err510 = thrift.WrapTException(err2)
+		_write_err521 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err510 == nil && err2 != nil {
-		_write_err510 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err521 == nil && err2 != nil {
+		_write_err521 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err510 == nil && err2 != nil {
-		_write_err510 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err521 == nil && err2 != nil {
+		_write_err521 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err510 == nil && err2 != nil {
-		_write_err510 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err521 == nil && err2 != nil {
+		_write_err521 = thrift.WrapTException(err2)
 	}
-	if _write_err510 != nil {
+	if _write_err521 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err510,
+			WriteError:    _write_err521,
 			EndpointError: err,
 		}
 	}
@@ -25955,7 +26210,7 @@ type apiServiceProcessorCommitTransformJob struct {
 }
 
 func (p *apiServiceProcessorCommitTransformJob) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err512 thrift.TException
+	var _write_err523 thrift.TException
 	args := ApiServiceCommitTransformJobArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -26012,22 +26267,22 @@ func (p *apiServiceProcessorCommitTransformJob) Process(ctx context.Context, seq
 				}
 			}
 		}
-		_exc513 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing commitTransformJob: " + err2.Error())
+		_exc524 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing commitTransformJob: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "commitTransformJob", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err512 = thrift.WrapTException(err2)
+			_write_err523 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc513.Write(ctx, oprot); _write_err512 == nil && err2 != nil {
-			_write_err512 = thrift.WrapTException(err2)
+		if err2 := _exc524.Write(ctx, oprot); _write_err523 == nil && err2 != nil {
+			_write_err523 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err512 == nil && err2 != nil {
-			_write_err512 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err523 == nil && err2 != nil {
+			_write_err523 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err512 == nil && err2 != nil {
-			_write_err512 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err523 == nil && err2 != nil {
+			_write_err523 = thrift.WrapTException(err2)
 		}
-		if _write_err512 != nil {
+		if _write_err523 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err512,
+				WriteError:    _write_err523,
 				EndpointError: err,
 			}
 		}
@@ -26037,20 +26292,20 @@ func (p *apiServiceProcessorCommitTransformJob) Process(ctx context.Context, seq
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "commitTransformJob", thrift.REPLY, seqId); err2 != nil {
-		_write_err512 = thrift.WrapTException(err2)
+		_write_err523 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err512 == nil && err2 != nil {
-		_write_err512 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err523 == nil && err2 != nil {
+		_write_err523 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err512 == nil && err2 != nil {
-		_write_err512 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err523 == nil && err2 != nil {
+		_write_err523 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err512 == nil && err2 != nil {
-		_write_err512 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err523 == nil && err2 != nil {
+		_write_err523 = thrift.WrapTException(err2)
 	}
-	if _write_err512 != nil {
+	if _write_err523 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err512,
+			WriteError:    _write_err523,
 			EndpointError: err,
 		}
 	}
@@ -26062,7 +26317,7 @@ type apiServiceProcessorGetTransformJobStatus struct {
 }
 
 func (p *apiServiceProcessorGetTransformJobStatus) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err514 thrift.TException
+	var _write_err525 thrift.TException
 	args := ApiServiceGetTransformJobStatusArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -26119,22 +26374,22 @@ func (p *apiServiceProcessorGetTransformJobStatus) Process(ctx context.Context, 
 				}
 			}
 		}
-		_exc515 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getTransformJobStatus: " + err2.Error())
+		_exc526 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getTransformJobStatus: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getTransformJobStatus", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err514 = thrift.WrapTException(err2)
+			_write_err525 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc515.Write(ctx, oprot); _write_err514 == nil && err2 != nil {
-			_write_err514 = thrift.WrapTException(err2)
+		if err2 := _exc526.Write(ctx, oprot); _write_err525 == nil && err2 != nil {
+			_write_err525 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err514 == nil && err2 != nil {
-			_write_err514 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err525 == nil && err2 != nil {
+			_write_err525 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err514 == nil && err2 != nil {
-			_write_err514 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err525 == nil && err2 != nil {
+			_write_err525 = thrift.WrapTException(err2)
 		}
-		if _write_err514 != nil {
+		if _write_err525 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err514,
+				WriteError:    _write_err525,
 				EndpointError: err,
 			}
 		}
@@ -26144,20 +26399,20 @@ func (p *apiServiceProcessorGetTransformJobStatus) Process(ctx context.Context, 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getTransformJobStatus", thrift.REPLY, seqId); err2 != nil {
-		_write_err514 = thrift.WrapTException(err2)
+		_write_err525 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err514 == nil && err2 != nil {
-		_write_err514 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err525 == nil && err2 != nil {
+		_write_err525 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err514 == nil && err2 != nil {
-		_write_err514 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err525 == nil && err2 != nil {
+		_write_err525 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err514 == nil && err2 != nil {
-		_write_err514 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err525 == nil && err2 != nil {
+		_write_err525 = thrift.WrapTException(err2)
 	}
-	if _write_err514 != nil {
+	if _write_err525 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err514,
+			WriteError:    _write_err525,
 			EndpointError: err,
 		}
 	}
@@ -26169,7 +26424,7 @@ type apiServiceProcessorCancelTransformJob struct {
 }
 
 func (p *apiServiceProcessorCancelTransformJob) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err516 thrift.TException
+	var _write_err527 thrift.TException
 	args := ApiServiceCancelTransformJobArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -26226,22 +26481,22 @@ func (p *apiServiceProcessorCancelTransformJob) Process(ctx context.Context, seq
 				}
 			}
 		}
-		_exc517 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing cancelTransformJob: " + err2.Error())
+		_exc528 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing cancelTransformJob: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "cancelTransformJob", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err516 = thrift.WrapTException(err2)
+			_write_err527 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc517.Write(ctx, oprot); _write_err516 == nil && err2 != nil {
-			_write_err516 = thrift.WrapTException(err2)
+		if err2 := _exc528.Write(ctx, oprot); _write_err527 == nil && err2 != nil {
+			_write_err527 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err516 == nil && err2 != nil {
-			_write_err516 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err527 == nil && err2 != nil {
+			_write_err527 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err516 == nil && err2 != nil {
-			_write_err516 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err527 == nil && err2 != nil {
+			_write_err527 = thrift.WrapTException(err2)
 		}
-		if _write_err516 != nil {
+		if _write_err527 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err516,
+				WriteError:    _write_err527,
 				EndpointError: err,
 			}
 		}
@@ -26251,20 +26506,20 @@ func (p *apiServiceProcessorCancelTransformJob) Process(ctx context.Context, seq
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "cancelTransformJob", thrift.REPLY, seqId); err2 != nil {
-		_write_err516 = thrift.WrapTException(err2)
+		_write_err527 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err516 == nil && err2 != nil {
-		_write_err516 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err527 == nil && err2 != nil {
+		_write_err527 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err516 == nil && err2 != nil {
-		_write_err516 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err527 == nil && err2 != nil {
+		_write_err527 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err516 == nil && err2 != nil {
-		_write_err516 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err527 == nil && err2 != nil {
+		_write_err527 = thrift.WrapTException(err2)
 	}
-	if _write_err516 != nil {
+	if _write_err527 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err516,
+			WriteError:    _write_err527,
 			EndpointError: err,
 		}
 	}
@@ -26276,7 +26531,7 @@ type apiServiceProcessorGetTransformJobBloodline struct {
 }
 
 func (p *apiServiceProcessorGetTransformJobBloodline) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err518 thrift.TException
+	var _write_err529 thrift.TException
 	args := ApiServiceGetTransformJobBloodlineArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -26333,22 +26588,22 @@ func (p *apiServiceProcessorGetTransformJobBloodline) Process(ctx context.Contex
 				}
 			}
 		}
-		_exc519 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getTransformJobBloodline: " + err2.Error())
+		_exc530 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getTransformJobBloodline: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getTransformJobBloodline", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err518 = thrift.WrapTException(err2)
+			_write_err529 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc519.Write(ctx, oprot); _write_err518 == nil && err2 != nil {
-			_write_err518 = thrift.WrapTException(err2)
+		if err2 := _exc530.Write(ctx, oprot); _write_err529 == nil && err2 != nil {
+			_write_err529 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err518 == nil && err2 != nil {
-			_write_err518 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err529 == nil && err2 != nil {
+			_write_err529 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err518 == nil && err2 != nil {
-			_write_err518 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err529 == nil && err2 != nil {
+			_write_err529 = thrift.WrapTException(err2)
 		}
-		if _write_err518 != nil {
+		if _write_err529 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err518,
+				WriteError:    _write_err529,
 				EndpointError: err,
 			}
 		}
@@ -26358,20 +26613,20 @@ func (p *apiServiceProcessorGetTransformJobBloodline) Process(ctx context.Contex
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getTransformJobBloodline", thrift.REPLY, seqId); err2 != nil {
-		_write_err518 = thrift.WrapTException(err2)
+		_write_err529 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err518 == nil && err2 != nil {
-		_write_err518 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err529 == nil && err2 != nil {
+		_write_err529 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err518 == nil && err2 != nil {
-		_write_err518 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err529 == nil && err2 != nil {
+		_write_err529 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err518 == nil && err2 != nil {
-		_write_err518 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err529 == nil && err2 != nil {
+		_write_err529 = thrift.WrapTException(err2)
 	}
-	if _write_err518 != nil {
+	if _write_err529 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err518,
+			WriteError:    _write_err529,
 			EndpointError: err,
 		}
 	}
@@ -26383,7 +26638,7 @@ type apiServiceProcessorGetUserManualFile struct {
 }
 
 func (p *apiServiceProcessorGetUserManualFile) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err520 thrift.TException
+	var _write_err531 thrift.TException
 	args := ApiServiceGetUserManualFileArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -26440,22 +26695,22 @@ func (p *apiServiceProcessorGetUserManualFile) Process(ctx context.Context, seqI
 				}
 			}
 		}
-		_exc521 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getUserManualFile: " + err2.Error())
+		_exc532 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getUserManualFile: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getUserManualFile", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err520 = thrift.WrapTException(err2)
+			_write_err531 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc521.Write(ctx, oprot); _write_err520 == nil && err2 != nil {
-			_write_err520 = thrift.WrapTException(err2)
+		if err2 := _exc532.Write(ctx, oprot); _write_err531 == nil && err2 != nil {
+			_write_err531 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err520 == nil && err2 != nil {
-			_write_err520 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err531 == nil && err2 != nil {
+			_write_err531 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err520 == nil && err2 != nil {
-			_write_err520 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err531 == nil && err2 != nil {
+			_write_err531 = thrift.WrapTException(err2)
 		}
-		if _write_err520 != nil {
+		if _write_err531 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err520,
+				WriteError:    _write_err531,
 				EndpointError: err,
 			}
 		}
@@ -26465,20 +26720,20 @@ func (p *apiServiceProcessorGetUserManualFile) Process(ctx context.Context, seqI
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getUserManualFile", thrift.REPLY, seqId); err2 != nil {
-		_write_err520 = thrift.WrapTException(err2)
+		_write_err531 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err520 == nil && err2 != nil {
-		_write_err520 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err531 == nil && err2 != nil {
+		_write_err531 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err520 == nil && err2 != nil {
-		_write_err520 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err531 == nil && err2 != nil {
+		_write_err531 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err520 == nil && err2 != nil {
-		_write_err520 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err531 == nil && err2 != nil {
+		_write_err531 = thrift.WrapTException(err2)
 	}
-	if _write_err520 != nil {
+	if _write_err531 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err520,
+			WriteError:    _write_err531,
 			EndpointError: err,
 		}
 	}
@@ -26490,7 +26745,7 @@ type apiServiceProcessorGenerateJavaCode struct {
 }
 
 func (p *apiServiceProcessorGenerateJavaCode) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err522 thrift.TException
+	var _write_err533 thrift.TException
 	args := ApiServiceGenerateJavaCodeArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -26547,22 +26802,22 @@ func (p *apiServiceProcessorGenerateJavaCode) Process(ctx context.Context, seqId
 				}
 			}
 		}
-		_exc523 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing generateJavaCode: " + err2.Error())
+		_exc534 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing generateJavaCode: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "generateJavaCode", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err522 = thrift.WrapTException(err2)
+			_write_err533 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc523.Write(ctx, oprot); _write_err522 == nil && err2 != nil {
-			_write_err522 = thrift.WrapTException(err2)
+		if err2 := _exc534.Write(ctx, oprot); _write_err533 == nil && err2 != nil {
+			_write_err533 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err522 == nil && err2 != nil {
-			_write_err522 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err533 == nil && err2 != nil {
+			_write_err533 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err522 == nil && err2 != nil {
-			_write_err522 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err533 == nil && err2 != nil {
+			_write_err533 = thrift.WrapTException(err2)
 		}
-		if _write_err522 != nil {
+		if _write_err533 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err522,
+				WriteError:    _write_err533,
 				EndpointError: err,
 			}
 		}
@@ -26572,20 +26827,20 @@ func (p *apiServiceProcessorGenerateJavaCode) Process(ctx context.Context, seqId
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "generateJavaCode", thrift.REPLY, seqId); err2 != nil {
-		_write_err522 = thrift.WrapTException(err2)
+		_write_err533 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err522 == nil && err2 != nil {
-		_write_err522 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err533 == nil && err2 != nil {
+		_write_err533 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err522 == nil && err2 != nil {
-		_write_err522 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err533 == nil && err2 != nil {
+		_write_err533 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err522 == nil && err2 != nil {
-		_write_err522 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err533 == nil && err2 != nil {
+		_write_err533 = thrift.WrapTException(err2)
 	}
-	if _write_err522 != nil {
+	if _write_err533 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err522,
+			WriteError:    _write_err533,
 			EndpointError: err,
 		}
 	}
@@ -26597,7 +26852,7 @@ type apiServiceProcessorGenerateGoCode struct {
 }
 
 func (p *apiServiceProcessorGenerateGoCode) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err524 thrift.TException
+	var _write_err535 thrift.TException
 	args := ApiServiceGenerateGoCodeArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -26654,22 +26909,22 @@ func (p *apiServiceProcessorGenerateGoCode) Process(ctx context.Context, seqId i
 				}
 			}
 		}
-		_exc525 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing generateGoCode: " + err2.Error())
+		_exc536 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing generateGoCode: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "generateGoCode", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err524 = thrift.WrapTException(err2)
+			_write_err535 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc525.Write(ctx, oprot); _write_err524 == nil && err2 != nil {
-			_write_err524 = thrift.WrapTException(err2)
+		if err2 := _exc536.Write(ctx, oprot); _write_err535 == nil && err2 != nil {
+			_write_err535 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err524 == nil && err2 != nil {
-			_write_err524 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err535 == nil && err2 != nil {
+			_write_err535 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err524 == nil && err2 != nil {
-			_write_err524 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err535 == nil && err2 != nil {
+			_write_err535 = thrift.WrapTException(err2)
 		}
-		if _write_err524 != nil {
+		if _write_err535 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err524,
+				WriteError:    _write_err535,
 				EndpointError: err,
 			}
 		}
@@ -26679,20 +26934,20 @@ func (p *apiServiceProcessorGenerateGoCode) Process(ctx context.Context, seqId i
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "generateGoCode", thrift.REPLY, seqId); err2 != nil {
-		_write_err524 = thrift.WrapTException(err2)
+		_write_err535 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err524 == nil && err2 != nil {
-		_write_err524 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err535 == nil && err2 != nil {
+		_write_err535 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err524 == nil && err2 != nil {
-		_write_err524 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err535 == nil && err2 != nil {
+		_write_err535 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err524 == nil && err2 != nil {
-		_write_err524 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err535 == nil && err2 != nil {
+		_write_err535 = thrift.WrapTException(err2)
 	}
-	if _write_err524 != nil {
+	if _write_err535 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err524,
+			WriteError:    _write_err535,
 			EndpointError: err,
 		}
 	}
@@ -26704,7 +26959,7 @@ type apiServiceProcessorGeneratePythonCode struct {
 }
 
 func (p *apiServiceProcessorGeneratePythonCode) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err526 thrift.TException
+	var _write_err537 thrift.TException
 	args := ApiServiceGeneratePythonCodeArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -26761,22 +27016,22 @@ func (p *apiServiceProcessorGeneratePythonCode) Process(ctx context.Context, seq
 				}
 			}
 		}
-		_exc527 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing generatePythonCode: " + err2.Error())
+		_exc538 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing generatePythonCode: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "generatePythonCode", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err526 = thrift.WrapTException(err2)
+			_write_err537 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc527.Write(ctx, oprot); _write_err526 == nil && err2 != nil {
-			_write_err526 = thrift.WrapTException(err2)
+		if err2 := _exc538.Write(ctx, oprot); _write_err537 == nil && err2 != nil {
+			_write_err537 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err526 == nil && err2 != nil {
-			_write_err526 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err537 == nil && err2 != nil {
+			_write_err537 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err526 == nil && err2 != nil {
-			_write_err526 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err537 == nil && err2 != nil {
+			_write_err537 = thrift.WrapTException(err2)
 		}
-		if _write_err526 != nil {
+		if _write_err537 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err526,
+				WriteError:    _write_err537,
 				EndpointError: err,
 			}
 		}
@@ -26786,20 +27041,20 @@ func (p *apiServiceProcessorGeneratePythonCode) Process(ctx context.Context, seq
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "generatePythonCode", thrift.REPLY, seqId); err2 != nil {
-		_write_err526 = thrift.WrapTException(err2)
+		_write_err537 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err526 == nil && err2 != nil {
-		_write_err526 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err537 == nil && err2 != nil {
+		_write_err537 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err526 == nil && err2 != nil {
-		_write_err526 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err537 == nil && err2 != nil {
+		_write_err537 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err526 == nil && err2 != nil {
-		_write_err526 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err537 == nil && err2 != nil {
+		_write_err537 = thrift.WrapTException(err2)
 	}
-	if _write_err526 != nil {
+	if _write_err537 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err526,
+			WriteError:    _write_err537,
 			EndpointError: err,
 		}
 	}
@@ -26811,7 +27066,7 @@ type apiServiceProcessorGenerateRestfulApiCode struct {
 }
 
 func (p *apiServiceProcessorGenerateRestfulApiCode) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err528 thrift.TException
+	var _write_err539 thrift.TException
 	args := ApiServiceGenerateRestfulApiCodeArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -26868,22 +27123,22 @@ func (p *apiServiceProcessorGenerateRestfulApiCode) Process(ctx context.Context,
 				}
 			}
 		}
-		_exc529 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing generateRestfulApiCode: " + err2.Error())
+		_exc540 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing generateRestfulApiCode: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "generateRestfulApiCode", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err528 = thrift.WrapTException(err2)
+			_write_err539 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc529.Write(ctx, oprot); _write_err528 == nil && err2 != nil {
-			_write_err528 = thrift.WrapTException(err2)
+		if err2 := _exc540.Write(ctx, oprot); _write_err539 == nil && err2 != nil {
+			_write_err539 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err528 == nil && err2 != nil {
-			_write_err528 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err539 == nil && err2 != nil {
+			_write_err539 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err528 == nil && err2 != nil {
-			_write_err528 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err539 == nil && err2 != nil {
+			_write_err539 = thrift.WrapTException(err2)
 		}
-		if _write_err528 != nil {
+		if _write_err539 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err528,
+				WriteError:    _write_err539,
 				EndpointError: err,
 			}
 		}
@@ -26893,20 +27148,20 @@ func (p *apiServiceProcessorGenerateRestfulApiCode) Process(ctx context.Context,
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "generateRestfulApiCode", thrift.REPLY, seqId); err2 != nil {
-		_write_err528 = thrift.WrapTException(err2)
+		_write_err539 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err528 == nil && err2 != nil {
-		_write_err528 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err539 == nil && err2 != nil {
+		_write_err539 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err528 == nil && err2 != nil {
-		_write_err528 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err539 == nil && err2 != nil {
+		_write_err539 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err528 == nil && err2 != nil {
-		_write_err528 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err539 == nil && err2 != nil {
+		_write_err539 = thrift.WrapTException(err2)
 	}
-	if _write_err528 != nil {
+	if _write_err539 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err528,
+			WriteError:    _write_err539,
 			EndpointError: err,
 		}
 	}
@@ -26918,7 +27173,7 @@ type apiServiceProcessorGenerateAllCode struct {
 }
 
 func (p *apiServiceProcessorGenerateAllCode) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err530 thrift.TException
+	var _write_err541 thrift.TException
 	args := ApiServiceGenerateAllCodeArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -26975,22 +27230,22 @@ func (p *apiServiceProcessorGenerateAllCode) Process(ctx context.Context, seqId 
 				}
 			}
 		}
-		_exc531 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing generateAllCode: " + err2.Error())
+		_exc542 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing generateAllCode: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "generateAllCode", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err530 = thrift.WrapTException(err2)
+			_write_err541 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc531.Write(ctx, oprot); _write_err530 == nil && err2 != nil {
-			_write_err530 = thrift.WrapTException(err2)
+		if err2 := _exc542.Write(ctx, oprot); _write_err541 == nil && err2 != nil {
+			_write_err541 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err530 == nil && err2 != nil {
-			_write_err530 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err541 == nil && err2 != nil {
+			_write_err541 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err530 == nil && err2 != nil {
-			_write_err530 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err541 == nil && err2 != nil {
+			_write_err541 = thrift.WrapTException(err2)
 		}
-		if _write_err530 != nil {
+		if _write_err541 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err530,
+				WriteError:    _write_err541,
 				EndpointError: err,
 			}
 		}
@@ -27000,20 +27255,20 @@ func (p *apiServiceProcessorGenerateAllCode) Process(ctx context.Context, seqId 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "generateAllCode", thrift.REPLY, seqId); err2 != nil {
-		_write_err530 = thrift.WrapTException(err2)
+		_write_err541 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err530 == nil && err2 != nil {
-		_write_err530 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err541 == nil && err2 != nil {
+		_write_err541 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err530 == nil && err2 != nil {
-		_write_err530 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err541 == nil && err2 != nil {
+		_write_err541 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err530 == nil && err2 != nil {
-		_write_err530 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err541 == nil && err2 != nil {
+		_write_err541 = thrift.WrapTException(err2)
 	}
-	if _write_err530 != nil {
+	if _write_err541 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err530,
+			WriteError:    _write_err541,
 			EndpointError: err,
 		}
 	}
@@ -27025,7 +27280,7 @@ type apiServiceProcessorGetGenerationStatus struct {
 }
 
 func (p *apiServiceProcessorGetGenerationStatus) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err532 thrift.TException
+	var _write_err543 thrift.TException
 	args := ApiServiceGetGenerationStatusArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -27082,22 +27337,22 @@ func (p *apiServiceProcessorGetGenerationStatus) Process(ctx context.Context, se
 				}
 			}
 		}
-		_exc533 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getGenerationStatus: " + err2.Error())
+		_exc544 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getGenerationStatus: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getGenerationStatus", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err532 = thrift.WrapTException(err2)
+			_write_err543 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc533.Write(ctx, oprot); _write_err532 == nil && err2 != nil {
-			_write_err532 = thrift.WrapTException(err2)
+		if err2 := _exc544.Write(ctx, oprot); _write_err543 == nil && err2 != nil {
+			_write_err543 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err532 == nil && err2 != nil {
-			_write_err532 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err543 == nil && err2 != nil {
+			_write_err543 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err532 == nil && err2 != nil {
-			_write_err532 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err543 == nil && err2 != nil {
+			_write_err543 = thrift.WrapTException(err2)
 		}
-		if _write_err532 != nil {
+		if _write_err543 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err532,
+				WriteError:    _write_err543,
 				EndpointError: err,
 			}
 		}
@@ -27107,20 +27362,20 @@ func (p *apiServiceProcessorGetGenerationStatus) Process(ctx context.Context, se
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getGenerationStatus", thrift.REPLY, seqId); err2 != nil {
-		_write_err532 = thrift.WrapTException(err2)
+		_write_err543 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err532 == nil && err2 != nil {
-		_write_err532 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err543 == nil && err2 != nil {
+		_write_err543 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err532 == nil && err2 != nil {
-		_write_err532 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err543 == nil && err2 != nil {
+		_write_err543 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err532 == nil && err2 != nil {
-		_write_err532 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err543 == nil && err2 != nil {
+		_write_err543 = thrift.WrapTException(err2)
 	}
-	if _write_err532 != nil {
+	if _write_err543 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err532,
+			WriteError:    _write_err543,
 			EndpointError: err,
 		}
 	}
@@ -27132,7 +27387,7 @@ type apiServiceProcessorValidateThriftFile struct {
 }
 
 func (p *apiServiceProcessorValidateThriftFile) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err534 thrift.TException
+	var _write_err545 thrift.TException
 	args := ApiServiceValidateThriftFileArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -27189,22 +27444,22 @@ func (p *apiServiceProcessorValidateThriftFile) Process(ctx context.Context, seq
 				}
 			}
 		}
-		_exc535 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing validateThriftFile: " + err2.Error())
+		_exc546 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing validateThriftFile: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "validateThriftFile", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err534 = thrift.WrapTException(err2)
+			_write_err545 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc535.Write(ctx, oprot); _write_err534 == nil && err2 != nil {
-			_write_err534 = thrift.WrapTException(err2)
+		if err2 := _exc546.Write(ctx, oprot); _write_err545 == nil && err2 != nil {
+			_write_err545 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err534 == nil && err2 != nil {
-			_write_err534 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err545 == nil && err2 != nil {
+			_write_err545 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err534 == nil && err2 != nil {
-			_write_err534 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err545 == nil && err2 != nil {
+			_write_err545 = thrift.WrapTException(err2)
 		}
-		if _write_err534 != nil {
+		if _write_err545 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err534,
+				WriteError:    _write_err545,
 				EndpointError: err,
 			}
 		}
@@ -27214,20 +27469,20 @@ func (p *apiServiceProcessorValidateThriftFile) Process(ctx context.Context, seq
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "validateThriftFile", thrift.REPLY, seqId); err2 != nil {
-		_write_err534 = thrift.WrapTException(err2)
+		_write_err545 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err534 == nil && err2 != nil {
-		_write_err534 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err545 == nil && err2 != nil {
+		_write_err545 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err534 == nil && err2 != nil {
-		_write_err534 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err545 == nil && err2 != nil {
+		_write_err545 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err534 == nil && err2 != nil {
-		_write_err534 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err545 == nil && err2 != nil {
+		_write_err545 = thrift.WrapTException(err2)
 	}
-	if _write_err534 != nil {
+	if _write_err545 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err534,
+			WriteError:    _write_err545,
 			EndpointError: err,
 		}
 	}
@@ -27239,7 +27494,7 @@ type apiServiceProcessorLogin struct {
 }
 
 func (p *apiServiceProcessorLogin) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err536 thrift.TException
+	var _write_err547 thrift.TException
 	args := ApiServiceLoginArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -27296,22 +27551,22 @@ func (p *apiServiceProcessorLogin) Process(ctx context.Context, seqId int32, ipr
 				}
 			}
 		}
-		_exc537 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing login: " + err2.Error())
+		_exc548 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing login: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "login", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err536 = thrift.WrapTException(err2)
+			_write_err547 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc537.Write(ctx, oprot); _write_err536 == nil && err2 != nil {
-			_write_err536 = thrift.WrapTException(err2)
+		if err2 := _exc548.Write(ctx, oprot); _write_err547 == nil && err2 != nil {
+			_write_err547 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err536 == nil && err2 != nil {
-			_write_err536 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err547 == nil && err2 != nil {
+			_write_err547 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err536 == nil && err2 != nil {
-			_write_err536 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err547 == nil && err2 != nil {
+			_write_err547 = thrift.WrapTException(err2)
 		}
-		if _write_err536 != nil {
+		if _write_err547 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err536,
+				WriteError:    _write_err547,
 				EndpointError: err,
 			}
 		}
@@ -27321,20 +27576,20 @@ func (p *apiServiceProcessorLogin) Process(ctx context.Context, seqId int32, ipr
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "login", thrift.REPLY, seqId); err2 != nil {
-		_write_err536 = thrift.WrapTException(err2)
+		_write_err547 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err536 == nil && err2 != nil {
-		_write_err536 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err547 == nil && err2 != nil {
+		_write_err547 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err536 == nil && err2 != nil {
-		_write_err536 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err547 == nil && err2 != nil {
+		_write_err547 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err536 == nil && err2 != nil {
-		_write_err536 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err547 == nil && err2 != nil {
+		_write_err547 = thrift.WrapTException(err2)
 	}
-	if _write_err536 != nil {
+	if _write_err547 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err536,
+			WriteError:    _write_err547,
 			EndpointError: err,
 		}
 	}
@@ -27346,7 +27601,7 @@ type apiServiceProcessorRefreshToken struct {
 }
 
 func (p *apiServiceProcessorRefreshToken) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err538 thrift.TException
+	var _write_err549 thrift.TException
 	args := ApiServiceRefreshTokenArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -27403,22 +27658,22 @@ func (p *apiServiceProcessorRefreshToken) Process(ctx context.Context, seqId int
 				}
 			}
 		}
-		_exc539 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing refreshToken: " + err2.Error())
+		_exc550 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing refreshToken: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "refreshToken", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err538 = thrift.WrapTException(err2)
+			_write_err549 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc539.Write(ctx, oprot); _write_err538 == nil && err2 != nil {
-			_write_err538 = thrift.WrapTException(err2)
+		if err2 := _exc550.Write(ctx, oprot); _write_err549 == nil && err2 != nil {
+			_write_err549 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err538 == nil && err2 != nil {
-			_write_err538 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err549 == nil && err2 != nil {
+			_write_err549 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err538 == nil && err2 != nil {
-			_write_err538 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err549 == nil && err2 != nil {
+			_write_err549 = thrift.WrapTException(err2)
 		}
-		if _write_err538 != nil {
+		if _write_err549 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err538,
+				WriteError:    _write_err549,
 				EndpointError: err,
 			}
 		}
@@ -27428,20 +27683,20 @@ func (p *apiServiceProcessorRefreshToken) Process(ctx context.Context, seqId int
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "refreshToken", thrift.REPLY, seqId); err2 != nil {
-		_write_err538 = thrift.WrapTException(err2)
+		_write_err549 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err538 == nil && err2 != nil {
-		_write_err538 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err549 == nil && err2 != nil {
+		_write_err549 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err538 == nil && err2 != nil {
-		_write_err538 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err549 == nil && err2 != nil {
+		_write_err549 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err538 == nil && err2 != nil {
-		_write_err538 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err549 == nil && err2 != nil {
+		_write_err549 = thrift.WrapTException(err2)
 	}
-	if _write_err538 != nil {
+	if _write_err549 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err538,
+			WriteError:    _write_err549,
 			EndpointError: err,
 		}
 	}
@@ -27453,7 +27708,7 @@ type apiServiceProcessorVerifyToken struct {
 }
 
 func (p *apiServiceProcessorVerifyToken) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err540 thrift.TException
+	var _write_err551 thrift.TException
 	args := ApiServiceVerifyTokenArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -27510,22 +27765,22 @@ func (p *apiServiceProcessorVerifyToken) Process(ctx context.Context, seqId int3
 				}
 			}
 		}
-		_exc541 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing verifyToken: " + err2.Error())
+		_exc552 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing verifyToken: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "verifyToken", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err540 = thrift.WrapTException(err2)
+			_write_err551 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc541.Write(ctx, oprot); _write_err540 == nil && err2 != nil {
-			_write_err540 = thrift.WrapTException(err2)
+		if err2 := _exc552.Write(ctx, oprot); _write_err551 == nil && err2 != nil {
+			_write_err551 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err540 == nil && err2 != nil {
-			_write_err540 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err551 == nil && err2 != nil {
+			_write_err551 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err540 == nil && err2 != nil {
-			_write_err540 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err551 == nil && err2 != nil {
+			_write_err551 = thrift.WrapTException(err2)
 		}
-		if _write_err540 != nil {
+		if _write_err551 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err540,
+				WriteError:    _write_err551,
 				EndpointError: err,
 			}
 		}
@@ -27535,20 +27790,20 @@ func (p *apiServiceProcessorVerifyToken) Process(ctx context.Context, seqId int3
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "verifyToken", thrift.REPLY, seqId); err2 != nil {
-		_write_err540 = thrift.WrapTException(err2)
+		_write_err551 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err540 == nil && err2 != nil {
-		_write_err540 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err551 == nil && err2 != nil {
+		_write_err551 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err540 == nil && err2 != nil {
-		_write_err540 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err551 == nil && err2 != nil {
+		_write_err551 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err540 == nil && err2 != nil {
-		_write_err540 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err551 == nil && err2 != nil {
+		_write_err551 = thrift.WrapTException(err2)
 	}
-	if _write_err540 != nil {
+	if _write_err551 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err540,
+			WriteError:    _write_err551,
 			EndpointError: err,
 		}
 	}
@@ -27560,7 +27815,7 @@ type apiServiceProcessorLogout struct {
 }
 
 func (p *apiServiceProcessorLogout) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err542 thrift.TException
+	var _write_err553 thrift.TException
 	args := ApiServiceLogoutArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -27617,22 +27872,22 @@ func (p *apiServiceProcessorLogout) Process(ctx context.Context, seqId int32, ip
 				}
 			}
 		}
-		_exc543 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing logout: " + err2.Error())
+		_exc554 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing logout: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "logout", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err542 = thrift.WrapTException(err2)
+			_write_err553 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc543.Write(ctx, oprot); _write_err542 == nil && err2 != nil {
-			_write_err542 = thrift.WrapTException(err2)
+		if err2 := _exc554.Write(ctx, oprot); _write_err553 == nil && err2 != nil {
+			_write_err553 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err542 == nil && err2 != nil {
-			_write_err542 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err553 == nil && err2 != nil {
+			_write_err553 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err542 == nil && err2 != nil {
-			_write_err542 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err553 == nil && err2 != nil {
+			_write_err553 = thrift.WrapTException(err2)
 		}
-		if _write_err542 != nil {
+		if _write_err553 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err542,
+				WriteError:    _write_err553,
 				EndpointError: err,
 			}
 		}
@@ -27642,20 +27897,20 @@ func (p *apiServiceProcessorLogout) Process(ctx context.Context, seqId int32, ip
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "logout", thrift.REPLY, seqId); err2 != nil {
-		_write_err542 = thrift.WrapTException(err2)
+		_write_err553 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err542 == nil && err2 != nil {
-		_write_err542 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err553 == nil && err2 != nil {
+		_write_err553 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err542 == nil && err2 != nil {
-		_write_err542 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err553 == nil && err2 != nil {
+		_write_err553 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err542 == nil && err2 != nil {
-		_write_err542 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err553 == nil && err2 != nil {
+		_write_err553 = thrift.WrapTException(err2)
 	}
-	if _write_err542 != nil {
+	if _write_err553 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err542,
+			WriteError:    _write_err553,
 			EndpointError: err,
 		}
 	}
@@ -27667,7 +27922,7 @@ type apiServiceProcessorGetCurrentAuthUser struct {
 }
 
 func (p *apiServiceProcessorGetCurrentAuthUser) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err544 thrift.TException
+	var _write_err555 thrift.TException
 	args := ApiServiceGetCurrentAuthUserArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -27724,22 +27979,22 @@ func (p *apiServiceProcessorGetCurrentAuthUser) Process(ctx context.Context, seq
 				}
 			}
 		}
-		_exc545 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getCurrentAuthUser: " + err2.Error())
+		_exc556 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getCurrentAuthUser: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getCurrentAuthUser", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err544 = thrift.WrapTException(err2)
+			_write_err555 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc545.Write(ctx, oprot); _write_err544 == nil && err2 != nil {
-			_write_err544 = thrift.WrapTException(err2)
+		if err2 := _exc556.Write(ctx, oprot); _write_err555 == nil && err2 != nil {
+			_write_err555 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err544 == nil && err2 != nil {
-			_write_err544 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err555 == nil && err2 != nil {
+			_write_err555 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err544 == nil && err2 != nil {
-			_write_err544 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err555 == nil && err2 != nil {
+			_write_err555 = thrift.WrapTException(err2)
 		}
-		if _write_err544 != nil {
+		if _write_err555 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err544,
+				WriteError:    _write_err555,
 				EndpointError: err,
 			}
 		}
@@ -27749,20 +28004,20 @@ func (p *apiServiceProcessorGetCurrentAuthUser) Process(ctx context.Context, seq
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getCurrentAuthUser", thrift.REPLY, seqId); err2 != nil {
-		_write_err544 = thrift.WrapTException(err2)
+		_write_err555 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err544 == nil && err2 != nil {
-		_write_err544 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err555 == nil && err2 != nil {
+		_write_err555 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err544 == nil && err2 != nil {
-		_write_err544 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err555 == nil && err2 != nil {
+		_write_err555 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err544 == nil && err2 != nil {
-		_write_err544 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err555 == nil && err2 != nil {
+		_write_err555 = thrift.WrapTException(err2)
 	}
-	if _write_err544 != nil {
+	if _write_err555 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err544,
+			WriteError:    _write_err555,
 			EndpointError: err,
 		}
 	}
@@ -27774,7 +28029,7 @@ type apiServiceProcessorSaveUser struct {
 }
 
 func (p *apiServiceProcessorSaveUser) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err546 thrift.TException
+	var _write_err557 thrift.TException
 	args := ApiServiceSaveUserArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -27831,22 +28086,22 @@ func (p *apiServiceProcessorSaveUser) Process(ctx context.Context, seqId int32, 
 				}
 			}
 		}
-		_exc547 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing saveUser: " + err2.Error())
+		_exc558 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing saveUser: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "saveUser", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err546 = thrift.WrapTException(err2)
+			_write_err557 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc547.Write(ctx, oprot); _write_err546 == nil && err2 != nil {
-			_write_err546 = thrift.WrapTException(err2)
+		if err2 := _exc558.Write(ctx, oprot); _write_err557 == nil && err2 != nil {
+			_write_err557 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err546 == nil && err2 != nil {
-			_write_err546 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err557 == nil && err2 != nil {
+			_write_err557 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err546 == nil && err2 != nil {
-			_write_err546 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err557 == nil && err2 != nil {
+			_write_err557 = thrift.WrapTException(err2)
 		}
-		if _write_err546 != nil {
+		if _write_err557 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err546,
+				WriteError:    _write_err557,
 				EndpointError: err,
 			}
 		}
@@ -27856,20 +28111,20 @@ func (p *apiServiceProcessorSaveUser) Process(ctx context.Context, seqId int32, 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "saveUser", thrift.REPLY, seqId); err2 != nil {
-		_write_err546 = thrift.WrapTException(err2)
+		_write_err557 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err546 == nil && err2 != nil {
-		_write_err546 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err557 == nil && err2 != nil {
+		_write_err557 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err546 == nil && err2 != nil {
-		_write_err546 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err557 == nil && err2 != nil {
+		_write_err557 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err546 == nil && err2 != nil {
-		_write_err546 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err557 == nil && err2 != nil {
+		_write_err557 = thrift.WrapTException(err2)
 	}
-	if _write_err546 != nil {
+	if _write_err557 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err546,
+			WriteError:    _write_err557,
 			EndpointError: err,
 		}
 	}
@@ -27881,7 +28136,7 @@ type apiServiceProcessorQueryUsers struct {
 }
 
 func (p *apiServiceProcessorQueryUsers) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err548 thrift.TException
+	var _write_err559 thrift.TException
 	args := ApiServiceQueryUsersArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -27938,22 +28193,22 @@ func (p *apiServiceProcessorQueryUsers) Process(ctx context.Context, seqId int32
 				}
 			}
 		}
-		_exc549 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryUsers: " + err2.Error())
+		_exc560 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryUsers: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "queryUsers", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err548 = thrift.WrapTException(err2)
+			_write_err559 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc549.Write(ctx, oprot); _write_err548 == nil && err2 != nil {
-			_write_err548 = thrift.WrapTException(err2)
+		if err2 := _exc560.Write(ctx, oprot); _write_err559 == nil && err2 != nil {
+			_write_err559 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err548 == nil && err2 != nil {
-			_write_err548 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err559 == nil && err2 != nil {
+			_write_err559 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err548 == nil && err2 != nil {
-			_write_err548 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err559 == nil && err2 != nil {
+			_write_err559 = thrift.WrapTException(err2)
 		}
-		if _write_err548 != nil {
+		if _write_err559 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err548,
+				WriteError:    _write_err559,
 				EndpointError: err,
 			}
 		}
@@ -27963,20 +28218,20 @@ func (p *apiServiceProcessorQueryUsers) Process(ctx context.Context, seqId int32
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "queryUsers", thrift.REPLY, seqId); err2 != nil {
-		_write_err548 = thrift.WrapTException(err2)
+		_write_err559 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err548 == nil && err2 != nil {
-		_write_err548 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err559 == nil && err2 != nil {
+		_write_err559 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err548 == nil && err2 != nil {
-		_write_err548 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err559 == nil && err2 != nil {
+		_write_err559 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err548 == nil && err2 != nil {
-		_write_err548 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err559 == nil && err2 != nil {
+		_write_err559 = thrift.WrapTException(err2)
 	}
-	if _write_err548 != nil {
+	if _write_err559 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err548,
+			WriteError:    _write_err559,
 			EndpointError: err,
 		}
 	}
@@ -27988,7 +28243,7 @@ type apiServiceProcessorCountUsers struct {
 }
 
 func (p *apiServiceProcessorCountUsers) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err550 thrift.TException
+	var _write_err561 thrift.TException
 	args := ApiServiceCountUsersArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -28045,22 +28300,22 @@ func (p *apiServiceProcessorCountUsers) Process(ctx context.Context, seqId int32
 				}
 			}
 		}
-		_exc551 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countUsers: " + err2.Error())
+		_exc562 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countUsers: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "countUsers", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err550 = thrift.WrapTException(err2)
+			_write_err561 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc551.Write(ctx, oprot); _write_err550 == nil && err2 != nil {
-			_write_err550 = thrift.WrapTException(err2)
+		if err2 := _exc562.Write(ctx, oprot); _write_err561 == nil && err2 != nil {
+			_write_err561 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err550 == nil && err2 != nil {
-			_write_err550 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err561 == nil && err2 != nil {
+			_write_err561 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err550 == nil && err2 != nil {
-			_write_err550 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err561 == nil && err2 != nil {
+			_write_err561 = thrift.WrapTException(err2)
 		}
-		if _write_err550 != nil {
+		if _write_err561 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err550,
+				WriteError:    _write_err561,
 				EndpointError: err,
 			}
 		}
@@ -28070,20 +28325,20 @@ func (p *apiServiceProcessorCountUsers) Process(ctx context.Context, seqId int32
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "countUsers", thrift.REPLY, seqId); err2 != nil {
-		_write_err550 = thrift.WrapTException(err2)
+		_write_err561 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err550 == nil && err2 != nil {
-		_write_err550 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err561 == nil && err2 != nil {
+		_write_err561 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err550 == nil && err2 != nil {
-		_write_err550 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err561 == nil && err2 != nil {
+		_write_err561 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err550 == nil && err2 != nil {
-		_write_err550 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err561 == nil && err2 != nil {
+		_write_err561 = thrift.WrapTException(err2)
 	}
-	if _write_err550 != nil {
+	if _write_err561 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err550,
+			WriteError:    _write_err561,
 			EndpointError: err,
 		}
 	}
@@ -28095,7 +28350,7 @@ type apiServiceProcessorAllUsers struct {
 }
 
 func (p *apiServiceProcessorAllUsers) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err552 thrift.TException
+	var _write_err563 thrift.TException
 	args := ApiServiceAllUsersArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -28152,22 +28407,22 @@ func (p *apiServiceProcessorAllUsers) Process(ctx context.Context, seqId int32, 
 				}
 			}
 		}
-		_exc553 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing allUsers: " + err2.Error())
+		_exc564 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing allUsers: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "allUsers", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err552 = thrift.WrapTException(err2)
+			_write_err563 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc553.Write(ctx, oprot); _write_err552 == nil && err2 != nil {
-			_write_err552 = thrift.WrapTException(err2)
+		if err2 := _exc564.Write(ctx, oprot); _write_err563 == nil && err2 != nil {
+			_write_err563 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err552 == nil && err2 != nil {
-			_write_err552 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err563 == nil && err2 != nil {
+			_write_err563 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err552 == nil && err2 != nil {
-			_write_err552 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err563 == nil && err2 != nil {
+			_write_err563 = thrift.WrapTException(err2)
 		}
-		if _write_err552 != nil {
+		if _write_err563 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err552,
+				WriteError:    _write_err563,
 				EndpointError: err,
 			}
 		}
@@ -28177,20 +28432,20 @@ func (p *apiServiceProcessorAllUsers) Process(ctx context.Context, seqId int32, 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "allUsers", thrift.REPLY, seqId); err2 != nil {
-		_write_err552 = thrift.WrapTException(err2)
+		_write_err563 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err552 == nil && err2 != nil {
-		_write_err552 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err563 == nil && err2 != nil {
+		_write_err563 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err552 == nil && err2 != nil {
-		_write_err552 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err563 == nil && err2 != nil {
+		_write_err563 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err552 == nil && err2 != nil {
-		_write_err552 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err563 == nil && err2 != nil {
+		_write_err563 = thrift.WrapTException(err2)
 	}
-	if _write_err552 != nil {
+	if _write_err563 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err552,
+			WriteError:    _write_err563,
 			EndpointError: err,
 		}
 	}
@@ -28202,7 +28457,7 @@ type apiServiceProcessorQueryUser struct {
 }
 
 func (p *apiServiceProcessorQueryUser) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err554 thrift.TException
+	var _write_err565 thrift.TException
 	args := ApiServiceQueryUserArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -28259,22 +28514,22 @@ func (p *apiServiceProcessorQueryUser) Process(ctx context.Context, seqId int32,
 				}
 			}
 		}
-		_exc555 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryUser: " + err2.Error())
+		_exc566 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryUser: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "queryUser", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err554 = thrift.WrapTException(err2)
+			_write_err565 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc555.Write(ctx, oprot); _write_err554 == nil && err2 != nil {
-			_write_err554 = thrift.WrapTException(err2)
+		if err2 := _exc566.Write(ctx, oprot); _write_err565 == nil && err2 != nil {
+			_write_err565 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err554 == nil && err2 != nil {
-			_write_err554 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err565 == nil && err2 != nil {
+			_write_err565 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err554 == nil && err2 != nil {
-			_write_err554 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err565 == nil && err2 != nil {
+			_write_err565 = thrift.WrapTException(err2)
 		}
-		if _write_err554 != nil {
+		if _write_err565 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err554,
+				WriteError:    _write_err565,
 				EndpointError: err,
 			}
 		}
@@ -28284,20 +28539,20 @@ func (p *apiServiceProcessorQueryUser) Process(ctx context.Context, seqId int32,
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "queryUser", thrift.REPLY, seqId); err2 != nil {
-		_write_err554 = thrift.WrapTException(err2)
+		_write_err565 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err554 == nil && err2 != nil {
-		_write_err554 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err565 == nil && err2 != nil {
+		_write_err565 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err554 == nil && err2 != nil {
-		_write_err554 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err565 == nil && err2 != nil {
+		_write_err565 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err554 == nil && err2 != nil {
-		_write_err554 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err565 == nil && err2 != nil {
+		_write_err565 = thrift.WrapTException(err2)
 	}
-	if _write_err554 != nil {
+	if _write_err565 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err554,
+			WriteError:    _write_err565,
 			EndpointError: err,
 		}
 	}
@@ -28309,7 +28564,7 @@ type apiServiceProcessorDeleteUser struct {
 }
 
 func (p *apiServiceProcessorDeleteUser) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err556 thrift.TException
+	var _write_err567 thrift.TException
 	args := ApiServiceDeleteUserArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -28366,22 +28621,22 @@ func (p *apiServiceProcessorDeleteUser) Process(ctx context.Context, seqId int32
 				}
 			}
 		}
-		_exc557 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteUser: " + err2.Error())
+		_exc568 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteUser: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "deleteUser", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err556 = thrift.WrapTException(err2)
+			_write_err567 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc557.Write(ctx, oprot); _write_err556 == nil && err2 != nil {
-			_write_err556 = thrift.WrapTException(err2)
+		if err2 := _exc568.Write(ctx, oprot); _write_err567 == nil && err2 != nil {
+			_write_err567 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err556 == nil && err2 != nil {
-			_write_err556 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err567 == nil && err2 != nil {
+			_write_err567 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err556 == nil && err2 != nil {
-			_write_err556 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err567 == nil && err2 != nil {
+			_write_err567 = thrift.WrapTException(err2)
 		}
-		if _write_err556 != nil {
+		if _write_err567 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err556,
+				WriteError:    _write_err567,
 				EndpointError: err,
 			}
 		}
@@ -28391,20 +28646,20 @@ func (p *apiServiceProcessorDeleteUser) Process(ctx context.Context, seqId int32
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "deleteUser", thrift.REPLY, seqId); err2 != nil {
-		_write_err556 = thrift.WrapTException(err2)
+		_write_err567 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err556 == nil && err2 != nil {
-		_write_err556 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err567 == nil && err2 != nil {
+		_write_err567 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err556 == nil && err2 != nil {
-		_write_err556 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err567 == nil && err2 != nil {
+		_write_err567 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err556 == nil && err2 != nil {
-		_write_err556 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err567 == nil && err2 != nil {
+		_write_err567 = thrift.WrapTException(err2)
 	}
-	if _write_err556 != nil {
+	if _write_err567 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err556,
+			WriteError:    _write_err567,
 			EndpointError: err,
 		}
 	}
@@ -28416,7 +28671,7 @@ type apiServiceProcessorUpdateUser struct {
 }
 
 func (p *apiServiceProcessorUpdateUser) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err558 thrift.TException
+	var _write_err569 thrift.TException
 	args := ApiServiceUpdateUserArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -28473,22 +28728,22 @@ func (p *apiServiceProcessorUpdateUser) Process(ctx context.Context, seqId int32
 				}
 			}
 		}
-		_exc559 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing updateUser: " + err2.Error())
+		_exc570 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing updateUser: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "updateUser", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err558 = thrift.WrapTException(err2)
+			_write_err569 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc559.Write(ctx, oprot); _write_err558 == nil && err2 != nil {
-			_write_err558 = thrift.WrapTException(err2)
+		if err2 := _exc570.Write(ctx, oprot); _write_err569 == nil && err2 != nil {
+			_write_err569 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err558 == nil && err2 != nil {
-			_write_err558 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err569 == nil && err2 != nil {
+			_write_err569 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err558 == nil && err2 != nil {
-			_write_err558 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err569 == nil && err2 != nil {
+			_write_err569 = thrift.WrapTException(err2)
 		}
-		if _write_err558 != nil {
+		if _write_err569 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err558,
+				WriteError:    _write_err569,
 				EndpointError: err,
 			}
 		}
@@ -28498,20 +28753,20 @@ func (p *apiServiceProcessorUpdateUser) Process(ctx context.Context, seqId int32
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "updateUser", thrift.REPLY, seqId); err2 != nil {
-		_write_err558 = thrift.WrapTException(err2)
+		_write_err569 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err558 == nil && err2 != nil {
-		_write_err558 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err569 == nil && err2 != nil {
+		_write_err569 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err558 == nil && err2 != nil {
-		_write_err558 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err569 == nil && err2 != nil {
+		_write_err569 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err558 == nil && err2 != nil {
-		_write_err558 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err569 == nil && err2 != nil {
+		_write_err569 = thrift.WrapTException(err2)
 	}
-	if _write_err558 != nil {
+	if _write_err569 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err558,
+			WriteError:    _write_err569,
 			EndpointError: err,
 		}
 	}
@@ -28523,7 +28778,7 @@ type apiServiceProcessorGetRoles struct {
 }
 
 func (p *apiServiceProcessorGetRoles) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err560 thrift.TException
+	var _write_err571 thrift.TException
 	args := ApiServiceGetRolesArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -28580,22 +28835,22 @@ func (p *apiServiceProcessorGetRoles) Process(ctx context.Context, seqId int32, 
 				}
 			}
 		}
-		_exc561 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getRoles: " + err2.Error())
+		_exc572 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getRoles: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getRoles", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err560 = thrift.WrapTException(err2)
+			_write_err571 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc561.Write(ctx, oprot); _write_err560 == nil && err2 != nil {
-			_write_err560 = thrift.WrapTException(err2)
+		if err2 := _exc572.Write(ctx, oprot); _write_err571 == nil && err2 != nil {
+			_write_err571 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err560 == nil && err2 != nil {
-			_write_err560 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err571 == nil && err2 != nil {
+			_write_err571 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err560 == nil && err2 != nil {
-			_write_err560 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err571 == nil && err2 != nil {
+			_write_err571 = thrift.WrapTException(err2)
 		}
-		if _write_err560 != nil {
+		if _write_err571 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err560,
+				WriteError:    _write_err571,
 				EndpointError: err,
 			}
 		}
@@ -28605,20 +28860,20 @@ func (p *apiServiceProcessorGetRoles) Process(ctx context.Context, seqId int32, 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getRoles", thrift.REPLY, seqId); err2 != nil {
-		_write_err560 = thrift.WrapTException(err2)
+		_write_err571 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err560 == nil && err2 != nil {
-		_write_err560 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err571 == nil && err2 != nil {
+		_write_err571 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err560 == nil && err2 != nil {
-		_write_err560 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err571 == nil && err2 != nil {
+		_write_err571 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err560 == nil && err2 != nil {
-		_write_err560 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err571 == nil && err2 != nil {
+		_write_err571 = thrift.WrapTException(err2)
 	}
-	if _write_err560 != nil {
+	if _write_err571 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err560,
+			WriteError:    _write_err571,
 			EndpointError: err,
 		}
 	}
@@ -28630,7 +28885,7 @@ type apiServiceProcessorChangePassword struct {
 }
 
 func (p *apiServiceProcessorChangePassword) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err562 thrift.TException
+	var _write_err573 thrift.TException
 	args := ApiServiceChangePasswordArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -28687,22 +28942,22 @@ func (p *apiServiceProcessorChangePassword) Process(ctx context.Context, seqId i
 				}
 			}
 		}
-		_exc563 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing changePassword: " + err2.Error())
+		_exc574 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing changePassword: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "changePassword", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err562 = thrift.WrapTException(err2)
+			_write_err573 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc563.Write(ctx, oprot); _write_err562 == nil && err2 != nil {
-			_write_err562 = thrift.WrapTException(err2)
+		if err2 := _exc574.Write(ctx, oprot); _write_err573 == nil && err2 != nil {
+			_write_err573 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err562 == nil && err2 != nil {
-			_write_err562 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err573 == nil && err2 != nil {
+			_write_err573 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err562 == nil && err2 != nil {
-			_write_err562 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err573 == nil && err2 != nil {
+			_write_err573 = thrift.WrapTException(err2)
 		}
-		if _write_err562 != nil {
+		if _write_err573 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err562,
+				WriteError:    _write_err573,
 				EndpointError: err,
 			}
 		}
@@ -28712,20 +28967,20 @@ func (p *apiServiceProcessorChangePassword) Process(ctx context.Context, seqId i
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "changePassword", thrift.REPLY, seqId); err2 != nil {
-		_write_err562 = thrift.WrapTException(err2)
+		_write_err573 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err562 == nil && err2 != nil {
-		_write_err562 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err573 == nil && err2 != nil {
+		_write_err573 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err562 == nil && err2 != nil {
-		_write_err562 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err573 == nil && err2 != nil {
+		_write_err573 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err562 == nil && err2 != nil {
-		_write_err562 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err573 == nil && err2 != nil {
+		_write_err573 = thrift.WrapTException(err2)
 	}
-	if _write_err562 != nil {
+	if _write_err573 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err562,
+			WriteError:    _write_err573,
 			EndpointError: err,
 		}
 	}
@@ -28737,7 +28992,7 @@ type apiServiceProcessorGetCurrentUser struct {
 }
 
 func (p *apiServiceProcessorGetCurrentUser) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err564 thrift.TException
+	var _write_err575 thrift.TException
 	args := ApiServiceGetCurrentUserArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -28794,22 +29049,22 @@ func (p *apiServiceProcessorGetCurrentUser) Process(ctx context.Context, seqId i
 				}
 			}
 		}
-		_exc565 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getCurrentUser: " + err2.Error())
+		_exc576 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getCurrentUser: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getCurrentUser", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err564 = thrift.WrapTException(err2)
+			_write_err575 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc565.Write(ctx, oprot); _write_err564 == nil && err2 != nil {
-			_write_err564 = thrift.WrapTException(err2)
+		if err2 := _exc576.Write(ctx, oprot); _write_err575 == nil && err2 != nil {
+			_write_err575 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err564 == nil && err2 != nil {
-			_write_err564 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err575 == nil && err2 != nil {
+			_write_err575 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err564 == nil && err2 != nil {
-			_write_err564 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err575 == nil && err2 != nil {
+			_write_err575 = thrift.WrapTException(err2)
 		}
-		if _write_err564 != nil {
+		if _write_err575 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err564,
+				WriteError:    _write_err575,
 				EndpointError: err,
 			}
 		}
@@ -28819,20 +29074,20 @@ func (p *apiServiceProcessorGetCurrentUser) Process(ctx context.Context, seqId i
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getCurrentUser", thrift.REPLY, seqId); err2 != nil {
-		_write_err564 = thrift.WrapTException(err2)
+		_write_err575 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err564 == nil && err2 != nil {
-		_write_err564 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err575 == nil && err2 != nil {
+		_write_err575 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err564 == nil && err2 != nil {
-		_write_err564 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err575 == nil && err2 != nil {
+		_write_err575 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err564 == nil && err2 != nil {
-		_write_err564 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err575 == nil && err2 != nil {
+		_write_err575 = thrift.WrapTException(err2)
 	}
-	if _write_err564 != nil {
+	if _write_err575 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err564,
+			WriteError:    _write_err575,
 			EndpointError: err,
 		}
 	}
@@ -28844,7 +29099,7 @@ type apiServiceProcessorListOwnerTables struct {
 }
 
 func (p *apiServiceProcessorListOwnerTables) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err566 thrift.TException
+	var _write_err577 thrift.TException
 	args := ApiServiceListOwnerTablesArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -28901,22 +29156,22 @@ func (p *apiServiceProcessorListOwnerTables) Process(ctx context.Context, seqId 
 				}
 			}
 		}
-		_exc567 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing listOwnerTables: " + err2.Error())
+		_exc578 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing listOwnerTables: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "listOwnerTables", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err566 = thrift.WrapTException(err2)
+			_write_err577 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc567.Write(ctx, oprot); _write_err566 == nil && err2 != nil {
-			_write_err566 = thrift.WrapTException(err2)
+		if err2 := _exc578.Write(ctx, oprot); _write_err577 == nil && err2 != nil {
+			_write_err577 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err566 == nil && err2 != nil {
-			_write_err566 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err577 == nil && err2 != nil {
+			_write_err577 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err566 == nil && err2 != nil {
-			_write_err566 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err577 == nil && err2 != nil {
+			_write_err577 = thrift.WrapTException(err2)
 		}
-		if _write_err566 != nil {
+		if _write_err577 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err566,
+				WriteError:    _write_err577,
 				EndpointError: err,
 			}
 		}
@@ -28926,20 +29181,20 @@ func (p *apiServiceProcessorListOwnerTables) Process(ctx context.Context, seqId 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "listOwnerTables", thrift.REPLY, seqId); err2 != nil {
-		_write_err566 = thrift.WrapTException(err2)
+		_write_err577 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err566 == nil && err2 != nil {
-		_write_err566 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err577 == nil && err2 != nil {
+		_write_err577 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err566 == nil && err2 != nil {
-		_write_err566 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err577 == nil && err2 != nil {
+		_write_err577 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err566 == nil && err2 != nil {
-		_write_err566 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err577 == nil && err2 != nil {
+		_write_err577 = thrift.WrapTException(err2)
 	}
-	if _write_err566 != nil {
+	if _write_err577 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err566,
+			WriteError:    _write_err577,
 			EndpointError: err,
 		}
 	}
@@ -28951,7 +29206,7 @@ type apiServiceProcessorQueryDataPermissions struct {
 }
 
 func (p *apiServiceProcessorQueryDataPermissions) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err568 thrift.TException
+	var _write_err579 thrift.TException
 	args := ApiServiceQueryDataPermissionsArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -29008,22 +29263,22 @@ func (p *apiServiceProcessorQueryDataPermissions) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc569 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryDataPermissions: " + err2.Error())
+		_exc580 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryDataPermissions: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "queryDataPermissions", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err568 = thrift.WrapTException(err2)
+			_write_err579 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc569.Write(ctx, oprot); _write_err568 == nil && err2 != nil {
-			_write_err568 = thrift.WrapTException(err2)
+		if err2 := _exc580.Write(ctx, oprot); _write_err579 == nil && err2 != nil {
+			_write_err579 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err568 == nil && err2 != nil {
-			_write_err568 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err579 == nil && err2 != nil {
+			_write_err579 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err568 == nil && err2 != nil {
-			_write_err568 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err579 == nil && err2 != nil {
+			_write_err579 = thrift.WrapTException(err2)
 		}
-		if _write_err568 != nil {
+		if _write_err579 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err568,
+				WriteError:    _write_err579,
 				EndpointError: err,
 			}
 		}
@@ -29033,20 +29288,20 @@ func (p *apiServiceProcessorQueryDataPermissions) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "queryDataPermissions", thrift.REPLY, seqId); err2 != nil {
-		_write_err568 = thrift.WrapTException(err2)
+		_write_err579 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err568 == nil && err2 != nil {
-		_write_err568 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err579 == nil && err2 != nil {
+		_write_err579 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err568 == nil && err2 != nil {
-		_write_err568 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err579 == nil && err2 != nil {
+		_write_err579 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err568 == nil && err2 != nil {
-		_write_err568 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err579 == nil && err2 != nil {
+		_write_err579 = thrift.WrapTException(err2)
 	}
-	if _write_err568 != nil {
+	if _write_err579 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err568,
+			WriteError:    _write_err579,
 			EndpointError: err,
 		}
 	}
@@ -29058,7 +29313,7 @@ type apiServiceProcessorCountDataPermissions struct {
 }
 
 func (p *apiServiceProcessorCountDataPermissions) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err570 thrift.TException
+	var _write_err581 thrift.TException
 	args := ApiServiceCountDataPermissionsArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -29115,22 +29370,22 @@ func (p *apiServiceProcessorCountDataPermissions) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc571 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countDataPermissions: " + err2.Error())
+		_exc582 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countDataPermissions: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "countDataPermissions", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err570 = thrift.WrapTException(err2)
+			_write_err581 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc571.Write(ctx, oprot); _write_err570 == nil && err2 != nil {
-			_write_err570 = thrift.WrapTException(err2)
+		if err2 := _exc582.Write(ctx, oprot); _write_err581 == nil && err2 != nil {
+			_write_err581 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err570 == nil && err2 != nil {
-			_write_err570 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err581 == nil && err2 != nil {
+			_write_err581 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err570 == nil && err2 != nil {
-			_write_err570 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err581 == nil && err2 != nil {
+			_write_err581 = thrift.WrapTException(err2)
 		}
-		if _write_err570 != nil {
+		if _write_err581 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err570,
+				WriteError:    _write_err581,
 				EndpointError: err,
 			}
 		}
@@ -29140,20 +29395,20 @@ func (p *apiServiceProcessorCountDataPermissions) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "countDataPermissions", thrift.REPLY, seqId); err2 != nil {
-		_write_err570 = thrift.WrapTException(err2)
+		_write_err581 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err570 == nil && err2 != nil {
-		_write_err570 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err581 == nil && err2 != nil {
+		_write_err581 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err570 == nil && err2 != nil {
-		_write_err570 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err581 == nil && err2 != nil {
+		_write_err581 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err570 == nil && err2 != nil {
-		_write_err570 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err581 == nil && err2 != nil {
+		_write_err581 = thrift.WrapTException(err2)
 	}
-	if _write_err570 != nil {
+	if _write_err581 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err570,
+			WriteError:    _write_err581,
 			EndpointError: err,
 		}
 	}
@@ -29165,7 +29420,7 @@ type apiServiceProcessorUpdateDataPermission struct {
 }
 
 func (p *apiServiceProcessorUpdateDataPermission) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err572 thrift.TException
+	var _write_err583 thrift.TException
 	args := ApiServiceUpdateDataPermissionArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -29222,22 +29477,22 @@ func (p *apiServiceProcessorUpdateDataPermission) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc573 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing updateDataPermission: " + err2.Error())
+		_exc584 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing updateDataPermission: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "updateDataPermission", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err572 = thrift.WrapTException(err2)
+			_write_err583 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc573.Write(ctx, oprot); _write_err572 == nil && err2 != nil {
-			_write_err572 = thrift.WrapTException(err2)
+		if err2 := _exc584.Write(ctx, oprot); _write_err583 == nil && err2 != nil {
+			_write_err583 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err572 == nil && err2 != nil {
-			_write_err572 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err583 == nil && err2 != nil {
+			_write_err583 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err572 == nil && err2 != nil {
-			_write_err572 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err583 == nil && err2 != nil {
+			_write_err583 = thrift.WrapTException(err2)
 		}
-		if _write_err572 != nil {
+		if _write_err583 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err572,
+				WriteError:    _write_err583,
 				EndpointError: err,
 			}
 		}
@@ -29247,20 +29502,20 @@ func (p *apiServiceProcessorUpdateDataPermission) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "updateDataPermission", thrift.REPLY, seqId); err2 != nil {
-		_write_err572 = thrift.WrapTException(err2)
+		_write_err583 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err572 == nil && err2 != nil {
-		_write_err572 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err583 == nil && err2 != nil {
+		_write_err583 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err572 == nil && err2 != nil {
-		_write_err572 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err583 == nil && err2 != nil {
+		_write_err583 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err572 == nil && err2 != nil {
-		_write_err572 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err583 == nil && err2 != nil {
+		_write_err583 = thrift.WrapTException(err2)
 	}
-	if _write_err572 != nil {
+	if _write_err583 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err572,
+			WriteError:    _write_err583,
 			EndpointError: err,
 		}
 	}
@@ -29272,7 +29527,7 @@ type apiServiceProcessorSaveEvaluationCriteria struct {
 }
 
 func (p *apiServiceProcessorSaveEvaluationCriteria) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err574 thrift.TException
+	var _write_err585 thrift.TException
 	args := ApiServiceSaveEvaluationCriteriaArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -29329,22 +29584,22 @@ func (p *apiServiceProcessorSaveEvaluationCriteria) Process(ctx context.Context,
 				}
 			}
 		}
-		_exc575 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing saveEvaluationCriteria: " + err2.Error())
+		_exc586 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing saveEvaluationCriteria: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "saveEvaluationCriteria", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err574 = thrift.WrapTException(err2)
+			_write_err585 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc575.Write(ctx, oprot); _write_err574 == nil && err2 != nil {
-			_write_err574 = thrift.WrapTException(err2)
+		if err2 := _exc586.Write(ctx, oprot); _write_err585 == nil && err2 != nil {
+			_write_err585 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err574 == nil && err2 != nil {
-			_write_err574 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err585 == nil && err2 != nil {
+			_write_err585 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err574 == nil && err2 != nil {
-			_write_err574 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err585 == nil && err2 != nil {
+			_write_err585 = thrift.WrapTException(err2)
 		}
-		if _write_err574 != nil {
+		if _write_err585 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err574,
+				WriteError:    _write_err585,
 				EndpointError: err,
 			}
 		}
@@ -29354,20 +29609,20 @@ func (p *apiServiceProcessorSaveEvaluationCriteria) Process(ctx context.Context,
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "saveEvaluationCriteria", thrift.REPLY, seqId); err2 != nil {
-		_write_err574 = thrift.WrapTException(err2)
+		_write_err585 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err574 == nil && err2 != nil {
-		_write_err574 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err585 == nil && err2 != nil {
+		_write_err585 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err574 == nil && err2 != nil {
-		_write_err574 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err585 == nil && err2 != nil {
+		_write_err585 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err574 == nil && err2 != nil {
-		_write_err574 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err585 == nil && err2 != nil {
+		_write_err585 = thrift.WrapTException(err2)
 	}
-	if _write_err574 != nil {
+	if _write_err585 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err574,
+			WriteError:    _write_err585,
 			EndpointError: err,
 		}
 	}
@@ -29379,7 +29634,7 @@ type apiServiceProcessorQueryEvaluationCriteria struct {
 }
 
 func (p *apiServiceProcessorQueryEvaluationCriteria) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err576 thrift.TException
+	var _write_err587 thrift.TException
 	args := ApiServiceQueryEvaluationCriteriaArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -29436,22 +29691,22 @@ func (p *apiServiceProcessorQueryEvaluationCriteria) Process(ctx context.Context
 				}
 			}
 		}
-		_exc577 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryEvaluationCriteria: " + err2.Error())
+		_exc588 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryEvaluationCriteria: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "queryEvaluationCriteria", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err576 = thrift.WrapTException(err2)
+			_write_err587 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc577.Write(ctx, oprot); _write_err576 == nil && err2 != nil {
-			_write_err576 = thrift.WrapTException(err2)
+		if err2 := _exc588.Write(ctx, oprot); _write_err587 == nil && err2 != nil {
+			_write_err587 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err576 == nil && err2 != nil {
-			_write_err576 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err587 == nil && err2 != nil {
+			_write_err587 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err576 == nil && err2 != nil {
-			_write_err576 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err587 == nil && err2 != nil {
+			_write_err587 = thrift.WrapTException(err2)
 		}
-		if _write_err576 != nil {
+		if _write_err587 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err576,
+				WriteError:    _write_err587,
 				EndpointError: err,
 			}
 		}
@@ -29461,20 +29716,20 @@ func (p *apiServiceProcessorQueryEvaluationCriteria) Process(ctx context.Context
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "queryEvaluationCriteria", thrift.REPLY, seqId); err2 != nil {
-		_write_err576 = thrift.WrapTException(err2)
+		_write_err587 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err576 == nil && err2 != nil {
-		_write_err576 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err587 == nil && err2 != nil {
+		_write_err587 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err576 == nil && err2 != nil {
-		_write_err576 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err587 == nil && err2 != nil {
+		_write_err587 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err576 == nil && err2 != nil {
-		_write_err576 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err587 == nil && err2 != nil {
+		_write_err587 = thrift.WrapTException(err2)
 	}
-	if _write_err576 != nil {
+	if _write_err587 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err576,
+			WriteError:    _write_err587,
 			EndpointError: err,
 		}
 	}
@@ -29486,7 +29741,7 @@ type apiServiceProcessorCountEvaluationCriteria struct {
 }
 
 func (p *apiServiceProcessorCountEvaluationCriteria) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err578 thrift.TException
+	var _write_err589 thrift.TException
 	args := ApiServiceCountEvaluationCriteriaArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -29543,22 +29798,22 @@ func (p *apiServiceProcessorCountEvaluationCriteria) Process(ctx context.Context
 				}
 			}
 		}
-		_exc579 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countEvaluationCriteria: " + err2.Error())
+		_exc590 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countEvaluationCriteria: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "countEvaluationCriteria", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err578 = thrift.WrapTException(err2)
+			_write_err589 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc579.Write(ctx, oprot); _write_err578 == nil && err2 != nil {
-			_write_err578 = thrift.WrapTException(err2)
+		if err2 := _exc590.Write(ctx, oprot); _write_err589 == nil && err2 != nil {
+			_write_err589 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err578 == nil && err2 != nil {
-			_write_err578 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err589 == nil && err2 != nil {
+			_write_err589 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err578 == nil && err2 != nil {
-			_write_err578 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err589 == nil && err2 != nil {
+			_write_err589 = thrift.WrapTException(err2)
 		}
-		if _write_err578 != nil {
+		if _write_err589 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err578,
+				WriteError:    _write_err589,
 				EndpointError: err,
 			}
 		}
@@ -29568,20 +29823,20 @@ func (p *apiServiceProcessorCountEvaluationCriteria) Process(ctx context.Context
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "countEvaluationCriteria", thrift.REPLY, seqId); err2 != nil {
-		_write_err578 = thrift.WrapTException(err2)
+		_write_err589 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err578 == nil && err2 != nil {
-		_write_err578 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err589 == nil && err2 != nil {
+		_write_err589 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err578 == nil && err2 != nil {
-		_write_err578 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err589 == nil && err2 != nil {
+		_write_err589 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err578 == nil && err2 != nil {
-		_write_err578 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err589 == nil && err2 != nil {
+		_write_err589 = thrift.WrapTException(err2)
 	}
-	if _write_err578 != nil {
+	if _write_err589 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err578,
+			WriteError:    _write_err589,
 			EndpointError: err,
 		}
 	}
@@ -29593,7 +29848,7 @@ type apiServiceProcessorGetEvaluationCriteria struct {
 }
 
 func (p *apiServiceProcessorGetEvaluationCriteria) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err580 thrift.TException
+	var _write_err591 thrift.TException
 	args := ApiServiceGetEvaluationCriteriaArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -29650,22 +29905,22 @@ func (p *apiServiceProcessorGetEvaluationCriteria) Process(ctx context.Context, 
 				}
 			}
 		}
-		_exc581 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getEvaluationCriteria: " + err2.Error())
+		_exc592 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getEvaluationCriteria: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getEvaluationCriteria", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err580 = thrift.WrapTException(err2)
+			_write_err591 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc581.Write(ctx, oprot); _write_err580 == nil && err2 != nil {
-			_write_err580 = thrift.WrapTException(err2)
+		if err2 := _exc592.Write(ctx, oprot); _write_err591 == nil && err2 != nil {
+			_write_err591 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err580 == nil && err2 != nil {
-			_write_err580 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err591 == nil && err2 != nil {
+			_write_err591 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err580 == nil && err2 != nil {
-			_write_err580 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err591 == nil && err2 != nil {
+			_write_err591 = thrift.WrapTException(err2)
 		}
-		if _write_err580 != nil {
+		if _write_err591 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err580,
+				WriteError:    _write_err591,
 				EndpointError: err,
 			}
 		}
@@ -29675,20 +29930,20 @@ func (p *apiServiceProcessorGetEvaluationCriteria) Process(ctx context.Context, 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getEvaluationCriteria", thrift.REPLY, seqId); err2 != nil {
-		_write_err580 = thrift.WrapTException(err2)
+		_write_err591 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err580 == nil && err2 != nil {
-		_write_err580 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err591 == nil && err2 != nil {
+		_write_err591 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err580 == nil && err2 != nil {
-		_write_err580 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err591 == nil && err2 != nil {
+		_write_err591 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err580 == nil && err2 != nil {
-		_write_err580 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err591 == nil && err2 != nil {
+		_write_err591 = thrift.WrapTException(err2)
 	}
-	if _write_err580 != nil {
+	if _write_err591 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err580,
+			WriteError:    _write_err591,
 			EndpointError: err,
 		}
 	}
@@ -29700,7 +29955,7 @@ type apiServiceProcessorDeleteEvaluationCriteria struct {
 }
 
 func (p *apiServiceProcessorDeleteEvaluationCriteria) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err582 thrift.TException
+	var _write_err593 thrift.TException
 	args := ApiServiceDeleteEvaluationCriteriaArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -29757,22 +30012,22 @@ func (p *apiServiceProcessorDeleteEvaluationCriteria) Process(ctx context.Contex
 				}
 			}
 		}
-		_exc583 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteEvaluationCriteria: " + err2.Error())
+		_exc594 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteEvaluationCriteria: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "deleteEvaluationCriteria", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err582 = thrift.WrapTException(err2)
+			_write_err593 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc583.Write(ctx, oprot); _write_err582 == nil && err2 != nil {
-			_write_err582 = thrift.WrapTException(err2)
+		if err2 := _exc594.Write(ctx, oprot); _write_err593 == nil && err2 != nil {
+			_write_err593 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err582 == nil && err2 != nil {
-			_write_err582 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err593 == nil && err2 != nil {
+			_write_err593 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err582 == nil && err2 != nil {
-			_write_err582 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err593 == nil && err2 != nil {
+			_write_err593 = thrift.WrapTException(err2)
 		}
-		if _write_err582 != nil {
+		if _write_err593 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err582,
+				WriteError:    _write_err593,
 				EndpointError: err,
 			}
 		}
@@ -29782,20 +30037,20 @@ func (p *apiServiceProcessorDeleteEvaluationCriteria) Process(ctx context.Contex
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "deleteEvaluationCriteria", thrift.REPLY, seqId); err2 != nil {
-		_write_err582 = thrift.WrapTException(err2)
+		_write_err593 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err582 == nil && err2 != nil {
-		_write_err582 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err593 == nil && err2 != nil {
+		_write_err593 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err582 == nil && err2 != nil {
-		_write_err582 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err593 == nil && err2 != nil {
+		_write_err593 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err582 == nil && err2 != nil {
-		_write_err582 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err593 == nil && err2 != nil {
+		_write_err593 = thrift.WrapTException(err2)
 	}
-	if _write_err582 != nil {
+	if _write_err593 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err582,
+			WriteError:    _write_err593,
 			EndpointError: err,
 		}
 	}
@@ -29807,7 +30062,7 @@ type apiServiceProcessorSaveQualityAssessment struct {
 }
 
 func (p *apiServiceProcessorSaveQualityAssessment) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err584 thrift.TException
+	var _write_err595 thrift.TException
 	args := ApiServiceSaveQualityAssessmentArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -29864,22 +30119,22 @@ func (p *apiServiceProcessorSaveQualityAssessment) Process(ctx context.Context, 
 				}
 			}
 		}
-		_exc585 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing saveQualityAssessment: " + err2.Error())
+		_exc596 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing saveQualityAssessment: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "saveQualityAssessment", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err584 = thrift.WrapTException(err2)
+			_write_err595 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc585.Write(ctx, oprot); _write_err584 == nil && err2 != nil {
-			_write_err584 = thrift.WrapTException(err2)
+		if err2 := _exc596.Write(ctx, oprot); _write_err595 == nil && err2 != nil {
+			_write_err595 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err584 == nil && err2 != nil {
-			_write_err584 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err595 == nil && err2 != nil {
+			_write_err595 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err584 == nil && err2 != nil {
-			_write_err584 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err595 == nil && err2 != nil {
+			_write_err595 = thrift.WrapTException(err2)
 		}
-		if _write_err584 != nil {
+		if _write_err595 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err584,
+				WriteError:    _write_err595,
 				EndpointError: err,
 			}
 		}
@@ -29889,20 +30144,20 @@ func (p *apiServiceProcessorSaveQualityAssessment) Process(ctx context.Context, 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "saveQualityAssessment", thrift.REPLY, seqId); err2 != nil {
-		_write_err584 = thrift.WrapTException(err2)
+		_write_err595 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err584 == nil && err2 != nil {
-		_write_err584 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err595 == nil && err2 != nil {
+		_write_err595 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err584 == nil && err2 != nil {
-		_write_err584 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err595 == nil && err2 != nil {
+		_write_err595 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err584 == nil && err2 != nil {
-		_write_err584 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err595 == nil && err2 != nil {
+		_write_err595 = thrift.WrapTException(err2)
 	}
-	if _write_err584 != nil {
+	if _write_err595 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err584,
+			WriteError:    _write_err595,
 			EndpointError: err,
 		}
 	}
@@ -29914,7 +30169,7 @@ type apiServiceProcessorQueryQualityAssessments struct {
 }
 
 func (p *apiServiceProcessorQueryQualityAssessments) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err586 thrift.TException
+	var _write_err597 thrift.TException
 	args := ApiServiceQueryQualityAssessmentsArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -29971,22 +30226,22 @@ func (p *apiServiceProcessorQueryQualityAssessments) Process(ctx context.Context
 				}
 			}
 		}
-		_exc587 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryQualityAssessments: " + err2.Error())
+		_exc598 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing queryQualityAssessments: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "queryQualityAssessments", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err586 = thrift.WrapTException(err2)
+			_write_err597 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc587.Write(ctx, oprot); _write_err586 == nil && err2 != nil {
-			_write_err586 = thrift.WrapTException(err2)
+		if err2 := _exc598.Write(ctx, oprot); _write_err597 == nil && err2 != nil {
+			_write_err597 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err586 == nil && err2 != nil {
-			_write_err586 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err597 == nil && err2 != nil {
+			_write_err597 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err586 == nil && err2 != nil {
-			_write_err586 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err597 == nil && err2 != nil {
+			_write_err597 = thrift.WrapTException(err2)
 		}
-		if _write_err586 != nil {
+		if _write_err597 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err586,
+				WriteError:    _write_err597,
 				EndpointError: err,
 			}
 		}
@@ -29996,20 +30251,20 @@ func (p *apiServiceProcessorQueryQualityAssessments) Process(ctx context.Context
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "queryQualityAssessments", thrift.REPLY, seqId); err2 != nil {
-		_write_err586 = thrift.WrapTException(err2)
+		_write_err597 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err586 == nil && err2 != nil {
-		_write_err586 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err597 == nil && err2 != nil {
+		_write_err597 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err586 == nil && err2 != nil {
-		_write_err586 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err597 == nil && err2 != nil {
+		_write_err597 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err586 == nil && err2 != nil {
-		_write_err586 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err597 == nil && err2 != nil {
+		_write_err597 = thrift.WrapTException(err2)
 	}
-	if _write_err586 != nil {
+	if _write_err597 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err586,
+			WriteError:    _write_err597,
 			EndpointError: err,
 		}
 	}
@@ -30021,7 +30276,7 @@ type apiServiceProcessorCountQualityAssessments struct {
 }
 
 func (p *apiServiceProcessorCountQualityAssessments) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err588 thrift.TException
+	var _write_err599 thrift.TException
 	args := ApiServiceCountQualityAssessmentsArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -30078,22 +30333,22 @@ func (p *apiServiceProcessorCountQualityAssessments) Process(ctx context.Context
 				}
 			}
 		}
-		_exc589 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countQualityAssessments: " + err2.Error())
+		_exc600 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countQualityAssessments: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "countQualityAssessments", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err588 = thrift.WrapTException(err2)
+			_write_err599 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc589.Write(ctx, oprot); _write_err588 == nil && err2 != nil {
-			_write_err588 = thrift.WrapTException(err2)
+		if err2 := _exc600.Write(ctx, oprot); _write_err599 == nil && err2 != nil {
+			_write_err599 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err588 == nil && err2 != nil {
-			_write_err588 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err599 == nil && err2 != nil {
+			_write_err599 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err588 == nil && err2 != nil {
-			_write_err588 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err599 == nil && err2 != nil {
+			_write_err599 = thrift.WrapTException(err2)
 		}
-		if _write_err588 != nil {
+		if _write_err599 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err588,
+				WriteError:    _write_err599,
 				EndpointError: err,
 			}
 		}
@@ -30103,20 +30358,20 @@ func (p *apiServiceProcessorCountQualityAssessments) Process(ctx context.Context
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "countQualityAssessments", thrift.REPLY, seqId); err2 != nil {
-		_write_err588 = thrift.WrapTException(err2)
+		_write_err599 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err588 == nil && err2 != nil {
-		_write_err588 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err599 == nil && err2 != nil {
+		_write_err599 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err588 == nil && err2 != nil {
-		_write_err588 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err599 == nil && err2 != nil {
+		_write_err599 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err588 == nil && err2 != nil {
-		_write_err588 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err599 == nil && err2 != nil {
+		_write_err599 = thrift.WrapTException(err2)
 	}
-	if _write_err588 != nil {
+	if _write_err599 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err588,
+			WriteError:    _write_err599,
 			EndpointError: err,
 		}
 	}
@@ -30128,7 +30383,7 @@ type apiServiceProcessorGetQualityAssessment struct {
 }
 
 func (p *apiServiceProcessorGetQualityAssessment) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err590 thrift.TException
+	var _write_err601 thrift.TException
 	args := ApiServiceGetQualityAssessmentArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -30185,22 +30440,22 @@ func (p *apiServiceProcessorGetQualityAssessment) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc591 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getQualityAssessment: " + err2.Error())
+		_exc602 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getQualityAssessment: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getQualityAssessment", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err590 = thrift.WrapTException(err2)
+			_write_err601 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc591.Write(ctx, oprot); _write_err590 == nil && err2 != nil {
-			_write_err590 = thrift.WrapTException(err2)
+		if err2 := _exc602.Write(ctx, oprot); _write_err601 == nil && err2 != nil {
+			_write_err601 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err590 == nil && err2 != nil {
-			_write_err590 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err601 == nil && err2 != nil {
+			_write_err601 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err590 == nil && err2 != nil {
-			_write_err590 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err601 == nil && err2 != nil {
+			_write_err601 = thrift.WrapTException(err2)
 		}
-		if _write_err590 != nil {
+		if _write_err601 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err590,
+				WriteError:    _write_err601,
 				EndpointError: err,
 			}
 		}
@@ -30210,20 +30465,20 @@ func (p *apiServiceProcessorGetQualityAssessment) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getQualityAssessment", thrift.REPLY, seqId); err2 != nil {
-		_write_err590 = thrift.WrapTException(err2)
+		_write_err601 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err590 == nil && err2 != nil {
-		_write_err590 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err601 == nil && err2 != nil {
+		_write_err601 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err590 == nil && err2 != nil {
-		_write_err590 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err601 == nil && err2 != nil {
+		_write_err601 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err590 == nil && err2 != nil {
-		_write_err590 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err601 == nil && err2 != nil {
+		_write_err601 = thrift.WrapTException(err2)
 	}
-	if _write_err590 != nil {
+	if _write_err601 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err590,
+			WriteError:    _write_err601,
 			EndpointError: err,
 		}
 	}
@@ -30235,7 +30490,7 @@ type apiServiceProcessorDeleteQualityAssessment struct {
 }
 
 func (p *apiServiceProcessorDeleteQualityAssessment) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err592 thrift.TException
+	var _write_err603 thrift.TException
 	args := ApiServiceDeleteQualityAssessmentArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -30292,22 +30547,22 @@ func (p *apiServiceProcessorDeleteQualityAssessment) Process(ctx context.Context
 				}
 			}
 		}
-		_exc593 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteQualityAssessment: " + err2.Error())
+		_exc604 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteQualityAssessment: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "deleteQualityAssessment", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err592 = thrift.WrapTException(err2)
+			_write_err603 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc593.Write(ctx, oprot); _write_err592 == nil && err2 != nil {
-			_write_err592 = thrift.WrapTException(err2)
+		if err2 := _exc604.Write(ctx, oprot); _write_err603 == nil && err2 != nil {
+			_write_err603 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err592 == nil && err2 != nil {
-			_write_err592 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err603 == nil && err2 != nil {
+			_write_err603 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err592 == nil && err2 != nil {
-			_write_err592 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err603 == nil && err2 != nil {
+			_write_err603 = thrift.WrapTException(err2)
 		}
-		if _write_err592 != nil {
+		if _write_err603 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err592,
+				WriteError:    _write_err603,
 				EndpointError: err,
 			}
 		}
@@ -30317,20 +30572,20 @@ func (p *apiServiceProcessorDeleteQualityAssessment) Process(ctx context.Context
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "deleteQualityAssessment", thrift.REPLY, seqId); err2 != nil {
-		_write_err592 = thrift.WrapTException(err2)
+		_write_err603 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err592 == nil && err2 != nil {
-		_write_err592 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err603 == nil && err2 != nil {
+		_write_err603 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err592 == nil && err2 != nil {
-		_write_err592 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err603 == nil && err2 != nil {
+		_write_err603 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err592 == nil && err2 != nil {
-		_write_err592 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err603 == nil && err2 != nil {
+		_write_err603 = thrift.WrapTException(err2)
 	}
-	if _write_err592 != nil {
+	if _write_err603 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err592,
+			WriteError:    _write_err603,
 			EndpointError: err,
 		}
 	}
@@ -30342,7 +30597,7 @@ type apiServiceProcessorListDatasetVersions struct {
 }
 
 func (p *apiServiceProcessorListDatasetVersions) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err594 thrift.TException
+	var _write_err605 thrift.TException
 	args := ApiServiceListDatasetVersionsArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -30399,22 +30654,22 @@ func (p *apiServiceProcessorListDatasetVersions) Process(ctx context.Context, se
 				}
 			}
 		}
-		_exc595 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing listDatasetVersions: " + err2.Error())
+		_exc606 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing listDatasetVersions: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "listDatasetVersions", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err594 = thrift.WrapTException(err2)
+			_write_err605 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc595.Write(ctx, oprot); _write_err594 == nil && err2 != nil {
-			_write_err594 = thrift.WrapTException(err2)
+		if err2 := _exc606.Write(ctx, oprot); _write_err605 == nil && err2 != nil {
+			_write_err605 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err594 == nil && err2 != nil {
-			_write_err594 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err605 == nil && err2 != nil {
+			_write_err605 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err594 == nil && err2 != nil {
-			_write_err594 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err605 == nil && err2 != nil {
+			_write_err605 = thrift.WrapTException(err2)
 		}
-		if _write_err594 != nil {
+		if _write_err605 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err594,
+				WriteError:    _write_err605,
 				EndpointError: err,
 			}
 		}
@@ -30424,20 +30679,20 @@ func (p *apiServiceProcessorListDatasetVersions) Process(ctx context.Context, se
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "listDatasetVersions", thrift.REPLY, seqId); err2 != nil {
-		_write_err594 = thrift.WrapTException(err2)
+		_write_err605 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err594 == nil && err2 != nil {
-		_write_err594 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err605 == nil && err2 != nil {
+		_write_err605 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err594 == nil && err2 != nil {
-		_write_err594 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err605 == nil && err2 != nil {
+		_write_err605 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err594 == nil && err2 != nil {
-		_write_err594 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err605 == nil && err2 != nil {
+		_write_err605 = thrift.WrapTException(err2)
 	}
-	if _write_err594 != nil {
+	if _write_err605 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err594,
+			WriteError:    _write_err605,
 			EndpointError: err,
 		}
 	}
@@ -30449,7 +30704,7 @@ type apiServiceProcessorCountDatasetVersions struct {
 }
 
 func (p *apiServiceProcessorCountDatasetVersions) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err596 thrift.TException
+	var _write_err607 thrift.TException
 	args := ApiServiceCountDatasetVersionsArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -30506,22 +30761,22 @@ func (p *apiServiceProcessorCountDatasetVersions) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc597 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countDatasetVersions: " + err2.Error())
+		_exc608 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing countDatasetVersions: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "countDatasetVersions", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err596 = thrift.WrapTException(err2)
+			_write_err607 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc597.Write(ctx, oprot); _write_err596 == nil && err2 != nil {
-			_write_err596 = thrift.WrapTException(err2)
+		if err2 := _exc608.Write(ctx, oprot); _write_err607 == nil && err2 != nil {
+			_write_err607 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err596 == nil && err2 != nil {
-			_write_err596 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err607 == nil && err2 != nil {
+			_write_err607 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err596 == nil && err2 != nil {
-			_write_err596 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err607 == nil && err2 != nil {
+			_write_err607 = thrift.WrapTException(err2)
 		}
-		if _write_err596 != nil {
+		if _write_err607 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err596,
+				WriteError:    _write_err607,
 				EndpointError: err,
 			}
 		}
@@ -30531,20 +30786,20 @@ func (p *apiServiceProcessorCountDatasetVersions) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "countDatasetVersions", thrift.REPLY, seqId); err2 != nil {
-		_write_err596 = thrift.WrapTException(err2)
+		_write_err607 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err596 == nil && err2 != nil {
-		_write_err596 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err607 == nil && err2 != nil {
+		_write_err607 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err596 == nil && err2 != nil {
-		_write_err596 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err607 == nil && err2 != nil {
+		_write_err607 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err596 == nil && err2 != nil {
-		_write_err596 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err607 == nil && err2 != nil {
+		_write_err607 = thrift.WrapTException(err2)
 	}
-	if _write_err596 != nil {
+	if _write_err607 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err596,
+			WriteError:    _write_err607,
 			EndpointError: err,
 		}
 	}
@@ -30556,7 +30811,7 @@ type apiServiceProcessorGetDatasetCategories struct {
 }
 
 func (p *apiServiceProcessorGetDatasetCategories) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err598 thrift.TException
+	var _write_err609 thrift.TException
 	args := ApiServiceGetDatasetCategoriesArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -30613,22 +30868,22 @@ func (p *apiServiceProcessorGetDatasetCategories) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc599 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetCategories: " + err2.Error())
+		_exc610 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetCategories: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getDatasetCategories", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err598 = thrift.WrapTException(err2)
+			_write_err609 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc599.Write(ctx, oprot); _write_err598 == nil && err2 != nil {
-			_write_err598 = thrift.WrapTException(err2)
+		if err2 := _exc610.Write(ctx, oprot); _write_err609 == nil && err2 != nil {
+			_write_err609 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err598 == nil && err2 != nil {
-			_write_err598 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err609 == nil && err2 != nil {
+			_write_err609 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err598 == nil && err2 != nil {
-			_write_err598 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err609 == nil && err2 != nil {
+			_write_err609 = thrift.WrapTException(err2)
 		}
-		if _write_err598 != nil {
+		if _write_err609 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err598,
+				WriteError:    _write_err609,
 				EndpointError: err,
 			}
 		}
@@ -30638,20 +30893,20 @@ func (p *apiServiceProcessorGetDatasetCategories) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getDatasetCategories", thrift.REPLY, seqId); err2 != nil {
-		_write_err598 = thrift.WrapTException(err2)
+		_write_err609 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err598 == nil && err2 != nil {
-		_write_err598 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err609 == nil && err2 != nil {
+		_write_err609 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err598 == nil && err2 != nil {
-		_write_err598 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err609 == nil && err2 != nil {
+		_write_err609 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err598 == nil && err2 != nil {
-		_write_err598 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err609 == nil && err2 != nil {
+		_write_err609 = thrift.WrapTException(err2)
 	}
-	if _write_err598 != nil {
+	if _write_err609 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err598,
+			WriteError:    _write_err609,
 			EndpointError: err,
 		}
 	}
@@ -30663,7 +30918,7 @@ type apiServiceProcessorGetDatasetsByCategory struct {
 }
 
 func (p *apiServiceProcessorGetDatasetsByCategory) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err600 thrift.TException
+	var _write_err611 thrift.TException
 	args := ApiServiceGetDatasetsByCategoryArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -30720,22 +30975,22 @@ func (p *apiServiceProcessorGetDatasetsByCategory) Process(ctx context.Context, 
 				}
 			}
 		}
-		_exc601 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetsByCategory: " + err2.Error())
+		_exc612 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetsByCategory: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getDatasetsByCategory", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err600 = thrift.WrapTException(err2)
+			_write_err611 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc601.Write(ctx, oprot); _write_err600 == nil && err2 != nil {
-			_write_err600 = thrift.WrapTException(err2)
+		if err2 := _exc612.Write(ctx, oprot); _write_err611 == nil && err2 != nil {
+			_write_err611 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err600 == nil && err2 != nil {
-			_write_err600 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err611 == nil && err2 != nil {
+			_write_err611 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err600 == nil && err2 != nil {
-			_write_err600 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err611 == nil && err2 != nil {
+			_write_err611 = thrift.WrapTException(err2)
 		}
-		if _write_err600 != nil {
+		if _write_err611 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err600,
+				WriteError:    _write_err611,
 				EndpointError: err,
 			}
 		}
@@ -30745,20 +31000,20 @@ func (p *apiServiceProcessorGetDatasetsByCategory) Process(ctx context.Context, 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getDatasetsByCategory", thrift.REPLY, seqId); err2 != nil {
-		_write_err600 = thrift.WrapTException(err2)
+		_write_err611 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err600 == nil && err2 != nil {
-		_write_err600 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err611 == nil && err2 != nil {
+		_write_err611 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err600 == nil && err2 != nil {
-		_write_err600 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err611 == nil && err2 != nil {
+		_write_err611 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err600 == nil && err2 != nil {
-		_write_err600 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err611 == nil && err2 != nil {
+		_write_err611 = thrift.WrapTException(err2)
 	}
-	if _write_err600 != nil {
+	if _write_err611 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err600,
+			WriteError:    _write_err611,
 			EndpointError: err,
 		}
 	}
@@ -30770,7 +31025,7 @@ type apiServiceProcessorGetDatasetRelations struct {
 }
 
 func (p *apiServiceProcessorGetDatasetRelations) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err602 thrift.TException
+	var _write_err613 thrift.TException
 	args := ApiServiceGetDatasetRelationsArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -30827,22 +31082,22 @@ func (p *apiServiceProcessorGetDatasetRelations) Process(ctx context.Context, se
 				}
 			}
 		}
-		_exc603 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetRelations: " + err2.Error())
+		_exc614 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetRelations: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getDatasetRelations", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err602 = thrift.WrapTException(err2)
+			_write_err613 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc603.Write(ctx, oprot); _write_err602 == nil && err2 != nil {
-			_write_err602 = thrift.WrapTException(err2)
+		if err2 := _exc614.Write(ctx, oprot); _write_err613 == nil && err2 != nil {
+			_write_err613 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err602 == nil && err2 != nil {
-			_write_err602 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err613 == nil && err2 != nil {
+			_write_err613 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err602 == nil && err2 != nil {
-			_write_err602 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err613 == nil && err2 != nil {
+			_write_err613 = thrift.WrapTException(err2)
 		}
-		if _write_err602 != nil {
+		if _write_err613 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err602,
+				WriteError:    _write_err613,
 				EndpointError: err,
 			}
 		}
@@ -30852,20 +31107,20 @@ func (p *apiServiceProcessorGetDatasetRelations) Process(ctx context.Context, se
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getDatasetRelations", thrift.REPLY, seqId); err2 != nil {
-		_write_err602 = thrift.WrapTException(err2)
+		_write_err613 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err602 == nil && err2 != nil {
-		_write_err602 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err613 == nil && err2 != nil {
+		_write_err613 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err602 == nil && err2 != nil {
-		_write_err602 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err613 == nil && err2 != nil {
+		_write_err613 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err602 == nil && err2 != nil {
-		_write_err602 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err613 == nil && err2 != nil {
+		_write_err613 = thrift.WrapTException(err2)
 	}
-	if _write_err602 != nil {
+	if _write_err613 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err602,
+			WriteError:    _write_err613,
 			EndpointError: err,
 		}
 	}
@@ -30877,7 +31132,7 @@ type apiServiceProcessorGetDatasetImpact struct {
 }
 
 func (p *apiServiceProcessorGetDatasetImpact) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err604 thrift.TException
+	var _write_err615 thrift.TException
 	args := ApiServiceGetDatasetImpactArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -30934,22 +31189,22 @@ func (p *apiServiceProcessorGetDatasetImpact) Process(ctx context.Context, seqId
 				}
 			}
 		}
-		_exc605 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetImpact: " + err2.Error())
+		_exc616 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getDatasetImpact: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getDatasetImpact", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err604 = thrift.WrapTException(err2)
+			_write_err615 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc605.Write(ctx, oprot); _write_err604 == nil && err2 != nil {
-			_write_err604 = thrift.WrapTException(err2)
+		if err2 := _exc616.Write(ctx, oprot); _write_err615 == nil && err2 != nil {
+			_write_err615 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err604 == nil && err2 != nil {
-			_write_err604 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err615 == nil && err2 != nil {
+			_write_err615 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err604 == nil && err2 != nil {
-			_write_err604 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err615 == nil && err2 != nil {
+			_write_err615 = thrift.WrapTException(err2)
 		}
-		if _write_err604 != nil {
+		if _write_err615 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err604,
+				WriteError:    _write_err615,
 				EndpointError: err,
 			}
 		}
@@ -30959,20 +31214,20 @@ func (p *apiServiceProcessorGetDatasetImpact) Process(ctx context.Context, seqId
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getDatasetImpact", thrift.REPLY, seqId); err2 != nil {
-		_write_err604 = thrift.WrapTException(err2)
+		_write_err615 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err604 == nil && err2 != nil {
-		_write_err604 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err615 == nil && err2 != nil {
+		_write_err615 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err604 == nil && err2 != nil {
-		_write_err604 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err615 == nil && err2 != nil {
+		_write_err615 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err604 == nil && err2 != nil {
-		_write_err604 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err615 == nil && err2 != nil {
+		_write_err615 = thrift.WrapTException(err2)
 	}
-	if _write_err604 != nil {
+	if _write_err615 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err604,
+			WriteError:    _write_err615,
 			EndpointError: err,
 		}
 	}
@@ -30984,7 +31239,7 @@ type apiServiceProcessorExportDatasetPackage struct {
 }
 
 func (p *apiServiceProcessorExportDatasetPackage) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err606 thrift.TException
+	var _write_err617 thrift.TException
 	args := ApiServiceExportDatasetPackageArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -31041,22 +31296,22 @@ func (p *apiServiceProcessorExportDatasetPackage) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc607 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing exportDatasetPackage: " + err2.Error())
+		_exc618 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing exportDatasetPackage: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "exportDatasetPackage", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err606 = thrift.WrapTException(err2)
+			_write_err617 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc607.Write(ctx, oprot); _write_err606 == nil && err2 != nil {
-			_write_err606 = thrift.WrapTException(err2)
+		if err2 := _exc618.Write(ctx, oprot); _write_err617 == nil && err2 != nil {
+			_write_err617 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err606 == nil && err2 != nil {
-			_write_err606 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err617 == nil && err2 != nil {
+			_write_err617 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err606 == nil && err2 != nil {
-			_write_err606 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err617 == nil && err2 != nil {
+			_write_err617 = thrift.WrapTException(err2)
 		}
-		if _write_err606 != nil {
+		if _write_err617 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err606,
+				WriteError:    _write_err617,
 				EndpointError: err,
 			}
 		}
@@ -31066,20 +31321,20 @@ func (p *apiServiceProcessorExportDatasetPackage) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "exportDatasetPackage", thrift.REPLY, seqId); err2 != nil {
-		_write_err606 = thrift.WrapTException(err2)
+		_write_err617 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err606 == nil && err2 != nil {
-		_write_err606 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err617 == nil && err2 != nil {
+		_write_err617 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err606 == nil && err2 != nil {
-		_write_err606 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err617 == nil && err2 != nil {
+		_write_err617 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err606 == nil && err2 != nil {
-		_write_err606 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err617 == nil && err2 != nil {
+		_write_err617 = thrift.WrapTException(err2)
 	}
-	if _write_err606 != nil {
+	if _write_err617 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err606,
+			WriteError:    _write_err617,
 			EndpointError: err,
 		}
 	}
@@ -31091,7 +31346,7 @@ type apiServiceProcessorGetQualityDimensions struct {
 }
 
 func (p *apiServiceProcessorGetQualityDimensions) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err608 thrift.TException
+	var _write_err619 thrift.TException
 	args := ApiServiceGetQualityDimensionsArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -31148,22 +31403,22 @@ func (p *apiServiceProcessorGetQualityDimensions) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc609 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getQualityDimensions: " + err2.Error())
+		_exc620 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getQualityDimensions: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getQualityDimensions", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err608 = thrift.WrapTException(err2)
+			_write_err619 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc609.Write(ctx, oprot); _write_err608 == nil && err2 != nil {
-			_write_err608 = thrift.WrapTException(err2)
+		if err2 := _exc620.Write(ctx, oprot); _write_err619 == nil && err2 != nil {
+			_write_err619 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err608 == nil && err2 != nil {
-			_write_err608 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err619 == nil && err2 != nil {
+			_write_err619 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err608 == nil && err2 != nil {
-			_write_err608 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err619 == nil && err2 != nil {
+			_write_err619 = thrift.WrapTException(err2)
 		}
-		if _write_err608 != nil {
+		if _write_err619 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err608,
+				WriteError:    _write_err619,
 				EndpointError: err,
 			}
 		}
@@ -31173,20 +31428,20 @@ func (p *apiServiceProcessorGetQualityDimensions) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getQualityDimensions", thrift.REPLY, seqId); err2 != nil {
-		_write_err608 = thrift.WrapTException(err2)
+		_write_err619 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err608 == nil && err2 != nil {
-		_write_err608 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err619 == nil && err2 != nil {
+		_write_err619 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err608 == nil && err2 != nil {
-		_write_err608 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err619 == nil && err2 != nil {
+		_write_err619 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err608 == nil && err2 != nil {
-		_write_err608 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err619 == nil && err2 != nil {
+		_write_err619 = thrift.WrapTException(err2)
 	}
-	if _write_err608 != nil {
+	if _write_err619 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err608,
+			WriteError:    _write_err619,
 			EndpointError: err,
 		}
 	}
@@ -31198,7 +31453,7 @@ type apiServiceProcessorAutoDetectQuality struct {
 }
 
 func (p *apiServiceProcessorAutoDetectQuality) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err610 thrift.TException
+	var _write_err621 thrift.TException
 	args := ApiServiceAutoDetectQualityArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -31255,22 +31510,22 @@ func (p *apiServiceProcessorAutoDetectQuality) Process(ctx context.Context, seqI
 				}
 			}
 		}
-		_exc611 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing autoDetectQuality: " + err2.Error())
+		_exc622 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing autoDetectQuality: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "autoDetectQuality", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err610 = thrift.WrapTException(err2)
+			_write_err621 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc611.Write(ctx, oprot); _write_err610 == nil && err2 != nil {
-			_write_err610 = thrift.WrapTException(err2)
+		if err2 := _exc622.Write(ctx, oprot); _write_err621 == nil && err2 != nil {
+			_write_err621 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err610 == nil && err2 != nil {
-			_write_err610 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err621 == nil && err2 != nil {
+			_write_err621 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err610 == nil && err2 != nil {
-			_write_err610 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err621 == nil && err2 != nil {
+			_write_err621 = thrift.WrapTException(err2)
 		}
-		if _write_err610 != nil {
+		if _write_err621 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err610,
+				WriteError:    _write_err621,
 				EndpointError: err,
 			}
 		}
@@ -31280,20 +31535,20 @@ func (p *apiServiceProcessorAutoDetectQuality) Process(ctx context.Context, seqI
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "autoDetectQuality", thrift.REPLY, seqId); err2 != nil {
-		_write_err610 = thrift.WrapTException(err2)
+		_write_err621 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err610 == nil && err2 != nil {
-		_write_err610 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err621 == nil && err2 != nil {
+		_write_err621 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err610 == nil && err2 != nil {
-		_write_err610 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err621 == nil && err2 != nil {
+		_write_err621 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err610 == nil && err2 != nil {
-		_write_err610 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err621 == nil && err2 != nil {
+		_write_err621 = thrift.WrapTException(err2)
 	}
-	if _write_err610 != nil {
+	if _write_err621 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err610,
+			WriteError:    _write_err621,
 			EndpointError: err,
 		}
 	}
@@ -31305,7 +31560,7 @@ type apiServiceProcessorGetQualityReportById struct {
 }
 
 func (p *apiServiceProcessorGetQualityReportById) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err612 thrift.TException
+	var _write_err623 thrift.TException
 	args := ApiServiceGetQualityReportByIdArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -31362,22 +31617,22 @@ func (p *apiServiceProcessorGetQualityReportById) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc613 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getQualityReportById: " + err2.Error())
+		_exc624 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getQualityReportById: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getQualityReportById", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err612 = thrift.WrapTException(err2)
+			_write_err623 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc613.Write(ctx, oprot); _write_err612 == nil && err2 != nil {
-			_write_err612 = thrift.WrapTException(err2)
+		if err2 := _exc624.Write(ctx, oprot); _write_err623 == nil && err2 != nil {
+			_write_err623 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err612 == nil && err2 != nil {
-			_write_err612 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err623 == nil && err2 != nil {
+			_write_err623 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err612 == nil && err2 != nil {
-			_write_err612 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err623 == nil && err2 != nil {
+			_write_err623 = thrift.WrapTException(err2)
 		}
-		if _write_err612 != nil {
+		if _write_err623 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err612,
+				WriteError:    _write_err623,
 				EndpointError: err,
 			}
 		}
@@ -31387,20 +31642,20 @@ func (p *apiServiceProcessorGetQualityReportById) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getQualityReportById", thrift.REPLY, seqId); err2 != nil {
-		_write_err612 = thrift.WrapTException(err2)
+		_write_err623 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err612 == nil && err2 != nil {
-		_write_err612 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err623 == nil && err2 != nil {
+		_write_err623 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err612 == nil && err2 != nil {
-		_write_err612 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err623 == nil && err2 != nil {
+		_write_err623 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err612 == nil && err2 != nil {
-		_write_err612 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err623 == nil && err2 != nil {
+		_write_err623 = thrift.WrapTException(err2)
 	}
-	if _write_err612 != nil {
+	if _write_err623 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err612,
+			WriteError:    _write_err623,
 			EndpointError: err,
 		}
 	}
@@ -31412,7 +31667,7 @@ type apiServiceProcessorListDataSourceArchives struct {
 }
 
 func (p *apiServiceProcessorListDataSourceArchives) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err614 thrift.TException
+	var _write_err625 thrift.TException
 	args := ApiServiceListDataSourceArchivesArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -31469,22 +31724,22 @@ func (p *apiServiceProcessorListDataSourceArchives) Process(ctx context.Context,
 				}
 			}
 		}
-		_exc615 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing listDataSourceArchives: " + err2.Error())
+		_exc626 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing listDataSourceArchives: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "listDataSourceArchives", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err614 = thrift.WrapTException(err2)
+			_write_err625 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc615.Write(ctx, oprot); _write_err614 == nil && err2 != nil {
-			_write_err614 = thrift.WrapTException(err2)
+		if err2 := _exc626.Write(ctx, oprot); _write_err625 == nil && err2 != nil {
+			_write_err625 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err614 == nil && err2 != nil {
-			_write_err614 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err625 == nil && err2 != nil {
+			_write_err625 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err614 == nil && err2 != nil {
-			_write_err614 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err625 == nil && err2 != nil {
+			_write_err625 = thrift.WrapTException(err2)
 		}
-		if _write_err614 != nil {
+		if _write_err625 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err614,
+				WriteError:    _write_err625,
 				EndpointError: err,
 			}
 		}
@@ -31494,20 +31749,20 @@ func (p *apiServiceProcessorListDataSourceArchives) Process(ctx context.Context,
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "listDataSourceArchives", thrift.REPLY, seqId); err2 != nil {
-		_write_err614 = thrift.WrapTException(err2)
+		_write_err625 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err614 == nil && err2 != nil {
-		_write_err614 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err625 == nil && err2 != nil {
+		_write_err625 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err614 == nil && err2 != nil {
-		_write_err614 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err625 == nil && err2 != nil {
+		_write_err625 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err614 == nil && err2 != nil {
-		_write_err614 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err625 == nil && err2 != nil {
+		_write_err625 = thrift.WrapTException(err2)
 	}
-	if _write_err614 != nil {
+	if _write_err625 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err614,
+			WriteError:    _write_err625,
 			EndpointError: err,
 		}
 	}
@@ -31519,7 +31774,7 @@ type apiServiceProcessorUpdateDataSourceModality struct {
 }
 
 func (p *apiServiceProcessorUpdateDataSourceModality) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err616 thrift.TException
+	var _write_err627 thrift.TException
 	args := ApiServiceUpdateDataSourceModalityArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -31576,22 +31831,22 @@ func (p *apiServiceProcessorUpdateDataSourceModality) Process(ctx context.Contex
 				}
 			}
 		}
-		_exc617 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing updateDataSourceModality: " + err2.Error())
+		_exc628 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing updateDataSourceModality: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "updateDataSourceModality", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err616 = thrift.WrapTException(err2)
+			_write_err627 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc617.Write(ctx, oprot); _write_err616 == nil && err2 != nil {
-			_write_err616 = thrift.WrapTException(err2)
+		if err2 := _exc628.Write(ctx, oprot); _write_err627 == nil && err2 != nil {
+			_write_err627 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err616 == nil && err2 != nil {
-			_write_err616 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err627 == nil && err2 != nil {
+			_write_err627 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err616 == nil && err2 != nil {
-			_write_err616 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err627 == nil && err2 != nil {
+			_write_err627 = thrift.WrapTException(err2)
 		}
-		if _write_err616 != nil {
+		if _write_err627 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err616,
+				WriteError:    _write_err627,
 				EndpointError: err,
 			}
 		}
@@ -31601,20 +31856,20 @@ func (p *apiServiceProcessorUpdateDataSourceModality) Process(ctx context.Contex
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "updateDataSourceModality", thrift.REPLY, seqId); err2 != nil {
-		_write_err616 = thrift.WrapTException(err2)
+		_write_err627 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err616 == nil && err2 != nil {
-		_write_err616 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err627 == nil && err2 != nil {
+		_write_err627 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err616 == nil && err2 != nil {
-		_write_err616 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err627 == nil && err2 != nil {
+		_write_err627 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err616 == nil && err2 != nil {
-		_write_err616 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err627 == nil && err2 != nil {
+		_write_err627 = thrift.WrapTException(err2)
 	}
-	if _write_err616 != nil {
+	if _write_err627 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err616,
+			WriteError:    _write_err627,
 			EndpointError: err,
 		}
 	}
@@ -31626,7 +31881,7 @@ type apiServiceProcessorPreviewDataset struct {
 }
 
 func (p *apiServiceProcessorPreviewDataset) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err618 thrift.TException
+	var _write_err629 thrift.TException
 	args := ApiServicePreviewDatasetArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -31683,22 +31938,22 @@ func (p *apiServiceProcessorPreviewDataset) Process(ctx context.Context, seqId i
 				}
 			}
 		}
-		_exc619 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing previewDataset: " + err2.Error())
+		_exc630 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing previewDataset: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "previewDataset", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err618 = thrift.WrapTException(err2)
+			_write_err629 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc619.Write(ctx, oprot); _write_err618 == nil && err2 != nil {
-			_write_err618 = thrift.WrapTException(err2)
+		if err2 := _exc630.Write(ctx, oprot); _write_err629 == nil && err2 != nil {
+			_write_err629 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err618 == nil && err2 != nil {
-			_write_err618 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err629 == nil && err2 != nil {
+			_write_err629 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err618 == nil && err2 != nil {
-			_write_err618 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err629 == nil && err2 != nil {
+			_write_err629 = thrift.WrapTException(err2)
 		}
-		if _write_err618 != nil {
+		if _write_err629 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err618,
+				WriteError:    _write_err629,
 				EndpointError: err,
 			}
 		}
@@ -31708,20 +31963,20 @@ func (p *apiServiceProcessorPreviewDataset) Process(ctx context.Context, seqId i
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "previewDataset", thrift.REPLY, seqId); err2 != nil {
-		_write_err618 = thrift.WrapTException(err2)
+		_write_err629 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err618 == nil && err2 != nil {
-		_write_err618 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err629 == nil && err2 != nil {
+		_write_err629 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err618 == nil && err2 != nil {
-		_write_err618 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err629 == nil && err2 != nil {
+		_write_err629 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err618 == nil && err2 != nil {
-		_write_err618 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err629 == nil && err2 != nil {
+		_write_err629 = thrift.WrapTException(err2)
 	}
-	if _write_err618 != nil {
+	if _write_err629 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err618,
+			WriteError:    _write_err629,
 			EndpointError: err,
 		}
 	}
@@ -31733,7 +31988,7 @@ type apiServiceProcessorToggleDatasetVersion struct {
 }
 
 func (p *apiServiceProcessorToggleDatasetVersion) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err620 thrift.TException
+	var _write_err631 thrift.TException
 	args := ApiServiceToggleDatasetVersionArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -31790,22 +32045,22 @@ func (p *apiServiceProcessorToggleDatasetVersion) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc621 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing toggleDatasetVersion: " + err2.Error())
+		_exc632 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing toggleDatasetVersion: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "toggleDatasetVersion", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err620 = thrift.WrapTException(err2)
+			_write_err631 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc621.Write(ctx, oprot); _write_err620 == nil && err2 != nil {
-			_write_err620 = thrift.WrapTException(err2)
+		if err2 := _exc632.Write(ctx, oprot); _write_err631 == nil && err2 != nil {
+			_write_err631 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err620 == nil && err2 != nil {
-			_write_err620 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err631 == nil && err2 != nil {
+			_write_err631 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err620 == nil && err2 != nil {
-			_write_err620 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err631 == nil && err2 != nil {
+			_write_err631 = thrift.WrapTException(err2)
 		}
-		if _write_err620 != nil {
+		if _write_err631 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err620,
+				WriteError:    _write_err631,
 				EndpointError: err,
 			}
 		}
@@ -31815,20 +32070,20 @@ func (p *apiServiceProcessorToggleDatasetVersion) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "toggleDatasetVersion", thrift.REPLY, seqId); err2 != nil {
-		_write_err620 = thrift.WrapTException(err2)
+		_write_err631 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err620 == nil && err2 != nil {
-		_write_err620 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err631 == nil && err2 != nil {
+		_write_err631 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err620 == nil && err2 != nil {
-		_write_err620 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err631 == nil && err2 != nil {
+		_write_err631 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err620 == nil && err2 != nil {
-		_write_err620 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err631 == nil && err2 != nil {
+		_write_err631 = thrift.WrapTException(err2)
 	}
-	if _write_err620 != nil {
+	if _write_err631 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err620,
+			WriteError:    _write_err631,
 			EndpointError: err,
 		}
 	}
@@ -31840,7 +32095,7 @@ type apiServiceProcessorUpdateDatasetVersion struct {
 }
 
 func (p *apiServiceProcessorUpdateDatasetVersion) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err622 thrift.TException
+	var _write_err633 thrift.TException
 	args := ApiServiceUpdateDatasetVersionArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -31897,22 +32152,22 @@ func (p *apiServiceProcessorUpdateDatasetVersion) Process(ctx context.Context, s
 				}
 			}
 		}
-		_exc623 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing updateDatasetVersion: " + err2.Error())
+		_exc634 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing updateDatasetVersion: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "updateDatasetVersion", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err622 = thrift.WrapTException(err2)
+			_write_err633 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc623.Write(ctx, oprot); _write_err622 == nil && err2 != nil {
-			_write_err622 = thrift.WrapTException(err2)
+		if err2 := _exc634.Write(ctx, oprot); _write_err633 == nil && err2 != nil {
+			_write_err633 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err622 == nil && err2 != nil {
-			_write_err622 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err633 == nil && err2 != nil {
+			_write_err633 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err622 == nil && err2 != nil {
-			_write_err622 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err633 == nil && err2 != nil {
+			_write_err633 = thrift.WrapTException(err2)
 		}
-		if _write_err622 != nil {
+		if _write_err633 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err622,
+				WriteError:    _write_err633,
 				EndpointError: err,
 			}
 		}
@@ -31922,20 +32177,20 @@ func (p *apiServiceProcessorUpdateDatasetVersion) Process(ctx context.Context, s
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "updateDatasetVersion", thrift.REPLY, seqId); err2 != nil {
-		_write_err622 = thrift.WrapTException(err2)
+		_write_err633 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err622 == nil && err2 != nil {
-		_write_err622 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err633 == nil && err2 != nil {
+		_write_err633 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err622 == nil && err2 != nil {
-		_write_err622 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err633 == nil && err2 != nil {
+		_write_err633 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err622 == nil && err2 != nil {
-		_write_err622 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err633 == nil && err2 != nil {
+		_write_err633 = thrift.WrapTException(err2)
 	}
-	if _write_err622 != nil {
+	if _write_err633 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err622,
+			WriteError:    _write_err633,
 			EndpointError: err,
 		}
 	}
@@ -31947,7 +32202,7 @@ type apiServiceProcessorUpdateFunctionDesc struct {
 }
 
 func (p *apiServiceProcessorUpdateFunctionDesc) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err624 thrift.TException
+	var _write_err635 thrift.TException
 	args := ApiServiceUpdateFunctionDescArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -32004,22 +32259,22 @@ func (p *apiServiceProcessorUpdateFunctionDesc) Process(ctx context.Context, seq
 				}
 			}
 		}
-		_exc625 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing updateFunctionDesc: " + err2.Error())
+		_exc636 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing updateFunctionDesc: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "updateFunctionDesc", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err624 = thrift.WrapTException(err2)
+			_write_err635 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc625.Write(ctx, oprot); _write_err624 == nil && err2 != nil {
-			_write_err624 = thrift.WrapTException(err2)
+		if err2 := _exc636.Write(ctx, oprot); _write_err635 == nil && err2 != nil {
+			_write_err635 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err624 == nil && err2 != nil {
-			_write_err624 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err635 == nil && err2 != nil {
+			_write_err635 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err624 == nil && err2 != nil {
-			_write_err624 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err635 == nil && err2 != nil {
+			_write_err635 = thrift.WrapTException(err2)
 		}
-		if _write_err624 != nil {
+		if _write_err635 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err624,
+				WriteError:    _write_err635,
 				EndpointError: err,
 			}
 		}
@@ -32029,20 +32284,20 @@ func (p *apiServiceProcessorUpdateFunctionDesc) Process(ctx context.Context, seq
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "updateFunctionDesc", thrift.REPLY, seqId); err2 != nil {
-		_write_err624 = thrift.WrapTException(err2)
+		_write_err635 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err624 == nil && err2 != nil {
-		_write_err624 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err635 == nil && err2 != nil {
+		_write_err635 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err624 == nil && err2 != nil {
-		_write_err624 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err635 == nil && err2 != nil {
+		_write_err635 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err624 == nil && err2 != nil {
-		_write_err624 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err635 == nil && err2 != nil {
+		_write_err635 = thrift.WrapTException(err2)
 	}
-	if _write_err624 != nil {
+	if _write_err635 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err624,
+			WriteError:    _write_err635,
 			EndpointError: err,
 		}
 	}
@@ -32054,7 +32309,7 @@ type apiServiceProcessorSaveSqlSnippet struct {
 }
 
 func (p *apiServiceProcessorSaveSqlSnippet) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err626 thrift.TException
+	var _write_err637 thrift.TException
 	args := ApiServiceSaveSqlSnippetArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -32111,22 +32366,22 @@ func (p *apiServiceProcessorSaveSqlSnippet) Process(ctx context.Context, seqId i
 				}
 			}
 		}
-		_exc627 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing saveSqlSnippet: " + err2.Error())
+		_exc638 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing saveSqlSnippet: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "saveSqlSnippet", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err626 = thrift.WrapTException(err2)
+			_write_err637 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc627.Write(ctx, oprot); _write_err626 == nil && err2 != nil {
-			_write_err626 = thrift.WrapTException(err2)
+		if err2 := _exc638.Write(ctx, oprot); _write_err637 == nil && err2 != nil {
+			_write_err637 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err626 == nil && err2 != nil {
-			_write_err626 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err637 == nil && err2 != nil {
+			_write_err637 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err626 == nil && err2 != nil {
-			_write_err626 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err637 == nil && err2 != nil {
+			_write_err637 = thrift.WrapTException(err2)
 		}
-		if _write_err626 != nil {
+		if _write_err637 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err626,
+				WriteError:    _write_err637,
 				EndpointError: err,
 			}
 		}
@@ -32136,20 +32391,20 @@ func (p *apiServiceProcessorSaveSqlSnippet) Process(ctx context.Context, seqId i
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "saveSqlSnippet", thrift.REPLY, seqId); err2 != nil {
-		_write_err626 = thrift.WrapTException(err2)
+		_write_err637 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err626 == nil && err2 != nil {
-		_write_err626 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err637 == nil && err2 != nil {
+		_write_err637 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err626 == nil && err2 != nil {
-		_write_err626 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err637 == nil && err2 != nil {
+		_write_err637 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err626 == nil && err2 != nil {
-		_write_err626 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err637 == nil && err2 != nil {
+		_write_err637 = thrift.WrapTException(err2)
 	}
-	if _write_err626 != nil {
+	if _write_err637 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err626,
+			WriteError:    _write_err637,
 			EndpointError: err,
 		}
 	}
@@ -32161,7 +32416,7 @@ type apiServiceProcessorListSqlSnippets struct {
 }
 
 func (p *apiServiceProcessorListSqlSnippets) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err628 thrift.TException
+	var _write_err639 thrift.TException
 	args := ApiServiceListSqlSnippetsArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -32218,22 +32473,22 @@ func (p *apiServiceProcessorListSqlSnippets) Process(ctx context.Context, seqId 
 				}
 			}
 		}
-		_exc629 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing listSqlSnippets: " + err2.Error())
+		_exc640 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing listSqlSnippets: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "listSqlSnippets", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err628 = thrift.WrapTException(err2)
+			_write_err639 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc629.Write(ctx, oprot); _write_err628 == nil && err2 != nil {
-			_write_err628 = thrift.WrapTException(err2)
+		if err2 := _exc640.Write(ctx, oprot); _write_err639 == nil && err2 != nil {
+			_write_err639 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err628 == nil && err2 != nil {
-			_write_err628 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err639 == nil && err2 != nil {
+			_write_err639 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err628 == nil && err2 != nil {
-			_write_err628 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err639 == nil && err2 != nil {
+			_write_err639 = thrift.WrapTException(err2)
 		}
-		if _write_err628 != nil {
+		if _write_err639 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err628,
+				WriteError:    _write_err639,
 				EndpointError: err,
 			}
 		}
@@ -32243,20 +32498,20 @@ func (p *apiServiceProcessorListSqlSnippets) Process(ctx context.Context, seqId 
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "listSqlSnippets", thrift.REPLY, seqId); err2 != nil {
-		_write_err628 = thrift.WrapTException(err2)
+		_write_err639 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err628 == nil && err2 != nil {
-		_write_err628 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err639 == nil && err2 != nil {
+		_write_err639 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err628 == nil && err2 != nil {
-		_write_err628 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err639 == nil && err2 != nil {
+		_write_err639 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err628 == nil && err2 != nil {
-		_write_err628 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err639 == nil && err2 != nil {
+		_write_err639 = thrift.WrapTException(err2)
 	}
-	if _write_err628 != nil {
+	if _write_err639 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err628,
+			WriteError:    _write_err639,
 			EndpointError: err,
 		}
 	}
@@ -32268,7 +32523,7 @@ type apiServiceProcessorGetSqlSnippet struct {
 }
 
 func (p *apiServiceProcessorGetSqlSnippet) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err630 thrift.TException
+	var _write_err641 thrift.TException
 	args := ApiServiceGetSqlSnippetArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -32325,22 +32580,22 @@ func (p *apiServiceProcessorGetSqlSnippet) Process(ctx context.Context, seqId in
 				}
 			}
 		}
-		_exc631 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getSqlSnippet: " + err2.Error())
+		_exc642 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getSqlSnippet: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "getSqlSnippet", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err630 = thrift.WrapTException(err2)
+			_write_err641 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc631.Write(ctx, oprot); _write_err630 == nil && err2 != nil {
-			_write_err630 = thrift.WrapTException(err2)
+		if err2 := _exc642.Write(ctx, oprot); _write_err641 == nil && err2 != nil {
+			_write_err641 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err630 == nil && err2 != nil {
-			_write_err630 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err641 == nil && err2 != nil {
+			_write_err641 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err630 == nil && err2 != nil {
-			_write_err630 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err641 == nil && err2 != nil {
+			_write_err641 = thrift.WrapTException(err2)
 		}
-		if _write_err630 != nil {
+		if _write_err641 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err630,
+				WriteError:    _write_err641,
 				EndpointError: err,
 			}
 		}
@@ -32350,20 +32605,20 @@ func (p *apiServiceProcessorGetSqlSnippet) Process(ctx context.Context, seqId in
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "getSqlSnippet", thrift.REPLY, seqId); err2 != nil {
-		_write_err630 = thrift.WrapTException(err2)
+		_write_err641 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err630 == nil && err2 != nil {
-		_write_err630 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err641 == nil && err2 != nil {
+		_write_err641 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err630 == nil && err2 != nil {
-		_write_err630 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err641 == nil && err2 != nil {
+		_write_err641 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err630 == nil && err2 != nil {
-		_write_err630 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err641 == nil && err2 != nil {
+		_write_err641 = thrift.WrapTException(err2)
 	}
-	if _write_err630 != nil {
+	if _write_err641 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err630,
+			WriteError:    _write_err641,
 			EndpointError: err,
 		}
 	}
@@ -32375,7 +32630,7 @@ type apiServiceProcessorDeleteSqlSnippet struct {
 }
 
 func (p *apiServiceProcessorDeleteSqlSnippet) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	var _write_err632 thrift.TException
+	var _write_err643 thrift.TException
 	args := ApiServiceDeleteSqlSnippetArgs{}
 	if err2 := args.Read(ctx, iprot); err2 != nil {
 		iprot.ReadMessageEnd(ctx)
@@ -32432,22 +32687,22 @@ func (p *apiServiceProcessorDeleteSqlSnippet) Process(ctx context.Context, seqId
 				}
 			}
 		}
-		_exc633 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteSqlSnippet: " + err2.Error())
+		_exc644 := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing deleteSqlSnippet: " + err2.Error())
 		if err2 := oprot.WriteMessageBegin(ctx, "deleteSqlSnippet", thrift.EXCEPTION, seqId); err2 != nil {
-			_write_err632 = thrift.WrapTException(err2)
+			_write_err643 = thrift.WrapTException(err2)
 		}
-		if err2 := _exc633.Write(ctx, oprot); _write_err632 == nil && err2 != nil {
-			_write_err632 = thrift.WrapTException(err2)
+		if err2 := _exc644.Write(ctx, oprot); _write_err643 == nil && err2 != nil {
+			_write_err643 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.WriteMessageEnd(ctx); _write_err632 == nil && err2 != nil {
-			_write_err632 = thrift.WrapTException(err2)
+		if err2 := oprot.WriteMessageEnd(ctx); _write_err643 == nil && err2 != nil {
+			_write_err643 = thrift.WrapTException(err2)
 		}
-		if err2 := oprot.Flush(ctx); _write_err632 == nil && err2 != nil {
-			_write_err632 = thrift.WrapTException(err2)
+		if err2 := oprot.Flush(ctx); _write_err643 == nil && err2 != nil {
+			_write_err643 = thrift.WrapTException(err2)
 		}
-		if _write_err632 != nil {
+		if _write_err643 != nil {
 			return false, &thrift.ProcessorError{
-				WriteError:    _write_err632,
+				WriteError:    _write_err643,
 				EndpointError: err,
 			}
 		}
@@ -32457,20 +32712,20 @@ func (p *apiServiceProcessorDeleteSqlSnippet) Process(ctx context.Context, seqId
 	}
 	tickerCancel()
 	if err2 := oprot.WriteMessageBegin(ctx, "deleteSqlSnippet", thrift.REPLY, seqId); err2 != nil {
-		_write_err632 = thrift.WrapTException(err2)
+		_write_err643 = thrift.WrapTException(err2)
 	}
-	if err2 := result.Write(ctx, oprot); _write_err632 == nil && err2 != nil {
-		_write_err632 = thrift.WrapTException(err2)
+	if err2 := result.Write(ctx, oprot); _write_err643 == nil && err2 != nil {
+		_write_err643 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.WriteMessageEnd(ctx); _write_err632 == nil && err2 != nil {
-		_write_err632 = thrift.WrapTException(err2)
+	if err2 := oprot.WriteMessageEnd(ctx); _write_err643 == nil && err2 != nil {
+		_write_err643 = thrift.WrapTException(err2)
 	}
-	if err2 := oprot.Flush(ctx); _write_err632 == nil && err2 != nil {
-		_write_err632 = thrift.WrapTException(err2)
+	if err2 := oprot.Flush(ctx); _write_err643 == nil && err2 != nil {
+		_write_err643 = thrift.WrapTException(err2)
 	}
-	if _write_err632 != nil {
+	if _write_err643 != nil {
 		return false, &thrift.ProcessorError{
-			WriteError:    _write_err632,
+			WriteError:    _write_err643,
 			EndpointError: err,
 		}
 	}
@@ -33345,6 +33600,476 @@ func (p *ApiServiceGetDataSourceTreeResult) LogValue() slog.Value {
 }
 
 var _ slog.LogValuer = (*ApiServiceGetDataSourceTreeResult)(nil)
+
+// Attributes:
+//  - File
+//  - FileName
+// 
+type ApiServiceUploadMetaPropsArgs struct {
+	File []byte `thrift:"file,1" db:"file" json:"file"`
+	FileName string `thrift:"fileName,2" db:"fileName" json:"fileName"`
+}
+
+func NewApiServiceUploadMetaPropsArgs() *ApiServiceUploadMetaPropsArgs {
+	return &ApiServiceUploadMetaPropsArgs{}
+}
+
+
+
+func (p *ApiServiceUploadMetaPropsArgs) GetFile() []byte {
+	return p.File
+}
+
+
+
+func (p *ApiServiceUploadMetaPropsArgs) GetFileName() string {
+	return p.FileName
+}
+
+func (p *ApiServiceUploadMetaPropsArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField1(ctx, iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField2(ctx, iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(ctx); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ApiServiceUploadMetaPropsArgs) ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBinary(ctx); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.File = v
+	}
+	return nil
+}
+
+func (p *ApiServiceUploadMetaPropsArgs) ReadField2(ctx context.Context, iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(ctx); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.FileName = v
+	}
+	return nil
+}
+
+func (p *ApiServiceUploadMetaPropsArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin(ctx, "uploadMetaProps_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(ctx, oprot); err != nil { return err }
+		if err := p.writeField2(ctx, oprot); err != nil { return err }
+	}
+	if err := oprot.WriteFieldStop(ctx); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(ctx); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ApiServiceUploadMetaPropsArgs) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin(ctx, "file", thrift.STRING, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:file: ", p), err)
+	}
+	if err := oprot.WriteBinary(ctx, p.File); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.file (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:file: ", p), err)
+	}
+	return err
+}
+
+func (p *ApiServiceUploadMetaPropsArgs) writeField2(ctx context.Context, oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin(ctx, "fileName", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:fileName: ", p), err)
+	}
+	if err := oprot.WriteString(ctx, string(p.FileName)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.fileName (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:fileName: ", p), err)
+	}
+	return err
+}
+
+func (p *ApiServiceUploadMetaPropsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ApiServiceUploadMetaPropsArgs(%+v)", *p)
+}
+
+func (p *ApiServiceUploadMetaPropsArgs) LogValue() slog.Value {
+	if p == nil {
+		return slog.AnyValue(nil)
+	}
+	v := thrift.SlogTStructWrapper{
+		Type: "*api.ApiServiceUploadMetaPropsArgs",
+		Value: p,
+	}
+	return slog.AnyValue(v)
+}
+
+var _ slog.LogValuer = (*ApiServiceUploadMetaPropsArgs)(nil)
+
+// Attributes:
+//  - Success
+// 
+type ApiServiceUploadMetaPropsResult struct {
+	Success *Result_ `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewApiServiceUploadMetaPropsResult() *ApiServiceUploadMetaPropsResult {
+	return &ApiServiceUploadMetaPropsResult{}
+}
+
+var ApiServiceUploadMetaPropsResult_Success_DEFAULT *Result_
+
+func (p *ApiServiceUploadMetaPropsResult) GetSuccess() *Result_ {
+	if !p.IsSetSuccess() {
+		return ApiServiceUploadMetaPropsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+
+func (p *ApiServiceUploadMetaPropsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ApiServiceUploadMetaPropsResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField0(ctx, iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(ctx); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ApiServiceUploadMetaPropsResult) ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
+	p.Success = &Result_{}
+	if err := p.Success.Read(ctx, iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+	}
+	return nil
+}
+
+func (p *ApiServiceUploadMetaPropsResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin(ctx, "uploadMetaProps_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField0(ctx, oprot); err != nil { return err }
+	}
+	if err := oprot.WriteFieldStop(ctx); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(ctx); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ApiServiceUploadMetaPropsResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin(ctx, "success", thrift.STRUCT, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := p.Success.Write(ctx, oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		}
+		if err := oprot.WriteFieldEnd(ctx); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ApiServiceUploadMetaPropsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ApiServiceUploadMetaPropsResult(%+v)", *p)
+}
+
+func (p *ApiServiceUploadMetaPropsResult) LogValue() slog.Value {
+	if p == nil {
+		return slog.AnyValue(nil)
+	}
+	v := thrift.SlogTStructWrapper{
+		Type: "*api.ApiServiceUploadMetaPropsResult",
+		Value: p,
+	}
+	return slog.AnyValue(v)
+}
+
+var _ slog.LogValuer = (*ApiServiceUploadMetaPropsResult)(nil)
+
+type ApiServiceDownloadMetaPropsTemplateArgs struct {
+}
+
+func NewApiServiceDownloadMetaPropsTemplateArgs() *ApiServiceDownloadMetaPropsTemplateArgs {
+	return &ApiServiceDownloadMetaPropsTemplateArgs{}
+}
+
+func (p *ApiServiceDownloadMetaPropsTemplateArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+			return err
+		}
+		if err := iprot.ReadFieldEnd(ctx); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ApiServiceDownloadMetaPropsTemplateArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin(ctx, "downloadMetaPropsTemplate_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+	}
+	if err := oprot.WriteFieldStop(ctx); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(ctx); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ApiServiceDownloadMetaPropsTemplateArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ApiServiceDownloadMetaPropsTemplateArgs(%+v)", *p)
+}
+
+func (p *ApiServiceDownloadMetaPropsTemplateArgs) LogValue() slog.Value {
+	if p == nil {
+		return slog.AnyValue(nil)
+	}
+	v := thrift.SlogTStructWrapper{
+		Type: "*api.ApiServiceDownloadMetaPropsTemplateArgs",
+		Value: p,
+	}
+	return slog.AnyValue(v)
+}
+
+var _ slog.LogValuer = (*ApiServiceDownloadMetaPropsTemplateArgs)(nil)
+
+// Attributes:
+//  - Success
+// 
+type ApiServiceDownloadMetaPropsTemplateResult struct {
+	Success []byte `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewApiServiceDownloadMetaPropsTemplateResult() *ApiServiceDownloadMetaPropsTemplateResult {
+	return &ApiServiceDownloadMetaPropsTemplateResult{}
+}
+
+var ApiServiceDownloadMetaPropsTemplateResult_Success_DEFAULT []byte
+
+
+func (p *ApiServiceDownloadMetaPropsTemplateResult) GetSuccess() []byte {
+	return p.Success
+}
+
+func (p *ApiServiceDownloadMetaPropsTemplateResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ApiServiceDownloadMetaPropsTemplateResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField0(ctx, iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(ctx); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ApiServiceDownloadMetaPropsTemplateResult) ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBinary(ctx); err != nil {
+		return thrift.PrependError("error reading field 0: ", err)
+	} else {
+		p.Success = v
+	}
+	return nil
+}
+
+func (p *ApiServiceDownloadMetaPropsTemplateResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin(ctx, "downloadMetaPropsTemplate_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField0(ctx, oprot); err != nil { return err }
+	}
+	if err := oprot.WriteFieldStop(ctx); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(ctx); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ApiServiceDownloadMetaPropsTemplateResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin(ctx, "success", thrift.STRING, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := oprot.WriteBinary(ctx, p.Success); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(ctx); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ApiServiceDownloadMetaPropsTemplateResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ApiServiceDownloadMetaPropsTemplateResult(%+v)", *p)
+}
+
+func (p *ApiServiceDownloadMetaPropsTemplateResult) LogValue() slog.Value {
+	if p == nil {
+		return slog.AnyValue(nil)
+	}
+	v := thrift.SlogTStructWrapper{
+		Type: "*api.ApiServiceDownloadMetaPropsTemplateResult",
+		Value: p,
+	}
+	return slog.AnyValue(v)
+}
+
+var _ slog.LogValuer = (*ApiServiceDownloadMetaPropsTemplateResult)(nil)
 
 // Attributes:
 //  - Request

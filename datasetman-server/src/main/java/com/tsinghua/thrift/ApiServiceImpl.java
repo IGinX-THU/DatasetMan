@@ -103,6 +103,9 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
     @Autowired
     private com.tsinghua.service.FunctionArchiveService functionArchiveService;
 
+    @Autowired
+    private com.tsinghua.service.MetaPropsService metaPropsService;
+
     // ========== Data Source Interface - Match DataSourceController ==========
 
     @Override
@@ -231,6 +234,34 @@ public class ApiServiceImpl implements com.tsinghua.thrift.api.ApiService.Iface 
             log.error("Thrift RPC: Get data source tree failed", e);
             com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(false, "Query failed: " + e.getMessage());
             return result;
+        }
+    }
+
+    @Override
+    public com.tsinghua.thrift.api.Result uploadMetaProps(java.nio.ByteBuffer file, String fileName) throws TException {
+        try {
+            log.info("Thrift RPC: Upload meta-props file: {}", fileName);
+            byte[] bytes = new byte[file.remaining()];
+            file.get(bytes);
+            String path = metaPropsService.upload(bytes, fileName);
+            com.tsinghua.thrift.api.Result result = new com.tsinghua.thrift.api.Result(true, "上传成功");
+            result.setData(path);
+            return result;
+        } catch (Exception e) {
+            log.error("Thrift RPC: Upload meta-props failed", e);
+            return new com.tsinghua.thrift.api.Result(false, "上传失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public java.nio.ByteBuffer downloadMetaPropsTemplate() throws TException {
+        try {
+            log.info("Thrift RPC: Download meta-props template");
+            byte[] bytes = metaPropsService.downloadTemplateBytes();
+            return java.nio.ByteBuffer.wrap(bytes);
+        } catch (Exception e) {
+            log.error("Thrift RPC: Download meta-props template failed", e);
+            return java.nio.ByteBuffer.wrap(new byte[0]);
         }
     }
 
