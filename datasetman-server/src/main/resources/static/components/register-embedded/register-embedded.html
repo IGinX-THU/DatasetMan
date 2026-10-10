@@ -154,7 +154,12 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">元数据配置文件路径</label>
-                    <input type="text" class="form-control" id="metaPropertiesPath" placeholder="resources/mysql-meta-template.properties">
+                    <input type="text" class="form-control" id="metaPropertiesPath" placeholder="不填则使用各引擎默认配置文件（如 dm-meta.properties）；填写时以IGinX服务器上的路径为准，建议绝对路径">
+                    <div style="display:flex;gap:8px;margin-top:6px;">
+                        <button type="button" class="btn btn-cancel" id="uploadMetaPropsBtn">上传配置文件</button>
+                        <button type="button" class="btn btn-cancel" id="downloadMetaPropsBtn">下载配置模板</button>
+                        <input type="file" id="metaPropsFile" accept=".properties" style="display:none">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">连接超时时间（毫秒）</label>

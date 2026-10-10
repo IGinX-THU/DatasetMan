@@ -7,6 +7,7 @@ import com.tsinghua.dto.StorageEngineInfoDto;
 import com.tsinghua.dto.request.*;
 import com.tsinghua.entity.DataArchiveEntity;
 import com.tsinghua.service.DataSourceService;
+import com.tsinghua.service.MetaPropsValidator;
 import com.tsinghua.model.Result;
 import com.tsinghua.auth.annotation.RequirePermission;
 import com.tsinghua.auth.enums.Permission;
@@ -85,7 +86,19 @@ public class DataSourceController {
         log.info("Storage engine type: " + request.getStorageEngineType());
         log.info("IP: " + request.getIp());
         log.info("Port: " + request.getPort());
-        
+
+        // 关系型数据源：填写了元数据配置文件路径时做 best-effort 校验，
+        // 因为IGinX读不到该文件时会静默回退到默认配置，导致注册"成功"但方言行为错误
+        if (request instanceof RelationalStorageRequest) {
+            String metaPropsPath = ((RelationalStorageRequest) request).getMetaPropertiesPath();
+            if (metaPropsPath != null && !metaPropsPath.trim().isEmpty()) {
+                String invalid = MetaPropsValidator.validate(metaPropsPath);
+                if (invalid != null) {
+                    return Result.error("元数据配置文件校验失败：" + invalid);
+                }
+            }
+        }
+
         boolean success = dataSourceService.registerDataSource(request);
         return success ? Result.success("数据源注册成功") : Result.error("注册失败，请检查配置");
     }

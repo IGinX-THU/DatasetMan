@@ -256,6 +256,7 @@ class FileSystemBrowser extends HTMLElement {
         const isText = textExtensions.includes(fileExtension);
         const isDocument = documentExtensions.includes(fileExtension);
         const isCad = cadExtensions.includes(fileExtension);
+        const isCsv = fileExtension === 'csv';
         const isPreviewable = isImage || isVideo || isAudio || isText || isCad;
 
         if (isPreviewable) {
@@ -412,6 +413,24 @@ class FileSystemBrowser extends HTMLElement {
                         </div>
                     </div>
                 `;
+            } else if (isCsv) {
+                // CSV：表格 / 文本 双 Tab 预览
+                const readCsvArray = (blob instanceof Blob) ? blob.arrayBuffer()
+                    : Promise.resolve((blob instanceof ArrayBuffer) ? blob : blob.buffer);
+                readCsvArray.then(arrayBuffer => {
+                    this.renderCsvPreview(new Uint8Array(arrayBuffer), fileName);
+                }).catch(error => {
+                    console.error('CSV数据读取失败:', error);
+                    fileGrid.innerHTML = `
+                        <div class="file-preview">
+                            <div class="preview-content">
+                                <div style="color: #999; text-align: center; padding: 20px;">
+                                    CSV读取失败: ${error.message}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
             } else if (isText) {
                 const textUrl = URL.createObjectURL(blob);
                 this.currentImageUrl = textUrl;
@@ -597,6 +616,7 @@ class FileSystemBrowser extends HTMLElement {
         const isText = textExtensions.includes(fileExtension);
         const isDocument = documentExtensions.includes(fileExtension);
         const isCad = cadExtensions.includes(fileExtension);
+        const isCsv = fileExtension === 'csv';
         const isPreviewable = isImage || isVideo || isAudio || isText || isCad;
 
         if (isPreviewable && records.length > 0) {
@@ -633,6 +653,8 @@ class FileSystemBrowser extends HTMLElement {
                 this.renderAudioPreview(binaryData, fileName);
             } else if (isText) {
                 this.renderTextPreview(binaryData, fileName);
+            } else if (isCsv) {
+                this.renderCsvPreview(this.base64ToUint8Array(binaryData), fileName);
             } else if (isCad) {
                 this.renderDxfPreview(this.base64ToUint8Array(binaryData), fileName);
             }
@@ -1758,6 +1780,134 @@ class FileSystemBrowser extends HTMLElement {
                 </div>
             `;
             const btn = fileGrid.querySelector('#downloadDxfBtn');
+            if (btn) btn.addEventListener('click', () => this.downloadSelected());
+        }
+    }
+
+    // ===== CSV 表格 / 文本 双 Tab 预览 =====
+
+    parseCsvRows(text, maxRows) {
+        // RFC 4180：支持引号字段、双引号转义、字段内换行；最多解析 maxRows 行即返回
+        const rows = [];
+        let row = [], field = '', inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            if (inQuotes) {
+                if (ch === '"') {
+                    if (text[i + 1] === '"') { field += '"'; i++; }
+                    else inQuotes = false;
+                } else field += ch;
+            } else if (ch === '"') {
+                inQuotes = true;
+            } else if (ch === ',') {
+                row.push(field); field = '';
+            } else if (ch === '\n') {
+                row.push(field); rows.push(row);
+                field = ''; row = [];
+                if (rows.length >= maxRows) return rows;
+            } else if (ch !== '\r') {
+                field += ch;
+            }
+        }
+        if (field !== '' || row.length) { row.push(field); rows.push(row); }
+        return rows;
+    }
+
+    renderCsvPreview(uint8Array, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        let text;
+        try {
+            text = new TextDecoder('utf-8').decode(uint8Array);
+            if (text.includes('\uFFFD')) {
+                try { text = new TextDecoder('gbk').decode(uint8Array); } catch (e) { /* 保持 utf-8 结果 */ }
+            }
+        } catch (e) {
+            text = '';
+            for (let i = 0; i < uint8Array.length; i++) text += String.fromCharCode(uint8Array[i]);
+        }
+
+        const csvBlob = new Blob([uint8Array], { type: 'text/csv' });
+        this.currentImageUrl = URL.createObjectURL(csvBlob);
+        this.currentFileName = fileName;
+
+        try {
+            const MAX_TABLE_ROWS = 200, MAX_TEXT_LINES = 2000;
+            const lines = text.split(/\r\n|\r|\n/);
+            const totalLines = lines.filter(l => l !== '').length;
+            const shownLines = Math.min(lines.length, MAX_TEXT_LINES);
+            const rows = this.parseCsvRows(text, MAX_TABLE_ROWS + 1);
+            if (!rows.length) throw new Error('未解析到数据行');
+
+            const tableRows = rows.slice(0, MAX_TABLE_ROWS + 1);
+            const header = tableRows[0];
+            const bodyRows = tableRows.slice(1);
+            const totalRows = rows.length > MAX_TABLE_ROWS ? `${MAX_TABLE_ROWS}+` : String(Math.max(rows.length - 1, 0));
+            const tableHtml = `
+                <div style="overflow: auto; max-height: 600px; border: 1px solid #e0e0e0;">
+                    <table style="border-collapse: collapse; width: 100%;">
+                        <thead><tr>${header.map(h => `<th style="border: 1px solid #ddd; padding: 6px 10px; background: #f5f5f5; font-weight: bold; font-size: 13px; text-align: left; white-space: nowrap; position: sticky; top: 0;">${this.escapeHtml(h)}</th>`).join('')}</tr></thead>
+                        <tbody>${bodyRows.map(r => `<tr>${header.map((_, i) => `<td style="border: 1px solid #ddd; padding: 5px 10px; font-size: 13px;">${this.escapeHtml(r[i] !== undefined ? r[i] : '')}</td>`).join('')}</tr>`).join('')}</tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 8px; font-size: 12px; color: #888;">表格视图：共 ${totalRows} 行数据${rows.length > MAX_TABLE_ROWS ? '（仅展示前 ' + MAX_TABLE_ROWS + ' 行）' : ''}；完整内容请切换文本视图或下载</div>
+            `;
+            const textHtml = `
+                <pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 600px; overflow: auto; border: 1px solid #e0e0e0; padding: 10px;">${this.escapeHtml(lines.slice(0, shownLines).join('\n'))}</pre>
+                <div style="margin-top: 8px; font-size: 12px; color: #888;">文本视图：共 ${totalLines} 行${lines.length > MAX_TEXT_LINES ? `（仅展示前 ${MAX_TEXT_LINES} 行）` : ''}；完整内容请下载</div>
+            `;
+
+            const btnStyle = 'padding: 4px 14px; margin-left: 8px; cursor: pointer; border-radius: 4px; font-size: 13px;';
+            fileGrid.classList.add('has-preview');
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header" style="display: flex; align-items: center; justify-content: space-between;">
+                        <span class="file-name">${fileName}</span>
+                        <div>
+                            <button id="csvTabTable" style="${btnStyle} border: 1px solid #bbb; background: #fff; color: #555;">表格</button>
+                            <button id="csvTabText" style="${btnStyle} border: 1px solid #1976D2; background: #1976D2; color: #fff;">文本</button>
+                        </div>
+                    </div>
+                    <div class="preview-content">
+                        <div id="csvTablePane" style="display: none; width: 100%;">${tableHtml}</div>
+                        <div id="csvTextPane" style="width: 100%;">${textHtml}</div>
+                    </div>
+                </div>
+            `;
+
+            const tabTable = fileGrid.querySelector('#csvTabTable');
+            const tabText = fileGrid.querySelector('#csvTabText');
+            const paneTable = fileGrid.querySelector('#csvTablePane');
+            const paneText = fileGrid.querySelector('#csvTextPane');
+            const activate = (showTable) => {
+                paneTable.style.display = showTable ? '' : 'none';
+                paneText.style.display = showTable ? 'none' : '';
+                tabTable.style.background = showTable ? '#1976D2' : '#fff';
+                tabTable.style.color = showTable ? '#fff' : '#555';
+                tabTable.style.border = showTable ? '1px solid #1976D2' : '1px solid #bbb';
+                tabText.style.background = showTable ? '#fff' : '#1976D2';
+                tabText.style.color = showTable ? '#555' : '#fff';
+                tabText.style.border = showTable ? '1px solid #bbb' : '1px solid #1976D2';
+            };
+            tabTable.addEventListener('click', () => activate(true));
+            tabText.addEventListener('click', () => activate(false));
+        } catch (error) {
+            console.error('CSV渲染失败:', error);
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${fileName}</span>
+                    </div>
+                    <div class="preview-content">
+                        <div class="document-preview-info">
+                            <p>CSV渲染失败: ${error.message}</p>
+                            <button class="download-btn" id="downloadCsvBtn">下载文件</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            const btn = fileGrid.querySelector('#downloadCsvBtn');
             if (btn) btn.addEventListener('click', () => this.downloadSelected());
         }
     }

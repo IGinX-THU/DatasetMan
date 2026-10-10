@@ -41,7 +41,9 @@ window.AppConfig = {
             test: '/api/datasource/test',
             tree: '/api/datasource/tree',
             archives: '/api/datasource/archives',
-            archiveUpdate: '/api/datasource/archive/update'
+            archiveUpdate: '/api/datasource/archive/update',
+            metaPropsUpload: '/api/datasource/meta-props/upload',
+            metaPropsTemplate: '/api/datasource/meta-props/template'
         },
         // 数据查询相关
         data: {

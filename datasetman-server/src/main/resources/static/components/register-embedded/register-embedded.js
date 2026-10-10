@@ -84,6 +84,66 @@ class RegisterDataResourceEmbedded extends HTMLElement {
                 this.toggleEngineField();
             });
         }
+
+        // 元数据配置文件：上传 / 下载模板
+        const uploadMetaPropsBtn = this.shadowRoot.getElementById('uploadMetaPropsBtn');
+        const metaPropsFile = this.shadowRoot.getElementById('metaPropsFile');
+        const downloadMetaPropsBtn = this.shadowRoot.getElementById('downloadMetaPropsBtn');
+        if (uploadMetaPropsBtn && metaPropsFile) {
+            uploadMetaPropsBtn.addEventListener('click', () => metaPropsFile.click());
+            metaPropsFile.addEventListener('change', (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (file) {
+                    this.uploadMetaProps(file);
+                    e.target.value = ''; // 允许重复选择同一文件
+                }
+            });
+        }
+        if (downloadMetaPropsBtn) {
+            downloadMetaPropsBtn.addEventListener('click', () => this.downloadMetaPropsTemplate());
+        }
+    }
+
+    /**
+     * 上传元数据配置文件，由后端校验必需配置项后存入受管目录，
+     * 并把IGinX可读取的绝对路径回填到输入框
+     */
+    async uploadMetaProps(file) {
+        if (!file.name.toLowerCase().endsWith('.properties')) {
+            this.showMessage('仅支持 .properties 配置文件', 'error');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const result = await window.AppConfig.upload('datasource', 'metaPropsUpload', formData);
+            if (result.success) {
+                const input = this.shadowRoot.getElementById('metaPropertiesPath');
+                if (input) input.value = result.data;
+                this.showMessage('配置文件已上传，路径已自动填充', 'success');
+            } else {
+                this.showMessage(result.message || '上传失败', 'error');
+            }
+        } catch (error) {
+            console.error('上传元数据配置文件失败:', error);
+            this.showMessage('上传失败：' + error.message, 'error');
+        }
+    }
+
+    /**
+     * 下载元数据配置文件模板（全参数通用模板，按注释启用对应引擎的取值）
+     */
+    downloadMetaPropsTemplate() {
+        window.AppConfig.download(
+            'datasource',
+            'metaPropsTemplate',
+            {},
+            'meta-properties-template.properties',
+            false
+        ).catch((error) => {
+            console.error('下载配置模板失败:', error);
+            this.showMessage('下载模板失败：' + error.message, 'error');
+        });
     }
 
     show() {

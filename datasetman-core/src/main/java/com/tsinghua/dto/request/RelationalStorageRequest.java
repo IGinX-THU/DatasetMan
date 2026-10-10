@@ -24,7 +24,7 @@ public class RelationalStorageRequest extends StorageEngineRegisterWrapper {
     @ApiModelProperty(value = "数据库密码", example = "postgres")
     private String password;
 
-    @ApiModelProperty(value = "元数据配置文件路径（仅mysql需要）", example = "resources/mysql-meta-template.properties")
+    @ApiModelProperty(value = "元数据配置文件路径（可选，路径以IGinX服务器文件系统为准；不填则使用驱动目录下各引擎默认配置文件）")
     private String metaPropertiesPath;
 
     // ==================== HikariDataSource 连接池参数 ====================
@@ -84,7 +84,7 @@ public class RelationalStorageRequest extends StorageEngineRegisterWrapper {
             params.put("prep_stmt_cache_size", String.valueOf(prepStmtCacheSize));
         }
         if (prepStmtCacheSqlLimit != null) {
-            params.put(" prep_stmt_cache_sql_limit", String.valueOf(prepStmtCacheSqlLimit));
+            params.put("prep_stmt_cache_sql_limit", String.valueOf(prepStmtCacheSqlLimit));
         }
 
         return params;
