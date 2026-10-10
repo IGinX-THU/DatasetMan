@@ -833,6 +833,10 @@ html.font-scale-1-5 .ribbon-btn-icon {
 .tree-node .tree-children {
     margin-left: 16px;
     display: block;
+    /* 嵌套缩进会使块级子容器宽度逐层变窄，导致行高亮背景只覆盖窄盒、
+       溢出文字的点击命中到父节点（误触发展开/收起）。
+       用 max-content 撑开使每行盒子与内容等宽，配合 .tree 的横向滚动查看 */
+    min-width: max-content;
 }
 
 .tree-node:not(.expanded) .tree-children {
