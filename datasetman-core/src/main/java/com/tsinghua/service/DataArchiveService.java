@@ -91,9 +91,17 @@ public class DataArchiveService {
      * 根据名称查询单个数据档案
      */
     public DataArchiveEntity findByName(String name) {
+        List<DataArchiveEntity> all = findAllByName(name);
+        return all.isEmpty() ? null : all.get(0);
+    }
+
+    /**
+     * 根据名称精确查询全部数据档案（同名可能存在多条历史遗留记录）
+     */
+    public List<DataArchiveEntity> findAllByName(String name) {
         try {
             if (name == null || name.trim().isEmpty()) {
-                return null;
+                return new ArrayList<>();
             }
             String sql = String.format("SELECT * FROM %s WHERE name = '%s';", DATA_ARCHIVE_PREFIX, name.trim());
             log.info("执行SQL: {}", sql);
@@ -106,18 +114,16 @@ public class DataArchiveService {
                 log.info("查询结果: {}", records.get(0));
             }
 
-            if (records.isEmpty()) {
-                return null;
+            List<DataArchiveEntity> result = new ArrayList<>();
+            for (Map<String, Object> rs : records) {
+                DataArchiveEntity entity = new DataArchiveEntity();
+                DataArchiveEntity mapped = ConvertUtil.mapToEntity(entity, rs, DATA_ARCHIVE_PREFIX);
+                result.add(mapped);
             }
-
-            DataArchiveEntity entity = new DataArchiveEntity();
-            Map<String, Object> rs = records.get(0);
-            DataArchiveEntity result = ConvertUtil.mapToEntity(entity, rs, DATA_ARCHIVE_PREFIX);
-            log.info("映射后的实体: name={}, desc={}", result.getName(), result.getDesc());
             return result;
         } catch (Exception e) {
             log.error("根据名称查询数据档案失败", e);
-            return null;
+            return new ArrayList<>();
         }
     }
 

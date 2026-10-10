@@ -83,10 +83,21 @@ public class DataSourceService {
                 storageEngineInfoDto.getSchemaPrefix() + "." + storageEngineInfoDto.getDataPrefix() :
                 storageEngineInfoDto.getSchemaPrefix();
         try {
-            DataArchiveEntity archive = dataArchiveService.findByName(tablePrefix);
-            if (archive != null && archive.getCreateTime() != null) {
-                dataArchiveService.deleteArchive(archive.getCreateTime());
-                log.info("已删除数据源档案元数据: {}", tablePrefix);
+            // 同名档案可能存在多条历史遗留记录，全部删除
+            List<DataArchiveEntity> archives = dataArchiveService.findAllByName(tablePrefix);
+            int deleted = 0;
+            for (DataArchiveEntity archive : archives) {
+                // 主键优先取id（读取回档时可能未映射），回退到createTime列（写入时与主键同值）
+                Long archiveKey = archive.getId() != null ? archive.getId() : archive.getCreateTime();
+                if (archiveKey != null) {
+                    dataArchiveService.deleteArchive(archiveKey);
+                    deleted++;
+                } else {
+                    log.warn("数据源档案 {} 有一条记录缺少主键时间戳，跳过删除，请手工处理", tablePrefix);
+                }
+            }
+            if (deleted > 0) {
+                log.info("已删除数据源档案元数据 {} 条: {}", deleted, tablePrefix);
             }
         } catch (Exception e) {
             log.error("删除数据源档案元数据失败", e);
@@ -171,6 +182,9 @@ public class DataSourceService {
             archive = new DataArchiveEntity();
             archive.setName(tablePrefix);
             archive.setType("datasource");
+            archive.setCreateTime(stableArchiveKey(tablePrefix));
+        } else if (archive.getId() == null && archive.getCreateTime() == null) {
+            archive.setCreateTime(stableArchiveKey(tablePrefix));
         }
         archive.setDesc(dataModality);
         dataArchiveService.saveArchive(archive);
@@ -251,9 +265,18 @@ public class DataSourceService {
      */
     private void saveDataSourceArchive(BaseStorageEngineRequest request, String tablePrefix) {
         try {
-            DataArchiveEntity archive = new DataArchiveEntity();
-            archive.setName(tablePrefix);
-            archive.setType("datasource");
+            // 同名档案已存在则复用（沿用其主键原地覆盖更新），不存在则新建；
+            // 新档案的主键由tablePrefix稳定派生，重复注册天然覆盖同一条档案，不会产生同名重复档案
+            DataArchiveEntity archive = dataArchiveService.findByName(tablePrefix);
+            if (archive == null) {
+                archive = new DataArchiveEntity();
+                archive.setName(tablePrefix);
+                archive.setType("datasource");
+                archive.setCreateTime(stableArchiveKey(tablePrefix));
+            } else if (archive.getId() == null && archive.getCreateTime() == null) {
+                // 旧档案读取时丢失主键，改用稳定主键重建，保证后续注册可覆盖到同一条
+                archive.setCreateTime(stableArchiveKey(tablePrefix));
+            }
             archive.setDesc(request.getDescription());
 
             log.info("准备保存数据源档案: name={}, desc={}", archive.getName(), archive.getDesc());
@@ -272,6 +295,19 @@ public class DataSourceService {
             log.error("保存数据源档案失败", e);
             // 不抛出异常，避免影响主流程
         }
+    }
+
+    /**
+     * 由tablePrefix稳定派生的档案主键（FNV-1a 64位，截取62位保证deleteArchive的key+1不溢出）。
+     * 同名数据源重复注册/卸载重建时覆盖同一条档案，避免每次生成本次时间戳导致同名重复档案
+     */
+    private static long stableArchiveKey(String tablePrefix) {
+        long hash = 0xcbf29ce484222325L;
+        for (byte b : tablePrefix.getBytes(java.nio.charset.StandardCharsets.UTF_8)) {
+            hash ^= (b & 0xff);
+            hash *= 0x100000001b3L;
+        }
+        return hash & 0x3fffffffffffffffL;
     }
 
 }
