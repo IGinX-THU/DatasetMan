@@ -1834,15 +1834,12 @@ class FileSystemBrowser extends HTMLElement {
 
         try {
             const MAX_TABLE_ROWS = 200, MAX_TEXT_LINES = 2000;
-            const lines = text.split(/\r\n|\r|\n/);
-            const totalLines = lines.filter(l => l !== '').length;
-            const shownLines = Math.min(lines.length, MAX_TEXT_LINES);
+            // 表格视图为主：解析到 MAX_TABLE_ROWS+1 行即停止扫描，超大文件只读文件开头
             const rows = this.parseCsvRows(text, MAX_TABLE_ROWS + 1);
             if (!rows.length) throw new Error('未解析到数据行');
 
-            const tableRows = rows.slice(0, MAX_TABLE_ROWS + 1);
-            const header = tableRows[0];
-            const bodyRows = tableRows.slice(1);
+            const header = rows[0];
+            const bodyRows = rows.slice(1, MAX_TABLE_ROWS + 1);
             const totalRows = rows.length > MAX_TABLE_ROWS ? `${MAX_TABLE_ROWS}+` : String(Math.max(rows.length - 1, 0));
             const tableHtml = `
                 <div style="overflow: auto; max-height: 600px; border: 1px solid #e0e0e0;">
@@ -1853,10 +1850,6 @@ class FileSystemBrowser extends HTMLElement {
                 </div>
                 <div style="margin-top: 8px; font-size: 12px; color: #888;">表格视图：共 ${totalRows} 行数据${rows.length > MAX_TABLE_ROWS ? '（仅展示前 ' + MAX_TABLE_ROWS + ' 行）' : ''}；完整内容请切换文本视图或下载</div>
             `;
-            const textHtml = `
-                <pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 600px; overflow: auto; border: 1px solid #e0e0e0; padding: 10px;">${this.escapeHtml(lines.slice(0, shownLines).join('\n'))}</pre>
-                <div style="margin-top: 8px; font-size: 12px; color: #888;">文本视图：共 ${totalLines} 行${lines.length > MAX_TEXT_LINES ? `（仅展示前 ${MAX_TEXT_LINES} 行）` : ''}；完整内容请下载</div>
-            `;
 
             const btnStyle = 'padding: 4px 14px; margin-left: 8px; cursor: pointer; border-radius: 4px; font-size: 13px;';
             fileGrid.classList.add('has-preview');
@@ -1865,13 +1858,13 @@ class FileSystemBrowser extends HTMLElement {
                     <div class="preview-header" style="display: flex; align-items: center; justify-content: space-between;">
                         <span class="file-name">${fileName}</span>
                         <div>
-                            <button id="csvTabTable" style="${btnStyle} border: 1px solid #bbb; background: #fff; color: #555;">表格</button>
-                            <button id="csvTabText" style="${btnStyle} border: 1px solid #1976D2; background: #1976D2; color: #fff;">文本</button>
+                            <button id="csvTabTable" style="${btnStyle} border: 1px solid #1976D2; background: #1976D2; color: #fff;">表格</button>
+                            <button id="csvTabText" style="${btnStyle} border: 1px solid #bbb; background: #fff; color: #555;">文本</button>
                         </div>
                     </div>
                     <div class="preview-content">
-                        <div id="csvTablePane" style="display: none; width: 100%;">${tableHtml}</div>
-                        <div id="csvTextPane" style="width: 100%;">${textHtml}</div>
+                        <div id="csvTablePane" style="width: 100%;">${tableHtml}</div>
+                        <div id="csvTextPane" style="display: none; width: 100%;"></div>
                     </div>
                 </div>
             `;
@@ -1880,6 +1873,19 @@ class FileSystemBrowser extends HTMLElement {
             const tabText = fileGrid.querySelector('#csvTabText');
             const paneTable = fileGrid.querySelector('#csvTablePane');
             const paneText = fileGrid.querySelector('#csvTextPane');
+
+            // 文本视图懒构建：首次切换到"文本"时才做全量分行与内容填充
+            let textPaneBuilt = false;
+            const buildTextHtml = () => {
+                const lines = text.split(/\r\n|\r|\n/);
+                let totalLines = 0;
+                for (let i = 0; i < lines.length; i++) if (lines[i] !== '') totalLines++;
+                const shown = lines.slice(0, Math.min(lines.length, MAX_TEXT_LINES)).join('\n');
+                return `
+                    <pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 600px; overflow: auto; border: 1px solid #e0e0e0; padding: 10px;">${this.escapeHtml(shown)}</pre>
+                    <div style="margin-top: 8px; font-size: 12px; color: #888;">文本视图：共 ${totalLines} 行${lines.length > MAX_TEXT_LINES ? `（仅展示前 ${MAX_TEXT_LINES} 行）` : ''}；完整内容请下载</div>
+                `;
+            };
             const activate = (showTable) => {
                 paneTable.style.display = showTable ? '' : 'none';
                 paneText.style.display = showTable ? 'none' : '';
@@ -1889,6 +1895,11 @@ class FileSystemBrowser extends HTMLElement {
                 tabText.style.background = showTable ? '#fff' : '#1976D2';
                 tabText.style.color = showTable ? '#555' : '#fff';
                 tabText.style.border = showTable ? '1px solid #bbb' : '1px solid #1976D2';
+                if (!showTable && !textPaneBuilt) {
+                    textPaneBuilt = true;
+                    paneText.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">正在生成文本视图...</div>';
+                    setTimeout(() => { paneText.innerHTML = buildTextHtml(); }, 30);
+                }
             };
             tabTable.addEventListener('click', () => activate(true));
             tabText.addEventListener('click', () => activate(false));
