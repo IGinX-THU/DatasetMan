@@ -58,7 +58,7 @@ public class DatasetCreationService {
         DatasetPathPreviewDTO result = new DatasetPathPreviewDTO();
         result.setDatasetName(request.getDatasetName());
         result.setProvenanceType(type.name());
-        result.setVersionNo(CommonUtil.generateVersion(System.currentTimeMillis()));
+        result.setVersionNo(CommonUtil.generateVersion(datasetVersionService.nextId()));
         if (type == ProvenanceType.SOURCE) {
             if (!StringUtils.hasText(request.getSourcePath())) {
                 throw new IllegalArgumentException("请选择数据源");
@@ -178,9 +178,9 @@ public class DatasetCreationService {
         }
 
         registration.setStoragePath(storagePath);
-        // 存储路径形如 datasets.<name>.v_yymmdd_hhmmss 时，复用其后缀作为版本号，避免版本号与路径不一致
+        // 存储路径形如 datasets.<name>.v_yymmdd_hhmmss[SSS] 时，复用其后缀作为版本号，避免版本号与路径不一致
         int lastDot = storagePath.lastIndexOf('.');
-        if (lastDot >= 0 && storagePath.substring(lastDot + 1).matches("v_\\d{6}_\\d{6}")) {
+        if (lastDot >= 0 && storagePath.substring(lastDot + 1).matches("v_\\d{6}_\\d{6}(\\d{3})?")) {
             registration.setVersionNo(storagePath.substring(lastDot + 1));
         }
         registration.setDerivationConfig(config);
@@ -280,10 +280,10 @@ public class DatasetCreationService {
     }
 
     private String nextStoragePath(String datasetName, String plannedVersionNo) {
-        long now = System.currentTimeMillis();
+        long now = datasetVersionService.nextId();
         String safeName = normalizePath(datasetName).replace('.', '_');
         // 前端预览时规划的版本号优先复用，保证预览存储路径与实际创建一致
-        if (plannedVersionNo != null && plannedVersionNo.matches("v_\\d{6}_\\d{6}")) {
+        if (plannedVersionNo != null && plannedVersionNo.matches("v_\\d{6}_\\d{6}(\\d{3})?")) {
             return SchemaPrefix.DATASET_PREFIX + "." + safeName + "." + plannedVersionNo;
         }
         return SchemaPrefix.DATASET_PREFIX + "." + safeName + "." + CommonUtil.generateVersion(now);

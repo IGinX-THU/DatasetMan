@@ -84,10 +84,19 @@ public class DatasetVersionService {
                 ? request.getVersionNo() : CommonUtil.generateVersion(timestamp);
         version.setVersionNo(versionNo);
         
-        // 如果版本号是 v_yymmdd_hhmmss 格式，解析时间戳用于 id 和 createTime，避免版本号与存储路径不一致
+        // 如果版本号是 v_yymmdd_hhmmss[SSS] 格式，解析时间戳用于 id 和 createTime，避免版本号与存储路径不一致
         long effectiveTimestamp = timestamp;
-        if (versionNo.matches("v_\\d{6}_\\d{6}")) {
+        if (versionNo.matches("v_\\d{6}_\\d{6}(\\d{3})?")) {
             effectiveTimestamp = CommonUtil.parseVersionTimestamp(versionNo);
+        }
+        // 唯一性兜底：同毫秒/旧秒级版本号并发登记时，id 保持进程内全局单调递增，
+        // 避免不同版本写到同一个 key 上互相覆盖（id 与版本号时间可能相差数毫秒，仅记录告警）
+        final long parsedTs = effectiveTimestamp;
+        long claimed = ID_SEQUENCE.updateAndGet(prev -> Math.max(prev, parsedTs));
+        if (claimed > parsedTs) {
+            effectiveTimestamp = claimed + 1;
+            ID_SEQUENCE.set(effectiveTimestamp);
+            log.warn("版本号 {} 解析出的时间戳与已有版本冲突，id 顺延为 {}", versionNo, effectiveTimestamp);
         }
         version.setId(effectiveTimestamp);
         version.setProvenanceType(type.name());
@@ -134,6 +143,7 @@ public class DatasetVersionService {
 
         log.info("数据集版本已登记。dataset={}, version={}, type={}, storagePath={}",
                 request.getDatasetName(), version.getVersionNo(), type, request.getStoragePath());
+        invalidateBulkCaches();
         return version;
     }
 
@@ -164,7 +174,8 @@ public class DatasetVersionService {
                     v.setJobState(job.getJobState());
                     v.setId(v.getCreateTime());
                     iginxClient.getWriteClient().writeMeasurement(v);
-                    log.info("已刷新版本 {} 的 Transform 作业状态为 {}", v.getId(), job.getJobState());
+                    invalidateBulkCaches();
+                    log.info("已刷新版本 {} 的 Transform 作业状态为 {}", v.getId(), v.getJobState());
                 }
             } catch (Exception e) {
                 log.warn("刷新版本 {} 的 Transform 作业状态失败: {}", v.getId(), e.getMessage());
@@ -189,7 +200,19 @@ public class DatasetVersionService {
     // ====================================================================
 
     public DatasetVersionEntity queryVersion(Long versionId) {
-        String sql = String.format("select * from %s where createTime = %d;", VERSION_PREFIX, versionId);
+        // 缓存优先：IGinX 关系表无索引，20 万行上的点查是一次全表扫描（实测 3~14 秒），
+        // 全量缓存已热时直接内存查找；未命中或缓存未建时按行键查询（比 createTime 谓词快 3 倍）
+        List<DatasetVersionEntity> cache = allVersionsCache;
+        if (cache != null && versionId != null) {
+            for (DatasetVersionEntity v : cache) {
+                Long key = v.getId() != null ? v.getId() : v.getCreateTime();
+                if (versionId.equals(key)) {
+                    return v;
+                }
+            }
+            return null;
+        }
+        String sql = String.format("select * from %s where key = %d;", VERSION_PREFIX, versionId);
         return query(sql, DatasetVersionEntity::new, VERSION_PREFIX).stream()
                 .findFirst().orElse(null);
     }
@@ -212,13 +235,23 @@ public class DatasetVersionService {
 
     /** 某数据集的全部版本（含已软删，按时间倒序），供变化过程表格使用 */
     public List<DatasetVersionEntity> listVersions(String datasetName, boolean includeDeleted) {
-        String sql;
-        if (StringUtils.hasText(datasetName)) {
-            sql = String.format("select * from %s where datasetName = '%s';", VERSION_PREFIX, escape(datasetName));
-        } else {
+        if (!StringUtils.hasText(datasetName)) {
             return new ArrayList<>();
         }
-        List<DatasetVersionEntity> versions = query(sql, DatasetVersionEntity::new, VERSION_PREFIX);
+        // 缓存优先：datasetName 谓词同样走全表扫描，大表上耗时数秒
+        List<DatasetVersionEntity> versions;
+        List<DatasetVersionEntity> cache = allVersionsCache;
+        if (cache != null) {
+            versions = new ArrayList<>();
+            for (DatasetVersionEntity v : cache) {
+                if (datasetName.equals(v.getDatasetName())) {
+                    versions.add(v);
+                }
+            }
+        } else {
+            String sql = String.format("select * from %s where datasetName = '%s';", VERSION_PREFIX, escape(datasetName));
+            versions = query(sql, DatasetVersionEntity::new, VERSION_PREFIX);
+        }
         refreshTransformJobStates(versions);
         return versions.stream()
                 .filter(v -> includeDeleted || !v.isDeleted())
@@ -236,13 +269,23 @@ public class DatasetVersionService {
      * 避免遍历中对每个版本单独查询 IginX。
      */
     public List<DatasetVersionEntity> listAllVersions() {
-        String sql = String.format("select * from %s;", VERSION_PREFIX);
-        return query(sql, DatasetVersionEntity::new, VERSION_PREFIX);
+        List<DatasetVersionEntity> cache = allVersionsCache;
+        if (cache == null) {
+            synchronized (this) {
+                if (allVersionsCache == null) {
+                    String sql = String.format("select * from %s;", VERSION_PREFIX);
+                    allVersionsCache = query(sql, DatasetVersionEntity::new, VERSION_PREFIX);
+                }
+                cache = allVersionsCache;
+            }
+        }
+        // 返回拷贝：调用方（如 LineageService 的补边）可能向列表追加元素
+        return new ArrayList<>(cache);
     }
 
     /** 全部未删除版本，并按当前用户数据权限过滤（供右侧树使用） */
-    public List<DatasetVersionEntity> listAllAccessibleVersions() {        String sql = String.format("select * from %s;", VERSION_PREFIX);
-        List<DatasetVersionEntity> all = query(sql, DatasetVersionEntity::new, VERSION_PREFIX).stream()
+    public List<DatasetVersionEntity> listAllAccessibleVersions() {
+        List<DatasetVersionEntity> all = listAllVersions().stream()
                 .filter(v -> !v.isDeleted())
                 .collect(Collectors.toList());
         refreshTransformJobStates(all);
@@ -258,6 +301,11 @@ public class DatasetVersionService {
     }
 
     public List<DatasetTreeDTO> getDatasetTree() {
+        // 树 DTO 缓存：20 万版本的分组/排序/DTO 构建耗时可观，写失效与全量缓存同步
+        List<DatasetTreeDTO> cached = datasetTreeCache;
+        if (cached != null) {
+            return new ArrayList<>(cached);
+        }
         Map<String, DatasetTreeDTO> groups = new LinkedHashMap<>();
         listAllAccessibleVersions().stream()
                 .sorted(Comparator.comparing(DatasetVersionEntity::getDatasetName, Comparator.nullsLast(Comparator.naturalOrder()))
@@ -281,7 +329,8 @@ public class DatasetVersionService {
                     version.setRowCount(v.getRowCount());
                     dataset.getVersions().add(version);
                 });
-        return new ArrayList<>(groups.values());
+        datasetTreeCache = new ArrayList<>(groups.values());
+        return new ArrayList<>(datasetTreeCache);
     }
 
     // ====================================================================
@@ -386,8 +435,32 @@ public class DatasetVersionService {
     }
 
     public List<DatasetLineageEntity> listAllEdges() {
-        String sql = String.format("select * from %s;", LINEAGE_PREFIX);
-        return query(sql, DatasetLineageEntity::new, LINEAGE_PREFIX);
+        List<DatasetLineageEntity> cache = allEdgesCache;
+        if (cache == null) {
+            synchronized (this) {
+                if (allEdgesCache == null) {
+                    String sql = String.format("select * from %s;", LINEAGE_PREFIX);
+                    allEdgesCache = query(sql, DatasetLineageEntity::new, LINEAGE_PREFIX);
+                }
+                cache = allEdgesCache;
+            }
+        }
+        return new ArrayList<>(cache);
+    }
+
+    // ====================================================================
+    // 全量读取缓存：血缘图谱/影响分析/关系提取每次请求都要全量加载版本与边，
+    // 20 万行规模下单次 SQL 载入需数秒；这里做进程内缓存，任何版本/边写操作后失效。
+    // ====================================================================
+
+    private volatile List<DatasetVersionEntity> allVersionsCache;
+    private volatile List<DatasetLineageEntity> allEdgesCache;
+    private volatile List<DatasetTreeDTO> datasetTreeCache;
+
+    private void invalidateBulkCaches() {
+        allVersionsCache = null;
+        allEdgesCache = null;
+        datasetTreeCache = null;
     }
 
     // ====================================================================
@@ -425,6 +498,7 @@ public class DatasetVersionService {
         version.setDeleted(true);
         version.setId(version.getCreateTime());
         iginxClient.getWriteClient().writeMeasurement(version);
+        invalidateBulkCaches();
         log.info("数据集版本已软删除。id={}, type={}, storagePath={}", versionId, version.getProvenanceType(), version.getStoragePath());
     }
 
@@ -438,6 +512,7 @@ public class DatasetVersionService {
         version.setDeleted(newState);
         version.setId(version.getCreateTime());
         iginxClient.getWriteClient().writeMeasurement(version);
+        invalidateBulkCaches();
         log.info("数据集版本已{}。id={}", newState ? "禁用" : "启用", versionId);
         return newState;
     }
@@ -457,6 +532,7 @@ public class DatasetVersionService {
         if (tags != null) version.setTags(tags);
         version.setId(version.getCreateTime());
         iginxClient.getWriteClient().writeMeasurement(version);
+        invalidateBulkCaches();
         log.info("数据集版本档案已更新。id={}", versionId);
     }
 
@@ -478,7 +554,8 @@ public class DatasetVersionService {
         }
     }
 
-    private long nextId() {
+    /** 进程内全局单调时间戳（毫秒）：版本 id / 自动版本号 / 存储路径后缀的唯一性来源 */
+    public long nextId() {
         return ID_SEQUENCE.updateAndGet(previous -> Math.max(previous + 1, System.currentTimeMillis()));
     }
 

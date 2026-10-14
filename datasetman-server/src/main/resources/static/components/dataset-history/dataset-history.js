@@ -137,7 +137,8 @@ class DatasetHistory extends HTMLElement {
                 </div>
                 <div class="card">
                     <div class="header"><h3>血缘图谱</h3></div>
-                    <div class="toolbar"><label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="checkbox" id="sideLineageToggle">显示旁系血缘</label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button><button id="forkPath">编辑</button></div>
+                    <div class="toolbar"><label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="checkbox" id="sideLineageToggle">显示旁系血缘</label><label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;">展开层级<select id="lineageDepth" style="padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;"><option value="1">1 跳</option><option value="2">2 跳</option><option value="3">3 跳</option><option value="all" selected>全部（大图慢）</option></select></label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button><button id="forkPath">编辑</button></div>
+                    <div class="lineage-notice" id="lineageNotice" style="display:none;margin:0 0 8px;padding:6px 10px;border:1px solid #fde68a;background:#fffbeb;border-radius:6px;font-size:12px;color:#92400e;"></div>
                     <div class="fork-bar" id="forkBar">
                         <span id="forkBarText"></span>
                         <span id="forkBarChain" class="fork-chain"></span>
@@ -173,6 +174,11 @@ class DatasetHistory extends HTMLElement {
         this.shadowRoot.querySelector('#zoomOut').addEventListener('click', () => this.zoomBy(0.8));
         this.shadowRoot.querySelector('#resetView').addEventListener('click', () => this.resetView());
         this.shadowRoot.querySelector('#sideLineageToggle').addEventListener('change', () => this.loadGraph());
+        this.shadowRoot.querySelector('#lineageDepth').addEventListener('change', () => this.loadGraph());
+        // 弹窗内"展开上下游"按钮（事件委托，弹窗内容为动态 innerHTML）
+        this.shadowRoot.querySelector('#lineagePopupBody').addEventListener('click', (e) => {
+            if (e.target.closest('[data-expand]')) this.expandFromPopup();
+        });
         this.shadowRoot.querySelector('#forkPath').addEventListener('click', () => this.toggleForkMode());
         this.shadowRoot.querySelector('#forkStart').addEventListener('click', () => this.startForkRun());
         this.shadowRoot.querySelector('#forkClear').addEventListener('click', () => this.clearForkSelection());
@@ -188,6 +194,8 @@ class DatasetHistory extends HTMLElement {
     async show(selection) {
         this.setAttribute('show', '');
         this.exitForkMode();
+        this._autoDepthApplied = false;
+        this.hideNotice();
         this.selection = typeof selection === 'object' ? selection : { storagePath: selection };
         try {
             if (!this.selection.versionId) {
@@ -207,6 +215,11 @@ class DatasetHistory extends HTMLElement {
                 throw new Error('版本详情缺少版本ID，无法加载血缘');
             }
             this.changes = ((changes.success || changes.code === 200) && changes.data) ? changes.data : [];
+            // 分页复位并定位到当前版本所在页
+            this.changePage = 1;
+            const curVid = this.version ? this.versionIdOf(this.version) : null;
+            const curIdx = curVid == null ? -1 : this.changes.findIndex(c => Number(this.versionIdOf(c)) === Number(curVid));
+            if (curIdx >= 0) this.changePage = Math.floor(curIdx / this.changePageSize) + 1;
             this.renderOverview();
             this.renderChangeTable();
             await this.loadGraph();
@@ -288,17 +301,61 @@ class DatasetHistory extends HTMLElement {
             container.innerHTML = '<div class="empty">暂无变化记录</div>';
             return;
         }
-        container.innerHTML = `<table><thead><tr><th>版本</th><th>产出方式</th><th>存储路径</th><th>上游版本</th><th>版本配置</th><th>操作人</th><th>时间</th><th>备注</th><th>状态</th></tr></thead><tbody>${this.changes.map(row => {
+        // 分页：版本数多时一次性渲染全表会拖垮页面
+        const total = this.changes.length;
+        const totalPages = Math.max(1, Math.ceil(total / this.changePageSize));
+        if (this.changePage > totalPages) this.changePage = totalPages;
+        if (this.changePage < 1) this.changePage = 1;
+        const start = (this.changePage - 1) * this.changePageSize;
+        const pageRows = this.changes.slice(start, start + this.changePageSize);
+        const activeVid = this.versionIdOf(this.version);
+        const pageBtnStyle = 'padding:3px 10px;border:1px solid #d1d5db;background:#fff;border-radius:4px;font-size:12px;cursor:pointer;';
+        container.innerHTML = `<table><thead><tr><th>版本</th><th>产出方式</th><th>存储路径</th><th>上游版本</th><th>版本配置</th><th>操作人</th><th>时间</th><th>备注</th><th>状态</th></tr></thead><tbody>${pageRows.map(row => {
             const upstreams = (row.upstreams || []).map(u => `${u.datasetName || ''}/${u.versionNo || u.versionId}`).join(', ') || '-';
             const recipe = this.recipeSummary(row.derivationConfig);
-            const activeVid = this.versionIdOf(this.version);
             const statusBadge = this.statusBadge(row);
             const vid = row.versionId || row.createTime;
             return `<tr data-version-id="${row.versionId}" class="${row.versionId === activeVid ? 'active' : ''}"><td>${this.escape(row.versionNo)}</td><td><span class="badge ${row.provenanceType}">${this.escape(row.provenanceLabel || row.provenanceType)}</span></td><td><code>${this.escape(row.storagePath || '-')}</code></td><td>${this.escape(upstreams)}</td><td title="${this.escape(JSON.stringify(row.derivationConfig || {}))}">${this.escape(recipe)}</td><td>${this.escape(row.operator || '-')}</td><td>${this.escape(this.formatTime(row.createTime))}</td><td>${this.escape(row.remark || '-')}</td><td>${statusBadge}</td></tr>`;
-        }).join('')}</tbody></table>`;
+        }).join('')}</tbody></table>
+        <div class="change-pager" style="display:flex;align-items:center;gap:8px;padding:8px 4px;font-size:12px;color:#6b7280;">
+            <span>共 ${total} 个版本</span>
+            <button data-change-page="first" style="${pageBtnStyle}">首页</button>
+            <button data-change-page="prev" style="${pageBtnStyle}" ${this.changePage <= 1 ? 'disabled' : ''}>上一页</button>
+            <span>第 ${this.changePage} / ${totalPages} 页</span>
+            <button data-change-page="next" style="${pageBtnStyle}" ${this.changePage >= totalPages ? 'disabled' : ''}>下一页</button>
+            <button data-change-page="last" style="${pageBtnStyle}">末页</button>
+            <span style="margin-left:auto;">每页</span>
+            <select data-change-size style="padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;">
+                ${[20, 50, 100].map(n => `<option value="${n}" ${n === this.changePageSize ? 'selected' : ''}>${n}</option>`).join('')}
+            </select>
+            <span>条</span>
+        </div>`;
         container.querySelectorAll('tbody tr').forEach(row => row.addEventListener('click', () => this.highlight(Number(row.dataset.versionId))));
+        const pager = container.querySelector('.change-pager');
+        pager.querySelectorAll('button[data-change-page]').forEach(btn => btn.addEventListener('click', () => {
+            const act = btn.getAttribute('data-change-page');
+            if (act === 'first') this.changePage = 1;
+            else if (act === 'prev') this.changePage -= 1;
+            else if (act === 'next') this.changePage += 1;
+            else if (act === 'last') this.changePage = totalPages;
+            this.renderChangeTable();
+        }));
+        const sizeSel = pager.querySelector('[data-change-size]');
+        sizeSel.addEventListener('change', () => {
+            this.changePageSize = Number(sizeSel.value);
+            this.changePage = 1;
+            this.renderChangeTable();
+        });
     }
 
+
+    /** 超过该可见版本数时，"全部"模式自动降级为 2 跳展开（DataWorks 式保护） */
+    AUTO_DEPTH_THRESHOLD = 200;
+    /** 变化过程表格分页状态 */
+    changePage = 1;
+    changePageSize = 20;
+    /** 单次返回节点数保护上限 */
+    MAX_NODES_LIMIT = 2000;
 
     async loadGraph() {
         const vid = this.versionIdOf(this.version);
@@ -308,9 +365,37 @@ class DatasetHistory extends HTMLElement {
             return;
         }
         const sideLineage = this.shadowRoot.querySelector('#sideLineageToggle')?.checked ?? false;
-        const result = await window.AppConfig.get('dataset', 'lineage', { versionId:vid, sideLineage });
+        const depthSel = this.shadowRoot.querySelector('#lineageDepth')?.value ?? 'all';
+        const params = { versionId:vid, sideLineage, maxNodes: this.MAX_NODES_LIMIT };
+        if (depthSel !== 'all') params.depth = Number(depthSel);
+        const result = await window.AppConfig.get('dataset', 'lineage', params);
         this.graph = ((result.success || result.code === 200) && result.data) ? result.data : { nodes:[], edges:[] };
+
+        // 大图自动降载：用户选择"全部"但可见版本过多时，自动切换为 2 跳展开并提示
+        const visible = this.graph.visibleVersions || 0;
+        if (depthSel === 'all' && visible > this.AUTO_DEPTH_THRESHOLD && !this._autoDepthApplied) {
+            this._autoDepthApplied = true;
+            const sel = this.shadowRoot.querySelector('#lineageDepth');
+            if (sel) sel.value = '2';
+            this.showNotice(`当前可见版本较多（${visible} 个），已自动切换为 2 跳展开以保证页面可交互；需要全图可用"展开层级"切换。`);
+            return this.loadGraph();
+        }
+        if (this.graph.truncated) {
+            this.showNotice(`节点数超出保护上限（${this.MAX_NODES_LIMIT}），已截断显示；可减小"展开层级"聚焦查看。`);
+        }
         this.renderGraph();
+    }
+
+    showNotice(text) {
+        const bar = this.shadowRoot.querySelector('#lineageNotice');
+        if (!bar) return;
+        bar.textContent = text;
+        bar.style.display = 'block';
+    }
+
+    hideNotice() {
+        const bar = this.shadowRoot.querySelector('#lineageNotice');
+        if (bar) bar.style.display = 'none';
     }
 
     renderGraph() {
@@ -367,6 +452,13 @@ class DatasetHistory extends HTMLElement {
         const operationNodeSize = [Math.round(120 * nodeScale), Math.round(44 * nodeScale)];
         const labelFontSize = Math.max(9, Math.round(11 * nodeScale));
 
+        // 标签分级（LOD）与大图护栏：
+        // - 节点多时默认只显示焦点节点标签，悬停显示，放大后全部显示
+        // - 边标签（关系类型文字）在边很多时关闭：文字绘制比连线本身更耗时
+        // - 力导向布局动画在节点多时关闭（确定性布局下动画没有意义，纯耗 CPU）
+        const lodLabelAll = estimatedNodeCount <= 400;
+        const showEdgeLabels = estimatedNodeCount <= 300;
+
         const echartsNodes = [];
         const echartsLinks = [];
         const versionKeyMap = new Map(); // versionId -> echarts node id
@@ -394,13 +486,14 @@ class DatasetHistory extends HTMLElement {
                     opacity: deleted ? 0.55 : 1
                 },
                 label: {
-                    show: true,
+                    show: n.focus || lodLabelAll,
                     position: 'bottom',
                     fontSize: labelFontSize,
                     color: deleted ? '#94a3b8' : '#374151',
                     formatter: () => `${n.datasetName || ''}\n${n.versionNo || ''}`
                 },
                 nodeType: 'version',
+                _lodAlways: n.focus,
                 versionData: n
             });
         });
@@ -456,7 +549,7 @@ class DatasetHistory extends HTMLElement {
                             borderRadius: 8
                         },
                         label: {
-                            show: true,
+                            show: lodLabelAll,
                             fontSize: labelFontSize,
                             color: opInfo.textColor,
                             formatter: () => opDetail ? `${opLabel}\n${opDetail}` : opLabel
@@ -489,7 +582,7 @@ class DatasetHistory extends HTMLElement {
                             type: e.primary ? 'solid' : 'dashed'
                         },
                         label: {
-                            show: !!e.relationType,
+                            show: showEdgeLabels && !!e.relationType,
                             formatter: e.relationType || '',
                             fontSize: 9,
                             color: '#64748b'
@@ -507,7 +600,7 @@ class DatasetHistory extends HTMLElement {
                         type: e.primary ? 'solid' : 'dashed'
                     },
                     label: {
-                        show: !!e.relationType,
+                        show: showEdgeLabels && !!e.relationType,
                         formatter: e.relationType || '',
                         fontSize: 9,
                         color: '#64748b'
@@ -671,7 +764,7 @@ class DatasetHistory extends HTMLElement {
                     edgeLength: edgeLength,
                     gravity: gravity,
                     friction: 0.8,
-                    layoutAnimation: true
+                    layoutAnimation: echartsNodes.length <= 500
                 },
                 roam: true,
                 draggable: true,
@@ -691,6 +784,7 @@ class DatasetHistory extends HTMLElement {
                 },
                 emphasis: {
                     focus: 'adjacency',
+                    label: { show: true },
                     lineStyle: { width: 3 }
                 },
                 data: echartsNodes,
@@ -698,6 +792,11 @@ class DatasetHistory extends HTMLElement {
             }]
         };
         chart.setOption(option);
+
+        // 缩放分级显示标签（LOD）：仅大图启用（小图标签恒显示，保持原有观感）
+        this._lodTierEnabled = !lodLabelAll;
+        this._labelTier = lodLabelAll ? 'all' : 'focus';
+        chart.on('graphRoam', () => this._handleRoamForLabels(chart));
 
         // 点击节点 -> 路径重跑选择模式下构建重跑链；否则弹出详情弹窗（版本节点同时高亮对应行）
         chart.on('click', (params) => {
@@ -731,6 +830,59 @@ class DatasetHistory extends HTMLElement {
         
         // 动态检测力导向布局是否稳定，稳定后再检测节点是否超出视口
         this._checkLayoutStable(chart);
+    }
+
+    /**
+     * 缩放分级显示标签（LOD）：防抖后按当前 zoom 切换——
+     * z>=1.2 全部显示；z<0.5 全部隐藏（悬停仍显示）；其余仅焦点/悬停显示
+     */
+    _handleRoamForLabels(chart) {
+        if (!this._lodTierEnabled) return;
+        if (this._roamLabelTimer) clearTimeout(this._roamLabelTimer);
+        this._roamLabelTimer = setTimeout(() => {
+            if (!chart || chart.isDisposed()) return;
+            const z = this._getGraphZoom(chart);
+            let tier;
+            if (z >= 1.2) tier = 'all';
+            else if (z < 0.5) tier = 'none';
+            else tier = 'focus';
+            if (tier === this._labelTier) return;
+            this._labelTier = tier;
+            this._applyLabelTier(chart, tier);
+        }, 250);
+    }
+
+    _getGraphZoom(chart) {
+        try {
+            const opt = chart.getOption();
+            return (opt.series[0] && opt.series[0].zoom) || 1;
+        } catch (e) {
+            return 1;
+        }
+    }
+
+    /** 按分级切换节点标签：携带完整节点数据按索引合并（只发 label 项会把 x/y/name 丢掉） */
+    _applyLabelTier(chart, tier) {
+        if (!this._echartsNodesCache) return;
+        const data = this._echartsNodesCache.map(n => ({
+            ...n,
+            label: { ...(n.label || {}), show: tier === 'all' || !!n._lodAlways }
+        }));
+        chart.setOption({ series: [{ data }] }, { lazyUpdate: true, silent: true });
+    }
+
+    /** 当前展开层级选择（'1'/'2'/'3'/'all'） */
+    currentDepth() {
+        return this.shadowRoot.querySelector('#lineageDepth')?.value ?? 'all';
+    }
+
+    /** 从节点弹窗发起逐层展开：层级 +1（3 跳以上直接切全部） */
+    expandFromPopup() {
+        const sel = this.shadowRoot.querySelector('#lineageDepth');
+        if (!sel) return;
+        if (sel.value === 'all') return;
+        sel.value = sel.value === '3' ? 'all' : String(Number(sel.value) + 1);
+        this.loadGraph();
     }
 
     /**
@@ -879,6 +1031,12 @@ class DatasetHistory extends HTMLElement {
                 originX: width / 2,
                 originY: height / 2
             });
+            // 兜底：大图上相对倍率可能因测量误差迭代发散（实测放大到 15 倍指向空白），
+            // 调整后若绝对缩放超出合理范围，直接按目标值设置绝对 zoom
+            const after = (chart.getOption().series[0].zoom) || 1;
+            if (after > 3 || after < 0.05) {
+                chart.setOption({ series: [{ zoom: Math.min(Math.max(target, 0.2), 3) }] });
+            }
         }
 
         // 平移：多分量图以主图包围盒中心为视觉中心，单分量图仍以整体包围盒为中心
@@ -1277,6 +1435,20 @@ class DatasetHistory extends HTMLElement {
             html.push(`<div class="field"><span class="field-label">状态:</span> ${v.deleted ? '<span style="color:#dc2626">已删除</span>' : '<span style="color:#16a34a">正常</span>'}</div>`);
         }
         if (v.remark) html.push(`<div class="field"><span class="field-label">备注:</span> ${this.escape(v.remark)}</div>`);
+        // 逐层展开入口：该版本在全图中仍有未展示的上下游时（DataWorks 式 +/- 展开），
+        // 给出一键展开按钮；"全部"模式下无截断，不展示
+        const upCnt = v.upstreamCount == null ? 0 : v.upstreamCount;
+        const downCnt = v.downstreamCount == null ? 0 : v.downstreamCount;
+        if ((upCnt > 0 || downCnt > 0) && this.currentDepth() !== 'all') {
+            html.push(`<div class="field" style="margin-top:10px;display:flex;gap:8px;">`);
+            if (upCnt > 0) {
+                html.push(`<button class="lineage-expand-btn" data-expand="up" style="flex:1;padding:6px 8px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;border-radius:6px;font-size:12px;cursor:pointer;">展开上游（${upCnt} 个直接上游）</button>`);
+            }
+            if (downCnt > 0) {
+                html.push(`<button class="lineage-expand-btn" data-expand="down" style="flex:1;padding:6px 8px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;border-radius:6px;font-size:12px;cursor:pointer;">展开下游（${downCnt} 个直接下游）</button>`);
+            }
+            html.push(`</div>`);
+        }
         return html.join('');
     }
 
@@ -1629,6 +1801,15 @@ class DatasetHistory extends HTMLElement {
     }
 
     highlight(versionId) {
+        // 分页兼容：目标行不在当前页时先翻到对应页再高亮
+        const idx = this.changes.findIndex(c => Number(this.versionIdOf(c)) === Number(versionId));
+        if (idx >= 0) {
+            const targetPage = Math.floor(idx / this.changePageSize) + 1;
+            if (targetPage !== this.changePage) {
+                this.changePage = targetPage;
+                this.renderChangeTable();
+            }
+        }
         // 高亮变化过程表格中的对应行
         this.shadowRoot.querySelectorAll('#changeTable tbody tr').forEach(row => {
             const rowVid = Number(row.dataset.versionId);

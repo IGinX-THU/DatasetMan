@@ -8,24 +8,27 @@ import java.time.format.DateTimeFormatter;
 public class CommonUtil {
 
     public static String generateVersion(long timestamp) {
+        // 毫秒级分辨率：同一秒内创建的多个版本各自拥有唯一版本号/时间戳，
+        // 避免旧的秒级格式（v_yyMMdd_HHmmss）在并发创建时生成相同 id 互相覆盖
         DateTimeFormatter FORMATTER =
-                DateTimeFormatter.ofPattern("'v_'yyMMdd_HHmmss")
+                DateTimeFormatter.ofPattern("'v_'yyMMdd_HHmmssSSS")
                         .withZone(ZoneId.of("Asia/Shanghai"));
         return FORMATTER.format(Instant.ofEpochMilli(timestamp));
     }
 
     /**
-     * 解析版本号格式 v_yyMMdd_HHmmss 为时间戳
-     * 与 generateVersion 相反操作
+     * 解析版本号为时间戳，与 generateVersion 相反操作。
+     * 兼容两种格式：毫秒级 v_yyMMdd_HHmmssSSS（当前）与秒级 v_yyMMdd_HHmmss（历史数据）。
      */
     public static long parseVersionTimestamp(String versionNo) {
-        if (versionNo == null || !versionNo.matches("v_\\d{6}_\\d{6}")) {
+        if (versionNo == null) {
             return System.currentTimeMillis();
         }
         try {
-            String timeStr = versionNo.substring(2); // 去掉 "v_"
+            String timeStr = versionNo.substring(2); // 去掉 "v_"（毫秒格式 16 位，秒级 13 位）
+            String pattern = timeStr.length() >= 16 ? "yyMMdd_HHmmssSSS" : "yyMMdd_HHmmss";
             DateTimeFormatter FORMATTER =
-                    DateTimeFormatter.ofPattern("yyMMdd_HHmmss")
+                    DateTimeFormatter.ofPattern(pattern)
                             .withZone(ZoneId.of("Asia/Shanghai"));
             Instant instant = FORMATTER.parse(timeStr, Instant::from);
             return instant.toEpochMilli();

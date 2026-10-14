@@ -580,14 +580,13 @@ public class LineageForkService {
         return base + "_fork_" + System.currentTimeMillis() + ext;
     }
 
-    /** 生成未占用的版本号（秒级时间戳），避免同名数据集同秒冲突导致存储路径碰撞 */
-    private String nextAvailableVersionNo(String datasetName) throws InterruptedException {
+    /** 生成未占用的版本号（毫秒级单调时间戳），避免同名数据集同刻冲突导致存储路径碰撞 */
+    private String nextAvailableVersionNo(String datasetName) {
         while (true) {
-            String candidate = CommonUtil.generateVersion(System.currentTimeMillis());
+            String candidate = CommonUtil.generateVersion(datasetVersionService.nextId());
             if (datasetVersionService.queryVersionByNameAndNo(datasetName, candidate) == null) {
                 return candidate;
             }
-            Thread.sleep(1000);
         }
     }
 

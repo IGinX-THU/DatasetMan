@@ -39,6 +39,14 @@ public class LineageService {
      * @param sideLineage 是否包含旁系血缘：true 时把同数据集名的所有可见版本也作为遍历起点（含独立版本树）
      */
     public LineageGraphDTO getLineageGraph(Long versionId, boolean sideLineage) {
+        return getLineageGraph(versionId, sideLineage, 0, 0);
+    }
+
+    /**
+     * @param depth    从焦点展开的层数上限，0 = 不限（跨数据集引用与版本链各算 1 层）
+     * @param maxNodes 返回节点数上限，0 = 不限；达到上限停止扩展并置 truncated=true
+     */
+    public LineageGraphDTO getLineageGraph(Long versionId, boolean sideLineage, int depth, int maxNodes) {
         LineageGraphDTO graph = new LineageGraphDTO();
         graph.setFocusVersionId(versionId);
 
@@ -68,20 +76,27 @@ public class LineageService {
         if (focus == null) {
             return graph;
         }
+        graph.setVisibleVersions(versionMap.size());
         Set<Long> visibleIds = new HashSet<>(versionMap.keySet());
 
-        // 血缘边索引：边表 + 按版本的 upstreamVersionIds 兜底补边（后者覆盖边表脏数据/缺失）
+        // 血缘边索引：先由边表建邻接表（O(E)），再按版本的 upstreamVersionIds 兜底补边。
+        // 补边去重直接查 byFrom 邻接表（O(度数)），避免旧实现对每条上游做全边表线性扫描
+        // 导致的 O(版本数×边数) 热点（20 万边规模下单次查询可达分钟级）。
         List<DatasetLineageEntity> allEdges = datasetVersionService.listAllEdges();
         Map<Long, List<DatasetLineageEntity>> byFrom = new HashMap<>();
         Map<Long, List<DatasetLineageEntity>> byTo = new HashMap<>();
+        for (DatasetLineageEntity e : allEdges) {
+            if (e.getFromVersionId() != null) byFrom.computeIfAbsent(e.getFromVersionId(), k -> new ArrayList<>()).add(e);
+            if (e.getToVersionId() != null) byTo.computeIfAbsent(e.getToVersionId(), k -> new ArrayList<>()).add(e);
+        }
         for (DatasetVersionEntity v : versionMap.values()) {
             List<Long> upstreamIds = datasetVersionService.parseUpstreamIds(v);
             Long to = versionKey(v);
             for (int i = 0; i < upstreamIds.size(); i++) {
                 Long uid = upstreamIds.get(i);
                 if (uid == null) continue;
-                boolean duplicated = allEdges.stream().anyMatch(e ->
-                        uid.equals(e.getFromVersionId()) && to.equals(e.getToVersionId()));
+                List<DatasetLineageEntity> fromEdges = byFrom.get(uid);
+                boolean duplicated = fromEdges != null && fromEdges.stream().anyMatch(e -> to.equals(e.getToVersionId()));
                 if (duplicated) continue;
                 DatasetLineageEntity supplemental = new DatasetLineageEntity();
                 supplemental.setFromVersionId(uid);
@@ -89,45 +104,71 @@ public class LineageService {
                 supplemental.setRelationType(label(v.getProvenanceType()));
                 supplemental.setPrimary(i == 0);
                 allEdges.add(supplemental);
+                byFrom.computeIfAbsent(uid, k -> new ArrayList<>()).add(supplemental);
+                byTo.computeIfAbsent(to, k -> new ArrayList<>()).add(supplemental);
             }
         }
-        for (DatasetLineageEntity e : allEdges) {
-            if (e.getFromVersionId() != null) byFrom.computeIfAbsent(e.getFromVersionId(), k -> new ArrayList<>()).add(e);
-            if (e.getToVersionId() != null) byTo.computeIfAbsent(e.getToVersionId(), k -> new ArrayList<>()).add(e);
-        }
 
-        // 在可见子图上从焦点双向 BFS；sideLineage 时同名数据集的可见版本也作为遍历起点
+        // 在可见子图上从焦点双向 BFS；sideLineage 时同名数据集的可见版本也作为遍历起点。
+        // depth 限制展开层数，maxNodes 限制返回节点数，超限置 truncated 供前端提示
+        Map<Long, Integer> dist = new HashMap<>();
         Set<Long> visited = new LinkedHashSet<>();
         Set<DatasetLineageEntity> edges = new LinkedHashSet<>();
         Deque<Long> queue = new ArrayDeque<>();
         visited.add(versionId);
+        dist.put(versionId, 0);
         queue.add(versionId);
         if (sideLineage && focus.getDatasetName() != null) {
             for (Map.Entry<Long, DatasetVersionEntity> entry : versionMap.entrySet()) {
                 if (focus.getDatasetName().equals(entry.getValue().getDatasetName()) && visited.add(entry.getKey())) {
+                    dist.put(entry.getKey(), 0);
                     queue.add(entry.getKey());
                 }
             }
         }
+        boolean truncated = false;
         while (!queue.isEmpty()) {
             Long cur = queue.poll();
+            int d = dist.getOrDefault(cur, 0);
+            if (depth > 0 && d >= depth) continue;
             for (DatasetLineageEntity e : byTo.getOrDefault(cur, Collections.emptyList())) {
                 edges.add(e);
                 Long from = e.getFromVersionId();
-                if (from != null && visibleIds.contains(from) && visited.add(from)) queue.add(from);
+                if (from != null && visibleIds.contains(from) && visited.add(from)) {
+                    if (maxNodes > 0 && visited.size() >= maxNodes) {
+                        truncated = true;
+                        queue.clear();
+                        break;
+                    }
+                    dist.put(from, d + 1);
+                    queue.add(from);
+                }
             }
             for (DatasetLineageEntity e : byFrom.getOrDefault(cur, Collections.emptyList())) {
                 edges.add(e);
                 Long to = e.getToVersionId();
-                if (to != null && visibleIds.contains(to) && visited.add(to)) queue.add(to);
+                if (to != null && visibleIds.contains(to) && visited.add(to)) {
+                    if (maxNodes > 0 && visited.size() >= maxNodes) {
+                        truncated = true;
+                        queue.clear();
+                        break;
+                    }
+                    dist.put(to, d + 1);
+                    queue.add(to);
+                }
             }
         }
+        graph.setTruncated(truncated);
 
         // visited 中的节点全部存在于版本树数据源，直接输出；边两端必然可见
         for (Long id : visited) {
             DatasetVersionEntity v = versionMap.get(id);
             if (v != null) {
-                graph.getNodes().add(toNode(v, id.equals(versionId)));
+                LineageGraphDTO.Node node = toNode(v, id.equals(versionId));
+                // 全图邻接计数（不受截断影响），前端据此展示"展开上下游"入口
+                node.setUpstreamCount(byTo.getOrDefault(id, Collections.emptyList()).size());
+                node.setDownstreamCount(byFrom.getOrDefault(id, Collections.emptyList()).size());
+                graph.getNodes().add(node);
             }
         }
         for (DatasetLineageEntity e : edges) {

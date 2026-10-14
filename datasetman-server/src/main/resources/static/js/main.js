@@ -2194,66 +2194,73 @@ function showVisualAnalysis() {
         return tree;
     }
     
-    // 渲染树节点HTML
-    function renderTreeNodes(treeData, level = 0) {
-        let html = '';
-        
-        Object.values(treeData).forEach(node => {
-            const hasChildren = Object.keys(node.children).length > 0;
-            const expandedClass = level < 2 ? 'expanded' : '';
-            const nodeClass = `tree-node ${expandedClass}`;
-            
-            // 根据节点类型选择图标
-            let iconHtml = '';
-            if (hasChildren) {
-                // 有子节点：根据dataModality显示对应图标
-                if (level === 0 && node.dataModality === 'relational') {
-                    iconHtml = `<span class="tree-icon folder-icon">🗄️</span>`;
-                } else if (level === 0 && node.dataModality === 'file_system') {
-                    iconHtml = `<span class="tree-icon folder-icon">📁</span>`;
-                } else if (level === 0 && node.dataModality === 'semi_structured') {
-                    iconHtml = `<span class="tree-icon folder-icon">🍃</span>`;
-                } else if (level === 0 && node.dataModality === 'key_value') {
-                    iconHtml = `<span class="tree-icon folder-icon">⚡</span>`;
-                } else if (level === 0 && node.dataModality === 'time_series') {
-                    iconHtml = `<span class="tree-icon folder-icon">📈</span>`;
-                } else if (level === 0) {
-                    // 根节点使用📁
-                    iconHtml = `<span class="tree-icon folder-icon"></span>`;
-                } else {
-                    // 中间节点使用📂
-                    iconHtml = `<span class="tree-icon ">📂</span>`;
-                }
+    // 渲染树节点HTML（分批）：根层与每层子节点超过 TREE_CHILD_BATCH 时只渲染一批，
+    // 其余通过"显示更多"节点增量追加，避免大数据量下一次渲染全部节点
+    const TREE_CHILD_BATCH = 100;
+    const treeChildShown = new Map();   // 节点 fullPath -> 已渲染子节点数
+    let lastDataSourcePayload = null;
+
+    function treeMoreNodeHtml(path, next, remain) {
+        return `<div class="tree-more-node" data-more-path="${path}" data-more-next="${next}" style="padding:4px 8px;font-size:12px;color:#2563eb;cursor:pointer;">\u25b8 显示更多（剩余 ${remain}）</div>`;
+    }
+
+    function renderTreeNodeHtml(node, level) {
+        const hasChildren = Object.keys(node.children || {}).length > 0;
+        const expandedClass = level < 2 ? 'expanded' : '';
+        const nodeClass = `tree-node ${expandedClass}`;
+
+        let iconHtml = '';
+        if (hasChildren) {
+            if (level === 0 && node.dataModality === 'relational') {
+                iconHtml = `<span class="tree-icon folder-icon">🗄️</span>`;
+            } else if (level === 0 && node.dataModality === 'file_system') {
+                iconHtml = `<span class="tree-icon folder-icon">📁</span>`;
+            } else if (level === 0 && node.dataModality === 'semi_structured') {
+                iconHtml = `<span class="tree-icon folder-icon">🍃</span>`;
+            } else if (level === 0 && node.dataModality === 'key_value') {
+                iconHtml = `<span class="tree-icon folder-icon">⚡</span>`;
+            } else if (level === 0 && node.dataModality === 'time_series') {
+                iconHtml = `<span class="tree-icon folder-icon">📈</span>`;
+            } else if (level === 0) {
+                iconHtml = `<span class="tree-icon folder-icon"></span>`;
             } else {
-                // 没有子节点的叶子节点：根据数据类型显示图标
-                const dataTypeIcons = {
-                    0: '🔘',      // BOOLEAN(0) - 开关
-                    1: '📈',      // INTEGER(1) - 曲线图
-                    2: '📈',      // LONG(2) - 曲线图
-                    3: '📈',      // FLOAT(3) - 曲线图
-                    4: '📈',      // DOUBLE(4) - 曲线图
-                    5: '💾'       // BINARY(5) - 包裹
-                };
-                const icon = dataTypeIcons[node.dataType] || '📈';
-                iconHtml = `<span class="tree-icon">${icon}</span>`;
+                iconHtml = `<span class="tree-icon ">📂</span>`;
             }
-            
-            html += `
+        } else {
+            const dataTypeIcons = { 0: '🔘', 1: '📈', 2: '📈', 3: '📈', 4: '📈', 5: '💾' };
+            const icon = dataTypeIcons[node.dataType] || '📈';
+            iconHtml = `<span class="tree-icon">${icon}</span>`;
+        }
+
+        let html = `
                 <div class="${nodeClass}" data-full-path="${node.fullPath}" data-is-leaf="${node.isLeaf}" data-type="${node.dataType || ''}" data-modality="${node.dataModality || ''}">
                     ${iconHtml}
                     <span class="tree-node-text">${node.name}</span>
-            `;
-            
-            if (hasChildren) {
-                html += '<div class="tree-children">';
-                html += renderTreeNodes(node.children, level + 1);
-                html += '</div>';
+        `;
+        if (hasChildren) {
+            const childEntries = Object.values(node.children);
+            const shown = Math.min(childEntries.length, treeChildShown.get(node.fullPath) ?? TREE_CHILD_BATCH);
+            html += '<div class="tree-children">';
+            html += childEntries.slice(0, shown).map(c => renderTreeNodeHtml(c, level + 1)).join('');
+            if (childEntries.length > shown) {
+                html += treeMoreNodeHtml(node.fullPath, shown + TREE_CHILD_BATCH, childEntries.length - shown);
             }
-            
             html += '</div>';
-        });
-        
+        }
+        html += '</div>';
         return html;
+    }
+
+    function renderTreeNodes(treeData, level = 0) {
+        const entries = Object.values(treeData);
+        const key = level === 0 ? '__root__' : null;
+        // 兼容旧调用：根层也分批（__root__ 计数），子层在 renderTreeNodeHtml 内分批
+        if (key !== null) {
+            const shown = Math.min(entries.length, treeChildShown.get(key) ?? TREE_CHILD_BATCH);
+            return entries.slice(0, shown).map(n => renderTreeNodeHtml(n, level)).join('')
+                + (entries.length > shown ? treeMoreNodeHtml(key, shown + TREE_CHILD_BATCH, entries.length - shown) : '');
+        }
+        return entries.map(n => renderTreeNodeHtml(n, level)).join('');
     }
     
     // 渲染数据源树
@@ -2263,17 +2270,64 @@ function showVisualAnalysis() {
             treeContainer.innerHTML = '<div class="empty-placeholder">暂无数据资源</div>';
             return;
         }
-        
-        // 将全部数据源转换为树结构
+
+        lastDataSourcePayload = dataSources;
         const treeData = buildTreeFromStringArray(dataSources);
-        
-        // 渲染树HTML
-        const treeHTML = renderTreeNodes(treeData);
-        
-        treeContainer.innerHTML = treeHTML;
-        
-        // 重新绑定树节点点击事件
+        treeContainer.innerHTML = renderTreeNodes(treeData, 0);
         bindTreeEvents();
+        ensureLeftMoreDelegation();
+    }
+
+    // 左侧树"显示更多"点击：定位树节点对象，增量渲染下一批子节点（只绑新节点）
+    let leftMoreDelegated = false;
+    function ensureLeftMoreDelegation() {
+        if (leftMoreDelegated) return;
+        leftMoreDelegated = true;
+        const tree = document.getElementById('dataSourceTree');
+        if (!tree) return;
+        tree.addEventListener('click', (e) => {
+            const more = e.target.closest('.tree-more-node');
+            if (!more) return;
+            e.stopPropagation();
+            const path = more.getAttribute('data-more-path');
+            const next = Number(more.getAttribute('data-more-next'));
+            treeChildShown.set(path, next);
+            const from = next - TREE_CHILD_BATCH;
+            const findNode = (map) => {
+                if (path === '__root__') return { children: map };
+                for (const n of Object.values(map)) {
+                    if (n.fullPath === path) return n;
+                    const hit = findNodeInChildren(n, path);
+                    if (hit) return hit;
+                }
+                return null;
+            };
+            const findNodeInChildren = (parent, target) => {
+                for (const n of Object.values(parent.children || {})) {
+                    if (n.fullPath === target) return n;
+                    const hit = findNodeInChildren(n, target);
+                    if (hit) return hit;
+                }
+                return null;
+            };
+            const nodeObj = findNode(buildTreeFromStringArray(lastDataSourcePayload || []));
+            if (!nodeObj) return;
+            const entries = Object.values(nodeObj.children || {});
+            const level = path === '__root__' ? 0 : path.split('.').length;
+            const batchHtml = entries.slice(from, next)
+                .map(c => renderTreeNodeHtml(c, level)).join('');
+            const remain = entries.length - next;
+            const moreHtml = remain > 0 ? treeMoreNodeHtml(path, next + TREE_CHILD_BATCH, remain) : '';
+            if (path === '__root__') {
+                more.insertAdjacentHTML('beforebegin', batchHtml + moreHtml);
+            } else {
+                const parentChildren = tree.querySelector(`.tree-node[data-full-path="${window.CSS && CSS.escape ? CSS.escape(path) : path}"] > .tree-children`);
+                if (!parentChildren) return;
+                more.insertAdjacentHTML('beforebegin', batchHtml + moreHtml);
+                parentChildren.querySelectorAll('.tree-node').forEach(bindLeftTreeNode);
+            }
+            more.remove();
+        });
     }
     
     // 根据存储引擎类型获取图标
@@ -2350,16 +2404,13 @@ function showVisualAnalysis() {
     }
 
     // 重新绑定树节点事件
-    function bindTreeEvents() {
+    function bindLeftTreeNode(node) {
         const leftSidebarTree = document.querySelector('.left-sidebar .tree');
-        if (leftSidebarTree) {
-            const treeNodes = leftSidebarTree.querySelectorAll('.tree-node');
-            treeNodes.forEach(node => {
-                node.addEventListener('click', function(e) {
+        node.addEventListener('click', function(e) {
                     e.stopPropagation();
                     
                     // 确保只处理左侧的节点
-                    if (!this.closest('.left-sidebar')) {
+                    if (!node.closest('.left-sidebar')) {
                         return;
                     }
                     
@@ -2367,16 +2418,16 @@ function showVisualAnalysis() {
                     leftSidebarTree.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
                     
                     // 设置当前选中
-                    this.classList.add('active');
+                    node.classList.add('active');
                     
                     // 获取节点的完整路径
-                    const fullPath = this.getAttribute('data-full-path');
-                    const isLeaf = this.getAttribute('data-is-leaf') === 'true';
+                    const fullPath = node.getAttribute('data-full-path');
+                    const isLeaf = node.getAttribute('data-is-leaf') === 'true';
                     
                     if (fullPath && isLeaf) {
                         selectedDataSource = fullPath;
 
-                        const dataModality = this.getAttribute('data-modality') || 'time_series';
+                        const dataModality = node.getAttribute('data-modality') || 'time_series';
 
                         // 每次点击节点时，下拉选自动跟随节点模态（空则默认时序视图）
                         if (modalitySwitch) {
@@ -2392,16 +2443,55 @@ function showVisualAnalysis() {
                         
                                             }
                     
-                    // 展开收起（如果有子节点）
-                    if (this.querySelector('.tree-children')) {
-                        this.classList.toggle('expanded');
-                    }
-                });
-            });
+                // 展开收起（如果有子节点）
+                if (node.querySelector('.tree-children')) {
+                    node.classList.toggle('expanded');
+                }
+        });
+    }
+
+    function bindTreeEvents() {
+        const leftSidebarTree = document.querySelector('.left-sidebar .tree');
+        if (leftSidebarTree) {
+            const treeNodes = leftSidebarTree.querySelectorAll('.tree-node');
+            treeNodes.forEach(bindLeftTreeNode);
         }
     }
     
     // 同步filesystem数据到右侧数据集
+    // 大数据量保护：单数据集默认最多渲染 50 个版本节点，点击"显示全部"再展开；
+    // 数据集数量多时默认折叠，避免 20 万版本一次性渲染成 DOM 拖垮页面
+    const MAX_TREE_VERSIONS = 50;
+    const DATASET_BATCH = 200;          // 数据集根节点分批大小
+    let datasetTreeData = [];
+    let datasetTreeDelegated = false;
+    let datasetShown = DATASET_BATCH;   // 当前已渲染的数据集数
+    let datasetTreeFilter = '';         // 名称过滤关键字
+
+    function renderTreeChildren(dataset) {
+        const versions = dataset.versions || [];
+        const shown = versions.slice(0, MAX_TREE_VERSIONS);
+        const hidden = versions.length - shown.length;
+        return `${shown.map(version => treeVersionItemHtml(dataset.datasetName, version)).join('')}
+                        ${hidden > 0 ? `
+                            <div class="tree-node" data-is-leaf="false" data-expand-dataset="${escapeHtml(dataset.datasetName)}">
+                                <span class="tree-node-text" style="color:#2563eb;">\u25b8 显示全部 ${versions.length} 个版本</span>
+                            </div>` : ''}`;
+    }
+
+    function treeVersionItemHtml(datasetName, version) {
+        const vId = version.versionId || version.createTime || version.id || '';
+        return `
+                            <div class="tree-node" data-is-leaf="true"
+                                 data-dataset-name="${escapeHtml(datasetName)}"
+                                 data-version-id="${vId}"
+                                 data-full-path="${escapeHtml(version.storagePath)}">
+                                <span class="tree-icon"></span>
+                                <span class="tree-node-text">${escapeHtml(version.versionNo)}</span>
+                            </div>
+                        `;
+    }
+
     async function loadDatasetTree() {
         const rightSidebarTree = document.getElementById('datasetTree');
         if (!rightSidebarTree) return;
@@ -2416,138 +2506,186 @@ function showVisualAnalysis() {
                 rightSidebarTree.innerHTML = '<div class="empty-placeholder">暂无数据集</div>';
                 return;
             }
-            rightSidebarTree.innerHTML = result.data.map(dataset => `
-                <div class="tree-node expanded" data-dataset-name="${escapeHtml(dataset.datasetName)}" data-is-leaf="false">
-                    <span class="tree-icon folder-icon"></span>
-                    <span class="tree-node-text">${escapeHtml(dataset.datasetName)}</span>
-                    <div class="tree-children">
-                        ${(dataset.versions || []).map(version => {
-                            const vId = version.versionId || version.createTime || version.id || '';
-                            return `
-                            <div class="tree-node" data-is-leaf="true"
-                                 data-dataset-name="${escapeHtml(dataset.datasetName)}"
-                                 data-version-id="${vId}"
-                                 data-full-path="${escapeHtml(version.storagePath)}">
-                                <span class="tree-icon"></span>
-                                <span class="tree-node-text">${escapeHtml(version.versionNo)}</span>
-                            </div>
-                        `;}).join('')}
-                    </div>
-                </div>
-            `).join('');
+            datasetTreeData = result.data;
+            datasetShown = DATASET_BATCH;
+            renderDatasetTree();
 
-            rightSidebarTree.querySelectorAll('.tree-node').forEach(node => {
-                node.addEventListener('click', function(e) {
-                    const isLeaf = this.getAttribute('data-is-leaf') === 'true';
-                    if (isLeaf) {
-                        // 叶子节点：阻止冒泡到父节点，避免树折叠
-                        e.stopPropagation();
-                    }
-                    rightSidebarTree.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
-                    this.classList.add('active');
-                    if (!isLeaf) {
-                        // 父节点：切换展开/折叠
-                        this.classList.toggle('expanded');
-                        return;
-                    }
-                    const rawVersionId = this.getAttribute('data-version-id');
-                    const versionId = rawVersionId && !isNaN(Number(rawVersionId)) ? Number(rawVersionId) : null;
-                    const datasetName = this.getAttribute('data-dataset-name');
-                    const storagePath = this.getAttribute('data-full-path');
-                    console.log('🌲 直接绑定点击右侧叶子节点:', { versionId, datasetName, storagePath, rawVersionId });
-                    if (versionId) {
-                        showComponent('datasetHistory', { versionId, datasetName, storagePath });
-                        
-                        // 根据存储路径展开左侧树对应节点
-                        if (storagePath) {
-                            const leftSidebarTree = document.getElementById('dataSourceTree');
-                            if (leftSidebarTree) {
-                                // 清除所有高亮和选中状态
-                                leftSidebarTree.querySelectorAll('.tree-node.highlighted').forEach(node => {
-                                    node.classList.remove('highlighted');
-                                });
-                                leftSidebarTree.querySelectorAll('.tree-node.active').forEach(node => {
-                                    node.classList.remove('active');
-                                });
-                                
-                                // 收起所有展开的节点
-                                leftSidebarTree.querySelectorAll('.tree-node.expanded').forEach(node => {
-                                    node.classList.remove('expanded');
-                                });
-                                
-                                // 尝试找到完全匹配存储路径的节点
-                                let targetNode = leftSidebarTree.querySelector(`.tree-node[data-full-path="${storagePath}"]`);
-                                
-                                // 如果没有完全匹配，尝试前缀匹配
-                                if (!targetNode) {
-                                    const allNodes = leftSidebarTree.querySelectorAll('.tree-node[data-full-path]');
-                                    let bestMatch = null;
-                                    let maxMatchLength = 0;
-                                    
-                                    for (const node of allNodes) {
-                                        const nodePath = node.getAttribute('data-full-path');
-                                        if (nodePath && storagePath.startsWith(nodePath)) {
-                                            if (nodePath.length > maxMatchLength) {
-                                                maxMatchLength = nodePath.length;
-                                                bestMatch = node;
-                                            }
-                                        }
-                                    }
-                                    targetNode = bestMatch;
-                                }
-                                
-                                if (targetNode) {
-                                    const isLeafNode = targetNode.getAttribute('data-is-leaf') === 'true';
-
-                                    if (isLeafNode) {
-                                        // 叶子节点：展开其所有父节点，并记录直接父节点
-                                        let parent = targetNode.parentElement;
-                                        let directParentNode = null;
-                                        while (parent && parent.classList.contains('tree-children')) {
-                                            const parentNode = parent.parentElement;
-                                            if (parentNode && parentNode.classList.contains('tree-node')) {
-                                                parentNode.classList.add('expanded');
-                                                if (!directParentNode) {
-                                                    directParentNode = parentNode;
-                                                }
-                                            }
-                                            parent = parentNode ? parentNode.parentElement : null;
-                                        }
-
-                                        // 叶子节点高亮，直接父节点选中（与鼠标点击该父节点效果一致）
-                                        targetNode.classList.add('highlighted');
-                                        if (directParentNode) {
-                                            directParentNode.classList.add('active');
-                                        }
-                                    } else {
-                                        // 非叶子节点：展开当前节点及其所有父节点
-                                        let parent = targetNode.parentElement;
-                                        while (parent && parent.classList.contains('tree-children')) {
-                                            const parentNode = parent.parentElement;
-                                            if (parentNode && parentNode.classList.contains('tree-node')) {
-                                                parentNode.classList.add('expanded');
-                                            }
-                                            parent = parentNode ? parentNode.parentElement : null;
-                                        }
-                                        targetNode.classList.add('expanded');
-                                        
-                                        // 非叶子节点同时高亮和选中
-                                        targetNode.classList.add('highlighted');
-                                        targetNode.classList.add('active');
-                                    }
-                                    
-                                    targetNode.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                }
-                            }
-                        }
-                    } else {
-                        console.warn('⚠️ versionId 为空，无法显示数据集历史', { rawVersionId, node: this });
-                    }
+            // 名称过滤框（一次绑定）
+            const filterInput = document.getElementById('datasetTreeFilter');
+            if (filterInput && !filterInput._bound) {
+                filterInput._bound = true;
+                filterInput.addEventListener('input', () => {
+                    datasetTreeFilter = filterInput.value.trim().toLowerCase();
+                    datasetShown = DATASET_BATCH;
+                    renderDatasetTree();
                 });
-            });
+            }
+            if (!datasetTreeDelegated) {
+                datasetTreeDelegated = true;
+                rightSidebarTree.addEventListener('click', onDatasetTreeClick);
+            }
         } catch (error) {
             console.error('加载数据集树异常:', error);
             rightSidebarTree.innerHTML = '<div class="error-placeholder">网络错误，无法加载数据集</div>';
+        }
+    }
+
+    // 右侧数据集树渲染：根节点分批 + 过滤；折叠数据集不渲染子节点
+    function datasetVisibleList() {
+        const kw = datasetTreeFilter.toLowerCase();
+        const list = kw ? datasetTreeData.filter(d => (d.datasetName || '').toLowerCase().includes(kw)) : datasetTreeData;
+        return list;
+    }
+
+    function datasetFolderHtml(dataset, forceExpanded) {
+        const versions = dataset.versions || [];
+        const shown = versions.slice(0, MAX_TREE_VERSIONS);
+        const hidden = versions.length - shown.length;
+        const childrenHtml = forceExpanded
+            ? `<div class="tree-children">${renderTreeChildren(dataset)}</div>`
+            : `<div class="tree-children" data-lazy="1"></div>`;
+        return `
+                <div class="tree-node ${forceExpanded ? 'expanded' : ''}" data-dataset-name="${escapeHtml(dataset.datasetName)}" data-is-leaf="false">
+                    <span class="tree-icon folder-icon"></span>
+                    <span class="tree-node-text">${escapeHtml(dataset.datasetName)}${versions.length > MAX_TREE_VERSIONS ? ` (${versions.length})` : ''}</span>
+                    ${childrenHtml}
+                </div>
+            `;
+    }
+
+    function datasetMoreNodeHtml(total) {
+        return `<div class="tree-node" data-more-datasets="1" data-is-leaf="false"><span class="tree-node-text" style="color:#2563eb;">\u25b8 显示更多数据集（已显示 ${Math.min(datasetShown, total)}/${total}）</span></div>`;
+    }
+
+    function renderDatasetTree() {
+        const rightSidebarTree = document.getElementById('datasetTree');
+        if (!rightSidebarTree) return;
+        const list = datasetVisibleList();
+        const collapseAll = datasetTreeData.length > 100 && !datasetTreeFilter;
+        const shownList = list.slice(0, datasetShown);
+        rightSidebarTree.innerHTML = shownList.map(d => datasetFolderHtml(d, !!datasetTreeFilter || !collapseAll)).join('')
+            + (list.length > datasetShown ? datasetMoreNodeHtml(list.length) : '');
+    }
+
+    function onDatasetTreeClick(e) {
+        const rightSidebarTree = document.getElementById('datasetTree');
+        if (!rightSidebarTree) return;
+        const node = e.target.closest('.tree-node');
+        if (!node) return;
+        const moreDatasets = node.getAttribute('data-more-datasets');
+        if (moreDatasets) {
+            // 增量追加下一批数据集文件夹（不整树重渲染，保留已展开状态）
+            const list = datasetVisibleList();
+            const start = datasetShown;
+            datasetShown = Math.min(list.length, datasetShown + DATASET_BATCH);
+            const collapseAll = datasetTreeData.length > 100 && !datasetTreeFilter;
+            const batchHtml = list.slice(start, datasetShown)
+                .map(d => datasetFolderHtml(d, !!datasetTreeFilter || !collapseAll)).join('');
+            const moreHtml = datasetShown < list.length ? datasetMoreNodeHtml(list.length) : '';
+            node.insertAdjacentHTML('beforebegin', batchHtml + moreHtml);
+            node.remove();
+            return;
+        }
+        const expandDatasetName = node.getAttribute('data-expand-dataset');
+        if (expandDatasetName) {
+            const dataset = datasetTreeData.find(d => d.datasetName === expandDatasetName);
+            const children = node.parentElement;
+            if (dataset && children) {
+                children.innerHTML = (dataset.versions || []).map(v => treeVersionItemHtml(expandDatasetName, v)).join('');
+                node.classList.add('expanded');
+            }
+            return;
+        }
+        const isLeaf = node.getAttribute('data-is-leaf') === 'true';
+        rightSidebarTree.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
+        node.classList.add('active');
+        if (!isLeaf) {
+            // 父节点：切换展开/折叠；懒加载容器首次展开时再渲染子节点
+            const children = node.querySelector(':scope > .tree-children[data-lazy]');
+            if (children && !children.dataset.loaded) {
+                const dataset = datasetTreeData.find(d => d.datasetName === node.getAttribute('data-dataset-name'));
+                if (dataset) {
+                    children.innerHTML = renderTreeChildren(dataset);
+                    children.dataset.loaded = '1';
+                }
+            }
+            node.classList.toggle('expanded');
+            return;
+        }
+        const rawVersionId = node.getAttribute('data-version-id');
+        const versionId = rawVersionId && !isNaN(Number(rawVersionId)) ? Number(rawVersionId) : null;
+        const datasetName = node.getAttribute('data-dataset-name');
+        const storagePath = node.getAttribute('data-full-path');
+        if (versionId) {
+            showComponent('datasetHistory', { versionId, datasetName, storagePath });
+            // 根据存储路径展开左侧树对应节点
+            if (storagePath) {
+                syncLeftTreeHighlight(storagePath);
+            }
+        } else {
+            console.warn('versionId 为空，无法显示数据集历史', { rawVersionId, node });
+        }
+    }
+
+    // 血缘图点击版本后，同步左侧数据源树高亮对应节点（展开父链、前缀匹配兜底）
+    function syncLeftTreeHighlight(storagePath) {
+        const leftSidebarTree = document.getElementById('dataSourceTree');
+        if (!leftSidebarTree) return;
+        leftSidebarTree.querySelectorAll('.tree-node.highlighted').forEach(node => {
+            node.classList.remove('highlighted');
+        });
+        leftSidebarTree.querySelectorAll('.tree-node.expanded').forEach(node => {
+            node.classList.remove('expanded');
+        });
+        let targetNode = leftSidebarTree.querySelector(`.tree-node[data-full-path="${storagePath}"]`);
+        if (!targetNode) {
+            const allNodes = leftSidebarTree.querySelectorAll('.tree-node[data-full-path]');
+            let bestMatch = null;
+            let maxMatchLength = 0;
+            for (const node of allNodes) {
+                const nodePath = node.getAttribute('data-full-path');
+                if (nodePath && storagePath.startsWith(nodePath)) {
+                    if (nodePath.length > maxMatchLength) {
+                        maxMatchLength = nodePath.length;
+                        bestMatch = node;
+                    }
+                }
+            }
+            targetNode = bestMatch;
+        }
+        if (targetNode) {
+            const isLeafNode = targetNode.getAttribute('data-is-leaf') === 'true';
+            if (isLeafNode) {
+                let parent = targetNode.parentElement;
+                let directParentNode = null;
+                while (parent && parent.classList.contains('tree-children')) {
+                    const parentNode = parent.parentElement;
+                    if (parentNode && parentNode.classList.contains('tree-node')) {
+                        parentNode.classList.add('expanded');
+                        if (!directParentNode) {
+                            directParentNode = parentNode;
+                        }
+                    }
+                    parent = parentNode ? parentNode.parentElement : null;
+                }
+                targetNode.classList.add('highlighted');
+                if (directParentNode) {
+                    directParentNode.classList.add('active');
+                }
+            } else {
+                let parent = targetNode.parentElement;
+                while (parent && parent.classList.contains('tree-children')) {
+                    const parentNode = parent.parentElement;
+                    if (parentNode && parentNode.classList.contains('tree-node')) {
+                        parentNode.classList.add('expanded');
+                    }
+                    parent = parentNode ? parentNode.parentElement : null;
+                }
+                targetNode.classList.add('expanded');
+                targetNode.classList.add('highlighted');
+                targetNode.classList.add('active');
+            }
+            targetNode.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     }
 

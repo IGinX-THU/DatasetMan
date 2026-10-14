@@ -156,8 +156,10 @@ public class DatasetController {
     @RequirePermission(Permission.READ)
     public Result<LineageGraphDTO> lineage(
             @RequestParam("versionId") Long versionId,
-            @RequestParam(value = "sideLineage", defaultValue = "true") boolean sideLineage) {
-        return Result.success(lineageService.getLineageGraph(versionId, sideLineage));
+            @RequestParam(value = "sideLineage", defaultValue = "true") boolean sideLineage,
+            @RequestParam(value = "depth", defaultValue = "0") int depth,
+            @RequestParam(value = "maxNodes", defaultValue = "0") int maxNodes) {
+        return Result.success(lineageService.getLineageGraph(versionId, sideLineage, depth, maxNodes));
     }
 
     @ApiOperation("血缘路径重跑：沿选中路径分叉生成同名数据集的新版本树")

@@ -39,6 +39,16 @@ public class ImpactAnalysisService {
             }
         }
 
+        // 版本索引：BFS 内逐个 queryVersion 会产生 O(下游数) 次串行 SQL（大图下 10s+），
+        // 改为一次性载入（走全量缓存）后内存查找
+        Map<Long, DatasetVersionEntity> versionMap = new HashMap<>();
+        for (DatasetVersionEntity v : datasetVersionService.listAllVersions()) {
+            Long key = v.getId() != null ? v.getId() : v.getCreateTime();
+            if (key != null) {
+                versionMap.put(key, v);
+            }
+        }
+
         // BFS 向下游遍历，记录深度与路径
         Deque<long[]> queue = new ArrayDeque<>();  // [版本ID, 深度]
         Map<Long, String> paths = new HashMap<>();
@@ -52,7 +62,7 @@ public class ImpactAnalysisService {
             for (DatasetLineageEntity e : byFrom.getOrDefault(curId, Collections.emptyList())) {
                 Long next = e.getToVersionId();
                 if (next == null || paths.containsKey(next)) continue;
-                DatasetVersionEntity v = datasetVersionService.queryVersion(next);
+                DatasetVersionEntity v = versionMap.get(next);
                 if (v == null || v.isDeleted()) continue;
 
                 String path = paths.get(curId) + " -> " + v.getVersionNo();
