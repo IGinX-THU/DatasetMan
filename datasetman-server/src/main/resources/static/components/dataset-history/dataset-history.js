@@ -137,7 +137,7 @@ class DatasetHistory extends HTMLElement {
                 </div>
                 <div class="card">
                     <div class="header"><h3>血缘图谱</h3></div>
-                    <div class="toolbar"><label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="checkbox" id="sideLineageToggle">显示旁系血缘</label><label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;">展开层级<select id="lineageDepth" style="padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;"><option value="1">1 跳</option><option value="2">2 跳</option><option value="3">3 跳</option><option value="all" selected>全部（大图慢）</option></select></label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button><button id="forkPath">编辑</button></div>
+                    <div class="toolbar"><label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="checkbox" id="sideLineageToggle">显示旁系血缘</label><button id="focus">聚焦当前版本</button><button id="zoomIn">放大</button><button id="zoomOut">缩小</button><button id="resetView">重置视图</button><button id="forkPath">编辑</button></div>
                     <div class="lineage-notice" id="lineageNotice" style="display:none;margin:0 0 8px;padding:6px 10px;border:1px solid #fde68a;background:#fffbeb;border-radius:6px;font-size:12px;color:#92400e;"></div>
                     <div class="fork-bar" id="forkBar">
                         <span id="forkBarText"></span>
@@ -174,11 +174,6 @@ class DatasetHistory extends HTMLElement {
         this.shadowRoot.querySelector('#zoomOut').addEventListener('click', () => this.zoomBy(0.8));
         this.shadowRoot.querySelector('#resetView').addEventListener('click', () => this.resetView());
         this.shadowRoot.querySelector('#sideLineageToggle').addEventListener('change', () => this.loadGraph());
-        this.shadowRoot.querySelector('#lineageDepth').addEventListener('change', () => this.loadGraph());
-        // 弹窗内"展开上下游"按钮（事件委托，弹窗内容为动态 innerHTML）
-        this.shadowRoot.querySelector('#lineagePopupBody').addEventListener('click', (e) => {
-            if (e.target.closest('[data-expand]')) this.expandFromPopup();
-        });
         this.shadowRoot.querySelector('#forkPath').addEventListener('click', () => this.toggleForkMode());
         this.shadowRoot.querySelector('#forkStart').addEventListener('click', () => this.startForkRun());
         this.shadowRoot.querySelector('#forkClear').addEventListener('click', () => this.clearForkSelection());
@@ -194,7 +189,6 @@ class DatasetHistory extends HTMLElement {
     async show(selection) {
         this.setAttribute('show', '');
         this.exitForkMode();
-        this._autoDepthApplied = false;
         this.hideNotice();
         this.selection = typeof selection === 'object' ? selection : { storagePath: selection };
         try {
@@ -349,13 +343,13 @@ class DatasetHistory extends HTMLElement {
     }
 
 
-    /** 超过该可见版本数时，"全部"模式自动降级为 2 跳展开（DataWorks 式保护） */
-    AUTO_DEPTH_THRESHOLD = 200;
+    /** 视口虚拟渲染的单次渲染节点上限，超出部分放大后渐进可见 */
+    VIEWPORT_CAP = 2500;
+    /** 单次返回节点数保护上限（后端截断）；渲染已虚拟化，可承载大图 */
+    MAX_NODES_LIMIT = 30000;
     /** 变化过程表格分页状态 */
     changePage = 1;
     changePageSize = 20;
-    /** 单次返回节点数保护上限 */
-    MAX_NODES_LIMIT = 2000;
 
     async loadGraph() {
         const vid = this.versionIdOf(this.version);
@@ -365,23 +359,11 @@ class DatasetHistory extends HTMLElement {
             return;
         }
         const sideLineage = this.shadowRoot.querySelector('#sideLineageToggle')?.checked ?? false;
-        const depthSel = this.shadowRoot.querySelector('#lineageDepth')?.value ?? 'all';
-        const params = { versionId:vid, sideLineage, maxNodes: this.MAX_NODES_LIMIT };
-        if (depthSel !== 'all') params.depth = Number(depthSel);
-        const result = await window.AppConfig.get('dataset', 'lineage', params);
+        // 完整血缘一次加载（后端 maxNodes 保护），前端视口虚拟渲染保证大图可交互
+        const result = await window.AppConfig.get('dataset', 'lineage', { versionId:vid, sideLineage, maxNodes: this.MAX_NODES_LIMIT });
         this.graph = ((result.success || result.code === 200) && result.data) ? result.data : { nodes:[], edges:[] };
-
-        // 大图自动降载：用户选择"全部"但可见版本过多时，自动切换为 2 跳展开并提示
-        const visible = this.graph.visibleVersions || 0;
-        if (depthSel === 'all' && visible > this.AUTO_DEPTH_THRESHOLD && !this._autoDepthApplied) {
-            this._autoDepthApplied = true;
-            const sel = this.shadowRoot.querySelector('#lineageDepth');
-            if (sel) sel.value = '2';
-            this.showNotice(`当前可见版本较多（${visible} 个），已自动切换为 2 跳展开以保证页面可交互；需要全图可用"展开层级"切换。`);
-            return this.loadGraph();
-        }
         if (this.graph.truncated) {
-            this.showNotice(`节点数超出保护上限（${this.MAX_NODES_LIMIT}），已截断显示；可减小"展开层级"聚焦查看。`);
+            this.showNotice(`节点数超出保护上限（${this.MAX_NODES_LIMIT}），已截断显示。`);
         }
         this.renderGraph();
     }
@@ -429,41 +411,12 @@ class DatasetHistory extends HTMLElement {
             TRANSFORM_SQL: '#8b5cf6'
         };
 
-        // 预估总节点数（版本节点 + 操作节点），用于动态调整大小
         const edges = this.graph.edges || [];
-        const operationCount = edges.filter(e => {
-            const toNode = (this.graph.nodes || []).find(n => (n.versionId || n.createTime) === e.to);
-            const derivType = toNode ? toNode.provenanceType : null;
-            return derivType === 'SQL_QUERY' || derivType === 'TRANSFORM'
-                || derivType === 'SELECT' || derivType === 'SELECT_UDF'
-                || derivType === 'TRANSFORM_SQL';
-        }).length;
-        const estimatedNodeCount = nodes.length + operationCount;
-        
-        // 根据节点数量动态调整节点大小和字体
-        // 只在节点数 > 10 时才调整，节点少时使用原始大小
-        let nodeScale;
-        if (estimatedNodeCount <= 10) {
-            nodeScale = 1;  // 节点少时使用原始大小
-        } else {
-            nodeScale = Math.max(0.6, Math.min(1, 1 - (estimatedNodeCount - 10) * 0.03));
-        }
-        const versionNodeSize = (n) => Math.round((n.focus ? 64 : 48) * nodeScale);
-        const operationNodeSize = [Math.round(120 * nodeScale), Math.round(44 * nodeScale)];
-        const labelFontSize = Math.max(9, Math.round(11 * nodeScale));
-
-        // 标签分级（LOD）与大图护栏：
-        // - 节点多时默认只显示焦点节点标签，悬停显示，放大后全部显示
-        // - 边标签（关系类型文字）在边很多时关闭：文字绘制比连线本身更耗时
-        // - 力导向布局动画在节点多时关闭（确定性布局下动画没有意义，纯耗 CPU）
-        const lodLabelAll = estimatedNodeCount <= 400;
-        const showEdgeLabels = estimatedNodeCount <= 300;
-
         const echartsNodes = [];
         const echartsLinks = [];
         const versionKeyMap = new Map(); // versionId -> echarts node id
 
-        // 1. 添加版本节点
+        // 1. 版本节点（尺寸/标签在渲染子集构建时按 zoom 等比计算）
         nodes.forEach(n => {
             const vid = n.versionId || n.createTime;
             const nodeId = `v_${vid}`;
@@ -476,7 +429,7 @@ class DatasetHistory extends HTMLElement {
                 id: nodeId,
                 name: `${n.datasetName || ''}\n${n.versionNo || ''}`,
                 symbol: 'circle',
-                symbolSize: versionNodeSize(n),
+                symbolSize: 30,
                 itemStyle: {
                     color: deleted ? '#cbd5e1' : color,
                     borderColor: n.focus ? '#111827' : (deleted ? '#94a3b8' : '#fff'),
@@ -486,9 +439,8 @@ class DatasetHistory extends HTMLElement {
                     opacity: deleted ? 0.55 : 1
                 },
                 label: {
-                    show: n.focus || lodLabelAll,
+                    show: false,
                     position: 'bottom',
-                    fontSize: labelFontSize,
                     color: deleted ? '#94a3b8' : '#374151',
                     formatter: () => `${n.datasetName || ''}\n${n.versionNo || ''}`
                 },
@@ -498,9 +450,7 @@ class DatasetHistory extends HTMLElement {
             });
         });
 
-        // 2. 添加操作节点和边
-        //    对于每条 from->to 边，若 to 节点 provenanceType 为 SQL_QUERY/TRANSFORM 等，
-        //    在 from 与 to 之间插入一个操作节点，承载 SQL/Transform/UDF 等元数据。
+        // 2. 操作节点与边
         const operationNodeSet = new Set();
         const nodeMap = new Map();
         nodes.forEach(n => { nodeMap.set(n.versionId || n.createTime, n); });
@@ -524,14 +474,12 @@ class DatasetHistory extends HTMLElement {
                 if (!operationNodeSet.has(opNodeId)) {
                     operationNodeSet.add(opNodeId);
 
-                    // 从 derivationConfig 提取操作信息
                     const cfg = (toNode && toNode.derivationConfig) || {};
                     const opInfo = this.extractOperationInfo(toNode, cfg);
                     const opLabel = opInfo.type;
                     const opDetail = opInfo.detail;
                     let opFull = opInfo.full;
 
-                    // 如果有 upstreamSqlBindings（多数据集转换），按当前边的 fromVid 过滤 SQL 语句
                     const bindings = cfg.upstreamSqlBindings;
                     if (bindings && opFull.sqlSnippet) {
                         opFull = this.filterOperationFullByUpstream(opFull, bindings, fromVid);
@@ -541,7 +489,7 @@ class DatasetHistory extends HTMLElement {
                         id: opNodeId,
                         name: opDetail ? `${opLabel}\n${opDetail}` : opLabel,
                         symbol: 'roundRect',
-                        symbolSize: operationNodeSize,
+                        symbolSize: [110, 40],
                         itemStyle: {
                             color: opInfo.color,
                             borderColor: opInfo.borderColor,
@@ -549,8 +497,7 @@ class DatasetHistory extends HTMLElement {
                             borderRadius: 8
                         },
                         label: {
-                            show: lodLabelAll,
-                            fontSize: labelFontSize,
+                            show: false,
                             color: opInfo.textColor,
                             formatter: () => opDetail ? `${opLabel}\n${opDetail}` : opLabel
                         },
@@ -562,7 +509,6 @@ class DatasetHistory extends HTMLElement {
                         toVersionId: toVid
                     });
 
-                    // 边：from -> operation
                     echartsLinks.push({
                         source: fromNodeId,
                         target: opNodeId,
@@ -572,7 +518,6 @@ class DatasetHistory extends HTMLElement {
                             type: e.primary ? 'solid' : 'dashed'
                         }
                     });
-                    // 边：operation -> to
                     echartsLinks.push({
                         source: opNodeId,
                         target: toNodeId,
@@ -581,16 +526,10 @@ class DatasetHistory extends HTMLElement {
                             width: 2,
                             type: e.primary ? 'solid' : 'dashed'
                         },
-                        label: {
-                            show: showEdgeLabels && !!e.relationType,
-                            formatter: e.relationType || '',
-                            fontSize: 9,
-                            color: '#64748b'
-                        }
+                        label: { show: false, formatter: e.relationType || '' }
                     });
                 }
             } else {
-                // 直接连接 from -> to
                 echartsLinks.push({
                     source: fromNodeId,
                     target: toNodeId,
@@ -599,19 +538,12 @@ class DatasetHistory extends HTMLElement {
                         width: 2,
                         type: e.primary ? 'solid' : 'dashed'
                     },
-                    label: {
-                        show: showEdgeLabels && !!e.relationType,
-                        formatter: e.relationType || '',
-                        fontSize: 9,
-                        color: '#64748b'
-                    }
+                    label: { show: false, formatter: e.relationType || '' }
                 });
             }
         });
 
-        // 3. 初始化 ECharts
-        // 按箭头方向从上往下分层，力导向分支排斥不重叠；
-        // 互相不可达的独立 DAG 由 computeLayeredLayout 分布到主图四周角落
+        // 3. 分层布局（确定性坐标，全部节点固定位置）
         const layout = this.computeLayeredLayout(echartsNodes, echartsLinks);
         const positions = layout.positions;
         echartsNodes.forEach(n => {
@@ -620,70 +552,14 @@ class DatasetHistory extends HTMLElement {
                 n.x = pos.x;
                 n.y = pos.y;
             }
+            n.fixed = true;
         });
 
-        const detachedIds = layout.detachedIds || new Set();
-        this._multiCompLayout = detachedIds.size > 0;
-        // 主图包围盒与中心（数据坐标），供 autoZoomToFit 保证主图完整可见并以其为视觉中心
-        this._mainRect = layout.mainRect || null;
-        this._mainCenterPos = layout.mainCenter || null;
-        // 大图（存在互相不可达的独立 DAG，或节点总数较多时）一律锁定分层布局位置：
-        // 力导向在大图上斥力各向同性，会把分层初始化搅成放射状，
-        // 节点散逸出视口、只留下操作节点悬在中心，完全不可读
-        const useDeterministicLayout = detachedIds.size > 0 || echartsNodes.length > 20;
-        if (useDeterministicLayout) {
-            // 全部节点锁定 computeLayeredLayout 的位置，布局完全确定：
-            // 主图分层排布（超宽层自动折行）+ 角落分量环布，稳定检测立刻通过，视口适配一次到位
-            echartsNodes.forEach(n => { n.fixed = true; });
-
-            // 估算 autoZoomToFit 的缩放比：节点符号是固定像素、不随视图缩放，
-            // 缩放比过低时按比例预先缩小符号与字号，保证缩放后屏幕间距仍大于符号尺寸
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            positions.forEach(p => {
-                if (p.x < minX) minX = p.x;
-                if (p.x > maxX) maxX = p.x;
-                if (p.y < minY) minY = p.y;
-                if (p.y > maxY) maxY = p.y;
-            });
-            const extentW = (maxX - minX) + 160;  // 外扩量容纳节点符号与标签
-            const extentH = (maxY - minY) + 200;
-            const viewW = container.clientWidth || 1394;
-            const viewH = container.clientHeight || 1000;
-            // 与 autoZoomToFit 的目标缩放保持同一口径：可读性下限 0.55，但不超过主图完整可见的缩放
-            let fitZoom = Math.min((viewW - 40) / extentW, (viewH - 40) / extentH, 1);
-            fitZoom = Math.max(fitZoom, 0.55);
-            if (this._mainRect) {
-                const mainW = Math.max(1, this._mainRect.maxX - this._mainRect.minX) + 160;
-                const mainH = Math.max(1, this._mainRect.maxY - this._mainRect.minY) + 200;
-                const fitMain = Math.min((viewW - 40) / mainW, (viewH - 40) / mainH, 1);
-                fitZoom = Math.min(fitZoom, fitMain);
-            }
-            if (fitZoom < 0.6) {
-                const symbolScale = Math.max(0.55, fitZoom / 0.6);
-                echartsNodes.forEach(n => {
-                    if (typeof n.symbolSize === 'number') {
-                        n.symbolSize = Math.max(8, Math.round(n.symbolSize * symbolScale));
-                    } else if (Array.isArray(n.symbolSize)) {
-                        n.symbolSize = n.symbolSize.map(s => Math.max(8, Math.round(s * symbolScale)));
-                    }
-                    if (n.label && n.label.fontSize) {
-                        n.label.fontSize = Math.max(8, Math.round(n.label.fontSize * symbolScale));
-                    }
-                });
-            }
-        }
-
-        // 画布尺寸固定，复杂关系图只通过 ECharts 内部缩放适配，不撑大页面
-        container.style.height = '';
-        container.style.minWidth = '';
-
-        // 禁用版本置灰整条入链：指向禁用版本的边（含中间操作节点）全部置灰，
-        // 而不仅是禁用版本节点本身
+        // 4. 禁用版本置灰（指向禁用版本的边与操作节点一并置灰）
         const deletedVersionIds = new Set(
             nodes.filter(n => n.deleted).map(n => String(n.versionId || n.createTime))
         );
         if (deletedVersionIds.size > 0) {
-            // 1) 直连边：目标版本已禁用 -> 边置灰
             echartsLinks.forEach(l => {
                 const m = /^v_(.+)$/.exec(l.target) ? null : /^op_(.+?)_(.+)$/.exec(l.target);
                 if (m && deletedVersionIds.has(m[2])) {
@@ -700,7 +576,6 @@ class DatasetHistory extends HTMLElement {
                     }
                 }
             });
-            // 2) 操作节点：其目标版本已禁用 -> 节点置灰
             echartsNodes.forEach(n => {
                 if (n.nodeType !== 'operation') return;
                 const m = /^op_(.+?)_(.+)$/.exec(n.id);
@@ -714,9 +589,94 @@ class DatasetHistory extends HTMLElement {
             });
         }
 
+        // 5. 虚拟渲染准备：全量图缓存 + 等比尺寸基准
+        this._fullNodes = echartsNodes;
+        this._fullLinks = echartsLinks;
+        const focusVid = this.version ? this.versionIdOf(this.version) : null;
+        this._focusId = focusVid == null ? null : `v_${focusVid}`;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        echartsNodes.forEach(n => {
+            if (n.x == null) return;
+            if (n.x < minX) minX = n.x;
+            if (n.x > maxX) maxX = n.x;
+            if (n.y < minY) minY = n.y;
+            if (n.y > maxY) maxY = n.y;
+        });
+        if (!isFinite(minX)) { minX = 0; maxX = 1; minY = 0; maxY = 1; }
+        const extentW = Math.max(1, maxX - minX);
+        const extentH = Math.max(1, maxY - minY);
+        // 节点基础尺寸为"数据单位"（约层间距的 1/10），渲染尺寸 = base × zoom，
+        // 任意缩放下节点与连线的比例保持一致（地图式等比缩放）
+        const spacing = this._estimateSpacing(echartsNodes);
+        this._baseNodeSize = Math.max(6, Math.min(40, spacing * 0.10));
+        this._baseFontSize = Math.max(8, Math.min(14, spacing * 0.045));
+
+        // 四角锚点（不可见）：把渲染子集的数据包围盒钉在整图范围上，
+        // 使 ECharts 的自动适配比例在全图生命周期内恒定，视口裁剪更新不会引起视图漂移
+        [[minX - spacing, minY - spacing], [maxX + spacing, minY - spacing],
+         [minX - spacing, maxY + spacing], [maxX + spacing, maxY + spacing]].forEach((p, i) => {
+            echartsNodes.push({
+                id: `__anchor_${i}`, name: '', symbol: 'circle', symbolSize: 0.1,
+                x: p[0], y: p[1], fixed: true, itemStyle: { opacity: 0 },
+                label: { show: false }, nodeType: 'anchor'
+            });
+        });
+
         const chart = window.echarts.init(container);
 
-        // 缓存节点与原始描边样式，供路径重跑选择态高亮/还原
+        // 初始视口：以焦点版本为中心、节点约 24px 的舒适尺寸（视口裁剪，不做整图适配）
+        const viewW = container.clientWidth || 1394;
+        const viewH = container.clientHeight || 1000;
+        const fitScale0 = Math.min(viewW / Math.max(1, extentW + spacing * 2), viewH / Math.max(1, extentH + spacing * 2));
+        this._fitScale = fitScale0;
+        const focusNode0 = this._focusId ? echartsNodes.find(n => n.id === this._focusId) : null;
+        const focusPos = focusNode0 && focusNode0.x != null
+            ? [focusNode0.x, focusNode0.y]
+            : [minX + extentW / 2, minY + extentH / 2];
+        const initZoom = Math.max(1, Math.min(80, 24 / Math.max(0.001, this._baseNodeSize * fitScale0)));
+        this._fitView = { zoom: initZoom, center: focusPos };
+        // 首屏裁剪矩形（此时坐标系尚未建立，手动计算）
+        const totalScale0 = fitScale0 * initZoom;
+        this._initialRect = {
+            minX: focusPos[0] - viewW / (2 * totalScale0) - spacing * 2,
+            maxX: focusPos[0] + viewW / (2 * totalScale0) + spacing * 2,
+            minY: focusPos[1] - viewH / (2 * totalScale0) - spacing * 2,
+            maxY: focusPos[1] + viewH / (2 * totalScale0) + spacing * 2
+        };
+
+        const first = this._buildRenderSubset(chart, initZoom, false);
+        const option = {
+            tooltip: { show: false },
+            series: [{
+                type: 'graph',
+                layout: 'none',
+                roam: true,
+                draggable: false,
+                zoom: initZoom,
+                center: focusPos,
+                symbol: 'circle',
+                edgeSymbol: ['none', 'arrow'],
+                edgeSymbolSize: [0, Math.max(5, Math.min(16, 4 * this._fitScale * initZoom))],
+                lineStyle: {
+                    color: '#94a3b8',
+                    width: Math.max(0.6, Math.min(5, 1.6 * this._fitScale * initZoom)),
+                    curveness: 0.05,
+                    opacity: 0.8
+                },
+                label: { show: false },
+                emphasis: {
+                    focus: 'adjacency',
+                    label: { show: true },
+                    lineStyle: { width: 3 }
+                },
+                data: first.data,
+                links: first.links
+            }]
+        };
+        chart.setOption(option);
+        this._echartsNodesCache = echartsNodes;
+
+        // 缓存节点原始描边样式（路径重跑选择态高亮/还原用）
         echartsNodes.forEach(n => {
             if (n.nodeType === 'version' && n.itemStyle) {
                 n._baseStyle = {
@@ -727,78 +687,8 @@ class DatasetHistory extends HTMLElement {
                 };
             }
         });
-        this._echartsNodesCache = echartsNodes;
-        
-        // 根据节点数量动态调整力导向参数，避免节点多时挤成一团
-        // 只在节点数 > 10 时才调整，节点少时使用原始默认参数
-        const nodeCount = echartsNodes.length;
-        let repulsion, edgeLength, gravity;
-        if (nodeCount <= 10) {
-            // 节点少时使用原始默认参数
-            repulsion = 400;
-            edgeLength = [100, 200];
-            gravity = 0.02;
-        } else {
-            // 节点多时动态调整
-            repulsion = Math.max(400, nodeCount * 120);
-            edgeLength = [100, Math.min(400, 200 + nodeCount * 30)];
-            gravity = Math.max(0.0005, 0.02 - nodeCount * 0.0008);
-        }
-        // 大图（确定性布局）时关闭重力并锁定位置，力导向不再参与：
-        // ECharts 力导向的重力以全部节点包围盒中心为目标，会把自由的主图
-        // 持续拽向角落或中心，叠加高斥力后布局完全失控
-        if (useDeterministicLayout) {
-            gravity = 0;
-        }
-        
-        const option = {
-            tooltip: {
-                show: false
-            },
-            series: [{
-                type: 'graph',
-                layout: 'force',
-                force: {
-                    initLayout: 'none',
-                    repulsion: repulsion,
-                    edgeLength: edgeLength,
-                    gravity: gravity,
-                    friction: 0.8,
-                    layoutAnimation: echartsNodes.length <= 500
-                },
-                roam: true,
-                draggable: true,
-                symbol: 'circle',
-                edgeSymbol: ['none', 'arrow'],
-                edgeSymbolSize: [0, 12],
-                lineStyle: {
-                    color: '#94a3b8',
-                    width: 2,
-                    curveness: 0.05,
-                    opacity: 0.8
-                },
-                label: {
-                    show: true,
-                    fontSize: 11,
-                    color: '#374151'
-                },
-                emphasis: {
-                    focus: 'adjacency',
-                    label: { show: true },
-                    lineStyle: { width: 3 }
-                },
-                data: echartsNodes,
-                links: echartsLinks
-            }]
-        };
-        chart.setOption(option);
 
-        // 缩放分级显示标签（LOD）：仅大图启用（小图标签恒显示，保持原有观感）
-        this._lodTierEnabled = !lodLabelAll;
-        this._labelTier = lodLabelAll ? 'all' : 'focus';
-        chart.on('graphRoam', () => this._handleRoamForLabels(chart));
-
-        // 点击节点 -> 路径重跑选择模式下构建重跑链；否则弹出详情弹窗（版本节点同时高亮对应行）
+        // 点击节点 -> 路径重跑选择 / 详情弹窗
         chart.on('click', (params) => {
             if (params.dataType !== 'node') return;
             const d = params.data;
@@ -818,38 +708,17 @@ class DatasetHistory extends HTMLElement {
             }
         });
 
-        // Resize
+        // 缩放/平移 -> 视口裁剪重渲染（防抖）
+        chart.on('graphRoam', () => this._handleRoamForRender(chart));
+
         if (container._resizeObserver) container._resizeObserver.disconnect();
-        const resizeObserver = new ResizeObserver(() => chart.resize());
+        const resizeObserver = new ResizeObserver(() => {
+            chart.resize();
+            this._handleRoamForRender(chart);
+        });
         resizeObserver.observe(container);
         container._chart = chart;
         container._resizeObserver = resizeObserver;
-
-        // 等力导向布局稳定后刷新 ECharts 尺寸，首次绘制保持原始布局
-        setTimeout(() => { if (!chart.isDisposed()) chart.resize(); }, 300);
-        
-        // 动态检测力导向布局是否稳定，稳定后再检测节点是否超出视口
-        this._checkLayoutStable(chart);
-    }
-
-    /**
-     * 缩放分级显示标签（LOD）：防抖后按当前 zoom 切换——
-     * z>=1.2 全部显示；z<0.5 全部隐藏（悬停仍显示）；其余仅焦点/悬停显示
-     */
-    _handleRoamForLabels(chart) {
-        if (!this._lodTierEnabled) return;
-        if (this._roamLabelTimer) clearTimeout(this._roamLabelTimer);
-        this._roamLabelTimer = setTimeout(() => {
-            if (!chart || chart.isDisposed()) return;
-            const z = this._getGraphZoom(chart);
-            let tier;
-            if (z >= 1.2) tier = 'all';
-            else if (z < 0.5) tier = 'none';
-            else tier = 'focus';
-            if (tier === this._labelTier) return;
-            this._labelTier = tier;
-            this._applyLabelTier(chart, tier);
-        }, 250);
     }
 
     _getGraphZoom(chart) {
@@ -861,28 +730,155 @@ class DatasetHistory extends HTMLElement {
         }
     }
 
-    /** 按分级切换节点标签：携带完整节点数据按索引合并（只发 label 项会把 x/y/name 丢掉） */
-    _applyLabelTier(chart, tier) {
-        if (!this._echartsNodesCache) return;
-        const data = this._echartsNodesCache.map(n => ({
+    /** 估计布局最近邻间距（分层布局的行距/列距），作为节点尺寸的数据单位基准 */
+    _estimateSpacing(nodes) {
+        const pts = nodes.filter(n => n.x != null);
+        if (pts.length < 2) return 100;
+        const xs = [...new Set(pts.map(n => Math.round(n.x)))].sort((a, b) => a - b);
+        const ys = [...new Set(pts.map(n => Math.round(n.y)))].sort((a, b) => a - b);
+        const minPositive = arr => {
+            let m = Infinity;
+            for (let i = 1; i < arr.length; i++) {
+                const d = arr[i] - arr[i - 1];
+                if (d > 4 && d < m) m = d;
+            }
+            return m;
+        };
+        const sx = minPositive(xs), sy = minPositive(ys);
+        const s = Math.min(isFinite(sx) ? sx : Infinity, isFinite(sy) ? sy : Infinity);
+        return isFinite(s) && s > 0 ? s : 100;
+    }
+
+    /** 视口的布局坐标系范围（四角 pointToData） */
+    _viewportDataRect(chart) {
+        try {
+            const seriesModel = chart.getModel().getSeriesByIndex(0);
+            const cs = seriesModel && seriesModel.coordinateSystem;
+            if (!cs || !cs.pointToData) return null;
+            const w = chart.getWidth(), h = chart.getHeight();
+            const a = cs.pointToData([0, 0]);
+            const b = cs.pointToData([w, h]);
+            if (!a || !b) return null;
+            return {
+                minX: Math.min(a[0], b[0]),
+                maxX: Math.max(a[0], b[0]),
+                minY: Math.min(a[1], b[1]),
+                maxY: Math.max(a[1], b[1])
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /**
+     * 构建当前应渲染的节点/连线子集（虚拟滚动核心）：
+     * 只取视口内（含缓冲）的节点；节点尺寸/标签字号按 zoom 等比换算，
+     * 任意缩放下节点与连线的比例保持一致；连线两端可见才渲染。
+     */
+    _buildRenderSubset(chart, zoom, initial) {
+        const full = this._fullNodes || [];
+        const fullLinks = this._fullLinks || [];
+        let visible = full;
+        let rect = null;
+        if (chart) {
+            rect = this._viewportDataRect(chart);
+        }
+        if (!rect && initial && this._initialRect) {
+            rect = this._initialRect;
+        }
+        if (rect) {
+            const pad = Math.max(this._baseNodeSize * 4, (rect.maxX - rect.minX) * 0.12);
+            visible = full.filter(n => n.x != null
+                && n.x >= rect.minX - pad && n.x <= rect.maxX + pad
+                && n.y >= rect.minY - pad && n.y <= rect.maxY + pad);
+        }
+        // 锚点恒渲染（撑住数据包围盒，保证适配比例恒定）
+        const anchors = full.filter(n => n.nodeType === 'anchor');
+        if (anchors.length) {
+            const have = new Set(visible.map(n => n.id));
+            visible = visible.concat(anchors.filter(a => !have.has(a.id)));
+        }
+        if (visible.length > this.VIEWPORT_CAP) {
+            visible = visible.slice(0, this.VIEWPORT_CAP);
+            if (!this._cullOverflow) {
+                this._cullOverflow = true;
+                this.showNotice('视野内节点过多，已部分渲染，放大可查看更多细节。');
+            }
+        } else if (this._cullOverflow) {
+            this._cullOverflow = false;
+            if (!this.graph.truncated) this.hideNotice();
+        }
+        // 焦点节点恒渲染
+        if (this._focusId && !visible.some(n => n.id === this._focusId)) {
+            const f = full.find(n => n.id === this._focusId);
+            if (f) visible = visible.concat([f]);
+        }
+        const ids = new Set(visible.map(n => n.id));
+        const links = fullLinks.filter(l => ids.has(l.source) && ids.has(l.target));
+        // 缩放语义（实测）：ECharts graph 的 symbolSize/edgeSymbolSize 随 option.zoom 缩放
+        // （但不随自动适配比例），而连线间距随 fitScale × zoom。因此符号尺寸只乘 fitScale、
+        // 不乘 zoom——zoom 在绘制时已自动作用于符号，重复相乘会导致放大时节点巨大、缩成一团
+        const fitScale = this._fitScale || 1;
+        const symbolSize = Math.max(2, Math.min(200, this._baseNodeSize * fitScale));
+        const labelOn = symbolSize * zoom >= 12;
+        const fontSize = Math.max(8, Math.min(18, (this._baseFontSize || 11) * fitScale * zoom));
+        const data = visible.map(n => ({
             ...n,
-            label: { ...(n.label || {}), show: tier === 'all' || !!n._lodAlways }
+            symbolSize: n.id === this._focusId ? Math.round(symbolSize * 1.3 * 10) / 10 : Math.round(symbolSize * 10) / 10,
+            label: { ...(n.label || {}), show: labelOn || !!n._lodAlways, fontSize }
         }));
-        chart.setOption({ series: [{ data }] }, { lazyUpdate: true, silent: true });
+        const edgeW = Math.max(0.5, Math.min(4, 1.6 * fitScale * zoom));
+        const arrowSetting = Math.max(3, Math.min(40, 0.5 * this._baseNodeSize * fitScale));
+        const styledLinks = links.map(l => ({
+            ...l,
+            lineStyle: { ...(l.lineStyle || {}), width: edgeW },
+            label: { ...(l.label || {}), show: symbolSize * zoom >= 15 && !!l.label?.formatter, fontSize: Math.max(8, Math.min(14, (this._baseFontSize || 11) * fitScale * zoom * 0.8)) }
+        }));
+        return { data, links: styledLinks, arrowSetting };
     }
 
-    /** 当前展开层级选择（'1'/'2'/'3'/'all'） */
-    currentDepth() {
-        return this.shadowRoot.querySelector('#lineageDepth')?.value ?? 'all';
-    }
-
-    /** 从节点弹窗发起逐层展开：层级 +1（3 跳以上直接切全部） */
-    expandFromPopup() {
-        const sel = this.shadowRoot.querySelector('#lineageDepth');
-        if (!sel) return;
-        if (sel.value === 'all') return;
-        sel.value = sel.value === '3' ? 'all' : String(Number(sel.value) + 1);
-        this.loadGraph();
+    /** 缩放/平移后防抖重建渲染子集 */
+    _handleRoamForRender(chart) {
+        if (this._roamRenderTimer) clearTimeout(this._roamRenderTimer);
+        this._roamRenderTimer = setTimeout(() => {
+            if (!chart || chart.isDisposed() || !this._fullNodes) return;
+            const zoom = this._getGraphZoom(chart);
+            const sub = this._buildRenderSubset(chart, zoom, false);
+            // 关键：data 更新时必须同时钉住 zoom/center，否则 ECharts 会按
+            // 渲染子集的包围盒重新适配视图，用户的缩放状态被冲掉，
+            // 导致节点尺寸与连线间距比例错乱（节点远大于间距、缩成一团）
+            let center;
+            try {
+                const opt = chart.getOption();
+                center = opt.series[0] && opt.series[0].center;
+            } catch (err) { center = undefined; }
+            chart.setOption({
+                series: [{
+                    zoom: zoom,
+                    center: center,
+                    data: sub.data,
+                    links: sub.links,
+                    edgeSymbolSize: [0, Math.max(5, Math.min(16, 4 * px))]
+                }]
+            }, { lazyUpdate: true, silent: true });
+            // 自校准：实测比例与估算不一致时（包围盒留白等误差），按实测值修正节点尺寸
+            clearTimeout(this._calibrateTimer);
+            this._calibrateTimer = setTimeout(() => {
+                if (!chart || chart.isDisposed()) return;
+                try {
+                    const sm = chart.getModel().getSeriesByIndex(0);
+                    const cs = sm.coordinateSystem;
+                    if (!cs || !cs.dataToPoint) return;
+                    const measured = Math.abs(cs.dataToPoint([0, 260])[1] - cs.dataToPoint([0, 100])[1]) / 160;
+                    const expected = this._fitScale * zoom;
+                    if (expected > 0 && Math.abs(measured / expected - 1) > 0.15) {
+                        this._fitScale *= measured / expected;
+                        const sub2 = this._buildRenderSubset(chart, zoom, false);
+                        chart.setOption({ series: [{ data: sub2.data, links: sub2.links }] }, { lazyUpdate: true, silent: true });
+                    }
+                } catch (err) { /* 忽略校准异常 */ }
+            }, 200);
+        }, 150);
     }
 
     /**
@@ -1179,7 +1175,9 @@ class DatasetHistory extends HTMLElement {
             // 可能让同一层有几十个节点，不折行会把包围盒撑得极宽，
             // 视口适配后缩放比过小，所有节点都缩得无法辨认
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            const maxPerRow = 6;
+            // 自适应每行节点数：按分量规模与层数估算，避免大分量布局过于细长（宽高比失衡）
+            const layerCount = Math.max(1, Object.keys(compLayers).length);
+            const maxPerRow = Math.max(6, Math.min(120, Math.round(comp.ids.length / layerCount / 1.5)));
             let yCursor = 0;
             Object.keys(compLayers).map(Number).sort((a, b) => a - b).forEach(layer => {
                 const idsInLayer = compLayers[layer];
@@ -1435,20 +1433,6 @@ class DatasetHistory extends HTMLElement {
             html.push(`<div class="field"><span class="field-label">状态:</span> ${v.deleted ? '<span style="color:#dc2626">已删除</span>' : '<span style="color:#16a34a">正常</span>'}</div>`);
         }
         if (v.remark) html.push(`<div class="field"><span class="field-label">备注:</span> ${this.escape(v.remark)}</div>`);
-        // 逐层展开入口：该版本在全图中仍有未展示的上下游时（DataWorks 式 +/- 展开），
-        // 给出一键展开按钮；"全部"模式下无截断，不展示
-        const upCnt = v.upstreamCount == null ? 0 : v.upstreamCount;
-        const downCnt = v.downstreamCount == null ? 0 : v.downstreamCount;
-        if ((upCnt > 0 || downCnt > 0) && this.currentDepth() !== 'all') {
-            html.push(`<div class="field" style="margin-top:10px;display:flex;gap:8px;">`);
-            if (upCnt > 0) {
-                html.push(`<button class="lineage-expand-btn" data-expand="up" style="flex:1;padding:6px 8px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;border-radius:6px;font-size:12px;cursor:pointer;">展开上游（${upCnt} 个直接上游）</button>`);
-            }
-            if (downCnt > 0) {
-                html.push(`<button class="lineage-expand-btn" data-expand="down" style="flex:1;padding:6px 8px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;border-radius:6px;font-size:12px;cursor:pointer;">展开下游（${downCnt} 个直接下游）</button>`);
-            }
-            html.push(`</div>`);
-        }
         return html.join('');
     }
 
@@ -1609,6 +1593,7 @@ class DatasetHistory extends HTMLElement {
         const series = option.series[0] || {};
         const curZoom = series.zoom || 1;
         chart.setOption({ series: [{ zoom: curZoom * factor }] });
+        this._handleRoamForRender(chart);
     }
 
     resetView() {
