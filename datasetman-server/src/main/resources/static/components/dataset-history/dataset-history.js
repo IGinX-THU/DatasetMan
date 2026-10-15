@@ -416,7 +416,32 @@ class DatasetHistory extends HTMLElement {
         const echartsLinks = [];
         const versionKeyMap = new Map(); // versionId -> echarts node id
 
-        // 1. 版本节点（尺寸/标签在渲染子集构建时按 zoom 等比计算）
+        // 预估总节点数（版本节点 + 操作节点），动态调整大小（历史逻辑）
+        const operationCount = edges.filter(e => {
+            const toNode = (this.graph.nodes || []).find(n => (n.versionId || n.createTime) === e.to);
+            const derivType = toNode ? toNode.provenanceType : null;
+            return derivType === 'SQL_QUERY' || derivType === 'TRANSFORM'
+                || derivType === 'SELECT' || derivType === 'SELECT_UDF'
+                || derivType === 'TRANSFORM_SQL';
+        }).length;
+        const estimatedNodeCount = nodes.length + operationCount;
+        let nodeScale;
+        if (estimatedNodeCount <= 10) {
+            nodeScale = 1;
+        } else {
+            nodeScale = Math.max(0.6, Math.min(1, 1 - (estimatedNodeCount - 10) * 0.03));
+        }
+        const versionNodeSize = (n) => Math.round((n.focus ? 64 : 48) * nodeScale);
+        const operationNodeSize = [Math.round(120 * nodeScale), Math.round(44 * nodeScale)];
+        const labelFontSize = Math.max(9, Math.round(11 * nodeScale));
+        // 渲染路径：小图走原生整图渲染（历史交互：初始固定分层、可拖拽、力导向），
+        // 大图（>1000 节点）走视口虚拟裁剪（只渲染视口内节点，防冻结）
+        const NATIVE_RENDER_THRESHOLD = 1000;
+        const useVirtualRender = estimatedNodeCount > NATIVE_RENDER_THRESHOLD;
+        this._useVirtualRender = useVirtualRender;
+        const showEdgeLabels = estimatedNodeCount <= 300;
+
+        // 1. 版本节点
         nodes.forEach(n => {
             const vid = n.versionId || n.createTime;
             const nodeId = `v_${vid}`;
@@ -429,7 +454,7 @@ class DatasetHistory extends HTMLElement {
                 id: nodeId,
                 name: `${n.datasetName || ''}\n${n.versionNo || ''}`,
                 symbol: 'circle',
-                symbolSize: 30,
+                symbolSize: versionNodeSize(n),
                 itemStyle: {
                     color: deleted ? '#cbd5e1' : color,
                     borderColor: n.focus ? '#111827' : (deleted ? '#94a3b8' : '#fff'),
@@ -439,8 +464,9 @@ class DatasetHistory extends HTMLElement {
                     opacity: deleted ? 0.55 : 1
                 },
                 label: {
-                    show: false,
+                    show: true,
                     position: 'bottom',
+                    fontSize: labelFontSize,
                     color: deleted ? '#94a3b8' : '#374151',
                     formatter: () => `${n.datasetName || ''}\n${n.versionNo || ''}`
                 },
@@ -489,7 +515,7 @@ class DatasetHistory extends HTMLElement {
                         id: opNodeId,
                         name: opDetail ? `${opLabel}\n${opDetail}` : opLabel,
                         symbol: 'roundRect',
-                        symbolSize: [110, 40],
+                        symbolSize: operationNodeSize,
                         itemStyle: {
                             color: opInfo.color,
                             borderColor: opInfo.borderColor,
@@ -497,7 +523,8 @@ class DatasetHistory extends HTMLElement {
                             borderRadius: 8
                         },
                         label: {
-                            show: false,
+                            show: true,
+                            fontSize: labelFontSize,
                             color: opInfo.textColor,
                             formatter: () => opDetail ? `${opLabel}\n${opDetail}` : opLabel
                         },
@@ -526,7 +553,7 @@ class DatasetHistory extends HTMLElement {
                             width: 2,
                             type: e.primary ? 'solid' : 'dashed'
                         },
-                        label: { show: false, formatter: e.relationType || '' }
+                        label: { show: showEdgeLabels && !!e.relationType, formatter: e.relationType || '' }
                     });
                 }
             } else {
@@ -538,22 +565,62 @@ class DatasetHistory extends HTMLElement {
                         width: 2,
                         type: e.primary ? 'solid' : 'dashed'
                     },
-                    label: { show: false, formatter: e.relationType || '' }
+                    label: { show: showEdgeLabels && !!e.relationType, formatter: e.relationType || '' }
                 });
             }
         });
 
-        // 3. 分层布局（确定性坐标，全部节点固定位置）
+        // 3. 分层布局（确定性坐标）：大图/有独立分量时锁定位置（历史行为），
+        // 小图不锁定 —— 初始固定、拖拽后由力导向微调
         const layout = this.computeLayeredLayout(echartsNodes, echartsLinks);
         const positions = layout.positions;
+        const detachedIds = layout.detachedIds || new Set();
         echartsNodes.forEach(n => {
             const pos = positions.get(n.id);
             if (pos) {
                 n.x = pos.x;
                 n.y = pos.y;
             }
-            n.fixed = true;
         });
+        const useDeterministicLayout = useVirtualRender || detachedIds.size > 0 || echartsNodes.length > 20;
+        if (useDeterministicLayout) {
+            echartsNodes.forEach(n => { n.fixed = true; });
+
+            // 缩放比过低时按比例预先缩小符号与字号，保证适配后屏幕间距仍大于符号尺寸（历史逻辑）
+            let exMinX = Infinity, exMaxX = -Infinity, exMinY = Infinity, exMaxY = -Infinity;
+            positions.forEach(p => {
+                if (p.x < exMinX) exMinX = p.x;
+                if (p.x > exMaxX) exMaxX = p.x;
+                if (p.y < exMinY) exMinY = p.y;
+                if (p.y > exMaxY) exMaxY = p.y;
+            });
+            const extentW = (exMaxX - exMinX) + 160;
+            const extentH = (exMaxY - exMinY) + 200;
+            const viewW0 = container.clientWidth || 1394;
+            const viewH0 = container.clientHeight || 1000;
+            let fitZoomEst = Math.min((viewW0 - 40) / extentW, (viewH0 - 40) / extentH, 1);
+            fitZoomEst = Math.max(fitZoomEst, 0.55);
+            if (this._mainRect) {
+                const r = this._mainRect;
+                const mainW = Math.max(1, r.maxX - r.minX) + 160;
+                const mainH = Math.max(1, r.maxY - r.minY) + 200;
+                const fitMain = Math.min((viewW0 - 40) / mainW, (viewH0 - 40) / mainH, 1);
+                if (fitZoomEst > fitMain) fitZoomEst = fitMain;
+            }
+            if (fitZoomEst < 0.6) {
+                const symbolScale = Math.max(0.55, fitZoomEst / 0.6);
+                echartsNodes.forEach(n => {
+                    if (typeof n.symbolSize === 'number') {
+                        n.symbolSize = Math.max(8, Math.round(n.symbolSize * symbolScale));
+                    } else if (Array.isArray(n.symbolSize)) {
+                        n.symbolSize = n.symbolSize.map(sz => Math.max(8, Math.round(sz * symbolScale)));
+                    }
+                    if (n.label && n.label.fontSize) {
+                        n.label.fontSize = Math.max(8, Math.round(n.label.fontSize * symbolScale));
+                    }
+                });
+            }
+        }
 
         // 4. 禁用版本置灰（指向禁用版本的边与操作节点一并置灰）
         const deletedVersionIds = new Set(
@@ -589,90 +656,175 @@ class DatasetHistory extends HTMLElement {
             });
         }
 
-        // 5. 虚拟渲染准备：全量图缓存 + 等比尺寸基准
-        this._fullNodes = echartsNodes;
-        this._fullLinks = echartsLinks;
+        // 5. 渲染准备：大图缓存全量图供视口裁剪
         const focusVid = this.version ? this.versionIdOf(this.version) : null;
         this._focusId = focusVid == null ? null : `v_${focusVid}`;
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        echartsNodes.forEach(n => {
-            if (n.x == null) return;
-            if (n.x < minX) minX = n.x;
-            if (n.x > maxX) maxX = n.x;
-            if (n.y < minY) minY = n.y;
-            if (n.y > maxY) maxY = n.y;
-        });
-        if (!isFinite(minX)) { minX = 0; maxX = 1; minY = 0; maxY = 1; }
-        const extentW = Math.max(1, maxX - minX);
-        const extentH = Math.max(1, maxY - minY);
-        // 节点基础尺寸为"数据单位"（约层间距的 1/10），渲染尺寸 = base × zoom，
-        // 任意缩放下节点与连线的比例保持一致（地图式等比缩放）
-        const spacing = this._estimateSpacing(echartsNodes);
-        this._baseNodeSize = Math.max(6, Math.min(40, spacing * 0.10));
-        this._baseFontSize = Math.max(8, Math.min(14, spacing * 0.045));
-
-        // 四角锚点（不可见）：把渲染子集的数据包围盒钉在整图范围上，
-        // 使 ECharts 的自动适配比例在全图生命周期内恒定，视口裁剪更新不会引起视图漂移
-        [[minX - spacing, minY - spacing], [maxX + spacing, minY - spacing],
-         [minX - spacing, maxY + spacing], [maxX + spacing, maxY + spacing]].forEach((p, i) => {
-            echartsNodes.push({
-                id: `__anchor_${i}`, name: '', symbol: 'circle', symbolSize: 0.1,
-                x: p[0], y: p[1], fixed: true, itemStyle: { opacity: 0 },
-                label: { show: false }, nodeType: 'anchor'
-            });
-        });
-
         const chart = window.echarts.init(container);
 
-        // 初始视口：以焦点版本为中心、节点约 24px 的舒适尺寸（视口裁剪，不做整图适配）
-        const viewW = container.clientWidth || 1394;
-        const viewH = container.clientHeight || 1000;
-        const fitScale0 = Math.min(viewW / Math.max(1, extentW + spacing * 2), viewH / Math.max(1, extentH + spacing * 2));
-        this._fitScale = fitScale0;
-        const focusNode0 = this._focusId ? echartsNodes.find(n => n.id === this._focusId) : null;
-        const focusPos = focusNode0 && focusNode0.x != null
-            ? [focusNode0.x, focusNode0.y]
-            : [minX + extentW / 2, minY + extentH / 2];
-        const initZoom = Math.max(1, Math.min(80, 24 / Math.max(0.001, this._baseNodeSize * fitScale0)));
-        this._fitView = { zoom: initZoom, center: focusPos };
-        // 首屏裁剪矩形（此时坐标系尚未建立，手动计算）
-        const totalScale0 = fitScale0 * initZoom;
-        this._initialRect = {
-            minX: focusPos[0] - viewW / (2 * totalScale0) - spacing * 2,
-            maxX: focusPos[0] + viewW / (2 * totalScale0) + spacing * 2,
-            minY: focusPos[1] - viewH / (2 * totalScale0) - spacing * 2,
-            maxY: focusPos[1] + viewH / (2 * totalScale0) + spacing * 2
-        };
+        let option;
+        if (useVirtualRender) {
+            this._fullNodes = echartsNodes;
+            this._fullLinks = echartsLinks;
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            echartsNodes.forEach(n => {
+                if (n.x == null) return;
+                if (n.x < minX) minX = n.x;
+                if (n.x > maxX) maxX = n.x;
+                if (n.y < minY) minY = n.y;
+                if (n.y > maxY) maxY = n.y;
+            });
+            if (!isFinite(minX)) { minX = 0; maxX = 1; minY = 0; maxY = 1; }
+            const extentW = Math.max(1, maxX - minX);
+            const extentH = Math.max(1, maxY - minY);
+            // 节点基础尺寸为"数据单位"（约层间距的 1/10）；四角锚点把数据包围盒
+            // 钉在整图范围上，使自动适配比例恒定、视口裁剪更新不引起视图漂移
+            const spacing = this._estimateSpacing(echartsNodes);
+            this._baseNodeSize = Math.max(6, Math.min(40, spacing * 0.10));
+            this._baseFontSize = Math.max(8, Math.min(14, spacing * 0.045));
+            [[minX - spacing, minY - spacing], [maxX + spacing, minY - spacing],
+             [minX - spacing, maxY + spacing], [maxX + spacing, maxY + spacing]].forEach((p, i) => {
+                echartsNodes.push({
+                    id: `__anchor_${i}`, name: '', symbol: 'circle', symbolSize: 0.1,
+                    x: p[0], y: p[1], fixed: true, itemStyle: { opacity: 0 },
+                    label: { show: false }, nodeType: 'anchor'
+                });
+            });
 
-        const first = this._buildRenderSubset(chart, initZoom, false);
-        const option = {
-            tooltip: { show: false },
-            series: [{
-                type: 'graph',
-                layout: 'none',
-                roam: true,
-                draggable: false,
-                zoom: initZoom,
-                center: focusPos,
-                symbol: 'circle',
-                edgeSymbol: ['none', 'arrow'],
-                edgeSymbolSize: [0, Math.max(5, Math.min(16, 4 * this._fitScale * initZoom))],
-                lineStyle: {
-                    color: '#94a3b8',
-                    width: Math.max(0.6, Math.min(5, 1.6 * this._fitScale * initZoom)),
-                    curveness: 0.05,
-                    opacity: 0.8
-                },
-                label: { show: false },
-                emphasis: {
-                    focus: 'adjacency',
-                    label: { show: true },
-                    lineStyle: { width: 3 }
-                },
-                data: first.data,
-                links: first.links
-            }]
-        };
+            // 初始视口：以焦点版本为中心、节点约 24px 的舒适尺寸（视口裁剪，不做整图适配）
+            const viewW = container.clientWidth || 1394;
+            const viewH = container.clientHeight || 1000;
+            const fitScale0 = Math.min(viewW / Math.max(1, extentW + spacing * 2), viewH / Math.max(1, extentH + spacing * 2));
+            this._fitScale = fitScale0;
+            const focusNode0 = this._focusId ? echartsNodes.find(n => n.id === this._focusId) : null;
+            const focusPos = focusNode0 && focusNode0.x != null
+                ? [focusNode0.x, focusNode0.y]
+                : [minX + extentW / 2, minY + extentH / 2];
+            const initZoom = Math.max(1, Math.min(80, 24 / Math.max(0.001, this._baseNodeSize * fitScale0)));
+            this._fitView = { zoom: initZoom, center: focusPos };
+            const totalScale0 = fitScale0 * initZoom;
+            this._initialRect = {
+                minX: focusPos[0] - viewW / (2 * totalScale0) - spacing * 2,
+                maxX: focusPos[0] + viewW / (2 * totalScale0) + spacing * 2,
+                minY: focusPos[1] - viewH / (2 * totalScale0) - spacing * 2,
+                maxY: focusPos[1] + viewH / (2 * totalScale0) + spacing * 2
+            };
+
+            const first = this._buildRenderSubset(chart, initZoom, false);
+            option = {
+                tooltip: { show: false },
+                series: [{
+                    type: 'graph',
+                    layout: 'none',
+                    roam: true,
+                    draggable: false,
+                    zoom: initZoom,
+                    center: focusPos,
+                    symbol: 'circle',
+                    edgeSymbol: ['none', 'arrow'],
+                    edgeSymbolSize: [0, Math.max(5, Math.min(16, 4 * this._fitScale * initZoom))],
+                    lineStyle: {
+                        color: '#94a3b8',
+                        width: Math.max(0.6, Math.min(5, 1.6 * this._fitScale * initZoom)),
+                        curveness: 0.05,
+                        opacity: 0.8
+                    },
+                    label: { show: false },
+                    emphasis: {
+                        focus: 'adjacency',
+                        label: { show: true },
+                        lineStyle: { width: 3 }
+                    },
+                    data: first.data,
+                    links: first.links
+                }]
+            };
+        } else {
+            // 原生路径：历史交互（初始固定分层、可拖拽、拖拽后力导向微调），
+            // 但视图模型与虚拟路径统一：焦点居中初始视口、尺寸按 fitScale × zoom 等比
+            const nodeCount = echartsNodes.length;
+            let repulsion, edgeLengthForce, gravity;
+            if (nodeCount <= 10) {
+                repulsion = 400;
+                edgeLengthForce = [100, 200];
+                gravity = 0.02;
+            } else {
+                repulsion = Math.max(400, nodeCount * 120);
+                edgeLengthForce = [100, Math.min(400, 200 + nodeCount * 30)];
+                gravity = Math.max(0.0005, 0.02 - nodeCount * 0.0008);
+            }
+            if (useDeterministicLayout) gravity = 0;
+
+            const viewW = container.clientWidth || 1394;
+            const viewH = container.clientHeight || 1000;
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            echartsNodes.forEach(n => {
+                if (n.x == null) return;
+                if (n.x < minX) minX = n.x;
+                if (n.x > maxX) maxX = n.x;
+                if (n.y < minY) minY = n.y;
+                if (n.y > maxY) maxY = n.y;
+            });
+            if (!isFinite(minX)) { minX = 0; maxX = 1; minY = 0; maxY = 1; }
+            const extentW0 = Math.max(1, maxX - minX);
+            const extentH0 = Math.max(1, maxY - minY);
+            const spacing = this._estimateSpacing(echartsNodes);
+            this._baseNodeSize = Math.max(6, Math.min(40, spacing * 0.10));
+            this._baseFontSize = Math.max(8, Math.min(14, spacing * 0.045));
+            const fitScale0 = Math.min(viewW / Math.max(1, extentW0), viewH / Math.max(1, extentH0));
+            this._fitScale = fitScale0;
+            const focusNode0 = this._focusId ? echartsNodes.find(n => n.id === this._focusId) : null;
+            const focusPos = focusNode0 && focusNode0.x != null
+                ? [focusNode0.x, focusNode0.y]
+                : [minX + extentW0 / 2, minY + extentH0 / 2];
+            // 符号会随 option.zoom 缩放：设置值只乘 fitScale，使初始绘制即 24px
+            const symSetting = this._baseNodeSize * fitScale0;
+            echartsNodes.forEach(n => {
+                n.symbolSize = Math.round((n.id === this._focusId ? symSetting * 1.3 : symSetting) * 10) / 10;
+            });
+            const initZoom = Math.max(1, Math.min(80, 24 / Math.max(0.001, symSetting)));
+            this._fitView = { zoom: initZoom, center: focusPos };
+            const edgeW = Math.max(0.6, Math.min(4, 1.6 * fitScale0 * initZoom));
+
+            option = {
+                tooltip: { show: false },
+                series: [{
+                    type: 'graph',
+                    layout: 'force',
+                    force: {
+                        initLayout: 'none',
+                        repulsion: repulsion,
+                        edgeLength: edgeLengthForce,
+                        gravity: gravity,
+                        friction: 0.8,
+                        layoutAnimation: true
+                    },
+                    roam: true,
+                    draggable: true,
+                    zoom: initZoom,
+                    center: focusPos,
+                    symbol: 'circle',
+                    edgeSymbol: ['none', 'arrow'],
+                    edgeSymbolSize: [0, Math.max(4, Math.min(20, 0.5 * symSetting))],
+                    lineStyle: {
+                        color: '#94a3b8',
+                        width: edgeW,
+                        curveness: 0.05,
+                        opacity: 0.8
+                    },
+                    label: {
+                        show: true,
+                        fontSize: Math.max(9, Math.min(16, (this._baseFontSize || 11) * fitScale0 * initZoom)),
+                        color: '#374151'
+                    },
+                    emphasis: {
+                        focus: 'adjacency',
+                        lineStyle: { width: 3 }
+                    },
+                    data: echartsNodes,
+                    links: echartsLinks
+                }]
+            };
+        }
         chart.setOption(option);
         this._echartsNodesCache = echartsNodes;
 
@@ -708,17 +860,22 @@ class DatasetHistory extends HTMLElement {
             }
         });
 
-        // 缩放/平移 -> 视口裁剪重渲染（防抖）
+        // 缩放/平移 -> 大图触发视口裁剪重渲染（防抖）；小图原生交互无需处理
         chart.on('graphRoam', () => this._handleRoamForRender(chart));
 
         if (container._resizeObserver) container._resizeObserver.disconnect();
         const resizeObserver = new ResizeObserver(() => {
             chart.resize();
-            this._handleRoamForRender(chart);
+            if (this._useVirtualRender) this._handleRoamForRender(chart);
         });
         resizeObserver.observe(container);
         container._chart = chart;
         container._resizeObserver = resizeObserver;
+
+        if (useVirtualRender) {
+            this._handleRoamForRender(chart);
+        }
+        // 原生路径初始视口已是焦点居中 + 等比尺寸，不再 autoZoomToFit 整图适配
     }
 
     _getGraphZoom(chart) {
@@ -839,6 +996,7 @@ class DatasetHistory extends HTMLElement {
 
     /** 缩放/平移后防抖重建渲染子集 */
     _handleRoamForRender(chart) {
+        if (!this._useVirtualRender) return;   // 小图原生渲染，无需视口裁剪
         if (this._roamRenderTimer) clearTimeout(this._roamRenderTimer);
         this._roamRenderTimer = setTimeout(() => {
             if (!chart || chart.isDisposed() || !this._fullNodes) return;
