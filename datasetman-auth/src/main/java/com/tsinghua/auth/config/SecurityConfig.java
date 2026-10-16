@@ -112,8 +112,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 // 放行server模块的静态资源
                 .antMatchers("/", "/index.html").permitAll()
                 .antMatchers("/static/**", "/css/**", "/js/**", "/images/**", "/lib/**", "/components/**", "/config/**").permitAll()
-                // 放行登录页面和错误页面
-                .antMatchers("/login.html", "/login", "/error", "/favicon.ico").permitAll()
+                // 放行登录页面和错误页面（knowledge-graph-detail.html 页面内自校验登录态，图数据API仍需认证）
+                .antMatchers("/login.html", "/knowledge-graph-detail.html", "/login", "/error", "/favicon.ico").permitAll()
                 // 放行认证相关API
                 .antMatchers("/api/auth/**").permitAll()
                 // 放行RBAC测试API（用于测试权限系统）

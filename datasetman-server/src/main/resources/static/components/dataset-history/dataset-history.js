@@ -49,7 +49,10 @@ class DatasetHistory extends HTMLElement {
                 .TRANSFORM, .TRANSFORM_SQL { background:#ede9fe; color:#6d28d9; }
                 .badge.deleted { background:#fef2f2; color:#dc2626; }
                 .badge.active-status { background:#f0fdf4; color:#16a34a; }
-                .graph { width:100%; height:1000px; overflow:hidden; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; box-sizing:border-box; } 
+                .graph { width:100%; height:1000px; overflow:hidden; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; box-sizing:border-box; } .graph { cursor: grab; } .graph:active { cursor: grabbing; }
+                .graph canvas { cursor: grab !important; }
+                .graph.cursor-pointer canvas { cursor: pointer !important; }
+                .graph canvas:active { cursor: grabbing !important; } 
                 .node { cursor:pointer; } .node circle { stroke:#fff; stroke-width:3; } .node.focus circle { stroke:#111827; stroke-width:4; }
                 .node text { font-size:11px; fill:#374151; text-anchor:middle; }
                 .empty { padding:40px; color:#9ca3af; text-align:center; }
@@ -801,11 +804,13 @@ class DatasetHistory extends HTMLElement {
         };
         chart.setOption(option);
 
-        // 节点悬停 pointer（可点击反馈）
-        chart.on('mouseover', (params) => {
-            if (params.dataType === 'node') container.style.cursor = 'pointer';
+        // 光标反馈：悬停节点 pointer（可点击），其余区域 grab（可平移）。
+        // 用类切换 + CSS !important 压制 ECharts 在 canvas 上写的内联光标
+        chart.getZr().on('mousemove', (e) => {
+            const overNode = !!(e.target && e.target.dataIndex !== undefined
+                && e.target.type !== 'line');
+            container.classList.toggle('cursor-pointer', overNode);
         });
-        chart.on('mouseout', () => { container.style.cursor = 'default'; });
 
         // 点击节点 -> 路径重跑选择模式下构建重跑链；否则弹出详情弹窗（版本节点同时高亮对应行）
         chart.on('click', (params) => {
@@ -1350,11 +1355,13 @@ class DatasetHistory extends HTMLElement {
             }
         });
 
-        // 节点可点击的鼠标反馈：悬停节点变 pointer（可点击），移开恢复
-        chart.on('mouseover', (params) => {
-            if (params.dataType === 'node') container.style.cursor = 'pointer';
+        // 光标反馈：悬停节点 pointer（可点击），其余区域 grab（可平移）。
+        // 用类切换 + CSS !important 压制 ECharts 在 canvas 上写的内联光标
+        chart.getZr().on('mousemove', (e) => {
+            const overNode = !!(e.target && e.target.dataIndex !== undefined
+                && e.target.type !== 'line');
+            container.classList.toggle('cursor-pointer', overNode);
         });
-        chart.on('mouseout', () => { container.style.cursor = 'default'; });
 
         // 缩放/平移 -> 大图触发视口裁剪重渲染（防抖）；小图原生交互无需处理
         chart.on('graphRoam', () => this._handleRoamForRender(chart));
@@ -1493,29 +1500,18 @@ class DatasetHistory extends HTMLElement {
     /** 缩放/平移后防抖重建渲染子集 */
     _handleRoamForRender(chart) {
         if (!this._useVirtualRender) return;   // 小图原生渲染，无需视口裁剪
+        if (this._nodeDragging) return;        // 节点拖拽中，暂停重建
         if (this._roamRenderTimer) clearTimeout(this._roamRenderTimer);
         this._roamRenderTimer = setTimeout(() => {
             if (!chart || chart.isDisposed() || !this._fullNodes) return;
             const zoom = this._getGraphZoom(chart);
             const sub = this._buildRenderSubset(chart, zoom, false);
-            // 关键：data 更新时必须同时钉住 zoom/center，否则 ECharts 会按
-            // 渲染子集的包围盒重新适配视图，用户的缩放状态被冲掉，
-            // 导致节点尺寸与连线间距比例错乱（节点远大于间距、缩成一团）
-            let center;
-            try {
-                const opt = chart.getOption();
-                center = opt.series[0] && opt.series[0].center;
-            } catch (err) { center = undefined; }
+            // 锚点已钉住数据包围盒（适配比例恒定），不钉 zoom/center——
+            // 钉回会吞掉 ECharts 原生平移（拖空白区平移失效的根因）
             chart.setOption({
-                series: [{
-                    zoom: zoom,
-                    center: center,
-                    data: sub.data,
-                    links: sub.links,
-                    edgeSymbolSize: [0, Math.max(5, Math.min(16, 4 * px))]
-                }]
+                series: [{ data: sub.data, links: sub.links }]
             }, { lazyUpdate: true, silent: true });
-            // 自校准：实测比例与估算不一致时（包围盒留白等误差），按实测值修正节点尺寸
+            // 自校准：实测比例与估算不一致时修正节点尺寸（节点尺寸 = 原始值 × fitScale × zoom）
             clearTimeout(this._calibrateTimer);
             this._calibrateTimer = setTimeout(() => {
                 if (!chart || chart.isDisposed()) return;

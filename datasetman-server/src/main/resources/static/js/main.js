@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'transformManagement',
             'udfManagement',
             'sqlSnippetManagement',
+            'knowledgeGraphManagement',
             'fileSystemBrowser',
             'keyValueViewer',
             'semiStructuredViewer',
@@ -412,12 +413,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const datasetDropdown = document.getElementById('datasetDropdown');
     const jobDropdown = document.getElementById('jobDropdown');
     const functionDropdown = document.getElementById('functionDropdown');
+    const qualityDropdown = document.getElementById('qualityDropdown');
+    const knowledgeGraphDropdown = document.getElementById('knowledgeGraphDropdown');
     const toolDropdown = document.getElementById('toolDropdown');
     const settingsDropdown = document.getElementById('settingsDropdown');
     const helpDropdown = document.getElementById('helpDropdown');
     const userDropdown = document.getElementById('userDropdown');
 
-    const allDropdowns = [dataSourceDropdown, datasetDropdown, jobDropdown, functionDropdown, toolDropdown, helpDropdown, userDropdown, settingsDropdown];
+    const allDropdowns = [dataSourceDropdown, datasetDropdown, jobDropdown, functionDropdown, qualityDropdown, knowledgeGraphDropdown, toolDropdown, helpDropdown, userDropdown, settingsDropdown];
 
     function closeAllDropdowns(except = null) {
         allDropdowns.forEach(dropdown => {
@@ -446,6 +449,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     functionDropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+        closeAllDropdowns(this);
+        this.classList.toggle('active');
+    });
+
+    qualityDropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+        closeAllDropdowns(this);
+        this.classList.toggle('active');
+    });
+
+    knowledgeGraphDropdown.addEventListener('click', function(e) {
         e.stopPropagation();
         closeAllDropdowns(this);
         this.classList.toggle('active');
@@ -614,6 +629,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'showQualityAssessment':
                         console.log('质量测评菜单被点击');
                         showComponent('qualityAssessment');
+                        break;
+                    case 'showKnowledgeGraphManagement':
+                        console.log('知识图谱管理菜单被点击');
+                        showComponent('knowledgeGraphManagement');
                         break;
                     case 'showSceneAnalysis':
                         console.log('数据集管理菜单被点击');
@@ -1092,6 +1111,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         break;
                     case 'showQualityAssessment':
                         showComponent('qualityAssessment');
+                        break;
+                    case 'showKnowledgeGraphManagement':
+                        showComponent('knowledgeGraphManagement');
                         break;
                     default:
                         console.warn(`未知的按钮动作: ${action}`);

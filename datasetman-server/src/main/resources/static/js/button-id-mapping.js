@@ -76,6 +76,10 @@ const BUTTON_ID_MAP = {
     'btn-func-udf': {
         text: 'UDF',
         action: 'showUdfManagement'
+    },
+    'btn-knowledge-graph': {
+        text: '图谱',
+        action: 'showKnowledgeGraphManagement'
     }
 };
 
@@ -169,13 +173,9 @@ const MENU_ID_MAP = {
         text: '质量测评',
         action: 'showQualityAssessment'
     },
-    'btn-evaluation-criteria': {
-        text: '准则',
-        action: 'showEvaluationCriteria'
-    },
-    'btn-quality-assessment': {
-        text: '测评',
-        action: 'showQualityAssessment'
+    'menu-knowledge-graph-management': {
+        text: '知识图谱管理',
+        action: 'showKnowledgeGraphManagement'
     }
 };
 

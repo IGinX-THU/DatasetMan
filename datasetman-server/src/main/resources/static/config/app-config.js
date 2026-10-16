@@ -8,7 +8,7 @@ window.AppConfig = {
         // baseURL: 'http://124.65.131.2:18081', // 可配置的API域名
         baseURL: 'http://localhost:8081', // 可配置的API域名
         // 前端请求超时时间（毫秒），建议略小于后端超时时间
-        timeout: 55000,
+        timeout: 300000,
         headers: {
             'Content-Type': 'application/json'
         }
@@ -171,6 +171,14 @@ window.AppConfig = {
             list: '/api/sql-snippet/list',
             metas: '/api/sql-snippet/metas',
             delete: '/api/sql-snippet/delete'
+        },
+        // 知识图谱相关
+        knowledgeGraph: {
+            upload: '/api/knowledge-graph/upload',
+            query: '/api/knowledge-graph/query',
+            count: '/api/knowledge-graph/count',
+            'validate-name': '/api/knowledge-graph/validate-name',
+            data: '/api/knowledge-graph/data'
         },
         // Transform作业相关
         job: {

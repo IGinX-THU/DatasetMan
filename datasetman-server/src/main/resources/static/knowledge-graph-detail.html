@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识图谱详情 - 多元数据集管理工具</title>
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            color: #2b2f36;
+        }
+
+        .detail-header {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 0 20px;
+            background: #fff;
+            border-bottom: 1px solid #e2e6ef;
+        }
+
+        .back-btn {
+            padding: 6px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            color: #4b5563;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            border-color: #4c89ff;
+            color: #4c89ff;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2329;
+            white-space: nowrap;
+        }
+
+        .header-desc {
+            font-size: 12px;
+            color: #8c8c8c;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 320px;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 12px;
+            margin-left: auto;
+            font-size: 12px;
+            color: #5f6b7a;
+            white-space: nowrap;
+        }
+
+        .header-stats .stat strong {
+            color: #1d6feb;
+            font-weight: 600;
+        }
+
+        .toolbar {
+            height: 44px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 20px;
+            background: #fff;
+            border-bottom: 1px solid #e8ecf3;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+        }
+
+        .tool-btn {
+            padding: 5px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            color: #4b5563;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .tool-btn:hover {
+            border-color: #4c89ff;
+            color: #4c89ff;
+        }
+
+        .tool-btn.primary {
+            background: #4c89ff;
+            border-color: #4c89ff;
+            color: #fff;
+        }
+
+        .tool-btn.primary:hover {
+            background: #3d7bf7;
+        }
+
+        .tool-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .search-input {
+            width: 220px;
+            padding: 5px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 12px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: #4c89ff;
+        }
+
+        .main-layout {
+            display: flex;
+            height: calc(100% - 100px);
+        }
+
+        .graph-wrap {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #graphContainer {
+            width: 100%;
+            height: 100%;
+        }
+
+        .graph-hint {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid #e2e6ef;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #5f6b7a;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+            max-width: 46%;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            z-index: 10;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid #e2e6ef;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #5f6b7a;
+            max-width: 60%;
+            max-height: 120px;
+            overflow: auto;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .side-panel {
+            width: 300px;
+            background: #fff;
+            border-left: 1px solid #e2e6ef;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .side-panel-header {
+            padding: 12px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f2329;
+            border-bottom: 1px solid #eef1f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .side-panel-body {
+            flex: 1;
+            overflow: auto;
+            padding: 12px 16px;
+        }
+
+        .prop-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .prop-table td {
+            padding: 7px 4px;
+            border-bottom: 1px solid #f3f4f6;
+            vertical-align: top;
+            word-break: break-all;
+        }
+
+        .prop-table td.prop-key {
+            color: #8c8c8c;
+            white-space: nowrap;
+            width: 40%;
+        }
+
+        .prop-table td.prop-value {
+            color: #2b2f36;
+        }
+
+        .panel-placeholder {
+            color: #9ca3af;
+            font-size: 12px;
+            text-align: center;
+            padding: 40px 12px;
+            line-height: 1.8;
+        }
+
+        .meta-block {
+            font-size: 12px;
+            color: #5f6b7a;
+            line-height: 1.9;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #e2e6ef;
+        }
+
+        .meta-block b {
+            color: #374151;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(245, 247, 250, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 34px;
+            height: 34px;
+            border: 3px solid #dbe4f0;
+            border-top-color: #4c89ff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 13px;
+            color: #5f6b7a;
+        }
+
+        .error-box {
+            margin: 80px auto;
+            max-width: 480px;
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            color: #cf1322;
+            padding: 20px 24px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+<div class="detail-header">
+    <button class="back-btn" id="backBtn">← 返回列表</button>
+    <span class="header-title" id="graphTitle">知识图谱详情</span>
+    <span class="header-desc" id="graphDesc"></span>
+    <div class="header-stats">
+        <span class="stat">节点 <strong id="statLoadedNodes">0</strong>/<span id="statTotalNodes">-</span></span>
+        <span class="stat">关系 <strong id="statEdges">0</strong>/<span id="statTotalEdges">-</span></span>
+        <span class="stat" id="statOperator"></span>
+    </div>
+</div>
+
+<div class="toolbar">
+    <input class="search-input" id="searchInput" type="text" placeholder="搜索节点ID/标签定位..." />
+    <button class="tool-btn" id="zoomInBtn">放大</button>
+    <button class="tool-btn" id="zoomOutBtn">缩小</button>
+    <button class="tool-btn" id="fitBtn">适配画布</button>
+    <button class="tool-btn" id="relayoutBtn">重新布局</button>
+    <button class="tool-btn primary" id="loadMoreBtn" disabled>加载更多节点</button>
+</div>
+
+<div class="main-layout">
+    <div class="graph-wrap">
+        <div id="graphContainer"></div>
+        <div class="graph-hint" id="graphHint">滚轮缩放画布，拖拽平移/移动节点，点击节点或关系查看属性</div>
+        <div class="legend" id="legend" style="display: none;"></div>
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="spinner"></div>
+            <div class="loading-text" id="loadingText">正在加载知识图谱...</div>
+        </div>
+    </div>
+    <div class="side-panel">
+        <div class="side-panel-header">
+            <span id="panelTitle">属性</span>
+            <button class="tool-btn" id="clearHighlightBtn" style="display:none;">取消高亮</button>
+        </div>
+        <div class="side-panel-body" id="panelBody">
+            <div class="panel-placeholder">点击图中的节点或关系<br>查看详细属性</div>
+        </div>
+    </div>
+</div>
+
+<script src="./config/app-config.js"></script>
+<script src="./lib/g6/g6.min.js"></script>
+<script>
+    (function () {
+        // 登录校验：无token跳转登录页
+        const token = localStorage.getItem('jwtToken');
+        if (!token) {
+            window.location.href = '/login.html';
+            return;
+        }
+
+        const graphName = new URLSearchParams(window.location.search).get('name');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        const panelBody = document.getElementById('panelBody');
+        const panelTitle = document.getElementById('panelTitle');
+        const clearHighlightBtn = document.getElementById('clearHighlightBtn');
+        const legendEl = document.getElementById('legend');
+
+        // 每批渲染的节点数与增量加载页大小
+        const RENDER_BATCH_SIZE = 100;
+        const FIRST_PAGE_SIZE = 300;
+        const PAGE_SIZE = 300;
+
+        let graph = null;
+        let loadedNodeCount = 0;   // 已增量加载的节点数（与服务端nodeOffset语义一致）
+        let renderedEdgeCount = 0;
+        let totalNodes = 0;
+        let totalEdges = 0;
+        let hasMore = false;
+        let isLoadingMore = false;
+        const labelColorMap = {};  // 节点标签 -> 颜色
+        const PALETTE = ['#5B8FF9', '#61DDAA', '#F6BD16', '#7262FD', '#78D3F8', '#9661BC', '#F6903D', '#008685', '#F08BB4', '#E8684A'];
+
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function labelColorOf(label) {
+            if (!labelColorMap[label]) {
+                const used = Object.keys(labelColorMap).length;
+                labelColorMap[label] = PALETTE[used % PALETTE.length];
+                renderLegend();
+            }
+            return labelColorMap[label];
+        }
+
+        function renderLegend() {
+            const entries = Object.entries(labelColorMap);
+            if (!entries.length) {
+                legendEl.style.display = 'none';
+                return;
+            }
+            legendEl.style.display = '';
+            legendEl.innerHTML = entries.map(([label, color]) => `
+                <span class="legend-item" data-label="${escapeHtml(label)}">
+                    <span class="legend-color" style="background:${color}"></span>${escapeHtml(label)}
+                </span>
+            `).join('');
+        }
+
+        function updateStats() {
+            document.getElementById('statLoadedNodes').textContent = loadedNodeCount.toLocaleString('zh-CN');
+            document.getElementById('statTotalNodes').textContent = totalNodes ? totalNodes.toLocaleString('zh-CN') : '-';
+            document.getElementById('statEdges').textContent = renderedEdgeCount.toLocaleString('zh-CN');
+            document.getElementById('statTotalEdges').textContent = totalEdges ? totalEdges.toLocaleString('zh-CN') : '-';
+            loadMoreBtn.disabled = !hasMore || isLoadingMore;
+            loadMoreBtn.textContent = hasMore
+                ? (isLoadingMore ? '加载中...' : '加载更多节点')
+                : '已加载全部节点';
+        }
+
+        function initGraph() {
+            const container = document.getElementById('graphContainer');
+            const width = container.clientWidth || container.offsetWidth;
+            const height = container.clientHeight || container.offsetHeight;
+
+            graph = new G6.Graph({
+                container: 'graphContainer',
+                width,
+                height,
+                // 增量渲染：初始不放入数据，后续通过addItem逐批加入
+                modes: {
+                    default: ['drag-canvas', 'zoom-canvas', 'drag-node']
+                },
+                layout: {
+                    type: 'force',
+                    preventOverlap: true,
+                    nodeSpacing: 30,
+                    linkDistance: 110,
+                    nodeStrength: -300,
+                    edgeStrength: 0.1,
+                    alphaDecay: 0.028,
+                    alphaMin: 0.001
+                },
+                animate: false,
+                defaultNode: {
+                    size: 26,
+                    style: {
+                        lineWidth: 1.5,
+                        stroke: '#fff',
+                        shadowBlur: 4,
+                        shadowColor: 'rgba(15,23,42,0.12)'
+                    },
+                    labelCfg: {
+                        position: 'bottom',
+                        offset: 4,
+                        style: { fontSize: 11, fill: '#4b5563' }
+                    }
+                },
+                defaultEdge: {
+                    type: 'line',
+                    style: {
+                        stroke: '#b8c4d6',
+                        lineWidth: 1.2,
+                        endArrow: {
+                            path: G6.Arrow.triangle(7, 8, 0),
+                            fill: '#b8c4d6'
+                        }
+                    },
+                    labelCfg: {
+                        autoRotate: true,
+                        style: { fontSize: 10, fill: '#8c8c8c', background: { fill: '#ffffff', stroke: '#e2e6ef', padding: [1, 3, 1, 3] } }
+                    }
+                },
+                nodeStateStyles: {
+                    highlight: { stroke: '#f6bd16', lineWidth: 2.5, shadowBlur: 10 },
+                    dim: { opacity: 0.15 }
+                },
+                edgeStateStyles: {
+                    highlight: { stroke: '#f6903d', lineWidth: 2 },
+                    dim: { opacity: 0.08 }
+                }
+            });
+
+            // 交互：点击节点/边展示属性
+            graph.on('node:click', (evt) => showItemDetail('节点', evt.item));
+            graph.on('edge:click', (evt) => showItemDetail('关系', evt.item));
+            graph.on('canvas:click', () => renderPlaceholder());
+
+            window.addEventListener('resize', () => {
+                if (!graph || graph.get('destroyed')) return;
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                if (w && h) graph.changeSize(w, h);
+            });
+        }
+
+        /**
+         * 增量渲染：分批addItem，避免大图一次性渲染阻塞主线程
+         */
+        async function appendIncrementally(newNodes, newEdges) {
+            // 节点按标签着色
+            const nodeModels = newNodes.map(n => {
+                const label = n.label || n.id;
+                const color = labelColorOf(n.labelType || '未分类');
+                return {
+                    id: String(n.id),
+                    label: String(label).length > 16 ? String(label).slice(0, 15) + '…' : String(label),
+                    rawLabel: String(label),
+                    properties: n.properties || {},
+                    style: { fill: color },
+                    labelType: n.labelType || ''
+                };
+            });
+
+            const knownEdges = new Set();
+            graph.getEdges().forEach(e => {
+                const m = e.getModel();
+                knownEdges.add(m.source + '\u0000' + m.target + '\u0000' + (m.rawLabel || ''));
+            });
+
+            // 分批加入节点
+            for (let i = 0; i < nodeModels.length; i += RENDER_BATCH_SIZE) {
+                const batch = nodeModels.slice(i, i + RENDER_BATCH_SIZE);
+                graph.setAutoPaint(false);
+                batch.forEach(m => {
+                    if (!graph.findById(m.id)) {
+                        graph.add('node', m);
+                    }
+                });
+                graph.paint();
+                graph.setAutoPaint(true);
+                loadingText.textContent = `正在增量渲染节点 ${Math.min(i + RENDER_BATCH_SIZE, nodeModels.length)}/${nodeModels.length} ...`;
+                // 让出主线程，保持页面可响应
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+
+            // 加入两端点已存在的边（服务端已保证，此处再兜底校验）
+            const addedEdges = newEdges.filter(e => {
+                const source = String(e.source);
+                const target = String(e.target);
+                const label = String(e.label || '');
+                const key = source + '\u0000' + target + '\u0000' + label;
+                if (knownEdges.has(key)) return false;
+                if (!graph.findById(source) || !graph.findById(target)) return false;
+                knownEdges.add(key);
+                return true;
+            });
+
+            graph.setAutoPaint(false);
+            addedEdges.forEach(e => {
+                graph.add('edge', {
+                    source: String(e.source),
+                    target: String(e.target),
+                    label: String(e.label || ''),
+                    rawLabel: String(e.label || ''),
+                    properties: e.properties || {}
+                });
+            });
+            graph.paint();
+            graph.setAutoPaint(true);
+
+            // 增量完成后重跑力导布局
+            if (nodeModels.length || addedEdges.length) {
+                try {
+                    graph.layout();
+                } catch (e) {
+                    console.warn('布局失败:', e);
+                }
+            }
+            renderedEdgeCount += addedEdges.length;
+        }
+
+        async function fetchPage(offset, limit) {
+            const result = await window.AppConfig.get('knowledgeGraph', 'data', {
+                name: graphName,
+                nodeOffset: offset,
+                nodeLimit: limit
+            });
+            if (result.code !== 200 || !result.data) {
+                throw new Error(result.message || '查询图数据失败');
+            }
+            return result.data;
+        }
+
+        async function init() {
+            if (!graphName) {
+                showError('缺少图谱名称参数，请从知识图谱管理列表点击"详情"进入。');
+                return;
+            }
+            try {
+                const data = await fetchPage(0, FIRST_PAGE_SIZE);
+                renderMeta(data);
+
+                if (totalNodes === 0) {
+                    hideLoading();
+                    panelBody.innerHTML = '<div class="panel-placeholder">该图谱暂无节点数据</div>';
+                    return;
+                }
+
+                initGraph();
+                await appendIncrementally(data.nodes, data.edges);
+                loadedNodeCount = data.loadedNodeCount || data.nodes.length;
+                hasMore = !!data.hasMore;
+                updateStats();
+                setTimeout(() => {
+                    try { graph.fitView(30); } catch (e) { /* 忽略 */ }
+                }, 100);
+                hideLoading();
+            } catch (error) {
+                console.error('加载知识图谱失败:', error);
+                showError('加载知识图谱失败: ' + error.message);
+            }
+        }
+
+        async function loadMore() {
+            if (!hasMore || isLoadingMore) return;
+            isLoadingMore = true;
+            updateStats();
+            showLoading('正在加载更多节点...');
+            try {
+                const data = await fetchPage(loadedNodeCount, PAGE_SIZE);
+                await appendIncrementally(data.nodes, data.edges);
+                loadedNodeCount = data.loadedNodeCount || (loadedNodeCount + data.nodes.length);
+                hasMore = !!data.hasMore;
+            } catch (error) {
+                console.error('加载更多节点失败:', error);
+                alert('加载更多节点失败: ' + error.message);
+            } finally {
+                isLoadingMore = false;
+                hideLoading();
+                updateStats();
+            }
+        }
+
+        function renderMeta(data) {
+            const graphInfo = data.graph || {};
+            document.getElementById('graphTitle').textContent = graphInfo.name || graphName;
+            document.getElementById('graphDesc').textContent = graphInfo.description || '';
+            const opTime = graphInfo.createTime
+                ? new Date(graphInfo.createTime).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                : '-';
+            document.getElementById('statOperator').textContent = '操作人: ' + (graphInfo.operator || graphInfo.owner || '-');
+            panelTitle.textContent = '图谱信息';
+            panelBody.innerHTML = `
+                <div class="meta-block">
+                    <div><b>图谱名称：</b>${escapeHtml(graphInfo.name || graphName)}</div>
+                    <div><b>描述：</b>${escapeHtml(graphInfo.description || '-')}</div>
+                    <div><b>节点路径：</b>${escapeHtml(graphInfo.nodePath || '-')}</div>
+                    <div><b>关系路径：</b>${escapeHtml(graphInfo.edgePath || '-')}</div>
+                    <div><b>上传时间：</b>${opTime}</div>
+                    <div><b>操作人：</b>${escapeHtml(graphInfo.operator || graphInfo.owner || '-')}</div>
+                </div>
+                <div class="meta-block" style="border-bottom:none;">
+                    点击图中的节点或关系可在此查看属性
+                </div>
+            `;
+            totalNodes = Number(data.totalNodes || 0);
+            totalEdges = Number(data.totalEdges || 0);
+        }
+
+        function showItemDetail(type, item) {
+            const model = item.getModel();
+            const isNode = type === '节点';
+            panelTitle.textContent = type + '属性';
+            const props = Object.assign({}, model.properties || {});
+            let html = `<div class="meta-block" style="border-bottom:1px dashed #e2e6ef;">`;
+            html += isNode
+                ? `<div><b>ID：</b>${escapeHtml(model.id)}</div><div><b>标签：</b>${escapeHtml(model.rawLabel || model.label || '-')}</div>`
+                : `<div><b>起点：</b>${escapeHtml(model.source)}</div><div><b>终点：</b>${escapeHtml(model.target)}</div><div><b>类型：</b>${escapeHtml(model.rawLabel || model.label || '-')}</div>`;
+            html += `</div>`;
+            const keys = Object.keys(props);
+            if (keys.length) {
+                html += `<table class="prop-table">` + keys.map(k =>
+                    `<tr><td class="prop-key">${escapeHtml(k)}</td><td class="prop-value">${escapeHtml(props[k])}</td></tr>`
+                ).join('') + `</table>`;
+            } else {
+                html += `<div class="panel-placeholder" style="padding:16px;">无其他属性</div>`;
+            }
+            panelBody.innerHTML = html;
+            highlightNeighbors(item, isNode);
+        }
+
+        function renderPlaceholder() {
+            clearHighlight();
+            panelTitle.textContent = '属性';
+            panelBody.innerHTML = '<div class="panel-placeholder">点击图中的节点或关系<br>查看详细属性</div>';
+        }
+
+        // 高亮选中项的一跳邻接，淡化其余元素
+        function highlightNeighbors(item, isNode) {
+            graph.removeAllItemStates();
+            clearHighlightBtn.style.display = '';
+            if (isNode) {
+                graph.setItemState(item, 'highlight', true);
+                const related = new Set([item]);
+                item.getEdges().forEach(edge => {
+                    related.add(edge);
+                    graph.setItemState(edge, 'highlight', true);
+                    related.add(edge.getSource());
+                    related.add(edge.getTarget());
+                });
+                graph.getNodes().forEach(n => { if (!related.has(n)) graph.setItemState(n, 'dim', true); });
+                graph.getEdges().forEach(e => { if (!related.has(e)) graph.setItemState(e, 'dim', true); });
+            } else {
+                graph.setItemState(item, 'highlight', true);
+                graph.setItemState(item.getSource(), 'highlight', true);
+                graph.setItemState(item.getTarget(), 'highlight', true);
+            }
+        }
+
+        function clearHighlight() {
+            if (graph && !graph.get('destroyed')) {
+                graph.removeAllItemStates();
+            }
+            clearHighlightBtn.style.display = 'none';
+        }
+
+        function showLoading(text) {
+            loadingText.textContent = text;
+            loadingOverlay.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            loadingOverlay.classList.add('hidden');
+        }
+
+        function showError(message) {
+            hideLoading();
+            document.querySelector('.main-layout').innerHTML =
+                `<div class="error-box">⛔ ${escapeHtml(message)}<br><br><a href="javascript:window.close()">关闭页面</a></div>`;
+        }
+
+        // 工具栏事件
+        document.getElementById('backBtn').addEventListener('click', () => window.close());
+        document.getElementById('zoomInBtn').addEventListener('click', () => graph && graph.zoom(1.2));
+        document.getElementById('zoomOutBtn').addEventListener('click', () => graph && graph.zoom(1 / 1.2));
+        document.getElementById('fitBtn').addEventListener('click', () => graph && graph.fitView(30));
+        document.getElementById('relayoutBtn').addEventListener('click', () => graph && graph.layout());
+        loadMoreBtn.addEventListener('click', loadMore);
+        clearHighlightBtn.addEventListener('click', renderPlaceholder);
+        document.getElementById('searchInput').addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            const keyword = e.target.value.trim().toLowerCase();
+            if (!keyword || !graph) return;
+            const target = graph.getNodes().find(n => {
+                const m = n.getModel();
+                return String(m.id).toLowerCase().includes(keyword)
+                    || String(m.rawLabel || '').toLowerCase().includes(keyword);
+            });
+            if (target) {
+                graph.focusItem(target, true, { easing: 'easeCubic', duration: 400 });
+                showItemDetail('节点', target);
+            } else {
+                alert('未找到匹配的已加载节点（可尝试先加载更多节点）');
+            }
+        });
+
+        init();
+    })();
+</script>
+</body>
+</html>

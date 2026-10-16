@@ -183,6 +183,12 @@
                     <li id="menu-quality-assessment">质量测评</li>
                 </ul>
             </span>
+        <span class="tab dropdown" id="knowledgeGraphDropdown">
+                <span class="dropdown-trigger">知识图谱</span>
+                <ul class="dropdown-menu">
+                    <li id="menu-knowledge-graph-management">知识图谱管理</li>
+                </ul>
+            </span>
         <span class="tab dropdown" id="userDropdown">
                 <span class="dropdown-trigger">用户</span>
                 <ul class="dropdown-menu">
@@ -327,6 +333,18 @@
                 </button>
             </div>
         </div>
+
+        <div class="ribbon-separator"></div>
+
+        <div class="ribbon-group">
+            <div class="ribbon-group-title">知识图谱</div>
+            <div class="ribbon-buttons">
+                <button class="ribbon-btn" id="btn-knowledge-graph">
+                    <svg class="ribbon-btn-icon"><use href="#icon-link"></use></svg>
+                    <span class="ribbon-btn-text">图谱</span>
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -375,6 +393,8 @@
             <udf-management id="udfManagement"></udf-management>
             <!-- SQL脚本管理组件 -->
             <sql-snippet-management id="sqlSnippetManagement"></sql-snippet-management>
+            <!-- 知识图谱管理组件 -->
+            <knowledge-graph-management id="knowledgeGraphManagement"></knowledge-graph-management>
             <!-- Transform作业编排组件 -->
             <transform-job id="transformJob"></transform-job>
             <!-- Transform作业编排组件 -->
@@ -436,6 +456,7 @@
 <script src="./components/transform-management/transform-management.js"></script>
 <script src="./components/udf-management/udf-management.js"></script>
 <script src="./components/sql-snippet-management/sql-snippet-management.js"></script>
+<script src="./components/knowledge-graph-management/knowledge-graph-management.js"></script>
 <script src="./components/transform-job/transform-job.js"></script>
 <script src="./components/transform-compare/transform-compare.js"></script>
 <script src="./components/schedule-editor/schedule-editor.js"></script>
