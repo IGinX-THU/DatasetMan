@@ -146,7 +146,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'transformManagement',
             'udfManagement',
             'sqlSnippetManagement',
-            'knowledgeGraphManagement',
+            'knowledgeGraphUpload',
+            'knowledgeGraphDetail',
             'fileSystemBrowser',
             'keyValueViewer',
             'semiStructuredViewer',
@@ -626,13 +627,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('评价准则菜单被点击');
                         showComponent('evaluationCriteria');
                         break;
+                    case 'showKnowledgeGraphUpload':
+                        console.log('知识图谱上传菜单被点击');
+                        showComponent('knowledgeGraphUpload');
+                        break;
                     case 'showQualityAssessment':
                         console.log('质量测评菜单被点击');
                         showComponent('qualityAssessment');
-                        break;
-                    case 'showKnowledgeGraphManagement':
-                        console.log('知识图谱管理菜单被点击');
-                        showComponent('knowledgeGraphManagement');
                         break;
                     case 'showSceneAnalysis':
                         console.log('数据集管理菜单被点击');
@@ -1112,8 +1113,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'showQualityAssessment':
                         showComponent('qualityAssessment');
                         break;
-                    case 'showKnowledgeGraphManagement':
-                        showComponent('knowledgeGraphManagement');
+                    case 'showKnowledgeGraphUpload':
+                        showComponent('knowledgeGraphUpload');
                         break;
                     default:
                         console.warn(`未知的按钮动作: ${action}`);
@@ -1231,6 +1232,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // 6.7 监听知识图谱上传成功事件：刷新右侧知识图谱树并切换到知识图谱面板
+    document.addEventListener('knowledge-graph-uploaded', function(e) {
+        console.log('知识图谱上传成功:', e.detail);
+        if (window.loadKnowledgeGraphTree) window.loadKnowledgeGraphTree();
+        const panel = document.querySelector('.right-sidebar-panel[data-panel="knowledge"]');
+        if (panel && window.desktopShell && typeof window.desktopShell.switchSidebarPanel === 'function') {
+            window.desktopShell.switchSidebarPanel('right', 'knowledge');
+        }
+    });
 
     // 7. 监听内嵌页面提交事件
     const embedded = document.getElementById('registerEmbedded');
@@ -1972,7 +1983,7 @@ function showVisualAnalysis() {
         console.log(`显示组件: ${componentId}`, args);
 
         // 弹窗组件不需要清空工作区，但需要隐藏其他弹窗
-        const modalComponents = ['registerEmbedded', 'importData', 'modelUpload', 'modelDownload', 'modelEdit', 'datasetDialog'];
+        const modalComponents = ['registerEmbedded', 'importData', 'modelUpload', 'modelDownload', 'modelEdit', 'datasetDialog', 'knowledgeGraphUpload'];
         if (modalComponents.includes(componentId)) {
             // 隐藏其他弹窗组件
             modalComponents.forEach(modalId => {
@@ -2161,6 +2172,7 @@ function showVisualAnalysis() {
             if (result.success && result.data) {
                 renderDataSourceTree(result.data);
                 loadDatasetTree();
+                loadKnowledgeGraphTree();
             } else {
                 console.error('加载数据源树失败:', result.message);
                 document.getElementById('dataSourceTree').innerHTML = '<div class="error-placeholder">加载数据源失败</div>';
@@ -2532,15 +2544,20 @@ function showVisualAnalysis() {
             datasetShown = DATASET_BATCH;
             renderDatasetTree();
 
-            // 名称过滤框（一次绑定）
+            // 名称过滤（一次绑定）：点击放大镜或回车触发，不做输入即搜
             const filterInput = document.getElementById('datasetTreeFilter');
             if (filterInput && !filterInput._bound) {
                 filterInput._bound = true;
-                filterInput.addEventListener('input', () => {
+                const applyDatasetFilter = () => {
                     datasetTreeFilter = filterInput.value.trim().toLowerCase();
                     datasetShown = DATASET_BATCH;
                     renderDatasetTree();
+                };
+                filterInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') applyDatasetFilter();
                 });
+                const searchBtn = document.getElementById('datasetTreeSearchBtn');
+                if (searchBtn) searchBtn.addEventListener('click', applyDatasetFilter);
             }
             if (!datasetTreeDelegated) {
                 datasetTreeDelegated = true;
@@ -2648,6 +2665,124 @@ function showVisualAnalysis() {
             console.warn('versionId 为空，无法显示数据集历史', { rawVersionId, node });
         }
     }
+
+    // ==================== 知识图谱右侧面板（分页查询+下拉加载，平铺列表非树形） ====================
+    const KG_TREE_PAGE_SIZE = 10;   // 与原管理列表分页大小一致
+    const kgTreeState = { page: 1, total: 0, loaded: 0, loading: false, filter: '' };
+
+    function kgNodeHtml(g) {
+        return `
+                <div class="tree-node kg-node" data-is-leaf="true" data-kg-name="${escapeHtml(g.name || '')}"
+                     title="节点路径: ${escapeHtml(g.nodePath || '')}&#10;关系路径: ${escapeHtml(g.edgePath || '')}&#10;操作人: ${escapeHtml(g.operator || g.owner || '-')}">
+                    <span class="kg-node-icon">图</span>
+                    <span class="tree-node-text">${escapeHtml(g.name || '')}</span>
+                </div>
+            `;
+    }
+
+    /**
+     * 沿用原管理列表的查询逻辑：query按页查询，第一页时同步count刷新总数；
+     * reset=true时回到第一页（初始加载/点击搜索），否则向下追加当前页（下拉加载）
+     */
+    async function loadKnowledgeGraphTree(reset = true) {
+        const tree = document.getElementById('knowledgeGraphTree');
+        if (!tree || kgTreeState.loading) return;
+        const filterInput = document.getElementById('knowledgeGraphTreeFilter');
+        if (reset) {
+            kgTreeState.page = 1;
+            kgTreeState.filter = filterInput ? filterInput.value.trim() : '';
+            tree.innerHTML = '<div class="loading-placeholder">正在加载知识图谱...</div>';
+        }
+        kgTreeState.loading = true;
+        try {
+            const result = await window.AppConfig.post('knowledgeGraph', 'query', {
+                pageNum: kgTreeState.page,
+                pageSize: KG_TREE_PAGE_SIZE,
+                name: kgTreeState.filter || null
+            });
+            if (!(result.success || result.code === 200) || !Array.isArray(result.data)) {
+                if (reset) {
+                    tree.innerHTML = '<div class="error-placeholder">加载知识图谱失败</div>';
+                }
+                return;
+            }
+            const graphs = result.data;
+
+            if (kgTreeState.page === 1) {
+                // 与原列表一致：第一页时刷新总数
+                kgTreeState.total = 0;
+                try {
+                    const countRes = await window.AppConfig.post('knowledgeGraph', 'count', { name: kgTreeState.filter || null });
+                    if (countRes.code === 200 && countRes.data !== undefined && countRes.data !== null) {
+                        kgTreeState.total = Number(countRes.data) || 0;
+                    }
+                } catch (ignore) { /* count失败时以当前页数量兜底 */ }
+                if (graphs.length === 0) {
+                    tree.innerHTML = `<div class="empty-placeholder">${kgTreeState.filter ? '未找到匹配的知识图谱' : '暂无知识图谱，可通过菜单"知识图谱→知识图谱构建"导入'}</div>`;
+                    return;
+                }
+                tree.innerHTML = '';
+            }
+
+            // 移除上一页尾部的加载提示行后追加本页节点
+            const moreRow = tree.querySelector('.kg-load-more');
+            if (moreRow) moreRow.remove();
+            tree.insertAdjacentHTML('beforeend', graphs.map(kgNodeHtml).join(''));
+
+            kgTreeState.loaded = (kgTreeState.page - 1) * KG_TREE_PAGE_SIZE + graphs.length;
+            if (kgTreeState.loaded < kgTreeState.total) {
+                tree.insertAdjacentHTML('beforeend',
+                    `<div class="kg-load-more">↓ 下拉加载更多（已加载 ${kgTreeState.loaded}/${kgTreeState.total}）</div>`);
+            }
+            bindKnowledgeGraphTreeEvents(tree);
+        } catch (error) {
+            console.error('加载知识图谱树异常:', error);
+            if (reset) {
+                tree.innerHTML = '<div class="error-placeholder">网络错误，无法加载知识图谱</div>';
+            }
+        } finally {
+            kgTreeState.loading = false;
+        }
+    }
+
+    function bindKnowledgeGraphTreeEvents(tree) {
+        if (tree._kgBound) return;
+        tree._kgBound = true;
+        tree.addEventListener('click', onKnowledgeGraphTreeClick);
+        // 下拉加载：滚动到底部自动加载下一页
+        tree.addEventListener('scroll', () => {
+            if (kgTreeState.loading || kgTreeState.loaded >= kgTreeState.total) return;
+            if (tree.scrollTop + tree.clientHeight >= tree.scrollHeight - 30) {
+                const moreRow = tree.querySelector('.kg-load-more');
+                if (moreRow) moreRow.textContent = '正在加载...';
+                kgTreeState.page += 1;
+                loadKnowledgeGraphTree(false);
+            }
+        });
+        // 名称搜索：点击放大镜或回车触发（不做输入即搜）
+        const filterInput = document.getElementById('knowledgeGraphTreeFilter');
+        if (filterInput) {
+            filterInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') loadKnowledgeGraphTree(true);
+            });
+        }
+        const searchBtn = document.getElementById('knowledgeGraphTreeSearchBtn');
+        if (searchBtn) {
+            searchBtn.addEventListener('click', () => loadKnowledgeGraphTree(true));
+        }
+    }
+
+    function onKnowledgeGraphTreeClick(e) {
+        const node = e.target.closest('.tree-node');
+        if (!node || !node.dataset.kgName) return;
+        const tree = document.getElementById('knowledgeGraphTree');
+        tree.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
+        node.classList.add('active');
+        // 点击图谱在工作区显示详情（与modelDetail一致）
+        showComponent('knowledgeGraphDetail', { name: node.dataset.kgName });
+    }
+
+    window.loadKnowledgeGraphTree = loadKnowledgeGraphTree;
 
     // 血缘图点击版本后，同步左侧数据源树高亮对应节点（展开父链、前缀匹配兜底）
     function syncLeftTreeHighlight(storagePath) {

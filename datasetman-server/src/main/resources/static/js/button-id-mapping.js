@@ -77,9 +77,9 @@ const BUTTON_ID_MAP = {
         text: 'UDF',
         action: 'showUdfManagement'
     },
-    'btn-knowledge-graph': {
-        text: '图谱',
-        action: 'showKnowledgeGraphManagement'
+    'btn-kg-upload': {
+        text: '上传',
+        action: 'showKnowledgeGraphUpload'
     }
 };
 
@@ -173,9 +173,9 @@ const MENU_ID_MAP = {
         text: '质量测评',
         action: 'showQualityAssessment'
     },
-    'menu-knowledge-graph-management': {
-        text: '知识图谱管理',
-        action: 'showKnowledgeGraphManagement'
+    'menu-knowledge-graph-upload': {
+        text: '知识图谱上传',
+        action: 'showKnowledgeGraphUpload'
     }
 };
 

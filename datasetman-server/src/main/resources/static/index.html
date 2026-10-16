@@ -41,6 +41,9 @@
             <div class="bottom-sidebar-icon right-sidebar-icon active" data-target="right" data-panel="dataset" title="数据集">
                 <span class="sidebar-tab-icon">📦</span>
             </div>
+            <div class="bottom-sidebar-icon right-sidebar-icon" data-target="right" data-panel="knowledge" title="知识图谱">
+                <span class="sidebar-tab-icon">🧠</span>
+            </div>
         </div>
     </div>
 </div>
@@ -186,7 +189,7 @@
         <span class="tab dropdown" id="knowledgeGraphDropdown">
                 <span class="dropdown-trigger">知识图谱</span>
                 <ul class="dropdown-menu">
-                    <li id="menu-knowledge-graph-management">知识图谱管理</li>
+                    <li id="menu-knowledge-graph-upload">知识图谱构建</li>
                 </ul>
             </span>
         <span class="tab dropdown" id="userDropdown">
@@ -339,9 +342,9 @@
         <div class="ribbon-group">
             <div class="ribbon-group-title">知识图谱</div>
             <div class="ribbon-buttons">
-                <button class="ribbon-btn" id="btn-knowledge-graph">
-                    <svg class="ribbon-btn-icon"><use href="#icon-link"></use></svg>
-                    <span class="ribbon-btn-text">图谱</span>
+                <button class="ribbon-btn" id="btn-kg-upload">
+                    <svg class="ribbon-btn-icon"><use href="#icon-upload"></use></svg>
+                    <span class="ribbon-btn-text">构建</span>
                 </button>
             </div>
         </div>
@@ -393,8 +396,10 @@
             <udf-management id="udfManagement"></udf-management>
             <!-- SQL脚本管理组件 -->
             <sql-snippet-management id="sqlSnippetManagement"></sql-snippet-management>
-            <!-- 知识图谱管理组件 -->
-            <knowledge-graph-management id="knowledgeGraphManagement"></knowledge-graph-management>
+            <!-- 知识图谱上传组件（独立组件+独立菜单+ribbon按钮，参考模型/算法上传） -->
+            <knowledge-graph-upload id="knowledgeGraphUpload"></knowledge-graph-upload>
+            <!-- 知识图谱详情组件（右侧树点击后在工作区显示） -->
+            <knowledge-graph-detail id="knowledgeGraphDetail"></knowledge-graph-detail>
             <!-- Transform作业编排组件 -->
             <transform-job id="transformJob"></transform-job>
             <!-- Transform作业编排组件 -->
@@ -433,9 +438,23 @@
         <div class="sidebar-content-wrapper">
             <div class="sidebar-panel right-sidebar-panel active" data-panel="dataset">
                 <div class="sidebar-title">数据集</div>
-                <input id="datasetTreeFilter" type="text" placeholder="搜索数据集名称..." style="width:100%;box-sizing:border-box;margin-bottom:6px;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;">
+                <div class="kg-search-row">
+                    <input id="datasetTreeFilter" class="kg-search-input" type="text" placeholder="搜索数据集名称...">
+                    <button id="datasetTreeSearchBtn" class="kg-search-btn" type="button" title="搜索">🔍</button>
+                </div>
                 <div class="tree" id="datasetTree">
                     <div class="loading-placeholder">正在加载数据集...</div>
+                </div>
+            </div>
+            <!-- 知识图谱面板（分页查询+下拉加载，平铺列表非树形） -->
+            <div class="sidebar-panel right-sidebar-panel" data-panel="knowledge">
+                <div class="sidebar-title">知识图谱</div>
+                <div class="kg-search-row">
+                    <input id="knowledgeGraphTreeFilter" class="kg-search-input" type="text" placeholder="搜索图谱名称...">
+                    <button id="knowledgeGraphTreeSearchBtn" class="kg-search-btn" type="button" title="搜索">🔍</button>
+                </div>
+                <div class="tree" id="knowledgeGraphTree">
+                    <div class="loading-placeholder">正在加载知识图谱...</div>
                 </div>
             </div>
         </div>
@@ -456,7 +475,9 @@
 <script src="./components/transform-management/transform-management.js"></script>
 <script src="./components/udf-management/udf-management.js"></script>
 <script src="./components/sql-snippet-management/sql-snippet-management.js"></script>
-<script src="./components/knowledge-graph-management/knowledge-graph-management.js"></script>
+<script src="./components/knowledge-graph-upload/knowledge-graph-upload.js"></script>
+<script src="./lib/g6/g6.min.js"></script>
+<script src="./components/knowledge-graph-detail/knowledge-graph-detail.js"></script>
 <script src="./components/transform-job/transform-job.js"></script>
 <script src="./components/transform-compare/transform-compare.js"></script>
 <script src="./components/schedule-editor/schedule-editor.js"></script>

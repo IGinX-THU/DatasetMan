@@ -224,7 +224,8 @@ public class KnowledgeGraphService {
             }
 
             if (StringUtils.hasText(request.getName())) {
-                sql.append(" AND name LIKE '%").append(escape(request.getName().trim())).append("%'");
+                // IGinX的LIKE为正则语义（'%x%'会按字面量匹配），模糊查询须用'^.*x.*'形式
+                sql.append(" AND name LIKE '^.*").append(escapeRegex(request.getName().trim())).append(".*'");
             }
 
             sql.append(" ORDER BY createTime DESC")
@@ -262,7 +263,8 @@ public class KnowledgeGraphService {
             }
 
             if (StringUtils.hasText(name)) {
-                sql.append(" AND name LIKE '%").append(escape(name.trim())).append("%'");
+                // IGinX的LIKE为正则语义（'%x%'会按字面量匹配），模糊查询须用'^.*x.*'形式
+                sql.append(" AND name LIKE '^.*").append(escapeRegex(name.trim())).append(".*'");
             }
 
             sql.append(";");
@@ -644,6 +646,16 @@ public class KnowledgeGraphService {
 
     private static String escape(String value) {
         return value == null ? "" : value.replace("'", "''");
+    }
+
+    /**
+     * 正则元字符转义，防止用户输入的 .*+?()[]{}| 等破坏LIKE正则语义
+     */
+    private static String escapeRegex(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("([\\\\\\.\\[\\]\\{\\}\\(\\)\\*\\+\\?\\^\\$\\|])", "\\\\$1");
     }
 
     private KnowledgeGraphEntity mapToEntity(Map<String, Object> record) {

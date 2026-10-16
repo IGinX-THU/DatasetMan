@@ -1400,3 +1400,76 @@ html.light-mode .dark-mode .dropdown-menu .submenu li:hover {
     background-color: #1E1E20 !important;
 }
 
+
+/* ==================== 知识图谱右侧面板（平铺列表，非树形） ==================== */
+.kg-search-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+    padding: 0 4px;
+}
+
+.kg-search-input {
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 5px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 12px;
+    outline: none;
+}
+
+.kg-search-input:focus {
+    border-color: #4c89ff;
+}
+
+.kg-search-btn {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 8px;
+    line-height: 1.4;
+}
+
+.kg-search-btn:hover {
+    border-color: #4c89ff;
+}
+
+/* 平铺节点：不显示树形折叠三角（.tree-node-text::before），改用图谱图标标识 */
+.tree-node.kg-node .tree-node-text::before {
+    content: none !important;
+}
+
+.kg-node-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #4c89ff, #7b5cf0);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+/* 下拉加载提示行 */
+.kg-load-more {
+    text-align: center;
+    padding: 6px 0;
+    font-size: 12px;
+    color: #2563eb;
+}
+
+html.dark-mode .kg-search-input,
+html.dark-mode .kg-search-btn {
+    background: #1f2937;
+    border-color: #374151;
+    color: #e5e7eb;
+}
