@@ -52,14 +52,18 @@ public class KnowledgeGraphService {
     /** 单元格最大长度保护 */
     private static final int MAX_CELL_LENGTH = 2000;
 
-    private static final List<String> ID_COLUMN_NAMES = Arrays.asList(":id", "id", "nodeid", "node_id");
-    private static final List<String> LABEL_COLUMN_NAMES = Arrays.asList(":label", ":labels", "label", "labels");
+    private static final List<String> ID_COLUMN_NAMES = Arrays.asList(
+            ":id", "id", "nodeid", "node_id", "节点ID", "标识", "ID"
+    );
+    private static final List<String> LABEL_COLUMN_NAMES = Arrays.asList(
+            ":label", ":labels", "label", "labels", "标签", "类型", "LABEL"
+    );
     private static final List<String> SOURCE_COLUMN_NAMES =
-            Arrays.asList(":start_id", "startid", "start_id", "source", "from", "src");
+            Arrays.asList(":start_id", "startid", "start_id", "source", "from", "src", "起点ID", "起始节点", "起点");
     private static final List<String> TARGET_COLUMN_NAMES =
-            Arrays.asList(":end_id", "endid", "end_id", "target", "to", "dst");
+            Arrays.asList(":end_id", "endid", "end_id", "target", "to", "dst", "终点ID", "目标节点", "终点");
     private static final List<String> TYPE_COLUMN_NAMES =
-            Arrays.asList(":type", ":relationship", "type", "relationship");
+            Arrays.asList(":type", ":relationship", "type", "relationship", "关系类型", "关系", "TYPE");
 
     @Autowired
     private Session iginxSession;
@@ -95,7 +99,7 @@ public class KnowledgeGraphService {
         String owner = AuthUtil.getCurrentUsername();
 
         // 全新上传前清理可能的历史残留数据（如上次上传中途失败），保证幂等
-        cleanGraphData(nodePath, edgePath);
+//        cleanGraphData(nodePath, edgePath);
 
         // 对齐创建数据集的CSV导入：Base64解码写入临时文件，复用DataTableService.importCsvFile
         Long nodeCount;
@@ -184,14 +188,7 @@ public class KnowledgeGraphService {
      */
     public KnowledgeGraphEntity queryByName(String name) {
         try {
-            String sql = "select * from %s where name = '%s' AND deleted = false";
-            if (!AuthUtil.isAdmin()) {
-                String currentUser = AuthUtil.getCurrentUsername();
-                if (!"unknown".equals(currentUser)) {
-                    sql += " AND owner = '" + currentUser + "'";
-                }
-            }
-            sql += " ORDER BY createTime DESC LIMIT 1;";
+            String sql = "select * from %s where name = '%s' LIMIT 1;";
             String formatSQL = String.format(sql, META_PREFIX, escape(name));
             SessionExecuteSqlResult res = iginxSession.executeSql(formatSQL);
             List<Map<String, Object>> records = ConvertUtil.getRecords(res);
@@ -391,7 +388,8 @@ public class KnowledgeGraphService {
         String labelRaw = cellValue(record, tablePath, meta.labelColumn);
         String label = StringUtils.hasText(labelRaw)
                 ? labelRaw
-                : firstNonBlankProperty(record, tablePath, meta.columns, meta.idColumn, "name", "title", "名称");
+                : firstNonBlankProperty(record, tablePath, meta.columns, meta.idColumn,
+                        "name", "title", "名称", "NAME", "TITLE", "节点名称");
         node.put("label", StringUtils.hasText(label) ? label : id);
         // 节点分类标签（仅取:LABEL/label列，避免退化到名称列导致每节点一类）
         node.put("labelType", StringUtils.hasText(labelRaw) ? labelRaw : "未分类");
@@ -437,8 +435,14 @@ public class KnowledgeGraphService {
         String sql = "SELECT * FROM " + path + " LIMIT " + limit + ";";
         try {
             SessionExecuteSqlResult res = iginxSession.executeSql(sql);
-            return ConvertUtil.getRecords(res);
+            List<Map<String, Object>> records = ConvertUtil.getRecords(res);
+            log.info("查询 {} 返回 {} 条记录", path, records.size());
+            if (!records.isEmpty()) {
+                log.info("第一条记录的键: {}", records.get(0).keySet());
+            }
+            return records;
         } catch (Exception e) {
+            log.error("查询图数据失败: {}, SQL: {}", path, sql, e);
             throw new RuntimeException("查询图数据失败: " + path + ", " + e.getMessage(), e);
         }
     }
@@ -478,7 +482,7 @@ public class KnowledgeGraphService {
                 continue;
             }
             try {
-                iginxSession.executeSql("DELETE FROM " + path);
+                iginxSession.executeSql("DELETE FROM " + path+";");
             } catch (Exception e) {
                 log.warn("清理知识图谱数据失败: {}", path, e);
             }
@@ -583,9 +587,15 @@ public class KnowledgeGraphService {
      * 按候选名（忽略大小写、忽略空格与冒号差异）查找列下标，找不到时返回fallback（<0表示无默认）
      */
     private int findColumn(List<String> columns, List<String> candidates, int fallback) {
+        // 预处理候选列表：小写、去空格、去冒号
+        List<String> normalizedCandidates = new ArrayList<>();
+        for (String candidate : candidates) {
+            normalizedCandidates.add(candidate.toLowerCase().replace(" ", "").replace(":", ""));
+        }
+
         for (int i = 0; i < columns.size(); i++) {
-            String normalized = columns.get(i).toLowerCase().replace(" ", "");
-            if (candidates.contains(normalized)) {
+            String normalized = columns.get(i).toLowerCase().replace(" ", "").replace(":", "");
+            if (normalizedCandidates.contains(normalized)) {
                 return i;
             }
         }
@@ -627,6 +637,23 @@ public class KnowledgeGraphService {
                     .findFirst().orElse(null);
         }
         if (value == null) {
+            // 最后尝试：URL编码的列名（IGinX可能对特殊字符进行编码）
+            try {
+                String encodedColumn = java.net.URLEncoder.encode(column, "UTF-8");
+                value = record.get(tablePath + "." + encodedColumn);
+                if (value == null) {
+                    value = record.entrySet().stream()
+                            .filter(e -> e.getKey().endsWith("." + encodedColumn))
+                            .map(Map.Entry::getValue)
+                            .findFirst().orElse(null);
+                }
+            } catch (Exception e) {
+                // 忽略编码错误
+            }
+        }
+        if (value == null) {
+            log.warn("无法获取列值: column={}, tablePath={}, record keys={}",
+                    column, tablePath, record.keySet());
             return null;
         }
         if (value instanceof byte[]) {

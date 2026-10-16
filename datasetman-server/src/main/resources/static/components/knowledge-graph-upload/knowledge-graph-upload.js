@@ -14,6 +14,8 @@ class KnowledgeGraphUpload extends HTMLElement {
         this._nameCheckTimer = null;
         this.pendingNodesFile = null;
         this.pendingEdgesFile = null;
+        this.pendingNodesBase64 = null;
+        this.pendingEdgesBase64 = null;
         this.attachShadow({ mode: 'open' });
     }
 
@@ -53,6 +55,53 @@ class KnowledgeGraphUpload extends HTMLElement {
                     max-height: 90vh;
                     overflow-y: auto;
                     box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
+                    position: relative;
+                }
+
+                /* 上传进度遮罩：读取/传输阶段覆盖弹窗，防止误操作并展示进度 */
+                .upload-progress {
+                    display: none;
+                    position: absolute;
+                    inset: 0;
+                    z-index: 10;
+                    background: rgba(255, 255, 255, 0.88);
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 12px;
+                    border-radius: 8px;
+                }
+
+                .progress-bar {
+                    width: 60%;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: #e5eaf2;
+                    overflow: hidden;
+                }
+
+                .progress-fill {
+                    height: 100%;
+                    border-radius: 4px;
+                    background: linear-gradient(90deg, #4c89ff, #7b5cf0);
+                    transition: width 0.2s ease;
+                }
+
+                .progress-fill.indeterminate {
+                    width: 100%;
+                    background: linear-gradient(90deg, #4c89ff 25%, #7b5cf0 50%, #4c89ff 75%);
+                    background-size: 200% 100%;
+                    animation: kg-progress-slide 1.2s linear infinite;
+                }
+
+                @keyframes kg-progress-slide {
+                    0% { background-position: 100% 0; }
+                    100% { background-position: -100% 0; }
+                }
+
+                .progress-text {
+                    font-size: 12px;
+                    color: #5f6b7a;
                 }
 
                 .modal-header {
@@ -262,6 +311,37 @@ class KnowledgeGraphUpload extends HTMLElement {
                     line-height: 1;
                     padding: 0 2px;
                 }
+
+                /* 拖入文件后的读取进度动画 */
+                .reading-progress {
+                    display: none;
+                    margin-top: 8px;
+                }
+
+                .reading-progress.visible {
+                    display: block;
+                }
+
+                .reading-bar {
+                    width: 80%;
+                    height: 6px;
+                    margin: 0 auto 4px;
+                    border-radius: 3px;
+                    background: #dbe4f0;
+                    overflow: hidden;
+                }
+
+                .reading-fill {
+                    height: 100%;
+                    border-radius: 3px;
+                    background: linear-gradient(90deg, #4c89ff, #7b5cf0);
+                    transition: width 0.15s ease;
+                }
+
+                .reading-text {
+                    font-size: 11px;
+                    color: #4c89ff;
+                }
             </style>
 
             <div class="modal-overlay" id="modalOverlay">
@@ -294,6 +374,10 @@ class KnowledgeGraphUpload extends HTMLElement {
                                     <div class="file-upload-area" id="nodesDropArea">
                                         <div class="upload-icon" id="nodesUploadIcon">📄</div>
                                         <div class="upload-text" id="nodesUploadText">点击选择或<em>拖拽</em>.csv文件到此处</div>
+                                        <div class="reading-progress" id="nodesReadingProgress">
+                                            <div class="reading-bar"><div class="reading-fill" id="nodesReadingFill"></div></div>
+                                            <div class="reading-text" id="nodesReadingText">正在读取 0%</div>
+                                        </div>
                                     </div>
                                     <input type="file" id="nodesFileInput" accept=".csv" style="display: none;">
                                     <div class="file-chip" id="nodesFileChip">
@@ -310,6 +394,10 @@ class KnowledgeGraphUpload extends HTMLElement {
                                     <div class="file-upload-area" id="edgesDropArea">
                                         <div class="upload-icon" id="edgesUploadIcon">🔗</div>
                                         <div class="upload-text" id="edgesUploadText">点击选择或<em>拖拽</em>.csv文件到此处</div>
+                                        <div class="reading-progress" id="edgesReadingProgress">
+                                            <div class="reading-bar"><div class="reading-fill" id="edgesReadingFill"></div></div>
+                                            <div class="reading-text" id="edgesReadingText">正在读取 0%</div>
+                                        </div>
                                     </div>
                                     <input type="file" id="edgesFileInput" accept=".csv" style="display: none;">
                                     <div class="file-chip" id="edgesFileChip">
@@ -325,6 +413,14 @@ class KnowledgeGraphUpload extends HTMLElement {
                     <div class="modal-footer">
                         <button type="button" class="modal-btn" id="cancelBtn">取消</button>
                         <button type="button" class="modal-btn primary" id="submitBtn">构建</button>
+                    </div>
+
+                    <!-- 上传进度遮罩 -->
+                    <div class="upload-progress" id="uploadProgress">
+                        <div class="progress-bar">
+                            <div class="progress-fill indeterminate" id="progressFill"></div>
+                        </div>
+                        <div class="progress-text" id="progressText">正在读取文件...</div>
                     </div>
                 </div>
             </div>
@@ -343,11 +439,22 @@ class KnowledgeGraphUpload extends HTMLElement {
         if (submitBtn) submitBtn.addEventListener('click', () => this.handleSubmit());
         // 点击遮罩不关闭弹窗，避免误触丢失已填写内容
 
-        // 名称输入实时存在检测（防抖）
+        // 名称失焦时做重名校验（避免每键入都触发接口）
         if (graphNameInput) {
-            graphNameInput.addEventListener('input', (e) => {
+            graphNameInput.addEventListener('blur', () => {
                 clearTimeout(this._nameCheckTimer);
-                this._nameCheckTimer = setTimeout(() => this.checkNameExists(e.target.value.trim()), 400);
+                const value = graphNameInput.value.trim();
+                if (!value) {
+                    this.nameExists = false;
+                    this.updateNameHint('', '');
+                    return;
+                }
+                this.checkNameExists(value);
+            });
+            // 输入时即时清空之前的冲突提示，避免残留
+            graphNameInput.addEventListener('input', () => {
+                this.nameExists = false;
+                this.updateNameHint('', '');
             });
         }
 
@@ -405,13 +512,15 @@ class KnowledgeGraphUpload extends HTMLElement {
     }
 
     resetForm() {
-        const $ = (id) => this.shadowRoot.querySelector('#' + id);
-        const nameInput = $('graphName');
+        const $ = (id) => this.shadowRoot.querySelector(id);
+        const nameInput = $('#graphName');
         if (nameInput) nameInput.value = '';
-        const descInput = $('graphDesc');
+        const descInput = $('#graphDesc');
         if (descInput) descInput.value = '';
         this.pendingNodesFile = null;
         this.pendingEdgesFile = null;
+        this.pendingNodesBase64 = null;
+        this.pendingEdgesBase64 = null;
         this.nameExists = false;
         this.updateNameHint('', '');
         this.updateFileChip('nodes');
@@ -421,24 +530,27 @@ class KnowledgeGraphUpload extends HTMLElement {
     removeFile(type) {
         if (type === 'nodes') {
             this.pendingNodesFile = null;
+            this.pendingNodesBase64 = null;
         } else {
             this.pendingEdgesFile = null;
+            this.pendingEdgesBase64 = null;
         }
         this.updateFileChip(type);
     }
 
-    async checkNameExists(name) {
+    async checkNameExists(name, force = false) {
         const nameInput = this.shadowRoot.querySelector('#graphName');
         if (!name) {
             this.nameExists = false;
             this.updateNameHint('', '');
-            return;
+            return false;
         }
         this.updateNameHint('checking', '正在检测名称...');
         try {
             const result = await window.AppConfig.get('knowledgeGraph', 'validate-name', { name });
-            // 输入已变化时丢弃过期结果
-            if (nameInput.value.trim() !== name) return;
+            // 非强制校验时，输入已变化则丢弃过期结果
+            const currentValue = (nameInput.value ?? '').trim();
+            if (!force && currentValue !== name) return false;
             if (result.code === 200 && result.data !== undefined && result.data !== null) {
                 this.nameExists = !!result.data;
                 this.updateNameHint(this.nameExists ? 'conflict' : 'ok',
@@ -452,6 +564,7 @@ class KnowledgeGraphUpload extends HTMLElement {
             this.nameExists = false;
             this.updateNameHint('', '');
         }
+        return this.nameExists;
     }
 
     updateNameHint(state, text) {
@@ -474,37 +587,89 @@ class KnowledgeGraphUpload extends HTMLElement {
         }
         if (type === 'nodes') {
             this.pendingNodesFile = file;
+            this.pendingNodesBase64 = null;
         } else {
             this.pendingEdgesFile = file;
+            this.pendingEdgesBase64 = null;
         }
+        // 拖入/选择后立即在拖拽区内读取Base64并展示进度动画，完成后显示文件条
         this.updateFileChip(type);
+        const prefix = type === 'nodes' ? 'nodes' : 'edges';
+        const textEl = this.shadowRoot.querySelector('#' + prefix + 'ReadingText');
+        this.readFileAsBase64(file, (ratio) => {
+            const fill = this.shadowRoot.querySelector('#' + prefix + 'ReadingFill');
+            if (fill) fill.style.width = Math.max(2, Math.round(ratio * 100)) + '%';
+            if (textEl) textEl.textContent = `正在读取 ${Math.round(ratio * 100)}%`;
+        }).then(base64 => {
+            if (type === 'nodes') {
+                this.pendingNodesBase64 = base64;
+            } else {
+                this.pendingEdgesBase64 = base64;
+            }
+            if (textEl) textEl.textContent = '读取完成';
+            this.updateFileChip(type);
+        }).catch(error => {
+            console.error('读取文件失败:', error);
+            if (type === 'nodes') {
+                this.pendingNodesFile = null;
+                this.pendingNodesBase64 = null;
+            } else {
+                this.pendingEdgesFile = null;
+                this.pendingEdgesBase64 = null;
+            }
+            this.showMessage('文件读取失败: ' + error.message, 'error');
+            this.updateFileChip(type);
+        });
     }
 
     updateFileChip(type) {
         const file = type === 'nodes' ? this.pendingNodesFile : this.pendingEdgesFile;
+        const base64 = type === 'nodes' ? this.pendingNodesBase64 : this.pendingEdgesBase64;
         const chip = this.shadowRoot.querySelector('#' + type + 'FileChip');
         const area = this.shadowRoot.querySelector('#' + type + 'DropArea');
-        if (!chip || !area) return;
-        if (file) {
+        const reading = this.shadowRoot.querySelector('#' + type + 'ReadingProgress');
+        const icon = this.shadowRoot.querySelector('#' + type + 'UploadIcon');
+        const text = this.shadowRoot.querySelector('#' + type + 'UploadText');
+        if (!chip || !area || !reading) return;
+        if (file && !base64) {
+            // 读取中：拖拽区显示进度动画
+            chip.classList.remove('visible');
+            area.style.display = '';
+            reading.classList.add('visible');
+            if (icon) icon.style.display = 'none';
+            if (text) text.style.display = 'none';
+        } else if (file) {
+            // 读取完成：显示文件条
             chip.classList.add('visible');
             this.shadowRoot.querySelector('#' + type + 'FileName').textContent =
                 `${file.name}（${this.formatSize(file.size)}）`;
             area.style.display = 'none';
+            reading.classList.remove('visible');
+            if (icon) icon.style.display = '';
+            if (text) text.style.display = '';
         } else {
+            // 空态：默认拖拽区
             chip.classList.remove('visible');
             area.style.display = '';
+            reading.classList.remove('visible');
+            if (icon) icon.style.display = '';
+            if (text) text.style.display = '';
         }
     }
 
     async handleSubmit() {
-        const name = this.shadowRoot.querySelector('#graphName').value.trim();
-        const description = this.shadowRoot.querySelector('#graphDesc').value.trim();
+        const nameEl = this.shadowRoot.querySelector('#graphName');
+        const descEl = this.shadowRoot.querySelector('#graphDesc');
+        const name = (nameEl?.value ?? '').trim();
+        const description = (descEl?.value ?? '').trim();
 
         if (!name) {
             this.showMessage('请输入图谱名称', 'error');
             return;
         }
-        if (this.nameExists) {
+        // 提交前强制做一次重名校验（应对用户输入完直接点提交未触发 blur 的场景）
+        const exists = await this.checkNameExists(name, true);
+        if (exists) {
             this.showMessage(`图谱名称「${name}」已存在，请更换名称`, 'error');
             return;
         }
@@ -522,27 +687,42 @@ class KnowledgeGraphUpload extends HTMLElement {
         const submitBtn = this.shadowRoot.querySelector('#submitBtn');
         submitBtn.disabled = true;
         submitBtn.textContent = '构建中...';
+        this.showProgress('正在提交数据...', 0, true);
 
-        // 对齐创建数据集的导入模式：文件读取为Base64后随JSON提交
+        // 文件已在拖入时预读取（进度动画见拖拽区）；未就绪时兜底读取
         try {
-            const nodesBase64 = await this.readFileAsBase64(this.pendingNodesFile);
-            const edgesBase64 = await this.readFileAsBase64(this.pendingEdgesFile);
+            let nodesBase64 = this.pendingNodesBase64;
+            if (!nodesBase64) {
+                this.showProgress('正在读取节点文件...', 0, true);
+                nodesBase64 = await this.readFileAsBase64(this.pendingNodesFile);
+            }
+            let edgesBase64 = this.pendingEdgesBase64;
+            if (!edgesBase64) {
+                this.showProgress('正在读取关系文件...', 0, true);
+                edgesBase64 = await this.readFileAsBase64(this.pendingEdgesFile);
+            }
 
-            this.showMessage(`正在导入知识图谱「${name}」...`);
-            const result = await window.AppConfig.post('knowledgeGraph', 'upload', {
-                name,
-                description,
-                nodesFileName: this.pendingNodesFile.name,
-                nodesFileBase64: nodesBase64,
-                edgesFileName: this.pendingEdgesFile.name,
-                edgesFileBase64: edgesBase64
-            });
+            const result = await this.postWithProgress(
+                window.AppConfig.getApiUrl('knowledgeGraph', 'upload'),
+                {
+                    name,
+                    description,
+                    nodesFileName: this.pendingNodesFile.name,
+                    nodesFileBase64: nodesBase64,
+                    edgesFileName: this.pendingEdgesFile.name,
+                    edgesFileBase64: edgesBase64
+                },
+                (ratio) => this.showProgress('正在上传文件...', ratio, false),
+                // 文件传输完成后进入服务端导入阶段（LOAD数据耗时最长），切换不定态动画
+                () => this.showProgress('服务端正在导入数据，请耐心等待...', null, true)
+            );
+            this.showProgress('导入完成', null, true);
             if (result.code === 200 || result.success) {
                 const graph = result.data || {};
                 this.showMessage(`知识图谱「${name}」构建成功！已入库节点 ${this.formatCount(graph.nodeCount)} 个、关系 ${this.formatCount(graph.edgeCount)} 条`, 'success');
-                // 通知main.js刷新右侧知识图谱面板
+                // 通知main.js刷新知识图谱树并打开详情页
                 document.dispatchEvent(new CustomEvent('knowledge-graph-uploaded', {
-                    detail: { name }
+                    detail: { name, graph }
                 }));
                 this.hide();
             } else {
@@ -552,23 +732,106 @@ class KnowledgeGraphUpload extends HTMLElement {
             console.error('构建知识图谱失败:', error);
             this.showMessage('构建失败: ' + error.message, 'error');
         } finally {
+            this.hideProgress();
             submitBtn.disabled = false;
             submitBtn.textContent = '构建';
             this._isSubmitting = false;
         }
     }
 
-    /** 读取文件为Base64字符串（去掉data:前缀），与创建数据集的readFileAsBase64一致 */
-    readFileAsBase64(file) {
+    /**
+     * 带上传进度的POST（XHR upload.onprogress），替代AppConfig.post以展示真实传输百分比；
+     * onUploaded在文件传输完成（服务端开始处理）时回调，用于切换到不定态导入动画
+     */
+    postWithProgress(url, bodyObj, onProgress, onUploaded) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', url);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            const token = window.AppConfig.getToken();
+            if (token) {
+                xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+            }
+            xhr.timeout = (window.AppConfig.api && window.AppConfig.api.timeout) || 300000;
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable && onProgress) {
+                    onProgress(e.loaded / e.total);
+                }
+            };
+            xhr.upload.onload = () => {
+                if (onUploaded) onUploaded();
+            };
+            xhr.onload = () => {
+                if (xhr.status === 401) {
+                    window.AppConfig.handleAuthFailure();
+                    reject(new Error('认证失败，请重新登录'));
+                    return;
+                }
+                try {
+                    resolve(JSON.parse(xhr.responseText));
+                } catch (err) {
+                    reject(new Error(`HTTP ${xhr.status}: 响应解析失败`));
+                }
+            };
+            xhr.onerror = () => reject(new Error('网络错误，请检查连接'));
+            xhr.ontimeout = () => reject(new Error('请求超时，请稍后重试'));
+            xhr.send(JSON.stringify(bodyObj));
+        });
+    }
+
+    /**
+     * 进度动画：ratio为null时显示不定态流光动画，否则显示确定百分比
+     */
+    showProgress(text, ratio, indeterminate) {
+        const overlay = this.shadowRoot.querySelector('#uploadProgress');
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+        const textEl = this.shadowRoot.querySelector('#progressText');
+        if (textEl) {
+            textEl.textContent = indeterminate || ratio === null
+                ? text
+                : `${text} ${Math.round(ratio * 100)}%`;
+        }
+        const fill = this.shadowRoot.querySelector('#progressFill');
+        const bar = this.shadowRoot.querySelector('.progress-bar');
+        if (fill && bar) {
+            if (indeterminate || ratio === null) {
+                fill.classList.add('indeterminate');
+                fill.style.width = '100%';
+            } else {
+                fill.classList.remove('indeterminate');
+                fill.style.width = Math.max(2, Math.round(ratio * 100)) + '%';
+            }
+        }
+    }
+
+    hideProgress() {
+        const overlay = this.shadowRoot.querySelector('#uploadProgress');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    /**
+     * 读取文件为Base64字符串（去掉data:前缀），与创建数据集的readFileAsBase64一致；
+     * onProgress可选，用于拖拽区内展示读取进度
+     */
+    readFileAsBase64(file, onProgress) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
+                if (onProgress) onProgress(1);
                 const result = reader.result;
                 // FileReader.readAsDataURL 返回 "data:...;base64,XXXX" 格式，去掉前缀
                 const base64 = String(result).split(',')[1] || '';
                 resolve(base64);
             };
             reader.onerror = () => reject(reader.error || new Error('读取失败'));
+            if (onProgress) {
+                reader.onprogress = (e) => {
+                    if (e.lengthComputable && e.total > 0) {
+                        onProgress(e.loaded / e.total);
+                    }
+                };
+            }
             reader.readAsDataURL(file);
         });
     }

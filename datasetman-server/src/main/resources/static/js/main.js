@@ -1233,14 +1233,44 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 6.7 监听知识图谱上传成功事件：刷新右侧知识图谱树并切换到知识图谱面板
-    document.addEventListener('knowledge-graph-uploaded', function(e) {
-        console.log('知识图谱上传成功:', e.detail);
-        if (window.loadKnowledgeGraphTree) window.loadKnowledgeGraphTree();
-        const panel = document.querySelector('.right-sidebar-panel[data-panel="knowledge"]');
-        if (panel && window.desktopShell && typeof window.desktopShell.switchSidebarPanel === 'function') {
+    // 6.7 监听知识图谱上传成功事件：刷新左右树、切换面板并点击右侧新节点打开详情页
+    document.addEventListener('knowledge-graph-uploaded', async function(e) {
+        const graphName = e.detail && e.detail.name;
+        console.log('知识图谱上传成功:', graphName);
+        // 切换到右侧知识图谱面板（先切，确保 DOM 可见）
+        if (window.desktopShell && typeof window.desktopShell.switchSidebarPanel === 'function') {
             window.desktopShell.switchSidebarPanel('right', 'knowledge');
         }
+        // 刷新左侧数据源树
+        if (window.loadDataSourceTree) {
+            try { await window.loadDataSourceTree(); } catch (ignore) {}
+        }
+        // 强制解锁右侧知识图谱树的 loading 状态，防止被上一次未完成的请求阻塞
+        kgTreeState.loading = false;
+        const filterInput = document.getElementById('knowledgeGraphTreeFilter');
+        if (filterInput && graphName) filterInput.value = graphName;
+        if (window.loadKnowledgeGraphTree) {
+            try { await window.loadKnowledgeGraphTree(); } catch (ignore) {}
+        }
+        // 等 DOM 稳定后，用全局属性选择器（而非局限某个 tree 容器）找节点
+        setTimeout(() => {
+            if (!graphName) return;
+            // 兼容图谱名含引号的情况，用 dataset 逐个比
+            const treeNodes = document.querySelectorAll('.right-sidebar-panel[data-panel="knowledge"] .tree-node');
+            let targetNode = null;
+            for (const n of treeNodes) {
+                if (n.dataset.kgName === graphName) { targetNode = n; break; }
+            }
+            if (targetNode) {
+                targetNode.click();
+            } else {
+                console.warn('[kg-uploaded] 未找到节点，graphName:', graphName,
+                    'DOM里的tree节点数:', treeNodes.length,
+                    'filterInput值:', filterInput?.value);
+                // 兜底：直接打开详情页
+                if (graphName) showComponent('knowledgeGraphDetail', { name: graphName });
+            }
+        }, 100);
     });
 
     // 7. 监听内嵌页面提交事件
@@ -2461,7 +2491,8 @@ function showVisualAnalysis() {
                     if (fullPath && isLeaf) {
                         selectedDataSource = fullPath;
 
-                        const dataModality = node.getAttribute('data-modality') || 'time_series';
+                        const dataModality = node.getAttribute('data-modality')
+                            || (fullPath.startsWith('knowledge_graphs') ? 'relational' : 'time_series');
 
                         // 每次点击节点时，下拉选自动跟随节点模态（空则默认时序视图）
                         if (modalitySwitch) {
