@@ -9,18 +9,21 @@ import com.alibaba.fastjson2.JSONObject;
 import com.tsinghua.auth.aspect.OperationLogAspect;
 import com.tsinghua.auth.util.AuthUtil;
 import com.tsinghua.dto.KnowledgeGraphQueryRequest;
+import com.tsinghua.dto.KnowledgeGraphUploadRequest;
 import com.tsinghua.entity.KnowledgeGraphEntity;
 import com.tsinghua.util.ConvertUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -33,7 +36,8 @@ import java.util.stream.Collectors;
 /**
  * 知识图谱管理服务
  * 图谱元信息存储于 relational_system.knowledge_graphs；
- * 节点/关系CSV数据入库到 knowledge_graphs.&lt;图谱名称&gt;.nodes / knowledge_graphs.&lt;图谱名称&gt;.edges，
+ * 节点/关系CSV参考创建数据集的导入逻辑（DataTableService.importCsvFile，LOAD DATA FROM INFILE）
+ * 入库到 knowledge_graphs.&lt;图谱名称&gt;.nodes / knowledge_graphs.&lt;图谱名称&gt;.edges，
  * 详情查询时解析为G6可视化所需的节点/边结构。
  */
 @Slf4j
@@ -43,8 +47,6 @@ public class KnowledgeGraphService {
     private static final String META_PREFIX = "relational_system.knowledge_graphs";
     private static final String DATA_NAMESPACE = "knowledge_graphs";
 
-    /** INSERT单批行数，避免单条SQL过长 */
-    private static final int INSERT_BATCH_SIZE = 200;
     /** 详情查询单次最多加载的关系行数（大图保护） */
     private static final int MAX_EDGE_SCAN = 100_000;
     /** 单元格最大长度保护 */
@@ -65,77 +67,105 @@ public class KnowledgeGraphService {
     @Autowired
     private IginXClient iginxClient;
 
+    @Autowired
+    private DataTableService dataTableService;
+
     /**
-     * 上传图谱：解析节点/关系CSV并入库到 knowledge_graphs.<图谱名称>.nodes/.edges，写入元信息
+     * 上传图谱：节点/关系CSV参考创建数据集的导入逻辑（Base64解码→临时文件→LOAD DATA FROM INFILE）
+     * 导入到 knowledge_graphs.<图谱名称>.nodes/.edges，并写入元信息
      *
      * @return 图谱元信息实体
      */
-    public KnowledgeGraphEntity uploadGraph(String name, String description,
-                                            MultipartFile nodesFile, MultipartFile edgesFile) {
+    public KnowledgeGraphEntity uploadGraph(KnowledgeGraphUploadRequest request) {
+        String name = request.getName();
         if (!StringUtils.hasText(name)) {
             throw new IllegalArgumentException("图谱名称不能为空");
         }
         if (!name.matches("^[0-9A-Za-z_\\-\\u4e00-\\u9fa5]{1,50}$")) {
             throw new IllegalArgumentException("图谱名称仅支持中文、字母、数字、下划线和短横线，长度不超过50");
         }
-        if (nodesFile == null || nodesFile.isEmpty()) {
-            throw new IllegalArgumentException("请上传节点数据文件");
-        }
-        if (edgesFile == null || edgesFile.isEmpty()) {
-            throw new IllegalArgumentException("请上传关系数据文件");
-        }
         // 图谱名称存在检测（同名且未删除的图谱不允许重复创建）
         if (queryByName(name) != null) {
             throw new IllegalArgumentException("知识图谱名称已存在: " + name);
         }
 
-        List<String[]> nodeRows = parseCsvFile(nodesFile, "nodes.csv");
-        List<String[]> edgeRows = parseCsvFile(edgesFile, "edges.csv");
-        if (nodeRows.size() < 2) {
-            throw new IllegalArgumentException("nodes.csv至少需要表头和一行节点数据");
-        }
-
-        // 解析表头与特殊列（id/label、source/target/type），兼容neo4j export格式与通用格式
-        NodeTableMeta nodeMeta = resolveNodeMeta(nodeRows.get(0));
-        EdgeTableMeta edgeMeta = edgeRows.size() >= 1 ? resolveEdgeMeta(edgeRows.get(0)) : null;
-
         long timestamp = System.currentTimeMillis();
         String nodePath = nodePathOf(name);
         String edgePath = edgePathOf(name);
+        String owner = AuthUtil.getCurrentUsername();
 
         // 全新上传前清理可能的历史残留数据（如上次上传中途失败），保证幂等
         cleanGraphData(nodePath, edgePath);
 
-        long nodeCount = insertCsvRows(nodePath, nodeMeta.columns, nodeRows);
-        long edgeCount = 0;
-        if (edgeMeta != null && edgeRows.size() > 1) {
-            edgeCount = insertCsvRows(edgePath, edgeMeta.columns, edgeRows);
+        // 对齐创建数据集的CSV导入：Base64解码写入临时文件，复用DataTableService.importCsvFile
+        Long nodeCount;
+        Long edgeCount;
+        List<String> nodeHeader;
+        List<String> edgeHeader;
+        Path nodesTemp = null;
+        Path edgesTemp = null;
+        try {
+            nodesTemp = writeTempCsv(request.getNodesFileName(), request.getNodesFileBase64(), "kg_nodes_");
+            edgesTemp = writeTempCsv(request.getEdgesFileName(), request.getEdgesFileBase64(), "kg_edges_");
+
+            nodeHeader = readCsvHeader(nodesTemp, "节点数据");
+            edgeHeader = readCsvHeader(edgesTemp, "关系数据");
+            if (nodeHeader.size() < 2) {
+                throw new IllegalArgumentException("节点数据表头至少需要一列节点id和一列属性");
+            }
+            if (edgeHeader.size() < 2) {
+                throw new IllegalArgumentException("关系数据表头至少需要两列（起点、终点）");
+            }
+
+            nodeCount = dataTableService.importCsvFile(nodesTemp, nodePath, request.getNodesFileName(), owner);
+            edgeCount = dataTableService.importCsvFile(edgesTemp, edgePath, request.getEdgesFileName(), owner);
+        } catch (IOException e) {
+            throw new RuntimeException("CSV文件解码失败: " + e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("知识图谱导入失败: " + e.getMessage(), e);
+        } finally {
+            if (nodesTemp != null) {
+                try {
+                    Files.deleteIfExists(nodesTemp);
+                } catch (IOException ignore) {
+                }
+            }
+            if (edgesTemp != null) {
+                try {
+                    Files.deleteIfExists(edgesTemp);
+                } catch (IOException ignore) {
+                }
+            }
         }
 
+        // 解析表头与特殊列（id/label、source/target/type），兼容neo4j export格式与通用格式
+        // LOAD导入会保留CSV原始表头作为列名，元数据直接记录原始表头
+        NodeTableMeta nodeMeta = resolveNodeMeta(nodeHeader);
+        EdgeTableMeta edgeMeta = resolveEdgeMeta(edgeHeader);
+
         // 校验关系端点是否都能在节点中找到（仅记录告警，不阻断入库）
-        if (edgeMeta != null && edgeCount > 0) {
-            Set<String> nodeIds = scanNodeIds(nodePath, nodeMeta);
-            Set<String> edgeEndpointIds = scanEdgeEndpointIds(edgePath, edgeMeta);
-            long missing = edgeEndpointIds.stream().filter(id -> !nodeIds.contains(id)).count();
-            if (missing > 0) {
-                log.warn("知识图谱[{}]存在{}个关系端点在节点表中未找到", name, missing);
-            }
+        Set<String> nodeIds = scanNodeIds(nodePath, nodeMeta);
+        Set<String> edgeEndpointIds = scanEdgeEndpointIds(edgePath, edgeMeta);
+        long missing = edgeEndpointIds.stream().filter(id -> !nodeIds.contains(id)).count();
+        if (missing > 0) {
+            log.warn("知识图谱[{}]存在{}个关系端点在节点表中未找到", name, missing);
         }
 
         String operator = OperationLogAspect.getCurrentUser();
         String clientIp = OperationLogAspect.getClientIp();
-        String owner = AuthUtil.getCurrentUsername();
 
         KnowledgeGraphEntity entity = new KnowledgeGraphEntity();
         entity.setId(timestamp);
         entity.setName(name);
-        entity.setDescription(description);
+        entity.setDescription(request.getDescription());
         entity.setNodePath(nodePath);
         entity.setEdgePath(edgePath);
-        entity.setNodeCount(nodeCount);
-        entity.setEdgeCount(edgeCount);
+        entity.setNodeCount(nodeCount != null ? nodeCount : 0L);
+        entity.setEdgeCount(edgeCount != null ? edgeCount : 0L);
         entity.setNodeColumns(JSON.toJSONString(nodeMeta.toJsonObject()));
-        entity.setEdgeColumns(edgeMeta != null ? JSON.toJSONString(edgeMeta.toJsonObject()) : "[]");
+        entity.setEdgeColumns(JSON.toJSONString(edgeMeta.toJsonObject()));
         entity.setOwner(owner);
         entity.setCreateTime(timestamp);
         entity.setOperator(operator);
@@ -257,22 +287,6 @@ public class KnowledgeGraphService {
     }
 
     /**
-     * 删除knowledge_graphs.<名称>.nodes/.edges数据表内容；失败仅告警
-     */
-    private void cleanGraphData(String nodePath, String edgePath) {
-        for (String path : Arrays.asList(nodePath, edgePath)) {
-            if (!StringUtils.hasText(path)) {
-                continue;
-            }
-            try {
-                iginxSession.executeSql("DELETE FROM " + path);
-            } catch (Exception e) {
-                log.warn("清理知识图谱数据失败: {}", path, e);
-            }
-        }
-    }
-
-    /**
      * 详情查询：增量分页返回G6可视化结构。
      * 节点按存储顺序分页返回（仅返回本次新增的增量）；
      * 关系返回两端点均已加载的边（保证G6可直接渲染，每条边只下发一次）。
@@ -308,12 +322,12 @@ public class KnowledgeGraphService {
         Set<String> seenIds = new LinkedHashSet<>();
         List<Map<String, Object>> loadedNodes = new ArrayList<>();
         for (Map<String, Object> record : loadedRecords) {
-            String id = cellValue(record, nodeMeta.idColumn);
+            String id = cellValue(record, graph.getNodePath(), nodeMeta.idColumn);
             if (id == null || seenIds.contains(id)) {
                 continue;
             }
             seenIds.add(id);
-            loadedNodes.add(toG6Node(record, nodeMeta));
+            loadedNodes.add(toG6Node(record, graph.getNodePath(), nodeMeta));
         }
 
         // 本次增量 = 去重后位于 [nodeOffset, nodeOffset+limit) 区间的节点
@@ -326,12 +340,12 @@ public class KnowledgeGraphService {
         if (edgeMeta != null && !seenIds.isEmpty()) {
             List<Map<String, Object>> edgeRecords = queryRecords(graph.getEdgePath(), MAX_EDGE_SCAN);
             for (Map<String, Object> record : edgeRecords) {
-                String source = cellValue(record, edgeMeta.sourceColumn);
-                String target = cellValue(record, edgeMeta.targetColumn);
+                String source = cellValue(record, graph.getEdgePath(), edgeMeta.sourceColumn);
+                String target = cellValue(record, graph.getEdgePath(), edgeMeta.targetColumn);
                 if (source == null || target == null || !seenIds.contains(source) || !seenIds.contains(target)) {
                     continue;
                 }
-                newEdges.add(toG6Edge(record, edgeMeta));
+                newEdges.add(toG6Edge(record, graph.getEdgePath(), edgeMeta));
             }
         }
 
@@ -368,14 +382,14 @@ public class KnowledgeGraphService {
         return summary;
     }
 
-    private Map<String, Object> toG6Node(Map<String, Object> record, NodeTableMeta meta) {
-        String id = cellValue(record, meta.idColumn);
+    private Map<String, Object> toG6Node(Map<String, Object> record, String tablePath, NodeTableMeta meta) {
+        String id = cellValue(record, tablePath, meta.idColumn);
         Map<String, Object> node = new LinkedHashMap<>();
         node.put("id", id);
-        String labelRaw = cellValue(record, meta.labelColumn);
+        String labelRaw = cellValue(record, tablePath, meta.labelColumn);
         String label = StringUtils.hasText(labelRaw)
                 ? labelRaw
-                : firstNonBlankProperty(record, meta.columns, meta.idColumn, "name", "title", "名称");
+                : firstNonBlankProperty(record, tablePath, meta.columns, meta.idColumn, "name", "title", "名称");
         node.put("label", StringUtils.hasText(label) ? label : id);
         // 节点分类标签（仅取:LABEL/label列，避免退化到名称列导致每节点一类）
         node.put("labelType", StringUtils.hasText(labelRaw) ? labelRaw : "未分类");
@@ -384,7 +398,7 @@ public class KnowledgeGraphService {
             if (column.equals(meta.idColumn) || column.equals(meta.labelColumn)) {
                 continue;
             }
-            String value = cellValue(record, column);
+            String value = cellValue(record, tablePath, column);
             if (value != null && !value.isEmpty()) {
                 properties.put(column, value);
             }
@@ -393,11 +407,11 @@ public class KnowledgeGraphService {
         return node;
     }
 
-    private Map<String, Object> toG6Edge(Map<String, Object> record, EdgeTableMeta meta) {
+    private Map<String, Object> toG6Edge(Map<String, Object> record, String tablePath, EdgeTableMeta meta) {
         Map<String, Object> edge = new LinkedHashMap<>();
-        edge.put("source", cellValue(record, meta.sourceColumn));
-        edge.put("target", cellValue(record, meta.targetColumn));
-        String label = cellValue(record, meta.typeColumn);
+        edge.put("source", cellValue(record, tablePath, meta.sourceColumn));
+        edge.put("target", cellValue(record, tablePath, meta.targetColumn));
+        String label = cellValue(record, tablePath, meta.typeColumn);
         edge.put("label", StringUtils.hasText(label) ? label : "");
         Map<String, Object> properties = new LinkedHashMap<>();
         for (String column : meta.columns) {
@@ -405,7 +419,7 @@ public class KnowledgeGraphService {
                     || column.equals(meta.typeColumn)) {
                 continue;
             }
-            String value = cellValue(record, column);
+            String value = cellValue(record, tablePath, column);
             if (value != null && !value.isEmpty()) {
                 properties.put(column, value);
             }
@@ -430,7 +444,7 @@ public class KnowledgeGraphService {
     private Set<String> scanNodeIds(String nodePath, NodeTableMeta nodeMeta) {
         Set<String> ids = new HashSet<>();
         for (Map<String, Object> record : queryRecords(nodePath, MAX_EDGE_SCAN)) {
-            String id = cellValue(record, nodeMeta.idColumn);
+            String id = cellValue(record, nodePath, nodeMeta.idColumn);
             if (id != null) {
                 ids.add(id);
             }
@@ -441,8 +455,8 @@ public class KnowledgeGraphService {
     private Set<String> scanEdgeEndpointIds(String edgePath, EdgeTableMeta edgeMeta) {
         Set<String> ids = new HashSet<>();
         for (Map<String, Object> record : queryRecords(edgePath, MAX_EDGE_SCAN)) {
-            String source = cellValue(record, edgeMeta.sourceColumn);
-            String target = cellValue(record, edgeMeta.targetColumn);
+            String source = cellValue(record, edgePath, edgeMeta.sourceColumn);
+            String target = cellValue(record, edgePath, edgeMeta.targetColumn);
             if (source != null) {
                 ids.add(source);
             }
@@ -454,89 +468,66 @@ public class KnowledgeGraphService {
     }
 
     /**
-     * 将解析后的CSV行批量INSERT入库，返回成功写入的行数
+     * 删除knowledge_graphs.<名称>.nodes/.edges数据表内容；失败仅告警
      */
-    private long insertCsvRows(String path, List<String> columns, List<String[]> rows) {
-        // rows[0]为表头，数据从第1行开始
-        List<String[]> dataRows = rows.subList(1, rows.size());
-        long written = 0;
-        long baseKey = System.currentTimeMillis();
-        StringBuilder values = new StringBuilder();
-        int batchCount = 0;
-
-        for (int i = 0; i < dataRows.size(); i++) {
-            String[] row = dataRows.get(i);
-            long key = baseKey + i;
-            if (batchCount > 0) {
-                values.append(", ");
+    private void cleanGraphData(String nodePath, String edgePath) {
+        for (String path : Arrays.asList(nodePath, edgePath)) {
+            if (!StringUtils.hasText(path)) {
+                continue;
             }
-            values.append("(").append(key);
-            for (int c = 0; c < columns.size(); c++) {
-                String cell = c < row.length ? row[c] : "";
-                values.append(", '").append(escape(cell)).append("'");
-            }
-            values.append(")");
-            batchCount++;
-            written++;
-
-            if (batchCount >= INSERT_BATCH_SIZE || i == dataRows.size() - 1) {
-                StringBuilder sql = new StringBuilder("INSERT INTO ").append(path)
-                        .append(" (key");
-                for (String column : columns) {
-                    sql.append(", ").append(column);
-                }
-                sql.append(") VALUES ").append(values).append(";");
-                try {
-                    iginxSession.executeSql(sql.toString());
-                } catch (Exception e) {
-                    throw new RuntimeException("图数据入库失败: " + path + " 第" + (i - batchCount + 2) + "行附近, " + e.getMessage(), e);
-                }
-                values.setLength(0);
-                batchCount = 0;
+            try {
+                iginxSession.executeSql("DELETE FROM " + path);
+            } catch (Exception e) {
+                log.warn("清理知识图谱数据失败: {}", path, e);
             }
         }
-        return written;
     }
 
-    // ==================== CSV解析与表头处理 ====================
+    // ==================== CSV文件处理（对齐创建数据集导入） ====================
 
-    private List<String[]> parseCsvFile(MultipartFile file, String displayName) {
-        String content;
+    /**
+     * Base64解码写入临时CSV文件（参考DatasetCreationService的IMPORT模式）
+     */
+    private Path writeTempCsv(String fileName, String base64, String prefix) throws IOException {
+        byte[] fileBytes;
         try {
-            content = new String(file.getBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new RuntimeException("读取" + displayName + "失败: " + e.getMessage(), e);
+            fileBytes = Base64.getDecoder().decode(base64);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("文件Base64解码失败: " + fileName);
         }
-        if (content.isEmpty()) {
-            throw new IllegalArgumentException(displayName + "内容为空");
+        if (fileBytes.length == 0) {
+            throw new IllegalArgumentException("文件内容为空: " + fileName);
         }
-        List<String[]> rows = parseCsv(content);
-        if (rows.isEmpty() || rows.get(0).length == 0
-                || rows.get(0)[0] == null || rows.get(0)[0].isEmpty()) {
-            throw new IllegalArgumentException(displayName + "缺少有效的表头行");
-        }
-        return rows;
+        Path tempFile = Files.createTempFile(prefix, ".csv");
+        Files.write(tempFile, fileBytes);
+        return tempFile;
     }
 
     /**
-     * 解析CSV文本（支持双引号包裹、引号转义、CRLF/LF换行），返回行-列数组，首行为表头
+     * 读取CSV表头行（支持双引号包裹、引号转义、CRLF/LF、UTF-8 BOM）
      */
-    static List<String[]> parseCsv(String content) {
+    private List<String> readCsvHeader(Path file, String displayName) throws IOException {
+        String content = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+        if (content.isEmpty()) {
+            throw new IllegalArgumentException(displayName + "文件内容为空");
+        }
         // 去除UTF-8 BOM
-        if (content.codePointAt(0) == 0xFEFF) {
+        if (content.charAt(0) == '\uFEFF') {
             content = content.substring(1);
         }
-        List<String[]> rows = new ArrayList<>();
-        List<String> currentRow = new ArrayList<>();
+        int lineEnd = content.indexOf('\n');
+        String headerLine = lineEnd >= 0 ? content.substring(0, lineEnd) : content;
+        if (headerLine.endsWith("\r")) {
+            headerLine = headerLine.substring(0, headerLine.length() - 1);
+        }
+        List<String> header = new ArrayList<>();
         StringBuilder cell = new StringBuilder();
         boolean inQuotes = false;
-        boolean cellStarted = false;
-
-        for (int i = 0; i < content.length(); i++) {
-            char ch = content.charAt(i);
+        for (int i = 0; i < headerLine.length(); i++) {
+            char ch = headerLine.charAt(i);
             if (inQuotes) {
                 if (ch == '"') {
-                    if (i + 1 < content.length() && content.charAt(i + 1) == '"') {
+                    if (i + 1 < headerLine.length() && headerLine.charAt(i + 1) == '"') {
                         cell.append('"');
                         i++;
                     } else {
@@ -547,125 +538,64 @@ public class KnowledgeGraphService {
                 }
             } else if (ch == '"' && cell.length() == 0) {
                 inQuotes = true;
-                cellStarted = true;
             } else if (ch == ',') {
-                currentRow.add(cell.toString());
+                header.add(cell.toString().trim());
                 cell.setLength(0);
-                cellStarted = false;
-            } else if (ch == '\r') {
-                // 忽略，由\n统一处理换行
-            } else if (ch == '\n') {
-                currentRow.add(cell.toString());
-                cell.setLength(0);
-                cellStarted = false;
-                rows.add(currentRow.toArray(new String[0]));
-                currentRow.clear();
             } else {
                 cell.append(ch);
-                cellStarted = true;
             }
         }
-        // 收尾：最后一行（含空行）
-        if (cell.length() > 0 || cellStarted || !currentRow.isEmpty()) {
-            currentRow.add(cell.toString());
-            rows.add(currentRow.toArray(new String[0]));
+        header.add(cell.toString().trim());
+        if (header.isEmpty() || header.get(0).isEmpty()) {
+            throw new IllegalArgumentException(displayName + "缺少有效的表头行");
         }
-        // 过滤全空行
-        rows.removeIf(row -> row.length == 1 && (row[0] == null || row[0].trim().isEmpty()));
-        return rows;
+        return header;
     }
 
-    private NodeTableMeta resolveNodeMeta(String[] header) {
+    private NodeTableMeta resolveNodeMeta(List<String> header) {
         NodeTableMeta meta = new NodeTableMeta();
-        meta.rawColumns = new ArrayList<>();
-        for (String raw : header) {
-            meta.rawColumns.add(raw == null ? "" : raw.trim());
-        }
-        int idIndex = findColumn(meta.rawColumns, ID_COLUMN_NAMES, 0);
-        int labelIndex = findColumn(meta.rawColumns, LABEL_COLUMN_NAMES, -1);
-        // 列清洗后保持原始顺序，保证INSERT时列名与单元格按下标一一对应
-        meta.columns = sanitizeColumns(meta.rawColumns);
-        meta.idColumn = idIndex >= 0 ? meta.columns.get(idIndex) : null;
-        meta.labelColumn = labelIndex >= 0 ? meta.columns.get(labelIndex) : null;
+        meta.columns = new ArrayList<>(header);
+        int idIndex = findColumn(header, ID_COLUMN_NAMES, 0);
+        int labelIndex = findColumn(header, LABEL_COLUMN_NAMES, -1);
+        meta.idColumn = idIndex >= 0 ? header.get(idIndex) : null;
+        meta.labelColumn = labelIndex >= 0 ? header.get(labelIndex) : null;
         return meta;
     }
 
-    private EdgeTableMeta resolveEdgeMeta(String[] header) {
+    private EdgeTableMeta resolveEdgeMeta(List<String> header) {
         EdgeTableMeta meta = new EdgeTableMeta();
-        meta.rawColumns = new ArrayList<>();
-        for (String raw : header) {
-            meta.rawColumns.add(raw == null ? "" : raw.trim());
-        }
-        if (meta.rawColumns.size() < 2) {
-            throw new IllegalArgumentException("edges.csv表头至少需要两列（起点、终点）");
-        }
-        int sourceIndex = findColumn(meta.rawColumns, SOURCE_COLUMN_NAMES, 0);
-        int targetIndex = findColumn(meta.rawColumns, TARGET_COLUMN_NAMES, 1);
+        meta.columns = new ArrayList<>(header);
+        int sourceIndex = findColumn(header, SOURCE_COLUMN_NAMES, 0);
+        int targetIndex = findColumn(header, TARGET_COLUMN_NAMES, 1);
         if (targetIndex == sourceIndex) {
             targetIndex = sourceIndex == 0 ? 1 : 0;
         }
-        int typeIndex = findColumn(meta.rawColumns, TYPE_COLUMN_NAMES, -1);
-        meta.columns = sanitizeColumns(meta.rawColumns);
-        meta.sourceColumn = sourceIndex >= 0 ? meta.columns.get(sourceIndex) : null;
-        meta.targetColumn = targetIndex >= 0 ? meta.columns.get(targetIndex) : null;
-        meta.typeColumn = typeIndex >= 0 ? meta.columns.get(typeIndex) : null;
+        int typeIndex = findColumn(header, TYPE_COLUMN_NAMES, -1);
+        meta.sourceColumn = sourceIndex >= 0 ? header.get(sourceIndex) : null;
+        meta.targetColumn = targetIndex >= 0 ? header.get(targetIndex) : null;
+        meta.typeColumn = typeIndex >= 0 ? header.get(typeIndex) : null;
         return meta;
     }
 
     /**
-     * 按候选名（忽略大小写）查找列下标，找不到时返回fallback（<0表示无默认）
+     * 按候选名（忽略大小写、忽略空格与冒号差异）查找列下标，找不到时返回fallback（<0表示无默认）
      */
-    private int findColumn(List<String> rawColumns, List<String> candidates, int fallback) {
-        for (int i = 0; i < rawColumns.size(); i++) {
-            String normalized = rawColumns.get(i).toLowerCase().replace(" ", "");
+    private int findColumn(List<String> columns, List<String> candidates, int fallback) {
+        for (int i = 0; i < columns.size(); i++) {
+            String normalized = columns.get(i).toLowerCase().replace(" ", "");
             if (candidates.contains(normalized)) {
                 return i;
             }
         }
-        return fallback >= 0 && fallback < rawColumns.size() ? fallback : -1;
+        return fallback >= 0 && fallback < columns.size() ? fallback : -1;
     }
 
-    /**
-     * 列名清洗为IGinX路径安全字符，保持原始列顺序并全局唯一
-     */
-    private List<String> sanitizeColumns(List<String> rawColumns) {
-        List<String> result = new ArrayList<>();
-        Set<String> used = new HashSet<>();
-        for (int i = 0; i < rawColumns.size(); i++) {
-            String name = sanitizeColumnName(rawColumns.get(i));
-            if (name.isEmpty()) {
-                name = "col" + i;
-            }
-            while (used.contains(name)) {
-                name = name + "_";
-            }
-            used.add(name);
-            result.add(name);
-        }
-        return result;
-    }
-
-    static String sanitizeColumnName(String raw) {
-        if (raw == null) {
-            return "";
-        }
-        String name = raw.trim()
-                .replaceAll("[^0-9A-Za-z_\\-\\u4e00-\\u9fa5]", "_")
-                .replaceAll("_+", "_")
-                .replaceAll("^_|_$", "");
-        // "key"是INSERT列描述中的保留字，需改名避免冲突
-        if ("key".equalsIgnoreCase(name)) {
-            name = "key_";
-        }
-        return name;
-    }
-
-    private String firstNonBlankProperty(Map<String, Object> record, List<String> columns,
+    private String firstNonBlankProperty(Map<String, Object> record, String tablePath, List<String> columns,
                                          String excludeColumn, String... preferredNames) {
         for (String preferred : preferredNames) {
             for (String column : columns) {
                 if (column.equalsIgnoreCase(preferred) && !column.equals(excludeColumn)) {
-                    String value = cellValue(record, column);
+                    String value = cellValue(record, tablePath, column);
                     if (StringUtils.hasText(value)) {
                         return value;
                     }
@@ -676,17 +606,21 @@ public class KnowledgeGraphService {
     }
 
     /**
-     * 读取记录中指定列的字符串值（IGinX可能返回byte[]或字符串）
+     * 读取记录中指定列的字符串值。
+     * IGinX返回的列名为全路径（如 knowledge_graphs.x.nodes.:ID），优先按全路径匹配。
      */
-    private String cellValue(Map<String, Object> record, String column) {
+    private String cellValue(Map<String, Object> record, String tablePath, String column) {
         if (column == null) {
             return null;
         }
         Object value = record.get(column);
+        if (value == null && StringUtils.hasText(tablePath)) {
+            value = record.get(tablePath + "." + column);
+        }
         if (value == null) {
-            // 兼容带前缀的列名
+            // 兜底：任意前缀下以 .column 结尾的列
             value = record.entrySet().stream()
-                    .filter(e -> e.getKey().endsWith("." + column) || e.getKey().equalsIgnoreCase(column))
+                    .filter(e -> e.getKey().endsWith("." + column))
                     .map(Map.Entry::getValue)
                     .findFirst().orElse(null);
         }
@@ -709,11 +643,7 @@ public class KnowledgeGraphService {
     }
 
     private static String escape(String value) {
-        if (value == null) {
-            return "";
-        }
-        // 单引号转义；换行替换为空格，避免SQL字面量跨行
-        return value.replace("'", "''").replace("\r", " ").replace("\n", " ");
+        return value == null ? "" : value.replace("'", "''");
     }
 
     private KnowledgeGraphEntity mapToEntity(Map<String, Object> record) {
@@ -730,10 +660,9 @@ public class KnowledgeGraphService {
     }
 
     /**
-     * 节点表元信息（列布局与特殊列），随图谱元数据持久化
+     * 节点表元信息（原始表头列与特殊列），随图谱元数据持久化
      */
     public static class NodeTableMeta {
-        List<String> rawColumns;
         List<String> columns;
         String idColumn;
         String labelColumn;
@@ -741,13 +670,11 @@ public class KnowledgeGraphService {
         public static NodeTableMeta fromJson(String json) {
             NodeTableMeta meta = new NodeTableMeta();
             meta.columns = new ArrayList<>();
-            meta.rawColumns = new ArrayList<>();
             if (StringUtils.hasText(json)) {
                 try {
                     JSONObject obj = JSON.parseObject(json);
                     if (obj.getJSONArray("columns") != null) {
                         meta.columns = obj.getJSONArray("columns").toJavaList(String.class);
-                        meta.rawColumns = meta.columns;
                     }
                     meta.idColumn = obj.getString("idColumn");
                     meta.labelColumn = obj.getString("labelColumn");
@@ -774,10 +701,9 @@ public class KnowledgeGraphService {
     }
 
     /**
-     * 关系表元信息（列布局与特殊列），随图谱元数据持久化
+     * 关系表元信息（原始表头列与特殊列），随图谱元数据持久化
      */
     public static class EdgeTableMeta {
-        List<String> rawColumns;
         List<String> columns;
         String sourceColumn;
         String targetColumn;
@@ -786,13 +712,11 @@ public class KnowledgeGraphService {
         public static EdgeTableMeta fromJson(String json) {
             EdgeTableMeta meta = new EdgeTableMeta();
             meta.columns = new ArrayList<>();
-            meta.rawColumns = new ArrayList<>();
             if (StringUtils.hasText(json)) {
                 try {
                     JSONObject obj = JSON.parseObject(json);
                     if (obj.getJSONArray("columns") != null) {
                         meta.columns = obj.getJSONArray("columns").toJavaList(String.class);
-                        meta.rawColumns = meta.columns;
                     }
                     meta.sourceColumn = obj.getString("sourceColumn");
                     meta.targetColumn = obj.getString("targetColumn");

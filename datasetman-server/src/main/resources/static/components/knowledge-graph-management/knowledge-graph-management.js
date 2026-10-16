@@ -794,16 +794,24 @@ class KnowledgeGraphManagement extends HTMLElement {
         const submitBtn = this.shadowRoot.querySelector('#submitBtn');
         submitBtn.disabled = true;
         submitBtn.textContent = '上传中...';
-        this.showResult(`正在上传知识图谱「${name}」并入库到 knowledge_graphs.${name}.nodes / knowledge_graphs.${name}.edges ...`, 'loading');
+        this.showResult(`正在上传知识图谱「${name}」...`, 'loading');
 
-        const formData = new FormData();
-        formData.append('name', name);
-        formData.append('description', description);
-        formData.append('nodesFile', this.pendingNodesFile);
-        formData.append('edgesFile', this.pendingEdgesFile);
-
+        // 对齐创建数据集的导入模式：文件读取为Base64后随JSON提交
         try {
-            const result = await window.AppConfig.upload('knowledgeGraph', 'upload', formData);
+            this.showResult('正在读取节点数据文件...', 'loading');
+            const nodesBase64 = await this.readFileAsBase64(this.pendingNodesFile);
+            this.showResult('正在读取关系数据文件...', 'loading');
+            const edgesBase64 = await this.readFileAsBase64(this.pendingEdgesFile);
+
+            this.showResult(`正在导入知识图谱「${name}」到 knowledge_graphs.${name}.nodes / knowledge_graphs.${name}.edges ...`, 'loading');
+            const result = await window.AppConfig.post('knowledgeGraph', 'upload', {
+                name,
+                description,
+                nodesFileName: this.pendingNodesFile.name,
+                nodesFileBase64: nodesBase64,
+                edgesFileName: this.pendingEdgesFile.name,
+                edgesFileBase64: edgesBase64
+            });
             if (result.code === 200 || result.success) {
                 const graph = result.data || {};
                 this.showResult(`知识图谱「${name}」上传成功！已入库节点 ${this.formatCount(graph.nodeCount)} 个、关系 ${this.formatCount(graph.edgeCount)} 条`, 'success');
@@ -824,6 +832,21 @@ class KnowledgeGraphManagement extends HTMLElement {
             submitBtn.textContent = '上传';
             this._isSubmitting = false;
         }
+    }
+
+    /** 读取文件为Base64字符串（去掉data:前缀），与创建数据集的readFileAsBase64一致 */
+    readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const result = reader.result;
+                // FileReader.readAsDataURL 返回 "data:...;base64,XXXX" 格式，去掉前缀
+                const base64 = String(result).split(',')[1] || '';
+                resolve(base64);
+            };
+            reader.onerror = () => reject(reader.error || new Error('读取失败'));
+            reader.readAsDataURL(file);
+        });
     }
 
     showMessage(message, type = 'success') {

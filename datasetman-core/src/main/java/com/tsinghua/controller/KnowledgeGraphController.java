@@ -4,6 +4,7 @@ import com.tsinghua.auth.annotation.OperationLog;
 import com.tsinghua.auth.annotation.RequirePermission;
 import com.tsinghua.auth.enums.Permission;
 import com.tsinghua.dto.KnowledgeGraphQueryRequest;
+import com.tsinghua.dto.KnowledgeGraphUploadRequest;
 import com.tsinghua.entity.KnowledgeGraphEntity;
 import com.tsinghua.model.Result;
 import com.tsinghua.service.KnowledgeGraphService;
@@ -11,8 +12,8 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -30,16 +31,12 @@ public class KnowledgeGraphController {
     @Autowired
     private KnowledgeGraphService knowledgeGraphService;
 
-    @ApiOperation("上传知识图谱（节点/关系CSV入库到knowledge_graphs.<图谱名称>.nodes/.edges）")
+    @ApiOperation("上传知识图谱（节点/关系CSV经LOAD导入knowledge_graphs.<图谱名称>.nodes/.edges）")
     @PostMapping("/upload")
     @RequirePermission(Permission.CREATE)
     @OperationLog(value = "上传知识图谱", type = OperationLog.OperationType.CREATE)
-    public Result<KnowledgeGraphEntity> uploadGraph(
-            @RequestParam("name") String name,
-            @RequestParam(value = "description", required = false) String description,
-            @RequestParam("nodesFile") MultipartFile nodesFile,
-            @RequestParam("edgesFile") MultipartFile edgesFile) {
-        return Result.success(knowledgeGraphService.uploadGraph(name, description, nodesFile, edgesFile));
+    public Result<KnowledgeGraphEntity> uploadGraph(@Validated @RequestBody KnowledgeGraphUploadRequest request) {
+        return Result.success(knowledgeGraphService.uploadGraph(request));
     }
 
     @ApiOperation("分页查询知识图谱")
