@@ -625,31 +625,22 @@ public class KnowledgeGraphService {
         if (column == null) {
             return null;
         }
+
         Object value = record.get(column);
         if (value == null && StringUtils.hasText(tablePath)) {
             value = record.get(tablePath + "." + column);
         }
-        if (value == null) {
-            // 兜底：任意前缀下以 .column 结尾的列
-            value = record.entrySet().stream()
-                    .filter(e -> e.getKey().endsWith("." + column))
-                    .map(Map.Entry::getValue)
-                    .findFirst().orElse(null);
+        if (value == null && StringUtils.hasText(tablePath)) {
+            // 尝试带 BOM 的列名（IGinX 可能在列名中保留 BOM）
+            value = record.get(tablePath + ".\uFEFF" + column);
         }
         if (value == null) {
-            // 最后尝试：URL编码的列名（IGinX可能对特殊字符进行编码）
-            try {
-                String encodedColumn = java.net.URLEncoder.encode(column, "UTF-8");
-                value = record.get(tablePath + "." + encodedColumn);
-                if (value == null) {
-                    value = record.entrySet().stream()
-                            .filter(e -> e.getKey().endsWith("." + encodedColumn))
-                            .map(Map.Entry::getValue)
-                            .findFirst().orElse(null);
-                }
-            } catch (Exception e) {
-                // 忽略编码错误
-            }
+            // 兜底：任意前缀下以 .column 结尾的列（去除所有 BOM 后比较）
+            String cleanColumn = removeAllBom(column);
+            value = record.entrySet().stream()
+                    .filter(e -> removeAllBom(e.getKey()).endsWith("." + cleanColumn))
+                    .map(Map.Entry::getValue)
+                    .findFirst().orElse(null);
         }
         if (value == null) {
             log.warn("无法获取列值: column={}, tablePath={}, record keys={}",
@@ -659,8 +650,17 @@ public class KnowledgeGraphService {
         if (value instanceof byte[]) {
             return new String((byte[]) value, StandardCharsets.UTF_8);
         }
-        String str = String.valueOf(value);
-        return str.length() > MAX_CELL_LENGTH ? str.substring(0, MAX_CELL_LENGTH) : str;
+        return String.valueOf(value);
+    }
+
+    /**
+     * 去除字符串中所有的 UTF-8 BOM 字符
+     */
+    private String removeAllBom(String str) {
+        if (str == null) {
+            return null;
+        }
+        return str.replace("\uFEFF", "");
     }
 
     private static String nodePathOf(String name) {
