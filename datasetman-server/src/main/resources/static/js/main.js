@@ -2704,7 +2704,7 @@ function showVisualAnalysis() {
     function kgNodeHtml(g) {
         return `
                 <div class="tree-node kg-node" data-is-leaf="true" data-kg-name="${escapeHtml(g.name || '')}"
-                     title="节点路径: ${escapeHtml(g.nodePath || '')}&#10;关系路径: ${escapeHtml(g.edgePath || '')}&#10;操作人: ${escapeHtml(g.operator || g.owner || '-')}">
+                     title="节点路径: ${escapeHtml(g.nodePath || '')}&#10;边路径: ${escapeHtml(g.edgePath || '')}&#10;操作人: ${escapeHtml(g.operator || g.owner || '-')}">
                     <span class="kg-node-icon">图</span>
                     <span class="tree-node-text">${escapeHtml(g.name || '')}</span>
                 </div>

@@ -1,7 +1,7 @@
 /**
  * 知识图谱上传组件（弹窗形式，参考模型/算法上传的交互）
  * - 弹窗展示，不占用工作区
- * - 节点/关系文件支持点击选择或拖拽上传（.csv，文件名不限）
+ * - 节点/边文件支持点击选择或拖拽上传（.csv，文件名不限）
  * - 图谱名称实时存在检测
  * - 对齐创建数据集的导入模式：文件读取为Base64后随JSON提交
  * - 上传成功后派发 knowledge-graph-uploaded 事件（main.js刷新右侧知识图谱面板）
@@ -389,7 +389,7 @@ class KnowledgeGraphUpload extends HTMLElement {
                             </div>
 
                             <div class="modal-form-row">
-                                <label class="modal-label">关系数据 <span style="color: #ff4d4f;">*</span></label>
+                                <label class="modal-label">边数据 <span style="color: #ff4d4f;">*</span></label>
                                 <div class="modal-input-wrapper">
                                     <div class="file-upload-area" id="edgesDropArea">
                                         <div class="upload-icon" id="edgesUploadIcon">🔗</div>
@@ -404,7 +404,7 @@ class KnowledgeGraphUpload extends HTMLElement {
                                         <span class="file-chip-name" id="edgesFileName"></span>
                                         <button type="button" class="file-chip-remove" id="edgesFileRemove" title="移除文件">&times;</button>
                                     </div>
-                                    <div class="file-hint">仅支持 .csv 文件，文件名不限；需含起点/终点列（如 :START_ID / :END_ID），可含 :TYPE 列作为关系类型，其余列作为关系属性</div>
+                                    <div class="file-hint">仅支持 .csv 文件，文件名不限；需含起点/终点列（如 :START_ID / :END_ID），可含 :TYPE 列作为边类型，其余列作为边属性</div>
                                 </div>
                             </div>
                         </form>
@@ -678,7 +678,7 @@ class KnowledgeGraphUpload extends HTMLElement {
             return;
         }
         if (!this.pendingEdgesFile) {
-            this.showMessage('请选择关系数据文件', 'error');
+            this.showMessage('请选择边数据文件', 'error');
             return;
         }
         if (this._isSubmitting) return;
@@ -698,7 +698,7 @@ class KnowledgeGraphUpload extends HTMLElement {
             }
             let edgesBase64 = this.pendingEdgesBase64;
             if (!edgesBase64) {
-                this.showProgress('正在读取关系文件...', 0, true);
+                this.showProgress('正在读取边文件...', 0, true);
                 edgesBase64 = await this.readFileAsBase64(this.pendingEdgesFile);
             }
 
@@ -719,7 +719,7 @@ class KnowledgeGraphUpload extends HTMLElement {
             this.showProgress('导入完成', null, true);
             if (result.code === 200 || result.success) {
                 const graph = result.data || {};
-                this.showMessage(`知识图谱「${name}」构建成功！已入库节点 ${this.formatCount(graph.nodeCount)} 个、关系 ${this.formatCount(graph.edgeCount)} 条`, 'success');
+                this.showMessage(`知识图谱「${name}」构建成功！已入库节点 ${this.formatCount(graph.nodeCount)} 个、边 ${this.formatCount(graph.edgeCount)} 条`, 'success');
                 // 通知main.js刷新知识图谱树并打开详情页
                 document.dispatchEvent(new CustomEvent('knowledge-graph-uploaded', {
                     detail: { name, graph }

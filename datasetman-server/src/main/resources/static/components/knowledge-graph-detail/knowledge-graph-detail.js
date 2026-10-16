@@ -419,7 +419,7 @@ class KnowledgeGraphDetail extends HTMLElement {
                         <span class="header-meta-item" id="metaTime" title=""></span>
                         <div class="header-stats">
                             <span>节点 <strong id="statLoadedNodes">0</strong>/<span id="statTotalNodes">-</span></span>
-                            <span>关系 <strong id="statEdges">0</strong>/<span id="statTotalEdges">-</span></span>
+                            <span>边 <strong id="statEdges">0</strong>/<span id="statTotalEdges">-</span></span>
                         </div>
                     </div>
                 </div>
@@ -437,17 +437,17 @@ class KnowledgeGraphDetail extends HTMLElement {
                 <div class="main-area">
                     <div class="graph-wrap">
                         <div id="graphContainer"></div>
-                        <div class="graph-hint">滚轮缩放画布，拖拽平移/移动节点，悬浮到节点或关系上查看属性</div>
+                        <div class="graph-hint">滚轮缩放画布，拖拽平移/移动节点，悬浮到节点或边上查看属性</div>
                         <div class="kg-tooltip" id="kgTooltip"></div>
                         <div class="legend" id="legend"></div>
-                        <!-- 右下角小属性面板：展示搜索定位/悬浮到的节点或关系属性 -->
+                        <!-- 右下角小属性面板：展示搜索定位/悬浮到的节点或边属性 -->
                         <div class="props-panel" id="propsPanel">
                             <div class="props-panel-header" id="propsPanelToggle">
                                 <span>属性</span>
                                 <span class="props-toggle-mark" id="propsToggleMark">−</span>
                             </div>
                             <div class="props-panel-body" id="propsPanelBody">
-                                <div class="props-placeholder">搜索定位或悬浮节点/关系<br>查看属性</div>
+                                <div class="props-placeholder">搜索定位或悬浮节点/边<br>查看属性</div>
                             </div>
                         </div>
                         <div class="loading-overlay hidden" id="loadingOverlay">
@@ -671,12 +671,12 @@ class KnowledgeGraphDetail extends HTMLElement {
             }
         });
 
-        // 属性悬浮窗：悬浮到节点/关系上跟随鼠标展示，不影响图谱视野
+        // 属性悬浮窗：悬浮到节点/边上跟随鼠标展示，不影响图谱视野
         this.graph.on('node:mousemove', (evt) => this.showTooltip('节点', evt));
-        this.graph.on('edge:mousemove', (evt) => this.showTooltip('关系', evt));
+        this.graph.on('edge:mousemove', (evt) => this.showTooltip('边', evt));
         // 右下角属性面板：悬浮时同步更新
         this.graph.on('node:mouseenter', (evt) => this.updatePropsPanel('节点', evt.item.getModel()));
-        this.graph.on('edge:mouseenter', (evt) => this.updatePropsPanel('关系', evt.item.getModel()));
+        this.graph.on('edge:mouseenter', (evt) => this.updatePropsPanel('边', evt.item.getModel()));
         this.graph.on('node:mouseleave', () => this.hideTooltip());
         this.graph.on('edge:mouseleave', () => this.hideTooltip());
         this.graph.on('canvas:mousemove', () => this.hideTooltip());
@@ -799,7 +799,7 @@ class KnowledgeGraphDetail extends HTMLElement {
         $('#graphDesc').textContent = graphInfo.description || '';
         $('#metaNodePath').textContent = '节点路径: ' + (graphInfo.nodePath || '-');
         $('#metaNodePath').title = graphInfo.nodePath || '';
-        $('#metaEdgePath').textContent = '关系路径: ' + (graphInfo.edgePath || '-');
+        $('#metaEdgePath').textContent = '边路径: ' + (graphInfo.edgePath || '-');
         $('#metaEdgePath').title = graphInfo.edgePath || '';
         const opTime = graphInfo.createTime
             ? new Date(graphInfo.createTime).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -834,7 +834,7 @@ class KnowledgeGraphDetail extends HTMLElement {
     }
 
     /**
-     * 属性悬浮窗：跟随鼠标位置展示节点/关系属性，不遮挡图谱整体视野
+     * 属性悬浮窗：跟随鼠标位置展示节点/边属性，不遮挡图谱整体视野
      */
     showTooltip(type, evt) {
         const tooltip = this.shadowRoot.querySelector('#kgTooltip');
@@ -867,14 +867,14 @@ class KnowledgeGraphDetail extends HTMLElement {
     }
 
     /**
-     * 构建节点/关系属性展示HTML（悬浮窗与右下角属性面板共用）
+     * 构建节点/边属性展示HTML（悬浮窗与右下角属性面板共用）
      */
     buildPropsHtml(type, model) {
         const isNode = type === '节点';
         const props = Object.assign({}, model.properties || {});
         let html = isNode
             ? `<div class="props-title">节点 ${this.escapeHtml(model.id)}【${this.escapeHtml(model.rawLabel || '-')}】</div>`
-            : `<div class="props-title">关系 ${this.escapeHtml(model.source)} → ${this.escapeHtml(model.target)}【${this.escapeHtml(model.rawLabel || '-')}】</div>`;
+            : `<div class="props-title">边 ${this.escapeHtml(model.source)} → ${this.escapeHtml(model.target)}【${this.escapeHtml(model.rawLabel || '-')}】</div>`;
         const keys = Object.keys(props);
         if (keys.length) {
             html += keys.map(k =>
@@ -887,7 +887,7 @@ class KnowledgeGraphDetail extends HTMLElement {
     }
 
     /**
-     * 右下角属性面板：展示搜索定位/悬浮到的节点或关系属性
+     * 右下角属性面板：展示搜索定位/悬浮到的节点或边属性
      */
     updatePropsPanel(type, model) {
         const body = this.shadowRoot.querySelector('#propsPanelBody');
@@ -905,7 +905,7 @@ class KnowledgeGraphDetail extends HTMLElement {
     resetPropsPanel() {
         const body = this.shadowRoot.querySelector('#propsPanelBody');
         if (body) {
-            body.innerHTML = '<div class="props-placeholder">搜索定位或悬浮节点/关系<br>查看属性</div>';
+            body.innerHTML = '<div class="props-placeholder">搜索定位或悬浮节点/边<br>查看属性</div>';
         }
     }
 
