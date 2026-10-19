@@ -63,6 +63,27 @@ public class KnowledgeGraphController {
         return Result.success(knowledgeGraphService.nameExists(name));
     }
 
+    @ApiOperation("知识图谱抽样视图（按标签分层抽样，供G6初始渲染）")
+    @GetMapping("/sample")
+    @RequirePermission(Permission.READ)
+    @OperationLog(value = "查询知识图谱抽样视图", type = OperationLog.OperationType.QUERY, recordResult = false)
+    public Result<Map<String, Object>> graphSample(
+            @RequestParam("name") String name,
+            @RequestParam(value = "size", required = false, defaultValue = "150") Integer size) {
+        return Result.success(knowledgeGraphService.getGraphSample(name, size));
+    }
+
+    @ApiOperation("节点邻接扩展（一跳邻居，供双击展开）")
+    @GetMapping("/neighbors")
+    @RequirePermission(Permission.READ)
+    @OperationLog(value = "查询节点邻接", type = OperationLog.OperationType.QUERY, recordResult = false)
+    public Result<Map<String, Object>> graphNeighbors(
+            @RequestParam("name") String name,
+            @RequestParam("nodeId") String nodeId,
+            @RequestParam(value = "limit", required = false, defaultValue = "50") Integer limit) {
+        return Result.success(knowledgeGraphService.getNeighbors(name, nodeId, limit));
+    }
+
     @ApiOperation("知识图谱图数据（增量分页，供G6渲染）")
     @GetMapping("/data")
     @RequirePermission(Permission.READ)

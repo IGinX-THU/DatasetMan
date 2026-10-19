@@ -178,7 +178,9 @@ window.AppConfig = {
             query: '/api/knowledge-graph/query',
             count: '/api/knowledge-graph/count',
             'validate-name': '/api/knowledge-graph/validate-name',
-            data: '/api/knowledge-graph/data'
+            data: '/api/knowledge-graph/data',
+            sample: '/api/knowledge-graph/sample',
+            neighbors: '/api/knowledge-graph/neighbors'
         },
         // Transform作业相关
         job: {

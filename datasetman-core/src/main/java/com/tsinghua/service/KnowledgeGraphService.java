@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -362,6 +363,182 @@ public class KnowledgeGraphService {
         data.put("nodes", newNodes);
         data.put("edges", newEdges);
         return data;
+    }
+
+    /**
+     * 分层抽样视图（对齐Neo4j Browser等主流工具的"小子图+按需扩展"模式）：
+     * 按节点标签分层轮转抽样，保证初始子图类别多样、存在跨类连线，避免万级节点一次性铺满画布。
+     */
+    public Map<String, Object> getGraphSample(String name, int sampleSize) {
+        KnowledgeGraphEntity graph = queryByName(name);
+        if (graph == null) {
+            throw new RuntimeException("知识图谱不存在或无权访问: " + name);
+        }
+        if (sampleSize <= 0) {
+            sampleSize = 150;
+        }
+        if (sampleSize > 1000) {
+            sampleSize = 1000;
+        }
+
+        NodeTableMeta nodeMeta = NodeTableMeta.fromJson(graph.getNodeColumns());
+        EdgeTableMeta edgeMeta = EdgeTableMeta.fromJson(graph.getEdgeColumns());
+
+        // 全表节点按标签分层：labelType -> 节点队列（保持key顺序）
+        Map<String, List<Map<String, Object>>> byLabel = new LinkedHashMap<>();
+        Map<String, Map<String, Object>> nodeById = new LinkedHashMap<>();
+        long totalNodes = 0;
+        for (Map<String, Object> record : queryRecords(graph.getNodePath(), MAX_EDGE_SCAN)) {
+            Map<String, Object> node = toG6Node(record, graph.getNodePath(), nodeMeta);
+            totalNodes++;
+            String id = String.valueOf(node.get("id"));
+            nodeById.put(id, node);
+            String label = String.valueOf(node.getOrDefault("labelType", "未分类"));
+            byLabel.computeIfAbsent(label, k -> new ArrayList<>()).add(node);
+        }
+
+        // 一次性构建邻接索引：id -> 相连边（含对端），用于沿边滚雪球采样
+        Map<String, List<Map<String, Object>>> adjacency = new HashMap<>();
+        if (edgeMeta != null) {
+            for (Map<String, Object> record : queryRecords(graph.getEdgePath(), MAX_EDGE_SCAN)) {
+                Map<String, Object> edge = toG6Edge(record, graph.getEdgePath(), edgeMeta);
+                String source = String.valueOf(edge.get("source"));
+                String target = String.valueOf(edge.get("target"));
+                adjacency.computeIfAbsent(source, k -> new ArrayList<>()).add(edge);
+                adjacency.computeIfAbsent(target, k -> new ArrayList<>()).add(edge);
+            }
+        }
+
+        // 第一步：分层选锚点（每类前几个），保证类别多样
+        Set<String> sampledIds = new LinkedHashSet<>();
+        List<Map<String, Object>> sampledNodes = new ArrayList<>();
+        int anchorsPerLabel = Math.max(2, sampleSize / Math.max(1, byLabel.size()) / 5);
+        for (List<Map<String, Object>> queue : byLabel.values()) {
+            for (int i = 0; i < queue.size() && i < anchorsPerLabel; i++) {
+                Map<String, Object> node = queue.get(i);
+                if (sampledIds.add(String.valueOf(node.get("id")))) {
+                    sampledNodes.add(node);
+                }
+            }
+        }
+
+        // 第二步：沿边滚雪球（BFS），从锚点出发把对端节点卷入样本，保证子图连通、有连线
+        // 每个节点最多带入8个邻居，避免单锚点独占样本配额
+        final int perNodeFanout = 8;
+        java.util.ArrayDeque<String> queue = new java.util.ArrayDeque<>(sampledIds);
+        while (sampledNodes.size() < sampleSize && !queue.isEmpty()) {
+            String nodeId = queue.poll();
+            List<Map<String, Object>> links = adjacency.getOrDefault(nodeId, java.util.Collections.emptyList());
+            int brought = 0;
+            for (Map<String, Object> edge : links) {
+                if (sampledNodes.size() >= sampleSize || brought >= perNodeFanout) {
+                    break;
+                }
+                String other = nodeId.equals(String.valueOf(edge.get("source")))
+                        ? String.valueOf(edge.get("target"))
+                        : String.valueOf(edge.get("source"));
+                Map<String, Object> otherNode = nodeById.get(other);
+                if (otherNode != null && sampledIds.add(other)) {
+                    sampledNodes.add(otherNode);
+                    queue.add(other);
+                    brought++;
+                }
+            }
+        }
+
+        // 仅保留两端点都在样本内的边
+        List<Map<String, Object>> edges = edgesWithin(graph, edgeMeta, sampledIds);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("graph", toGraphSummary(graph));
+        data.put("totalNodes", totalNodes);
+        data.put("totalEdges", graph.getEdgeCount() != null ? graph.getEdgeCount() : 0L);
+        data.put("loadedNodeCount", sampledNodes.size());
+        data.put("hasMore", sampledNodes.size() < totalNodes);
+        data.put("mode", "sample");
+        data.put("nodes", sampledNodes);
+        data.put("edges", edges);
+        return data;
+    }
+
+    /**
+     * 邻接扩展（双击节点展开一跳邻居，对齐Neo4j Browser的expand交互）
+     */
+    public Map<String, Object> getNeighbors(String name, String nodeId, int limit) {
+        KnowledgeGraphEntity graph = queryByName(name);
+        if (graph == null) {
+            throw new RuntimeException("知识图谱不存在或无权访问: " + name);
+        }
+        if (limit <= 0) {
+            limit = 50;
+        }
+        if (limit > 500) {
+            limit = 500;
+        }
+        NodeTableMeta nodeMeta = NodeTableMeta.fromJson(graph.getNodeColumns());
+        EdgeTableMeta edgeMeta = EdgeTableMeta.fromJson(graph.getEdgeColumns());
+
+        // 扫描关系表，取与nodeId直接相连的边及对端节点
+        Set<String> neighborIds = new LinkedHashSet<>();
+        List<Map<String, Object>> edges = new ArrayList<>();
+        for (Map<String, Object> record : queryRecords(graph.getEdgePath(), MAX_EDGE_SCAN)) {
+            String source = cellValue(record, graph.getEdgePath(), edgeMeta.sourceColumn);
+            String target = cellValue(record, graph.getEdgePath(), edgeMeta.targetColumn);
+            if (source == null || target == null) {
+                continue;
+            }
+            boolean hitSource = nodeId.equals(source);
+            boolean hitTarget = nodeId.equals(target);
+            if (!hitSource && !hitTarget) {
+                continue;
+            }
+            edges.add(toG6Edge(record, graph.getEdgePath(), edgeMeta));
+            neighborIds.add(hitSource ? target : source);
+        }
+
+        // 邻居数量截断
+        List<String> limited = neighborIds.stream().limit(limit).collect(Collectors.toList());
+        Set<String> limitedSet = new HashSet<>(limited);
+        edges.removeIf(e -> !limitedSet.contains(String.valueOf(e.get("source")))
+                || !limitedSet.contains(String.valueOf(e.get("target"))));
+
+        // 邻居节点详情（全表过滤，G6节点已在抽样时按labelType着色）
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        if (!limitedSet.isEmpty()) {
+            for (Map<String, Object> record : queryRecords(graph.getNodePath(), MAX_EDGE_SCAN)) {
+                String id = cellValue(record, graph.getNodePath(), nodeMeta.idColumn);
+                if (id != null && limitedSet.contains(id)) {
+                    nodes.add(toG6Node(record, graph.getNodePath(), nodeMeta));
+                }
+            }
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("nodeId", nodeId);
+        data.put("totalNeighbors", neighborIds.size());
+        data.put("nodes", nodes);
+        data.put("edges", edges);
+        return data;
+    }
+
+    /**
+     * 两端点均在指定节点集合内的边
+     */
+    private List<Map<String, Object>> edgesWithin(KnowledgeGraphEntity graph, EdgeTableMeta edgeMeta,
+                                                  Set<String> nodeIds) {
+        List<Map<String, Object>> edges = new ArrayList<>();
+        if (edgeMeta == null || nodeIds.isEmpty()) {
+            return edges;
+        }
+        for (Map<String, Object> record : queryRecords(graph.getEdgePath(), MAX_EDGE_SCAN)) {
+            String source = cellValue(record, graph.getEdgePath(), edgeMeta.sourceColumn);
+            String target = cellValue(record, graph.getEdgePath(), edgeMeta.targetColumn);
+            if (source == null || target == null || !nodeIds.contains(source) || !nodeIds.contains(target)) {
+                continue;
+            }
+            edges.add(toG6Edge(record, graph.getEdgePath(), edgeMeta));
+        }
+        return edges;
     }
 
     /**

@@ -24,12 +24,11 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.initEventListeners();
     }
 
-    // 每批渲染的节点数与增量加载页大小
+    // 抽样+扩展交互（对齐Neo4j Browser）：首屏分层抽样，双击节点展开一跳邻接
+    static get SAMPLE_SIZE() { return 150; }
+    static get NEIGHBOR_LIMIT() { return 50; }
     static get RENDER_BATCH_SIZE() { return 300; }
-    static get FIRST_PAGE_SIZE() { return 1000; }
-    static get PAGE_SIZE() { return 2000; }
-    // 超过该节点数切换grid快速布局（力导在万级节点下不可用），仍可点"重新布局"手动力导
-    static get FORCE_LAYOUT_MAX_NODES() { return 3000; }
+    static get PAGE_SIZE() { return 500; }   // "按页加载"兜底的每页节点数
     static get PALETTE() {
         return ['#5B8FF9', '#61DDAA', '#F6BD16', '#7262FD', '#78D3F8', '#9661BC', '#F6903D', '#008685', '#F08BB4', '#E8684A'];
     }
@@ -433,13 +432,13 @@ class KnowledgeGraphDetail extends HTMLElement {
                     <button class="tool-btn" id="zoomOutBtn">缩小</button>
                     <button class="tool-btn" id="fitBtn">适配画布</button>
                     <button class="tool-btn" id="relayoutBtn">重新布局</button>
-                    <button class="tool-btn primary" id="loadMoreBtn" disabled>加载更多节点</button>
+                    <button class="tool-btn" id="loadMoreBtn" disabled title="按存储顺序分页追加节点（抽样探索为主，无需加载全部）">按页追加节点</button>
                 </div>
 
                 <div class="main-area">
                     <div class="graph-wrap">
                         <div id="graphContainer"></div>
-                        <div class="graph-hint">滚轮缩放画布，拖拽平移/移动节点，悬浮到节点或边上查看属性</div>
+                        <div class="graph-hint">滚轮缩放画布；<b>双击节点展开其邻接关系</b>；悬浮查看属性</div>
                         <div class="kg-tooltip" id="kgTooltip"></div>
                         <div class="legend" id="legend"></div>
                         <!-- 右下角小属性面板：展示搜索定位/悬浮到的节点或边属性 -->
@@ -524,6 +523,7 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.totalEdges = 0;
         this.hasMore = false;
         this.labelColorMap = {};
+        this.expandedNodeIds = new Set();   // 已双击展开过的节点
 
         this.style.display = 'flex';
         this.setAttribute('show', '');
@@ -532,8 +532,8 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.resetPropsPanel();
 
         try {
-            this.showLoading('正在加载知识图谱...');
-            const data = await this.fetchPage(name, 0, KnowledgeGraphDetail.FIRST_PAGE_SIZE);
+            this.showLoading('正在加载知识图谱抽样视图...');
+            const data = await this.fetchSample(name, KnowledgeGraphDetail.SAMPLE_SIZE);
             this.renderMeta(data);
 
             if (!this.totalNodes) {
@@ -614,31 +614,6 @@ class KnowledgeGraphDetail extends HTMLElement {
             : '已加载全部节点';
     }
 
-    /**
-     * 大图布局策略：小图用力导布局，万级节点切换grid快速布局（力导O(n^2)不可用）
-     */
-    buildLayoutConfig(totalNodes) {
-        if (totalNodes > KnowledgeGraphDetail.FORCE_LAYOUT_MAX_NODES) {
-            const cols = Math.max(1, Math.ceil(Math.sqrt(totalNodes * 1.6)));
-            return {
-                type: 'grid',
-                cols,
-                preventOverlap: true,
-                nodeSpacing: 16
-            };
-        }
-        return {
-            type: 'force',
-            preventOverlap: true,
-            nodeSpacing: 30,
-            linkDistance: 110,
-            nodeStrength: -300,
-            edgeStrength: 0.1,
-            alphaDecay: 0.028,
-            alphaMin: 0.001
-        };
-    }
-
     initGraph() {
         const container = this.shadowRoot.querySelector('#graphContainer');
         const width = container.clientWidth || 600;
@@ -652,7 +627,16 @@ class KnowledgeGraphDetail extends HTMLElement {
             modes: {
                 default: ['drag-canvas', 'zoom-canvas', 'drag-node']
             },
-            layout: this.buildLayoutConfig(this.totalNodes),
+            layout: {
+                type: 'force',
+                preventOverlap: true,
+                nodeSpacing: 30,
+                linkDistance: 110,
+                nodeStrength: -300,
+                edgeStrength: 0.1,
+                alphaDecay: 0.028,
+                alphaMin: 0.001
+            },
             animate: false,
             defaultNode: {
                 size: 26,
@@ -690,6 +674,11 @@ class KnowledgeGraphDetail extends HTMLElement {
         });
 
         // 属性悬浮窗：悬浮到节点/边上跟随鼠标展示，不影响图谱视野
+        // 双击节点展开一跳邻接（Neo4j Browser的expand交互）
+        this.graph.on('node:dblclick', (evt) => {
+            const model = evt.item.getModel();
+            this.expandNode(String(model.id));
+        });
         this.graph.on('node:mousemove', (evt) => this.showTooltip('节点', evt));
         this.graph.on('edge:mousemove', (evt) => this.showTooltip('边', evt));
         // 右下角属性面板：悬浮时同步更新
@@ -807,6 +796,50 @@ class KnowledgeGraphDetail extends HTMLElement {
             this.isLoadingMore = false;
             this.hideLoading();
             this.updateStats();
+        }
+    }
+
+    /**
+     * 抽样视图：按标签分层抽样的初始子图（对齐Neo4j Browser的初始小子图模式）
+     */
+    async fetchSample(name, size) {
+        const result = await window.AppConfig.get('knowledgeGraph', 'sample', { name, size });
+        if (result.code !== 200 || !result.data) {
+            throw new Error(result.message || '查询图数据失败');
+        }
+        return result.data;
+    }
+
+    /**
+     * 邻接扩展：双击节点展开其一跳邻居（增量addItem， Neo4j Browser的expand交互）
+     */
+    async expandNode(nodeId) {
+        if (!this.graph || this.isLoadingMore) return;
+        this.isLoadingMore = true;
+        this.showLoading('正在展开节点邻接...');
+        try {
+            const result = await window.AppConfig.get('knowledgeGraph', 'neighbors', {
+                name: this.graphName,
+                nodeId,
+                limit: KnowledgeGraphDetail.NEIGHBOR_LIMIT
+            });
+            if (result.code !== 200 || !result.data) {
+                throw new Error(result.message || '查询邻接失败');
+            }
+            const data = result.data;
+            const before = this.graph.getNodes().length;
+            await this.appendIncrementally(data.nodes, data.edges);
+            const added = this.graph.getNodes().length - before;
+            this.expandedNodeIds.add(String(nodeId));
+            this.showMessage(added > 0
+                ? `已展开「${nodeId}」的 ${added} 个邻居节点`
+                : `「${nodeId}」的邻接节点均已显示`, 'success');
+        } catch (error) {
+            console.error('展开邻接失败:', error);
+            this.showMessage('展开邻接失败: ' + error.message);
+        } finally {
+            this.isLoadingMore = false;
+            this.hideLoading();
         }
     }
 
