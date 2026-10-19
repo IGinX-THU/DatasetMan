@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,7 +49,7 @@ public class KnowledgeGraphService {
     private static final String DATA_NAMESPACE = "knowledge_graphs";
 
     /** 详情查询单次最多加载的关系行数（大图保护） */
-    private static final int MAX_EDGE_SCAN = 100_000;
+    private static final int MAX_EDGE_SCAN = 1_000_000;
     /** 单元格最大长度保护 */
     private static final int MAX_CELL_LENGTH = 2000;
 
@@ -106,14 +107,14 @@ public class KnowledgeGraphService {
         Long edgeCount;
         List<String> nodeHeader;
         List<String> edgeHeader;
-        Path nodesTemp = null;
-        Path edgesTemp = null;
+        CsvTemp nodesTemp = null;
+        CsvTemp edgesTemp = null;
         try {
             nodesTemp = writeTempCsv(request.getNodesFileName(), request.getNodesFileBase64(), "kg_nodes_");
             edgesTemp = writeTempCsv(request.getEdgesFileName(), request.getEdgesFileBase64(), "kg_edges_");
 
-            nodeHeader = readCsvHeader(nodesTemp, "节点数据");
-            edgeHeader = readCsvHeader(edgesTemp, "关系数据");
+            nodeHeader = readCsvHeader(nodesTemp.content, "节点数据");
+            edgeHeader = readCsvHeader(edgesTemp.content, "关系数据");
             if (nodeHeader.size() < 2) {
                 throw new IllegalArgumentException("节点数据表头至少需要一列节点id和一列属性");
             }
@@ -121,8 +122,8 @@ public class KnowledgeGraphService {
                 throw new IllegalArgumentException("关系数据表头至少需要两列（起点、终点）");
             }
 
-            nodeCount = dataTableService.importCsvFile(nodesTemp, nodePath, request.getNodesFileName(), owner);
-            edgeCount = dataTableService.importCsvFile(edgesTemp, edgePath, request.getEdgesFileName(), owner);
+            nodeCount = dataTableService.importCsvFile(nodesTemp.path, nodePath, request.getNodesFileName(), owner);
+            edgeCount = dataTableService.importCsvFile(edgesTemp.path, edgePath, request.getEdgesFileName(), owner);
         } catch (IOException e) {
             throw new RuntimeException("CSV文件解码失败: " + e.getMessage(), e);
         } catch (IllegalArgumentException e) {
@@ -132,13 +133,13 @@ public class KnowledgeGraphService {
         } finally {
             if (nodesTemp != null) {
                 try {
-                    Files.deleteIfExists(nodesTemp);
+                    Files.deleteIfExists(nodesTemp.path);
                 } catch (IOException ignore) {
                 }
             }
             if (edgesTemp != null) {
                 try {
-                    Files.deleteIfExists(edgesTemp);
+                    Files.deleteIfExists(edgesTemp.path);
                 } catch (IOException ignore) {
                 }
             }
@@ -300,10 +301,10 @@ public class KnowledgeGraphService {
             throw new RuntimeException("知识图谱不存在或无权访问: " + name);
         }
         if (nodeLimit <= 0) {
-            nodeLimit = 300;
+            nodeLimit = 1000;
         }
-        if (nodeLimit > 2000) {
-            nodeLimit = 2000;
+        if (nodeLimit > 10000) {
+            nodeLimit = 10000;
         }
         if (nodeOffset < 0) {
             nodeOffset = 0;
@@ -492,9 +493,21 @@ public class KnowledgeGraphService {
     // ==================== CSV文件处理（对齐创建数据集导入） ====================
 
     /**
-     * Base64解码写入临时CSV文件（参考DatasetCreationService的IMPORT模式）
+     * 解码Base64为文本（BOM感知），并转GBK写入临时CSV文件后返回解码文本。
+     * 转GBK原因：IGinX 0.8.0的CSV导入对UTF-8中文大文件存在编码误判（整文件解析成一行、导入0行），
+     * GBK/ASCII实测稳定；详情读取侧（cellValue）按GBK解码，链路自洽。
      */
-    private Path writeTempCsv(String fileName, String base64, String prefix) throws IOException {
+    private CsvTemp writeTempCsv(String fileName, String base64, String prefix) throws IOException {
+        String content = decodeCsvString(fileName, base64);
+        Path tempFile = Files.createTempFile(prefix, ".csv");
+        Files.write(tempFile, content.getBytes(Charset.forName("GBK")));
+        return new CsvTemp(tempFile, content);
+    }
+
+    /**
+     * Base64解码为字符串：识别UTF-8/UTF-16 BOM，无BOM按UTF-8解码
+     */
+    private String decodeCsvString(String fileName, String base64) {
         byte[] fileBytes;
         try {
             fileBytes = Base64.getDecoder().decode(base64);
@@ -504,20 +517,30 @@ public class KnowledgeGraphService {
         if (fileBytes.length == 0) {
             throw new IllegalArgumentException("文件内容为空: " + fileName);
         }
-        Path tempFile = Files.createTempFile(prefix, ".csv");
-        Files.write(tempFile, fileBytes);
-        return tempFile;
+        // UTF-8 BOM
+        if (fileBytes.length >= 3 && (fileBytes[0] & 0xFF) == 0xEF
+                && (fileBytes[1] & 0xFF) == 0xBB && (fileBytes[2] & 0xFF) == 0xBF) {
+            return new String(fileBytes, 3, fileBytes.length - 3, StandardCharsets.UTF_8);
+        }
+        // UTF-16LE BOM
+        if (fileBytes.length >= 2 && (fileBytes[0] & 0xFF) == 0xFF && (fileBytes[1] & 0xFF) == 0xFE) {
+            return new String(fileBytes, 2, fileBytes.length - 2, StandardCharsets.UTF_16LE);
+        }
+        // UTF-16BE BOM
+        if (fileBytes.length >= 2 && (fileBytes[0] & 0xFF) == 0xFE && (fileBytes[1] & 0xFF) == 0xFF) {
+            return new String(fileBytes, 2, fileBytes.length - 2, StandardCharsets.UTF_16BE);
+        }
+        return new String(fileBytes, StandardCharsets.UTF_8);
     }
 
     /**
-     * 读取CSV表头行（支持双引号包裹、引号转义、CRLF/LF、UTF-8 BOM）
+     * 读取CSV表头行（支持双引号包裹、引号转义、CRLF/LF、BOM）
      */
-    private List<String> readCsvHeader(Path file, String displayName) throws IOException {
-        String content = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
-        if (content.isEmpty()) {
+    private List<String> readCsvHeader(String content, String displayName) {
+        if (content == null || content.isEmpty()) {
             throw new IllegalArgumentException(displayName + "文件内容为空");
         }
-        // 去除UTF-8 BOM
+        // 去除BOM（decodeCsvString已剥，此处兜底）
         if (content.charAt(0) == '\uFEFF') {
             content = content.substring(1);
         }
@@ -626,9 +649,16 @@ public class KnowledgeGraphService {
             return null;
         }
 
-        Object value = record.get(column);
-        if (value == null && StringUtils.hasText(tablePath)) {
-            value = record.get(tablePath + "." + column);
+        String[] candidates = {column, "_" + column, column.replace(":", "_")};
+        Object value = null;
+        for (String candidate : candidates) {
+            value = record.get(candidate);
+            if (value == null && StringUtils.hasText(tablePath)) {
+                value = record.get(tablePath + "." + candidate);
+            }
+            if (value != null) {
+                break;
+            }
         }
         if (value == null && StringUtils.hasText(tablePath)) {
             // 尝试带 BOM 的列名（IGinX 可能在列名中保留 BOM）
@@ -638,7 +668,8 @@ public class KnowledgeGraphService {
             // 兜底：任意前缀下以 .column 结尾的列（去除所有 BOM 后比较）
             String cleanColumn = removeAllBom(column);
             value = record.entrySet().stream()
-                    .filter(e -> removeAllBom(e.getKey()).endsWith("." + cleanColumn))
+                    .filter(e -> removeAllBom(e.getKey()).endsWith("." + cleanColumn)
+                            || removeAllBom(e.getKey()).endsWith("_" + cleanColumn))
                     .map(Map.Entry::getValue)
                     .findFirst().orElse(null);
         }
@@ -648,6 +679,7 @@ public class KnowledgeGraphService {
             return null;
         }
         if (value instanceof byte[]) {
+            // 服务端导入时内部已统一转UTF-8存储（GBK仅用于绕过导入阶段的编码误判，实测验证）
             return new String((byte[]) value, StandardCharsets.UTF_8);
         }
         return String.valueOf(value);
@@ -696,6 +728,19 @@ public class KnowledgeGraphService {
             entity.setId(entity.getCreateTime());
         }
         return entity;
+    }
+
+    /**
+     * 临时CSV文件与其解码文本
+     */
+    private static class CsvTemp {
+        final Path path;
+        final String content;
+
+        CsvTemp(Path path, String content) {
+            this.path = path;
+            this.content = content;
+        }
     }
 
     /**

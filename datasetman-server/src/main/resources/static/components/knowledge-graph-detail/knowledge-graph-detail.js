@@ -25,9 +25,11 @@ class KnowledgeGraphDetail extends HTMLElement {
     }
 
     // 每批渲染的节点数与增量加载页大小
-    static get RENDER_BATCH_SIZE() { return 100; }
-    static get FIRST_PAGE_SIZE() { return 300; }
-    static get PAGE_SIZE() { return 300; }
+    static get RENDER_BATCH_SIZE() { return 300; }
+    static get FIRST_PAGE_SIZE() { return 1000; }
+    static get PAGE_SIZE() { return 2000; }
+    // 超过该节点数切换grid快速布局（力导在万级节点下不可用），仍可点"重新布局"手动力导
+    static get FORCE_LAYOUT_MAX_NODES() { return 3000; }
     static get PALETTE() {
         return ['#5B8FF9', '#61DDAA', '#F6BD16', '#7262FD', '#78D3F8', '#9661BC', '#F6903D', '#008685', '#F08BB4', '#E8684A'];
     }
@@ -612,6 +614,31 @@ class KnowledgeGraphDetail extends HTMLElement {
             : '已加载全部节点';
     }
 
+    /**
+     * 大图布局策略：小图用力导布局，万级节点切换grid快速布局（力导O(n^2)不可用）
+     */
+    buildLayoutConfig(totalNodes) {
+        if (totalNodes > KnowledgeGraphDetail.FORCE_LAYOUT_MAX_NODES) {
+            const cols = Math.max(1, Math.ceil(Math.sqrt(totalNodes * 1.6)));
+            return {
+                type: 'grid',
+                cols,
+                preventOverlap: true,
+                nodeSpacing: 16
+            };
+        }
+        return {
+            type: 'force',
+            preventOverlap: true,
+            nodeSpacing: 30,
+            linkDistance: 110,
+            nodeStrength: -300,
+            edgeStrength: 0.1,
+            alphaDecay: 0.028,
+            alphaMin: 0.001
+        };
+    }
+
     initGraph() {
         const container = this.shadowRoot.querySelector('#graphContainer');
         const width = container.clientWidth || 600;
@@ -625,16 +652,7 @@ class KnowledgeGraphDetail extends HTMLElement {
             modes: {
                 default: ['drag-canvas', 'zoom-canvas', 'drag-node']
             },
-            layout: {
-                type: 'force',
-                preventOverlap: true,
-                nodeSpacing: 30,
-                linkDistance: 110,
-                nodeStrength: -300,
-                edgeStrength: 0.1,
-                alphaDecay: 0.028,
-                alphaMin: 0.001
-            },
+            layout: this.buildLayoutConfig(this.totalNodes),
             animate: false,
             defaultNode: {
                 size: 26,

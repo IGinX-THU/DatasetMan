@@ -70,7 +70,7 @@ public class KnowledgeGraphController {
     public Result<Map<String, Object>> graphData(
             @RequestParam("name") String name,
             @RequestParam(value = "nodeOffset", required = false, defaultValue = "0") Integer nodeOffset,
-            @RequestParam(value = "nodeLimit", required = false, defaultValue = "300") Integer nodeLimit) {
+            @RequestParam(value = "nodeLimit", required = false, defaultValue = "1000") Integer nodeLimit) {
         return Result.success(knowledgeGraphService.getGraphData(name, nodeOffset, nodeLimit));
     }
 }
