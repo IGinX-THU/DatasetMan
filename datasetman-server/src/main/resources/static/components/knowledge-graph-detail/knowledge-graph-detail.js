@@ -438,7 +438,7 @@ class KnowledgeGraphDetail extends HTMLElement {
                 <div class="main-area">
                     <div class="graph-wrap">
                         <div id="graphContainer"></div>
-                        <div class="graph-hint">滚轮缩放画布；<b>双击节点展开其邻接关系</b>；悬浮查看属性</div>
+                        <div class="graph-hint">滚轮缩放画布；<b>单击节点展开其邻接关系</b>；悬浮查看属性</div>
                         <div class="kg-tooltip" id="kgTooltip"></div>
                         <div class="legend" id="legend"></div>
                         <!-- 右下角小属性面板：展示搜索定位/悬浮到的节点或边属性 -->
@@ -526,7 +526,7 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.allNodes = null;
         this.allEdges = null;
         this.nodeById = null;
-        this.adjacency = null;   // 已双击展开过的节点
+        this.adjacency = null;   // 已单击展开过的节点
 
         this.style.display = 'flex';
         this.setAttribute('show', '');
@@ -592,11 +592,6 @@ class KnowledgeGraphDetail extends HTMLElement {
                 try { this.graph && this.graph.fitView(30); } catch (e) { /* 忽略 */ }
             }, 100);
             this.hideLoading();
-
-            if (this.hasMore) {
-                this.showMessage(`全图共 ${(data.nodes || []).length.toLocaleString('zh-CN')} 节点，已渲染连通子图 ${sub.nodes.length} 个（浏览器渲染上限）。` +
-                    `双击节点继续展开邻接，或用搜索框定位目标节点`, 'success');
-            }
         } catch (error) {
             console.error('加载知识图谱失败:', error);
             this.hideLoading();
@@ -710,8 +705,8 @@ class KnowledgeGraphDetail extends HTMLElement {
         });
 
         // 属性悬浮窗：悬浮到节点/边上跟随鼠标展示，不影响图谱视野
-        // 双击节点展开一跳邻接（Neo4j Browser的expand交互）
-        this.graph.on('node:dblclick', (evt) => {
+        // 单击节点展开一跳邻接（Neo4j Browser的expand交互）
+        this.graph.on('node:click', (evt) => {
             const model = evt.item.getModel();
             this.expandNode(String(model.id));
         });
@@ -721,12 +716,27 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.graph.on('node:mouseenter', (evt) => {
             this._tooltipForcePos = true;
             this.updatePropsPanel('节点', evt.item.getModel());
+            // 仅"可展开"（存在未显示的邻居）的节点悬浮变手指，可展开与否一目了然
+            const model = evt.item.getModel();
+            const links = (this.adjacency && this.adjacency.get(String(model.id))) || [];
+            const expandable = links.some(e => {
+                const other = String(model.id) === String(e.source) ? String(e.target) : String(e.source);
+                return !this.graph.findById(other);
+            });
+            try {
+                this.graph.updateItem(evt.item, { style: { cursor: expandable ? 'pointer' : 'default' } });
+            } catch (ignore) { /* 元素可能已销毁 */ }
         });
         this.graph.on('edge:mouseenter', (evt) => {
             this._tooltipForcePos = true;
             this.updatePropsPanel('边', evt.item.getModel());
         });
-        this.graph.on('node:mouseleave', () => this.hideTooltip());
+        this.graph.on('node:mouseleave', (evt) => {
+            this.hideTooltip();
+            try {
+                this.graph.updateItem(evt.item, { style: { cursor: 'default' } });
+            } catch (ignore) { /* 元素可能已销毁 */ }
+        });
         this.graph.on('edge:mouseleave', () => this.hideTooltip());
         this.graph.on('canvas:mousemove', () => this.hideTooltip());
         this.graph.on('canvas:click', () => this.hideTooltip());
@@ -876,7 +886,7 @@ class KnowledgeGraphDetail extends HTMLElement {
     }
 
     /**
-     * 邻接扩展：双击节点展开其一跳邻居（增量addItem， Neo4j Browser的expand交互）
+     * 邻接扩展：单击节点展开其一跳邻居（增量addItem， Neo4j Browser的expand交互）
      */
     /**
      * 单击展开：直接从内存中的全量数据取一跳邻居（首屏已一次查询缓存），无接口调用
@@ -909,6 +919,9 @@ class KnowledgeGraphDetail extends HTMLElement {
             const hideLabels = (this.graph.getNodes().length + nodes.length) > KnowledgeGraphDetail.LABEL_MAX_NODES;
             await this.appendIncrementally(nodes, keptEdges, { hideLabels });
             this.expandedNodeIds.add(String(nodeId));
+            // 展开完成后同步右上角统计（节点数以画布实际元素为准）
+            this.loadedNodeCount = this.graph.getNodes().length;
+            this.updateStats();
         } catch (error) {
             console.error('展开邻接失败:', error);
             this.showMessage('展开邻接失败: ' + error.message);
