@@ -84,14 +84,18 @@ public class KnowledgeGraphController {
         return Result.success(knowledgeGraphService.getNeighbors(name, nodeId, limit));
     }
 
-    @ApiOperation("知识图谱图数据（增量分页，供G6渲染）")
+    @ApiOperation("知识图谱图数据（mode=page增量分页 / mode=full全量一次查询）")
     @GetMapping("/data")
     @RequirePermission(Permission.READ)
     @OperationLog(value = "查询知识图谱图数据", type = OperationLog.OperationType.QUERY, recordResult = false)
     public Result<Map<String, Object>> graphData(
             @RequestParam("name") String name,
+            @RequestParam(value = "mode", required = false, defaultValue = "page") String mode,
             @RequestParam(value = "nodeOffset", required = false, defaultValue = "0") Integer nodeOffset,
             @RequestParam(value = "nodeLimit", required = false, defaultValue = "1000") Integer nodeLimit) {
+        if ("full".equalsIgnoreCase(mode)) {
+            return Result.success(knowledgeGraphService.getGraphDataFull(name));
+        }
         return Result.success(knowledgeGraphService.getGraphData(name, nodeOffset, nodeLimit));
     }
 }

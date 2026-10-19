@@ -24,11 +24,12 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.initEventListeners();
     }
 
-    // 抽样+扩展交互（对齐Neo4j Browser）：首屏分层抽样，双击节点展开一跳邻接
-    static get SAMPLE_SIZE() { return 150; }
+    // 首屏一次全量查询 + 渲染连通子图（对齐Neo4j Browser的1000渲染上限），双击节点展开一跳邻接
+    static get MAX_RENDER_NODES() { return 1000; }
     static get NEIGHBOR_LIMIT() { return 50; }
     static get RENDER_BATCH_SIZE() { return 300; }
-    static get PAGE_SIZE() { return 500; }   // "按页加载"兜底的每页节点数
+    // 渲染节点数超过该值时隐藏标签（缩略下不可读），悬浮/属性面板/搜索仍可查看
+    static get LABEL_MAX_NODES() { return 1200; }
     static get PALETTE() {
         return ['#5B8FF9', '#61DDAA', '#F6BD16', '#7262FD', '#78D3F8', '#9661BC', '#F6903D', '#008685', '#F08BB4', '#E8684A'];
     }
@@ -432,7 +433,6 @@ class KnowledgeGraphDetail extends HTMLElement {
                     <button class="tool-btn" id="zoomOutBtn">缩小</button>
                     <button class="tool-btn" id="fitBtn">适配画布</button>
                     <button class="tool-btn" id="relayoutBtn">重新布局</button>
-                    <button class="tool-btn" id="loadMoreBtn" disabled title="按存储顺序分页追加节点（抽样探索为主，无需加载全部）">按页追加节点</button>
                 </div>
 
                 <div class="main-area">
@@ -472,7 +472,6 @@ class KnowledgeGraphDetail extends HTMLElement {
         $('#zoomOutBtn')?.addEventListener('click', () => this.graph && this.graph.zoom(1 / 1.2));
         $('#fitBtn')?.addEventListener('click', () => this.graph && this.graph.fitView(30));
         $('#relayoutBtn')?.addEventListener('click', () => this.graph && this.graph.layout());
-        $('#loadMoreBtn')?.addEventListener('click', () => this.loadMore());
         // 搜索定位：点击"搜索"按钮或输入框回车
         $('#searchBtn')?.addEventListener('click', () => this.focusSearch());
         $('#searchInput')?.addEventListener('keydown', (e) => {
@@ -532,8 +531,16 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.resetPropsPanel();
 
         try {
-            this.showLoading('正在加载知识图谱抽样视图...');
-            const data = await this.fetchSample(name, KnowledgeGraphDetail.SAMPLE_SIZE);
+            // 一次全量查询（节点表+关系表各查一次），渲染在客户端截取的连通子图上
+            this.showLoading('正在加载知识图谱...');
+            const result = await window.AppConfig.get('knowledgeGraph', 'data', {
+                name,
+                mode: 'full'
+            });
+            if (result.code !== 200 || !result.data) {
+                throw new Error(result.message || '查询图数据失败');
+            }
+            const data = result.data;
             this.renderMeta(data);
 
             if (!this.totalNodes) {
@@ -542,15 +549,37 @@ class KnowledgeGraphDetail extends HTMLElement {
                 return;
             }
 
+            // 浏览器渲染上限：沿边滚雪球截取1000个节点的连通子图（类别多样、有连线）
+            const sub = this.buildCappedSubgraph(data.nodes || [], data.edges || [],
+                KnowledgeGraphDetail.MAX_RENDER_NODES);
+            const hideLabels = sub.nodes.length > KnowledgeGraphDetail.LABEL_MAX_NODES;
+
             this.initGraph();
-            await this.appendIncrementally(data.nodes, data.edges);
-            this.loadedNodeCount = data.loadedNodeCount || data.nodes.length;
-            this.hasMore = !!data.hasMore;
+            for (let i = 0; i < sub.nodes.length; i += KnowledgeGraphDetail.RENDER_BATCH_SIZE) {
+                await this.appendIncrementally(sub.nodes.slice(i, i + KnowledgeGraphDetail.RENDER_BATCH_SIZE), [],
+                    { skipLayout: true, hideLabels });
+                this.showLoading(`正在渲染节点 ${Math.min(i + KnowledgeGraphDetail.RENDER_BATCH_SIZE, sub.nodes.length)}/${sub.nodes.length} ...`);
+            }
+            const edgeBatch = KnowledgeGraphDetail.RENDER_BATCH_SIZE * 5;
+            for (let i = 0; i < sub.edges.length; i += edgeBatch) {
+                await this.appendIncrementally([], sub.edges.slice(i, i + edgeBatch),
+                    { skipLayout: true, hideLabels });
+                this.showLoading(`正在渲染关系 ${Math.min(i + edgeBatch, sub.edges.length)}/${sub.edges.length} ...`);
+            }
+
+            this.loadedNodeCount = sub.nodes.length;
+            this.hasMore = sub.nodes.length < (data.nodes || []).length;
             this.updateStats();
+            this.graph.layout();
             setTimeout(() => {
                 try { this.graph && this.graph.fitView(30); } catch (e) { /* 忽略 */ }
             }, 100);
             this.hideLoading();
+
+            if (this.hasMore) {
+                this.showMessage(`全图共 ${(data.nodes || []).length.toLocaleString('zh-CN')} 节点，已渲染连通子图 ${sub.nodes.length} 个（浏览器渲染上限）。` +
+                    `双击节点继续展开邻接，或用搜索框定位目标节点`, 'success');
+            }
         } catch (error) {
             console.error('加载知识图谱失败:', error);
             this.hideLoading();
@@ -607,11 +636,6 @@ class KnowledgeGraphDetail extends HTMLElement {
         $('#statTotalNodes').textContent = this.totalNodes ? this.totalNodes.toLocaleString('zh-CN') : '-';
         $('#statEdges').textContent = this.renderedEdgeCount.toLocaleString('zh-CN');
         $('#statTotalEdges').textContent = this.totalEdges ? this.totalEdges.toLocaleString('zh-CN') : '-';
-        const loadMoreBtn = $('#loadMoreBtn');
-        loadMoreBtn.disabled = !this.hasMore || this.isLoadingMore;
-        loadMoreBtn.textContent = this.hasMore
-            ? (this.isLoadingMore ? '加载中...' : '加载更多节点')
-            : '已加载全部节点';
     }
 
     initGraph() {
@@ -638,6 +662,8 @@ class KnowledgeGraphDetail extends HTMLElement {
                 alphaMin: 0.001
             },
             animate: false,
+            // 大图优化：仅绘制视口内元素（5万节点全量加载时保证可交互）
+            enableOptimize: true,
             defaultNode: {
                 size: 26,
                 style: {
@@ -693,13 +719,16 @@ class KnowledgeGraphDetail extends HTMLElement {
     /**
      * 增量渲染：分批addItem，避免大图一次性渲染阻塞主线程
      */
-    async appendIncrementally(newNodes, newEdges) {
+    async appendIncrementally(newNodes, newEdges, opts) {
+        opts = opts || {};
+        const hideLabels = !!opts.hideLabels;
         const nodeModels = newNodes.map(n => {
             const label = n.label || n.id;
             const color = this.labelColorOf(n.labelType || '未分类');
             return {
                 id: String(n.id),
-                label: String(label).length > 16 ? String(label).slice(0, 15) + '…' : String(label),
+                // 全图概览模式不显示标签（缩略下不可读，悬浮/属性面板可查），保持rawLabel供搜索与悬浮
+                label: hideLabels ? '' : (String(label).length > 16 ? String(label).slice(0, 15) + '…' : String(label)),
                 rawLabel: String(label),
                 properties: n.properties || {},
                 style: { fill: color },
@@ -756,8 +785,8 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.graph.paint();
         this.graph.setAutoPaint(true);
 
-        // 增量完成后重跑力导布局
-        if (nodeModels.length || addedEdges.length) {
+        // 增量完成后重跑力导布局（全量概览模式由调用方统一做最终布局）
+        if (!opts.skipLayout && (nodeModels.length || addedEdges.length)) {
             try {
                 this.graph.layout();
             } catch (e) {
@@ -767,47 +796,66 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.renderedEdgeCount += addedEdges.length;
     }
 
-    async fetchPage(name, offset, limit) {
-        const result = await window.AppConfig.get('knowledgeGraph', 'data', {
-            name,
-            nodeOffset: offset,
-            nodeLimit: limit
-        });
-        if (result.code !== 200 || !result.data) {
-            throw new Error(result.message || '查询图数据失败');
-        }
-        return result.data;
-    }
-
-    async loadMore() {
-        if (!this.hasMore || this.isLoadingMore) return;
-        this.isLoadingMore = true;
-        this.updateStats();
-        this.showLoading('正在加载更多节点...');
-        try {
-            const data = await this.fetchPage(this.graphName, this.loadedNodeCount, KnowledgeGraphDetail.PAGE_SIZE);
-            await this.appendIncrementally(data.nodes, data.edges);
-            this.loadedNodeCount = data.loadedNodeCount || (this.loadedNodeCount + data.nodes.length);
-            this.hasMore = !!data.hasMore;
-        } catch (error) {
-            console.error('加载更多节点失败:', error);
-            this.showMessage('加载更多节点失败: ' + error.message);
-        } finally {
-            this.isLoadingMore = false;
-            this.hideLoading();
-            this.updateStats();
-        }
-    }
-
     /**
-     * 抽样视图：按标签分层抽样的初始子图（对齐Neo4j Browser的初始小子图模式）
+     * 客户端截取连通子图：分层选锚点 + 沿边滚雪球BFS，每节点最多带入8个邻居，
+     * 保证子图类别多样、连通、有连线（与服务端sample同思路，作用于已取回的全量数据）
      */
-    async fetchSample(name, size) {
-        const result = await window.AppConfig.get('knowledgeGraph', 'sample', { name, size });
-        if (result.code !== 200 || !result.data) {
-            throw new Error(result.message || '查询图数据失败');
+    buildCappedSubgraph(allNodes, allEdges, cap) {
+        if (allNodes.length <= cap) {
+            return { nodes: allNodes, edges: allEdges };
         }
-        return result.data;
+        const nodeById = new Map();
+        const byLabel = new Map();
+        allNodes.forEach(n => {
+            nodeById.set(String(n.id), n);
+            const label = String(n.labelType || '未分类');
+            if (!byLabel.has(label)) byLabel.set(label, []);
+            byLabel.get(label).push(n);
+        });
+        const adjacency = new Map();
+        allEdges.forEach(e => {
+            const src = String(e.source), dst = String(e.target);
+            if (!adjacency.has(src)) adjacency.set(src, []);
+            if (!adjacency.has(dst)) adjacency.set(dst, []);
+            adjacency.get(src).push(e);
+            adjacency.get(dst).push(e);
+        });
+
+        const selected = new Set();
+        const selectedNodes = [];
+        // 分层锚点：每类前几个
+        const anchorsPerLabel = Math.max(2, Math.ceil(cap / Math.max(1, byLabel.size) / 5));
+        byLabel.forEach(queue => {
+            for (let i = 0; i < queue.length && i < anchorsPerLabel; i++) {
+                const id = String(queue[i].id);
+                if (!selected.has(id)) {
+                    selected.add(id);
+                    selectedNodes.push(queue[i]);
+                }
+            }
+        });
+        // 沿边BFS滚雪球
+        const perNodeFanout = 8;
+        const queue = selectedNodes.map(n => String(n.id));
+        while (selectedNodes.length < cap && queue.length) {
+            const nodeId = queue.shift();
+            const links = adjacency.get(nodeId) || [];
+            let brought = 0;
+            for (const e of links) {
+                if (selectedNodes.length >= cap || brought >= perNodeFanout) break;
+                const other = nodeId === String(e.source) ? String(e.target) : String(e.source);
+                const otherNode = nodeById.get(other);
+                if (otherNode && !selected.has(other)) {
+                    selected.add(other);
+                    selectedNodes.push(otherNode);
+                    queue.push(other);
+                    brought++;
+                }
+            }
+        }
+        const selectedEdges = allEdges.filter(e =>
+            selected.has(String(e.source)) && selected.has(String(e.target)));
+        return { nodes: selectedNodes, edges: selectedEdges };
     }
 
     /**
@@ -828,7 +876,8 @@ class KnowledgeGraphDetail extends HTMLElement {
             }
             const data = result.data;
             const before = this.graph.getNodes().length;
-            await this.appendIncrementally(data.nodes, data.edges);
+            const hideLabels = (before + data.nodes.length) > KnowledgeGraphDetail.LABEL_MAX_NODES;
+            await this.appendIncrementally(data.nodes, data.edges, { hideLabels });
             const added = this.graph.getNodes().length - before;
             this.expandedNodeIds.add(String(nodeId));
             this.showMessage(added > 0

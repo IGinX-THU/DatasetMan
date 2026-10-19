@@ -462,6 +462,47 @@ public class KnowledgeGraphService {
     }
 
     /**
+     * 全量视图（fetch-all）：一次查询返回全部节点与关系，避免前端循环分页多次查库
+     */
+    public Map<String, Object> getGraphDataFull(String name) {
+        KnowledgeGraphEntity graph = queryByName(name);
+        if (graph == null) {
+            throw new RuntimeException("知识图谱不存在或无权访问: " + name);
+        }
+        NodeTableMeta nodeMeta = NodeTableMeta.fromJson(graph.getNodeColumns());
+        EdgeTableMeta edgeMeta = EdgeTableMeta.fromJson(graph.getEdgeColumns());
+
+        // 全表节点一次查回并按id去重
+        Map<String, Map<String, Object>> nodeById = new LinkedHashMap<>();
+        for (Map<String, Object> record : queryRecords(graph.getNodePath(), MAX_EDGE_SCAN)) {
+            Map<String, Object> node = toG6Node(record, graph.getNodePath(), nodeMeta);
+            nodeById.putIfAbsent(String.valueOf(node.get("id")), node);
+        }
+
+        // 全表关系一次查回，过滤端点存在
+        List<Map<String, Object>> edges = new ArrayList<>();
+        for (Map<String, Object> record : queryRecords(graph.getEdgePath(), MAX_EDGE_SCAN)) {
+            Map<String, Object> edge = toG6Edge(record, graph.getEdgePath(), edgeMeta);
+            String source = String.valueOf(edge.get("source"));
+            String target = String.valueOf(edge.get("target"));
+            if (nodeById.containsKey(source) && nodeById.containsKey(target)) {
+                edges.add(edge);
+            }
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("graph", toGraphSummary(graph));
+        data.put("totalNodes", graph.getNodeCount() != null ? graph.getNodeCount() : nodeById.size());
+        data.put("totalEdges", graph.getEdgeCount() != null ? graph.getEdgeCount() : edges.size());
+        data.put("loadedNodeCount", nodeById.size());
+        data.put("hasMore", false);
+        data.put("mode", "full");
+        data.put("nodes", new ArrayList<>(nodeById.values()));
+        data.put("edges", edges);
+        return data;
+    }
+
+    /**
      * 邻接扩展（双击节点展开一跳邻居，对齐Neo4j Browser的expand交互）
      */
     public Map<String, Object> getNeighbors(String name, String nodeId, int limit) {
