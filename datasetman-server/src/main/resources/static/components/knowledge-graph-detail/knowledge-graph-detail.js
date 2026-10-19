@@ -24,12 +24,12 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.initEventListeners();
     }
 
-    // 首屏一次全量查询 + 渲染连通子图（对齐Neo4j Browser的1000渲染上限），双击节点展开一跳邻接
-    static get MAX_RENDER_NODES() { return 1000; }
+    // 首屏一次全量查询 + 渲染连通子图（对齐Neo4j Browser的渲染上限），单击节点展开一跳邻接
+    static get MAX_RENDER_NODES() { return 500; }
     static get NEIGHBOR_LIMIT() { return 50; }
     static get RENDER_BATCH_SIZE() { return 300; }
     // 渲染节点数超过该值时隐藏标签（缩略下不可读），悬浮/属性面板/搜索仍可查看
-    static get LABEL_MAX_NODES() { return 1200; }
+    static get LABEL_MAX_NODES() { return 600; }
     static get PALETTE() {
         return ['#5B8FF9', '#61DDAA', '#F6BD16', '#7262FD', '#78D3F8', '#9661BC', '#F6903D', '#008685', '#F08BB4', '#E8684A'];
     }
@@ -522,7 +522,11 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.totalEdges = 0;
         this.hasMore = false;
         this.labelColorMap = {};
-        this.expandedNodeIds = new Set();   // 已双击展开过的节点
+        this.expandedNodeIds = new Set();
+        this.allNodes = null;
+        this.allEdges = null;
+        this.nodeById = null;
+        this.adjacency = null;   // 已双击展开过的节点
 
         this.style.display = 'flex';
         this.setAttribute('show', '');
@@ -542,6 +546,19 @@ class KnowledgeGraphDetail extends HTMLElement {
             }
             const data = result.data;
             this.renderMeta(data);
+
+            // 全量数据与邻接索引缓存到内存：后续单击展开直接查内存，无需再调接口
+            this.allNodes = data.nodes || [];
+            this.allEdges = data.edges || [];
+            this.nodeById = new Map(this.allNodes.map(n => [String(n.id), n]));
+            this.adjacency = new Map();
+            this.allEdges.forEach(e => {
+                const src = String(e.source), dst = String(e.target);
+                if (!this.adjacency.has(src)) this.adjacency.set(src, []);
+                if (!this.adjacency.has(dst)) this.adjacency.set(dst, []);
+                this.adjacency.get(src).push(e);
+                this.adjacency.get(dst).push(e);
+            });
 
             if (!this.totalNodes) {
                 this.hideLoading();
@@ -665,12 +682,9 @@ class KnowledgeGraphDetail extends HTMLElement {
             // 大图优化：仅绘制视口内元素（5万节点全量加载时保证可交互）
             enableOptimize: true,
             defaultNode: {
-                size: 26,
+                size: 22,
                 style: {
-                    lineWidth: 1.5,
-                    stroke: '#fff',
-                    shadowBlur: 4,
-                    shadowColor: 'rgba(15,23,42,0.12)'
+                    lineWidth: 1
                 },
                 labelCfg: {
                     position: 'bottom',
@@ -688,13 +702,9 @@ class KnowledgeGraphDetail extends HTMLElement {
                         fill: '#b8c4d6'
                     }
                 },
+                // 大图优化：边不渲染独立标签文本（几千个text shape严重拖慢交互），类型经悬浮窗查看
                 labelCfg: {
-                    autoRotate: true,
-                    style: {
-                        fontSize: 10,
-                        fill: '#8c8c8c',
-                        background: { fill: '#ffffff', stroke: '#e2e6ef', padding: [1, 3, 1, 3] }
-                    }
+                    style: { opacity: 0 }
                 }
             }
         });
@@ -708,8 +718,14 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.graph.on('node:mousemove', (evt) => this.showTooltip('节点', evt));
         this.graph.on('edge:mousemove', (evt) => this.showTooltip('边', evt));
         // 右下角属性面板：悬浮时同步更新
-        this.graph.on('node:mouseenter', (evt) => this.updatePropsPanel('节点', evt.item.getModel()));
-        this.graph.on('edge:mouseenter', (evt) => this.updatePropsPanel('边', evt.item.getModel()));
+        this.graph.on('node:mouseenter', (evt) => {
+            this._tooltipForcePos = true;
+            this.updatePropsPanel('节点', evt.item.getModel());
+        });
+        this.graph.on('edge:mouseenter', (evt) => {
+            this._tooltipForcePos = true;
+            this.updatePropsPanel('边', evt.item.getModel());
+        });
         this.graph.on('node:mouseleave', () => this.hideTooltip());
         this.graph.on('edge:mouseleave', () => this.hideTooltip());
         this.graph.on('canvas:mousemove', () => this.hideTooltip());
@@ -753,7 +769,8 @@ class KnowledgeGraphDetail extends HTMLElement {
             });
             this.graph.paint();
             this.graph.setAutoPaint(true);
-            if (loadingText) {
+            const overlay = this.shadowRoot.querySelector('#loadingOverlay');
+            if (loadingText && overlay && !overlay.classList.contains('hidden')) {
                 loadingText.textContent = `正在增量渲染节点 ${Math.min(i + KnowledgeGraphDetail.RENDER_BATCH_SIZE, nodeModels.length)}/${nodeModels.length} ...`;
             }
             // 让出主线程，保持页面可响应
@@ -861,34 +878,42 @@ class KnowledgeGraphDetail extends HTMLElement {
     /**
      * 邻接扩展：双击节点展开其一跳邻居（增量addItem， Neo4j Browser的expand交互）
      */
+    /**
+     * 单击展开：直接从内存中的全量数据取一跳邻居（首屏已一次查询缓存），无接口调用
+     */
     async expandNode(nodeId) {
         if (!this.graph || this.isLoadingMore) return;
+        const links = (this.adjacency && this.adjacency.get(String(nodeId))) || [];
+        if (!links.length) {
+            this.showMessage(`「${nodeId}」暂无邻接关系`);
+            return;
+        }
         this.isLoadingMore = true;
-        this.showLoading('正在展开节点邻接...');
         try {
-            const result = await window.AppConfig.get('knowledgeGraph', 'neighbors', {
-                name: this.graphName,
-                nodeId,
-                limit: KnowledgeGraphDetail.NEIGHBOR_LIMIT
-            });
-            if (result.code !== 200 || !result.data) {
-                throw new Error(result.message || '查询邻接失败');
+            const neighborIds = [];
+            const edges = [];
+            for (const e of links) {
+                const other = String(nodeId) === String(e.source) ? String(e.target) : String(e.source);
+                edges.push(e);
+                if (!neighborIds.includes(other)) {
+                    neighborIds.push(other);
+                }
             }
-            const data = result.data;
-            const before = this.graph.getNodes().length;
-            const hideLabels = (before + data.nodes.length) > KnowledgeGraphDetail.LABEL_MAX_NODES;
-            await this.appendIncrementally(data.nodes, data.edges, { hideLabels });
-            const added = this.graph.getNodes().length - before;
+            // 邻居截断后仅保留两端都保留的边
+            const limited = neighborIds.slice(0, KnowledgeGraphDetail.NEIGHBOR_LIMIT);
+            const keep = new Set(limited);
+            keep.add(String(nodeId));
+            const keptEdges = edges.filter(e => keep.has(String(e.source)) && keep.has(String(e.target)));
+            const nodes = limited.map(id => this.nodeById.get(id)).filter(Boolean);
+
+            const hideLabels = (this.graph.getNodes().length + nodes.length) > KnowledgeGraphDetail.LABEL_MAX_NODES;
+            await this.appendIncrementally(nodes, keptEdges, { hideLabels });
             this.expandedNodeIds.add(String(nodeId));
-            this.showMessage(added > 0
-                ? `已展开「${nodeId}」的 ${added} 个邻居节点`
-                : `「${nodeId}」的邻接节点均已显示`, 'success');
         } catch (error) {
             console.error('展开邻接失败:', error);
             this.showMessage('展开邻接失败: ' + error.message);
         } finally {
             this.isLoadingMore = false;
-            this.hideLoading();
         }
     }
 
@@ -939,8 +964,20 @@ class KnowledgeGraphDetail extends HTMLElement {
     showTooltip(type, evt) {
         const tooltip = this.shadowRoot.querySelector('#kgTooltip');
         if (!tooltip) return;
-        tooltip.innerHTML = this.buildPropsHtml(type, evt.item.getModel());
+        // 同一元素不重复重建内容（mousemove高频触发，innerHTML重建是主要开销）
+        const model = evt.item.getModel();
+        const itemId = type + ':' + String(model.id);
+        if (this._tooltipItemId !== itemId) {
+            this._tooltipItemId = itemId;
+            tooltip.innerHTML = this.buildPropsHtml(type, model);
+        }
         tooltip.classList.add('visible');
+        // 位置更新节流（约40ms一次），减少高频DOM写入
+        const now = Date.now();
+        if (this._tooltipMoveTs && now - this._tooltipMoveTs < 40 && !this._tooltipForcePos) {
+            return;
+        }
+        this._tooltipMoveTs = now;
 
         // 跟随鼠标位置，靠右/靠下时自动翻转避免溢出
         const wrap = this.shadowRoot.querySelector('.graph-wrap');
@@ -955,6 +992,7 @@ class KnowledgeGraphDetail extends HTMLElement {
         if (y + 260 > wrapH) {
             y = Math.max(4, evt.canvasY - 260 - 14);
         }
+        this._tooltipForcePos = false;
         tooltip.style.left = x + 'px';
         tooltip.style.top = y + 'px';
     }
