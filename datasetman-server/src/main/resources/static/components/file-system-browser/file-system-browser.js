@@ -196,7 +196,13 @@ class FileSystemBrowser extends HTMLElement {
             
             // 使用setTimeout让loading有机会渲染
             setTimeout(() => {
-                this.renderBinaryPreview(blob, this.currentPath);
+                this.renderBinaryPreview(blob, this.currentPath).catch(error => {
+                    console.error('文件预览失败:', error);
+                    const fileGrid = this.querySelector('#fileGrid');
+                    if (fileGrid) {
+                        fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">文件预览失败: ' + error.message + '</div>';
+                    }
+                });
             }, 0);
         } catch (error) {
             console.error('查询文件数据失败:', error);
@@ -209,7 +215,7 @@ class FileSystemBrowser extends HTMLElement {
         this.renderBreadcrumb();
     }
 
-    renderBinaryPreview(blob, filePath) {
+    async renderBinaryPreview(blob, filePath) {
         const fileGrid = this.querySelector('#fileGrid');
         if (!fileGrid) return;
 
@@ -244,7 +250,7 @@ class FileSystemBrowser extends HTMLElement {
         
         // 根据文件后缀判断文件类型
         const fileExtension = fileName.split('.').pop().toLowerCase();
-        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'];
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tif', 'tiff', 'webp', 'svg', 'ico'];
         const videoExtensions = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv'];
         const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
         const textExtensions = ['txt', 'csv', 'json', 'xml', 'html', 'htm', 'md', 'log', 'css', 'js', 'java', 'py', 'sql'];
@@ -262,9 +268,16 @@ class FileSystemBrowser extends HTMLElement {
         if (isPreviewable) {
             // 创建预览内容
             fileGrid.classList.add('has-preview');
-            
+
             if (isImage) {
-                const imageUrl = URL.createObjectURL(blob);
+                let imageUrl;
+                if (fileExtension === 'tif' || fileExtension === 'tiff') {
+                    // 浏览器原生不支持TIFF，使用UTIF解码后转为PNG显示
+                    const arrayBuffer = await blob.arrayBuffer();
+                    imageUrl = await this.tiffToPngUrl(arrayBuffer);
+                } else {
+                    imageUrl = URL.createObjectURL(blob);
+                }
                 fileGrid.innerHTML = `
                     <div class="file-preview">
                         <div class="preview-header">
@@ -604,7 +617,7 @@ class FileSystemBrowser extends HTMLElement {
         
         // 根据文件后缀判断文件类型
         const fileExtension = fileName.split('.').pop().toLowerCase();
-        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'];
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tif', 'tiff', 'webp', 'svg', 'ico'];
         const videoExtensions = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv'];
         const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
         const textExtensions = ['txt', 'csv', 'json', 'xml', 'html', 'htm', 'md', 'log', 'css', 'js', 'java', 'py', 'sql'];
@@ -1437,14 +1450,6 @@ class FileSystemBrowser extends HTMLElement {
             const uint8Array = this.base64ToUint8Array(binaryData);
             console.log('转换后的Uint8Array长度:', uint8Array.length);
 
-            // 检查JPEG文件头 (FF D8 FF)
-            if (uint8Array.length >= 2) {
-                console.log('文件头前两个字节:', uint8Array[0].toString(16), uint8Array[1].toString(16));
-                if (uint8Array[0] !== 0xFF || uint8Array[1] !== 0xD8) {
-                    console.warn('警告：不是标准的JPEG文件头');
-                }
-            }
-
             // 根据文件扩展名确定MIME类型
             const fileExtension = fileName.split('.').pop().toLowerCase();
             const mimeTypes = {
@@ -1453,6 +1458,8 @@ class FileSystemBrowser extends HTMLElement {
                 'png': 'image/png',
                 'gif': 'image/gif',
                 'bmp': 'image/bmp',
+                'tif': 'image/tiff',
+                'tiff': 'image/tiff',
                 'webp': 'image/webp'
             };
             const mimeType = mimeTypes[fileExtension] || 'image/jpeg';
@@ -1462,9 +1469,110 @@ class FileSystemBrowser extends HTMLElement {
             const blob = new Blob([uint8Array], { type: mimeType });
             console.log('Blob创建成功，大小:', blob.size, 'bytes');
 
-            // 创建ObjectURL
-            const imageUrl = URL.createObjectURL(blob);
-            console.log('ObjectURL创建成功:', imageUrl);
+            // 校验文件头（魔法数字）
+            this.validateImageHeader(uint8Array, fileExtension);
+
+            // 创建图片URL（TIFF需要解码转PNG）
+            const imageUrlPromise = this.getImageUrlFromBlob(blob, fileExtension);
+
+            // 异步渲染（TIFF解码为异步操作，常规图片同步返回URL）
+            return imageUrlPromise.then(imageUrl => {
+                this.renderImagePreviewWithUrl(imageUrl, fileName, fileGrid);
+            }).catch(error => {
+                console.error('图片渲染失败:', error);
+                fileGrid.classList.add('has-preview');
+                fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">图片无法显示: ' + error.message + '</div>';
+            });
+        } catch (error) {
+            console.error('图片数据格式错误:', error);
+            fileGrid.classList.add('has-preview');
+            fileGrid.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">图片数据格式错误: ' + error.message + '</div>';
+        }
+    }
+
+    /**
+     * 根据文件类型生成可用于<img>的图片URL。
+     * 浏览器原生支持PNG/JPG/JPEG/BMP等格式，直接ObjectURL；
+     * TIFF不被浏览器支持，使用UTIF解码后转PNG。
+     */
+    async getImageUrlFromBlob(blob, fileExtension) {
+        if (fileExtension === 'tif' || fileExtension === 'tiff') {
+            const arrayBuffer = await blob.arrayBuffer();
+            return this.tiffToPngUrl(arrayBuffer);
+        }
+        return URL.createObjectURL(blob);
+    }
+
+    /**
+     * 使用UTIF将TIFF数据解码为PNG的ObjectURL
+     */
+    async tiffToPngUrl(arrayBuffer) {
+        if (typeof UTIF === 'undefined') {
+            throw new Error('TIFF解码器(UTIF)未加载');
+        }
+        const ifds = UTIF.decode(arrayBuffer);
+        if (!ifds || ifds.length === 0) {
+            throw new Error('无法解析TIFF数据');
+        }
+        // 解码第一页
+        UTIF.decodeImage(arrayBuffer, ifds[0], ifds);
+        const rgba = UTIF.toRGBA8(ifds[0]);
+        const canvas = document.createElement('canvas');
+        canvas.width = ifds[0].width;
+        canvas.height = ifds[0].height;
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.createImageData(canvas.width, canvas.height);
+        imageData.data.set(rgba);
+        ctx.putImageData(imageData, 0, 0);
+        return new Promise((resolve, reject) => {
+            canvas.toBlob(blob => {
+                if (blob) {
+                    resolve(URL.createObjectURL(blob));
+                } else {
+                    reject(new Error('TIFF转PNG失败'));
+                }
+            }, 'image/png');
+        });
+    }
+
+    /**
+     * 校验常见图片格式的文件头（魔法数字），用于尽早发现数据错误
+     */
+    validateImageHeader(uint8Array, fileExtension) {
+        if (uint8Array.length < 4) return;
+        const b = uint8Array;
+        const sig = (bytes) => bytes.every((byte, i) => b[i] === byte);
+        let valid = false;
+        switch (fileExtension) {
+            case 'jpg':
+            case 'jpeg':
+                valid = b[0] === 0xFF && b[1] === 0xD8;
+                break;
+            case 'png':
+                valid = sig([0x89, 0x50, 0x4E, 0x47]);
+                break;
+            case 'gif':
+                valid = sig([0x47, 0x49, 0x46]);
+                break;
+            case 'bmp':
+                valid = sig([0x42, 0x4D]);
+                break;
+            case 'tif':
+            case 'tiff':
+                valid = (sig([0x49, 0x49, 0x2A, 0x00]) || sig([0x4D, 0x4D, 0x00, 0x2A]));
+                break;
+            default:
+                valid = true; // 未知格式不做校验
+        }
+        if (!valid) {
+            console.warn('警告：文件头与扩展名 ' + fileExtension + ' 不匹配，前几个字节:',
+                Array.from(b.slice(0, 4)).map(x => x.toString(16)).join(' '));
+        }
+    }
+
+    renderImagePreviewWithUrl(imageUrl, fileName, fileGrid) {
+        try {
+            console.log('图片URL创建成功:', imageUrl);
 
             // 存储当前图片信息用于下载
             this.currentImageUrl = imageUrl;

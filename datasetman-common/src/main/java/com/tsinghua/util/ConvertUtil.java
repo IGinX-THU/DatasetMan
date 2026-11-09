@@ -114,7 +114,7 @@ public class ConvertUtil {
 
         // 常见的二进制文件扩展名
         Set<String> binaryExtensions = new HashSet<>(Arrays.asList(
-            "jpg", "jpeg", "png", "gif", "bmp", "webp",  // 图片
+            "jpg", "jpeg", "png", "gif", "bmp", "tif", "tiff", "webp",  // 图片
             "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",  // 文档
             "zip", "rar", "7z", "tar", "gz",  // 压缩文件
             "mp3", "mp4", "avi", "mov", "wav",  // 音视频
