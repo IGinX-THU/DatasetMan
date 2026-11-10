@@ -1,13 +1,19 @@
 /**
  * 知识图谱详情组件（在工作区显示，参考模型/算法详情的交互）
- * show({name}) 后增量加载图数据并用G6 4.8.22渲染：
- * - 顶部图谱元信息与统计；工具栏（搜索/缩放/适配/重布局/加载更多节点）
- * - 主体：G6画布 + 属性侧板；节点按标签着色，点击高亮一跳邻接并展示属性
+ * show({name}) 后一次全量查询，缓存全量 nodes/edges，再按视图模式渲染：
+ * - 力导子图（默认）：G6 4.8.22 + force layout，截取连通子图，单击节点展开一跳邻接；
+ * - 全图概览：Sigma.js 2.4.0 (WebGL) + graphology，一次性渲染全部节点+边，
+ *   平移缩放只改相机矩阵由 GPU 承担，可承载 5万节点/20万边，工具栏「返回子图」切回 G6。
+ * 两种模式的画布共存（互斥可见），切换时不销毁、不重建，返回子图保持原有布局与展开状态。
  */
 class KnowledgeGraphDetail extends HTMLElement {
     constructor() {
         super();
         this.graph = null;
+        this.overview = null;
+        this.viewMode = 'subgraph';   // 'subgraph' | 'overview'
+        this.overviewNodeCount = 0;
+        this.overviewEdgeCount = 0;
         this.graphName = null;
         this.loadedNodeCount = 0;
         this.renderedEdgeCount = 0;
@@ -155,6 +161,16 @@ class KnowledgeGraphDetail extends HTMLElement {
                     cursor: not-allowed;
                 }
 
+                .tool-btn[hidden] { display: none; }
+
+                .mode-label {
+                    margin-left: auto;
+                    font-size: 11px;
+                    color: #8c96a8;
+                    white-space: nowrap;
+                    padding-left: 10px;
+                }
+
                 .search-input {
                     width: 220px;
                     padding: 5px 10px;
@@ -181,10 +197,56 @@ class KnowledgeGraphDetail extends HTMLElement {
                     overflow: hidden;
                 }
 
-                #graphContainer {
+                /* 两个画布绝对定位重叠；用 visibility 互斥而不是 display，
+                   这样切换时两者尺寸始终有效，G6/Sigma 都无需重算尺寸或重建 */
+                #graphContainer,
+                #overviewContainer {
+                    position: absolute;
+                    inset: 0;
                     width: 100%;
                     height: 100%;
                 }
+
+                #graphContainer { z-index: 0; }
+
+                #overviewContainer {
+                    z-index: 1;
+                    overflow: hidden;
+                    background: #f5f7fa;
+                }
+
+                /* Sigma 把鼠标交互（拖拽/滚轮/点击）绑在最上层的 canvas.sigma-mouse 上，
+                   必须保留它的 pointer-events；其余绘制层全部透传，事件统一落在该画布 */
+                #overviewContainer canvas { pointer-events: none; }
+                #overviewContainer canvas.sigma-mouse { pointer-events: auto; }
+
+                .graph-wrap[data-mode="subgraph"] #overviewContainer {
+                    visibility: hidden;
+                    pointer-events: none;
+                }
+
+                .graph-wrap[data-mode="overview"] #graphContainer {
+                    visibility: hidden;
+                    pointer-events: none;
+                }
+
+                .overview-badge {
+                    position: absolute;
+                    right: 12px;
+                    top: 12px;
+                    z-index: 12;
+                    display: none;
+                    padding: 5px 10px;
+                    border: 1px solid #d7e3f7;
+                    border-radius: 4px;
+                    background: rgba(255, 255, 255, 0.94);
+                    color: #1d6feb;
+                    font-size: 11px;
+                    white-space: nowrap;
+                    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+                }
+
+                .graph-wrap[data-mode="overview"] .overview-badge { display: block; }
 
                 /* 属性悬浮窗：跟随鼠标，不占用图谱视野 */
                 .kg-tooltip {
@@ -366,6 +428,45 @@ class KnowledgeGraphDetail extends HTMLElement {
                     flex-shrink: 0;
                 }
 
+                .legend-line {
+                    width: 14px;
+                    height: 3px;
+                    border-radius: 2px;
+                    flex-shrink: 0;
+                }
+
+                .legend-sep {
+                    width: 100%;
+                    font-size: 11px;
+                    color: #94a3b8;
+                    border-top: 1px solid #eef1f6;
+                    padding-top: 4px;
+                }
+
+                /* 图例可点击过滤（全图概览模式）：hover 高亮、off 态置灰加删除线 */
+                .legend-item.clickable {
+                    cursor: pointer;
+                    border-radius: 3px;
+                    padding: 1px 4px;
+                    margin: -1px -4px;
+                }
+
+                .legend-item.clickable:hover {
+                    background: #eef2fa;
+                }
+
+                .legend-item.off {
+                    opacity: 0.38;
+                    text-decoration: line-through;
+                }
+
+                .legend-item i {
+                    font-style: normal;
+                    color: #9aa5b5;
+                    font-size: 11px;
+                    margin-left: 2px;
+                }
+
                 .loading-overlay {
                     position: absolute;
                     inset: 0;
@@ -433,13 +534,19 @@ class KnowledgeGraphDetail extends HTMLElement {
                     <button class="tool-btn" id="zoomOutBtn">缩小</button>
                     <button class="tool-btn" id="fitBtn">适配画布</button>
                     <button class="tool-btn" id="relayoutBtn">重新布局</button>
+                    <button class="tool-btn" id="overviewEdgesBtn" hidden>隐藏边</button>
+                    <button class="tool-btn" id="edgeLevelBtn" hidden title="默认随缩放自动增减边密度（LOD）；点击可锁定精简/均衡/全量三档；全部边始终在 GPU 缓冲中">边: 自适应</button>
+                    <button class="tool-btn primary" id="overviewBtn">全图概览</button>
+                    <button class="tool-btn primary" id="backSubgraphBtn" hidden>返回子图</button>
+                    <span class="mode-label" id="modeLabel">力导子图 · G6</span>
                 </div>
 
                 <div class="main-area">
-                    <div class="graph-wrap">
+                    <div class="graph-wrap" data-mode="subgraph">
                         <div id="graphContainer"></div>
-                        <div class="graph-hint">滚轮缩放画布；<b>单击节点展开其邻接关系</b>；悬浮查看属性</div>
-                        <div class="kg-tooltip" id="kgTooltip"></div>
+                        <div id="overviewContainer"></div>
+                        <div class="overview-badge" id="overviewBadge">Sigma.js · WebGL 全图</div>
+                        <div class="graph-hint" id="graphHint">滚轮缩放画布；<b>单击节点展开其邻接关系</b>；悬浮查看属性</div>                        <div class="kg-tooltip" id="kgTooltip"></div>
                         <div class="legend" id="legend"></div>
                         <!-- 右下角小属性面板：展示搜索定位/悬浮到的节点或边属性 -->
                         <div class="props-panel" id="propsPanel">
@@ -468,10 +575,63 @@ class KnowledgeGraphDetail extends HTMLElement {
 
     initEventListeners() {
         const $ = (id) => this.shadowRoot.querySelector(id);
-        $('#zoomInBtn')?.addEventListener('click', () => this.graph && this.graph.zoom(1.2));
-        $('#zoomOutBtn')?.addEventListener('click', () => this.graph && this.graph.zoom(1 / 1.2));
-        $('#fitBtn')?.addEventListener('click', () => this.graph && this.graph.fitView(30));
+        // 工具栏按当前视图模式路由：全图概览走 Sigma 相机，力导子图走 G6
+        $('#zoomInBtn')?.addEventListener('click', () => {
+            if (this.viewMode === 'overview') this.overview && this.overview.zoomIn();
+            else if (this.graph) this.graph.zoom(1.2);
+        });
+        $('#zoomOutBtn')?.addEventListener('click', () => {
+            if (this.viewMode === 'overview') this.overview && this.overview.zoomOut();
+            else if (this.graph) this.graph.zoom(1 / 1.2);
+        });
+        $('#fitBtn')?.addEventListener('click', () => {
+            if (this.viewMode === 'overview') this.overview && this.overview.fit();
+            else if (this.graph) this.graph.fitView(30);
+        });
         $('#relayoutBtn')?.addEventListener('click', () => this.graph && this.graph.layout());
+        $('#overviewBtn')?.addEventListener('click', () => this.enterOverview());
+        $('#backSubgraphBtn')?.addEventListener('click', () => this.backToSubgraph());
+        $('#overviewEdgesBtn')?.addEventListener('click', () => {
+            if (!this.overview) return;
+            const hidden = this.overview.toggleEdges();
+            $('#overviewEdgesBtn').textContent = hidden ? '显示边' : '隐藏边';
+        });
+        $('#edgeLevelBtn')?.addEventListener('click', () => {
+            if (!this.overview || this._edgeLevelBusy) return;
+            this._edgeLevelBusy = true;
+            this.showLoading('正在调整边的显示密度...');
+            // 让遮罩先绘制一帧，再做一次性的全量重算（约几百毫秒）
+            setTimeout(() => {
+                try {
+                    this.overview.cycleEdgeMode();
+                    this.syncEdgeLevelButton();
+                } finally {
+                    this.hideLoading();
+                    this._edgeLevelBusy = false;
+                }
+            }, 30);
+        });
+        // 图例可点击过滤（仅全图概览模式）：点击类别/关系项显示或隐藏该类元素
+        $('#legend')?.addEventListener('click', (e) => {
+            const item = e.target && e.target.closest ? e.target.closest('.legend-item') : null;
+            if (!item || !item.dataset || !item.dataset.kind) return;
+            if (this.viewMode !== 'overview' || !this.overview || this._edgeLevelBusy) return;
+            const kind = item.dataset.kind;
+            const key = item.dataset.key || '';
+            this._edgeLevelBusy = true;
+            this.showLoading('正在按图例过滤...');
+            setTimeout(() => {
+                try {
+                    if (kind === 'node') this.overview.toggleNodeType(key);
+                    else if (kind === 'edge') this.overview.toggleEdgeRelType(key);
+                    this.renderLegend();
+                    this.updateOverviewBadge();
+                } finally {
+                    this.hideLoading();
+                    this._edgeLevelBusy = false;
+                }
+            }, 30);
+        });
         // 搜索定位：点击"搜索"按钮或输入框回车
         $('#searchBtn')?.addEventListener('click', () => this.focusSearch());
         $('#searchInput')?.addEventListener('keydown', (e) => {
@@ -493,15 +653,246 @@ class KnowledgeGraphDetail extends HTMLElement {
             window.addEventListener('resize', () => {
                 if (!this.graph || this.graph.get('destroyed') || !this.isShown()) return;
                 const container = this.shadowRoot.querySelector('#graphContainer');
+                if (!container) return;
                 const w = container.clientWidth;
                 const h = container.clientHeight;
-                if (w && h) this.graph.changeSize(w, h);
+                if (!w || !h) return;
+                // 尺寸没变就完全不动画布：changeSize() 会重置 G6 的 canvas 位图，
+                // 无谓调用（例如模式切换间接触发的 resize）会让画布变空白。
+                if (w === this.graph.get('width') && h === this.graph.get('height')) return;
+                this.graph.changeSize(w, h);
+                // changeSize 之后必须重绘，且必须晚于 G6 内部的异步绘制调度：
+                // 同步或过早的 refresh() 会被节流吞掉，画布就永久空白。
+                // 这里下一帧执行一次，再留一个 120ms 的幂等兜底（rAF 在后台标签页可能不触发）。
+                // 注意绝不能调 render()：它会 clear 后再 clear，反而把画布再次清空。
+                const graph = this.graph;
+                const repaint = () => {
+                    if (this.graph !== graph || graph.get('destroyed')) return;
+                    try {
+                        graph.refresh();
+                        graph.paint();
+                        graph.fitView(30);
+                    } catch (e) { /* 忽略 */ }
+                };
+                requestAnimationFrame(() => setTimeout(repaint, 0));
+                setTimeout(repaint, 120);
             });
         }
     }
 
     isShown() {
         return this.hasAttribute('show');
+    }
+
+    /**
+     * 切换到「全图概览」：把首屏已缓存的全量 nodes/edges 交给 Sigma.js 一次性渲染。
+     * G6 实例不销毁，仅隐藏画布，「返回子图」时直接恢复原有布局与展开状态。
+     */
+    async enterOverview() {
+        if (this.viewMode === 'overview' || this._switching) return;
+        if (!this.allNodes || !this.allNodes.length) {
+            this.showMessage('暂无可概览的图数据');
+            return;
+        }
+        const Overview = window.KnowledgeGraphOverview;
+        if (!Overview || !Overview.isSupported()) {
+            this.showMessage(Overview ? Overview.unsupportedReason() : '全图概览组件未加载');
+            return;
+        }
+
+        this._switching = true;
+        try {
+            // 「返回子图 → 再次全图概览」：数据未变则直接复用已上传的 GPU 缓冲，瞬时切回
+            if (this.overview && this.overview.canReuse(this.allNodes, this.allEdges)) {
+                this.viewMode = 'overview';
+                this.applyViewMode();
+                this.overview.resume();
+                return;
+            }
+
+            this.showLoading('正在准备全图数据...');
+            // 让 loading 遮罩先绘制一帧，再进行同步的 GPU 上传
+            // rAF 在后台标签页可能不触发，加定时器兜底避免切换流程卡死
+            await new Promise(resolve => {
+                let done = false;
+                const finish = () => { if (!done) { done = true; resolve(); } };
+                requestAnimationFrame(finish);
+                setTimeout(finish, 24);
+            });
+            const container = this.shadowRoot.querySelector('#overviewContainer');
+            if (!container) return;
+            if (!this.overview) {
+                this.overview = new Overview(container, {
+                    colorOf: (labelType) => this.labelColorOf(labelType),
+                    onHoverNode: (model, x, y) => {
+                        this.renderTooltip('节点', model, x, y, true);
+                        this.updatePropsPanel('节点', model);
+                    },
+                    onHoverMove: (model, x, y) => this.renderTooltip('节点', model, x, y),
+                    onLeaveNode: () => this.hideTooltip(),
+                    onSelectNode: (model) => this.updatePropsPanel('节点', model),
+                    onClearSelection: () => this.hideTooltip(),
+                    // 全图概览充当 minimap/规模导航：单击节点 → 返回子图并搜索定位展开
+                    onOpenInSubgraph: (model) => this.openInSubgraph(model),
+                    // LOD 档位变化 → 同步按钮文案与角标点亮数
+                    onLodChange: () => this.syncEdgeLevelButton(),
+                    onEdgeModeChange: () => this.syncEdgeLevelButton()
+                });
+            }
+
+            const result = await this.overview.render(this.allNodes, this.allEdges,
+                (text) => this.showLoading(text));
+            this.overviewNodeCount = result.nodes;
+            this.overviewEdgeCount = result.edges;
+            this.viewMode = 'overview';
+            this.applyViewMode();
+            this.overview.resume();
+            this.hideLoading();
+
+            // 后端若返回的是截断数据，明确告知用户，避免"假全图"
+            const totalNodes = Number(this.totalNodes || 0);
+            const totalEdges = Number(this.totalEdges || 0);
+            if ((totalNodes && result.nodes < totalNodes) || (totalEdges && result.edges < totalEdges)) {
+                this.showMessage(`接口返回被截断：已渲染 ${result.nodes}/${totalNodes} 节点、${result.edges}/${totalEdges} 边，请检查后端全量查询上限`);
+            }
+        } catch (error) {
+            console.error('全图概览渲染失败:', error);
+            this.destroyOverview();
+            this.viewMode = 'subgraph';
+            this.applyViewMode();
+            this.hideLoading();
+            this.showMessage('全图概览渲染失败: ' + error.message);
+        } finally {
+            this._switching = false;
+        }
+    }
+
+    /** 返回力导子图：G6 画布一直在，重新可见后做一次轻量重绘与视图适配 */
+    backToSubgraph() {
+        if (this.viewMode !== 'overview') return;
+        this.viewMode = 'subgraph';
+        this.applyViewMode();
+        this.hideTooltip();
+        if (!this.graph || this.graph.get('destroyed')) return;
+
+        // 两个画布用 visibility 互斥，容器尺寸从未变化，绝不能调用 changeSize()：
+        // 它会重置 G6 的 canvas 位图，配合 enableOptimize 视口裁剪后不会自动重绘，
+        // 结果就是「返回子图」一片空白。这里只做一次全量重绘 + fitView（≤1000 节点，开销可忽略）。
+        // rAF 在后台标签页可能不触发，加定时器兜底。
+        let done = false;
+        const restore = () => {
+            if (done) return;
+            done = true;
+            if (this.viewMode !== 'subgraph' || !this.graph || this.graph.get('destroyed')) return;
+            try {
+                this.graph.refresh();
+                this.graph.fitView(30);
+            } catch (e) { /* 忽略切换瞬间的竞态 */ }
+        };
+        requestAnimationFrame(restore);
+        setTimeout(restore, 24);
+    }
+
+    /**
+     * 全图概览单击节点 → 返回力导子图，回填搜索框并触发搜索定位到该节点，
+     * 再自动触发一次"点击"语义（展开其一跳邻接 + 属性面板，expandNode 幂等）。
+     * 子图已含该节点：直接搜索定位；未含：先增量加入再展开定位。
+     */
+    openInSubgraph(model) {
+        const id = String((model && model.id != null) ? model.id : (model || ''));
+        if (!id || id === 'null' || id === 'undefined') return;
+        const label = (model && (model.rawLabel || model.label)) || id;
+        // ① 搜索框回填节点 ID：概览单击 = 「按 ID 搜索定位」语义
+        //    （节点 label 可能是「部件」这类类别词，ID 才是唯一定位标识）
+        const input = this.shadowRoot.querySelector('#searchInput');
+        if (input) input.value = id;
+        if (this.viewMode === 'overview') this.backToSubgraph();
+        if (this.viewMode !== 'subgraph') return;
+        // backToSubgraph 的重绘走 rAF + 24ms 兜底，等它完成后再定位
+        setTimeout(() => {
+            if (this.viewMode !== 'subgraph' || !this.graph || this.graph.get('destroyed')) return;
+            if (!this.nodeById || !this.nodeById.get(id)) {
+                this.showMessage(`子图中未找到节点「${label}」`);
+                return;
+            }
+            // ③ 触发搜索定位：按精确 ID 命中 + focusItem 聚焦 + 属性面板同步（等价于输入关键字后回车）
+            const searchLocate = () => setTimeout(() => this.focusSearch(id), 350);
+            if (this.graph.findById(id)) {
+                // ② 自动触发点击语义：展开一跳邻接（幂等）
+                this.expandNode(id)
+                    .then(searchLocate)
+                    .catch((e) => console.warn('子图定位失败:', e));
+            } else {
+                this.appendIncrementally([this.nodeById.get(id)], [], { skipLayout: true, hideLabels: false })
+                    .then(() => this.expandNode(id))
+                    .then(searchLocate)
+                    .catch((e) => console.warn('子图定位失败:', e));
+            }
+        }, 80);
+    }
+
+    /** 子图内相机聚焦到指定节点，并同步右下角属性面板 */
+    focusGraphNode(id) {
+        if (!this.graph || this.graph.get('destroyed')) return false;
+        const item = this.graph.findById(String(id));
+        if (!item) return false;
+        try {
+            this.graph.focusItem(item, true, { easing: 'easeCubic', duration: 400 });
+        } catch (e) { /* 忽略 */ }
+        this.updatePropsPanel('节点', item.getModel());
+        return true;
+    }
+
+    /** 同步工具栏按钮、提示文案、统计与画布可见性 */
+    applyViewMode() {
+        const $ = (id) => this.shadowRoot.querySelector(id);
+        const overview = this.viewMode === 'overview';
+        const wrap = this.shadowRoot.querySelector('.graph-wrap');
+        if (wrap) wrap.dataset.mode = this.viewMode;
+        const show = (id, visible) => {
+            const el = $(id);
+            if (el) el.hidden = !visible;
+        };
+        show('#overviewBtn', !overview);
+        show('#backSubgraphBtn', overview);
+        show('#relayoutBtn', !overview);   // 重新布局只对 G6 力导子图有意义
+        show('#overviewEdgesBtn', overview);
+        show('#edgeLevelBtn', overview);
+        const edgeBtn = $('#overviewEdgesBtn');
+        if (edgeBtn) {
+            edgeBtn.textContent = (this.overview && this.overview.edgesHidden) ? '显示边' : '隐藏边';
+        }
+        const levelBtn = $('#edgeLevelBtn');
+        if (levelBtn && this.overview) levelBtn.textContent = this.overview.edgeLevelLabel();
+        if ($('#modeLabel')) {
+            $('#modeLabel').textContent = overview ? '全图概览 · 规模导航 / minimap' : '力导子图 · G6';
+        }
+        if ($('#graphHint')) {
+            $('#graphHint').innerHTML = overview
+                ? '远景只显示<b>高度数骨架</b>节点，滚轮放大逐步浮现更多；图例可点击过滤；<b>单击节点</b>回子图定位展开'
+                : '滚轮缩放画布；<b>单击节点展开其邻接关系</b>；悬浮查看属性';
+        }
+        this.updateOverviewBadge();
+        this.updateStats();
+        this.renderLegend();
+    }
+
+    /** 概览角标：总量 + 当前边模式/点亮数，避免"抽样显示"被误认为数据被截断 */
+    updateOverviewBadge() {
+        const badge = this.shadowRoot.querySelector('#overviewBadge');
+        if (!badge) return;
+        const lit = this.overview ? this.overview.visibleEdgeCount() : 0;
+        badge.textContent = `全图概览 · ${this.overviewNodeCount.toLocaleString('zh-CN')} 节点 / ${this.overviewEdgeCount.toLocaleString('zh-CN')} 边`
+            + (this.overview ? ` · ${this.overview.edgeLevelLabel()} · 点亮 ${lit.toLocaleString('zh-CN')}` : '');
+    }
+
+    destroyOverview() {
+        if (this.overview) {
+            try { this.overview.destroy(); } catch (e) { /* 忽略 */ }
+            this.overview = null;
+        }
+        this.overviewNodeCount = 0;
+        this.overviewEdgeCount = 0;
     }
 
     /**
@@ -512,9 +903,11 @@ class KnowledgeGraphDetail extends HTMLElement {
         if (!name) return;
 
         // 重建DOM（清除上次可能的错误态）并销毁旧图，画布尺寸按当前容器重新计算
+        this.destroyOverview();          // 先释放上一张图谱的 WebGL 上下文
         this.render();
         this.initEventListeners();
         this.destroyGraph();
+        this.viewMode = 'subgraph';
         this.graphName = name;
         this.loadedNodeCount = 0;
         this.renderedEdgeCount = 0;
@@ -603,6 +996,7 @@ class KnowledgeGraphDetail extends HTMLElement {
     hide() {
         this.style.display = 'none';
         this.removeAttribute('show');
+        this.destroyOverview();
         this.destroyGraph();
     }
 
@@ -625,28 +1019,72 @@ class KnowledgeGraphDetail extends HTMLElement {
         return this.labelColorMap[label];
     }
 
+    /**
+     * 图例：节点类别 + 关系类型。
+     * 全图概览模式下可点击过滤（隐藏/显示该类别或关系），并显示每类计数（类别分布）。
+     */
     renderLegend() {
         const legendEl = this.shadowRoot.querySelector('#legend');
         if (!legendEl) return;
         const entries = Object.entries(this.labelColorMap);
-        if (!entries.length) {
+        // 全图概览下追加「关系类型」图例，明确不同颜色的边各代表什么
+        const overviewMode = this.viewMode === 'overview' && this.overview;
+        const edgeEntries = overviewMode ? this.overview.getEdgeLegend() : [];
+        const nodeStats = overviewMode ? this.overview.getNodeTypeStats() : null;
+        if (!entries.length && !edgeEntries.length) {
             legendEl.classList.remove('visible');
             return;
         }
         legendEl.classList.add('visible');
-        legendEl.innerHTML = entries.map(([label, color]) => `
+        const zh = (n) => (n || 0).toLocaleString('zh-CN');
+        const nodeHtml = entries.map(([label, color]) => {
+            if (!overviewMode) {
+                return `
             <span class="legend-item">
                 <span class="legend-color" style="background:${color}"></span>${this.escapeHtml(label)}
             </span>
-        `).join('');
+        `;
+            }
+            const off = this.overview.isNodeTypeFiltered(label);
+            const count = nodeStats ? nodeStats.get(label) || 0 : 0;
+            return `
+            <span class="legend-item clickable${off ? ' off' : ''}" data-kind="node" data-key="${this.escapeHtml(label)}"
+                  title="点击显示/隐藏该类别的全部节点">
+                <span class="legend-color" style="background:${color}"></span>${this.escapeHtml(label)} <i>${zh(count)}</i>
+            </span>
+        `;
+        }).join('');
+        const edgeHtml = edgeEntries.length ? `
+            <span class="legend-sep">关系</span>
+            ${edgeEntries.map(({ type, color, count }) => {
+                const off = this.overview.isEdgeTypeFiltered(type);
+                return `
+                <span class="legend-item clickable${off ? ' off' : ''}" data-kind="edge" data-key="${this.escapeHtml(type)}"
+                      title="点击显示/隐藏该类关系">
+                    <span class="legend-line" style="background:${color}"></span>${this.escapeHtml(type)} <i>${zh(count)}</i>
+                </span>
+            `;
+            }).join('')}
+        ` : '';
+        legendEl.innerHTML = nodeHtml + edgeHtml;
+    }
+
+    /** 同步「边: 自适应/手动档」按钮文案与角标点亮数（LOD 跨档 / 切换模式 / 图例过滤后调用） */
+    syncEdgeLevelButton() {
+        const btn = this.shadowRoot.querySelector('#edgeLevelBtn');
+        if (btn && this.overview) btn.textContent = this.overview.edgeLevelLabel();
+        this.updateOverviewBadge();
     }
 
     updateStats() {
         const $ = (id) => this.shadowRoot.querySelector(id);
         if (!$('#statLoadedNodes')) return;
-        $('#statLoadedNodes').textContent = this.loadedNodeCount.toLocaleString('zh-CN');
+        const overview = this.viewMode === 'overview';
+        const shownNodes = overview ? this.overviewNodeCount : this.loadedNodeCount;
+        const shownEdges = overview ? this.overviewEdgeCount : this.renderedEdgeCount;
+        $('#statLoadedNodes').textContent = shownNodes.toLocaleString('zh-CN');
         $('#statTotalNodes').textContent = this.totalNodes ? this.totalNodes.toLocaleString('zh-CN') : '-';
-        $('#statEdges').textContent = this.renderedEdgeCount.toLocaleString('zh-CN');
+        $('#statEdges').textContent = shownEdges.toLocaleString('zh-CN');
         $('#statTotalEdges').textContent = this.totalEdges ? this.totalEdges.toLocaleString('zh-CN') : '-';
     }
 
@@ -674,8 +1112,10 @@ class KnowledgeGraphDetail extends HTMLElement {
                 alphaMin: 0.001
             },
             animate: false,
-            // 大图优化：仅绘制视口内元素（5万节点全量加载时保证可交互）
-            enableOptimize: true,
+            // G6 只承载 ≤1000 节点的力导子图（全量图已交给 Sigma WebGL），不需要视口裁剪。
+            // 不能开 enableOptimize：画布被隐藏或 changeSize 后它会清空位图却不重绘，
+            // 导致「返回子图」/窗口缩放后出现空白画布。
+            enableOptimize: false,
             defaultNode: {
                 size: 22,
                 style: {
@@ -951,19 +1391,48 @@ class KnowledgeGraphDetail extends HTMLElement {
     }
 
     /**
-     * 搜索定位：按ID/标签匹配已加载节点并聚焦
+     * 搜索定位：按ID/标签匹配已加载节点并聚焦。
+     * @param {string} [exactId] 可选精确节点 ID：概览钻取回填时优先按 ID 命中，
+     *        避免标签前缀相同（如「节点1」匹配到「节点10」）时定位到错误节点。
      */
-    focusSearch() {
+    focusSearch(exactId) {
         const input = this.shadowRoot.querySelector('#searchInput');
         const keyword = input ? input.value.trim().toLowerCase() : '';
-        if (!keyword || !this.graph) return;
-        const target = this.graph.getNodes().find(n => {
-            const m = n.getModel();
-            return String(m.id).toLowerCase().includes(keyword)
-                || String(m.rawLabel || '').toLowerCase().includes(keyword);
-        });
+        if (!keyword) return;
+        // 全图概览：在全量节点里定位，命中后只动相机矩阵（GPU），不做重绘
+        if (this.viewMode === 'overview') {
+            if (!this.overview || !this.overview.focusSearch(keyword)) {
+                this.showMessage('全图中未找到匹配的节点');
+            }
+            return;
+        }
+        if (!this.graph) return;
+        let target = null;
+        if (exactId != null) {
+            const item = this.graph.findById(String(exactId));
+            if (item) target = item;
+        }
+        if (!target) {
+            target = this.graph.getNodes().find(n => {
+                const m = n.getModel();
+                return String(m.id).toLowerCase().includes(keyword)
+                    || String(m.rawLabel || '').toLowerCase().includes(keyword);
+            });
+        }
         if (target) {
             this.graph.focusItem(target, true, { easing: 'easeCubic', duration: 400 });
+            // 金色光圈圈定命中节点，一眼可辨；8 秒后自动取消
+            this._markLocate(target);
+            // 当前缩放过小（节点在屏幕上太小难以辨认）时，放大到该节点处
+            if (this.graph.getZoom() < 0.8) {
+                setTimeout(() => {
+                    if (!this.graph || this.graph.get('destroyed')) return;
+                    try {
+                        const pos = this.graph.getItemPosition(target);
+                        this.graph.zoomTo(0.8, this.graph.graphToCanvasPoint(pos));
+                    } catch (e) { /* 忽略 */ }
+                }, 430);
+            }
             // 搜索结果同步到右下角属性面板
             this.updatePropsPanel('节点', target.getModel());
         } else {
@@ -972,22 +1441,62 @@ class KnowledgeGraphDetail extends HTMLElement {
     }
 
     /**
+     * 圈定高亮：把搜索定位命中的节点直接放大到约 2 倍，一眼认出。
+     * 下一次定位先恢复上一个节点的原始尺寸；8 秒后自动恢复。
+     */
+    _markLocate(item) {
+        if (!this.graph || this.graph.get('destroyed')) return;
+        clearTimeout(this._locateTimer);
+        this._restoreLocateSize();
+        try {
+            // 记录原始尺寸再放大：子图节点默认 22，放大到 2 倍且不小于 44px
+            const orig = Number(item.getModel().size) || 22;
+            this._locateItem = item;
+            this._locateOrigSize = orig;
+            this.graph.updateItem(item, { size: Math.max(44, orig * 2) });
+        } catch (e) {
+            this._locateItem = null;
+            this._locateOrigSize = null;
+            return;
+        }
+        this._locateTimer = setTimeout(() => {
+            this._restoreLocateSize();
+        }, 8000);
+    }
+
+    /** 恢复当前被放大节点的原始尺寸 */
+    _restoreLocateSize() {
+        try {
+            if (this._locateItem && !this._locateItem.destroyed && this._locateOrigSize != null) {
+                this.graph.updateItem(this._locateItem, { size: this._locateOrigSize });
+            }
+        } catch (e) { /* 项已被移除则忽略 */ }
+        this._locateItem = null;
+        this._locateOrigSize = null;
+    }
+
+    /**
      * 属性悬浮窗：跟随鼠标位置展示节点/边属性，不遮挡图谱整体视野
      */
     showTooltip(type, evt) {
+        this.renderTooltip(type, evt.item.getModel(), evt.canvasX, evt.canvasY, true);
+    }
+
+    /**
+     * 悬浮窗渲染（G6 与 Sigma 共用）：内容按元素缓存，位置更新约 40ms 节流，
+     * 全图概览的高频 mousemove 因此只有少量 DOM 写入，完全不触碰 WebGL 缓冲。
+     */
+    renderTooltip(type, model, canvasX, canvasY, forcePos) {
         const tooltip = this.shadowRoot.querySelector('#kgTooltip');
         if (!tooltip) return;
-        // 同一元素不重复重建内容（mousemove高频触发，innerHTML重建是主要开销）
-        const model = evt.item.getModel();
         const itemId = type + ':' + String(model.id);
         if (this._tooltipItemId !== itemId) {
             this._tooltipItemId = itemId;
             tooltip.innerHTML = this.buildPropsHtml(type, model);
         }
         tooltip.classList.add('visible');
-        // 位置更新节流（约40ms一次），减少高频DOM写入
         const now = Date.now();
-        if (this._tooltipMoveTs && now - this._tooltipMoveTs < 40 && !this._tooltipForcePos) {
+        if (!forcePos && this._tooltipMoveTs && now - this._tooltipMoveTs < 40 && !this._tooltipForcePos) {
             return;
         }
         this._tooltipMoveTs = now;
@@ -997,13 +1506,13 @@ class KnowledgeGraphDetail extends HTMLElement {
         const wrapW = wrap ? wrap.clientWidth : 800;
         const wrapH = wrap ? wrap.clientHeight : 600;
         const tipW = 300;
-        let x = evt.canvasX + 14;
+        let x = canvasX + 14;
         if (x + tipW > wrapW) {
-            x = Math.max(4, evt.canvasX - tipW - 14);
+            x = Math.max(4, canvasX - tipW - 14);
         }
-        let y = evt.canvasY + 14;
+        let y = canvasY + 14;
         if (y + 260 > wrapH) {
-            y = Math.max(4, evt.canvasY - 260 - 14);
+            y = Math.max(4, canvasY - 260 - 14);
         }
         this._tooltipForcePos = false;
         tooltip.style.left = x + 'px';

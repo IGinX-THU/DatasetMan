@@ -32,4 +32,9 @@ build/
 ### VS Code ###
 .vscode/
 
+# Spring Boot 外部静态资源目录（file:./static/），本地运行态覆盖文件，不纳入版本控制
+/static/
+
 logs
+# WorkBuddy 会话数据（工作日志/记忆），不纳入版本控制
+/.workbuddy/
