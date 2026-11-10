@@ -9,9 +9,10 @@
  *   1. 数据只灌一次：graphology 建图 → Sigma 一次性把节点/边打包成 WebGL 缓冲；
  *      之后平移缩放只改相机矩阵，由 GPU 重投影，主线程不重排、不逐帧重建几何。
  *   2. 建图分块 + 让出主线程，加载遮罩可正常绘制，不出现长时间白屏。
- *   3. 布局用 O(N+E)「随机播种 + 邻域平均松弛 + 半径分位数归一」的伪力导：
- *      随机播种让各类颜色均匀混布（BFS 层与类别强相关，按序列铺盘会形成同色同心圆）；
- *      松弛让相连节点相互靠拢（边短成簇、hub 聚中心）；归一保证密度均匀、外轮廓圆形。
+ *   3. 布局两阶段：先 O(N+E)「随机播种 + 邻域平均松弛 + 半径分位数归一」出均匀圆盘
+ *      （随机播种让各类颜色均匀混布；松弛让相连节点靠拢、hub 聚中心），
+ *      再用 ForceAtlas2（Barnes-Hut 近似，vendor 于 lib/sigma/forceatlas2.esm.min.js）
+ *      分块迭代 ~150-300 轮做力导向精化：拉开簇团、留出簇间空隙，真力导向观感。
  *   4. 交互绝不调 renderer.refresh()：那会 O(N+E) 全量重算。
  *      点击/搜索只走相机动画 + 一张轻量 2D overlay 画布画一跳邻域（≤600 点）。
  *   5. 20万条边按关系类型共用最多 16 个属性对象（Sigma 内部会浅拷贝），显著降低 JS 堆占用。
@@ -57,6 +58,7 @@ class KnowledgeGraphOverview {
         this._hiddenEdgeCache = new Map();  // 按颜色复用 hidden 版属性对象，避免 refresh 时产生海量临时对象
         this._sizedEdgeCache = new Map();   // 按「颜色|线宽」复用变宽版属性对象
         this._camRatio = 1;                 // 当前相机 ratio（camera updated 事件同步）
+        this._destroyed = false;            // destroy() 置位：让 render 中的异步循环及时中断
         this._lastSizeRatio = 1;            // 上次做边宽补偿时的 ratio（漂移检测）
         this._lodHiddenNodes = new Set();   // 节点 LOD：当前档位下被隐藏的低度数节点
         this._nodeLodLevel = -1;            // 已应用节点 LOD 的档位
@@ -69,6 +71,8 @@ class KnowledgeGraphOverview {
     /** 分块大小：每块灌完后让出一次主线程 */
     static get NODE_CHUNK() { return 5000; }
     static get EDGE_CHUNK() { return 12000; }
+    /** FA2 精化每块迭代数：每块结束 yield 一次并刷新进度（块内同步阻塞，块间让出主线程） */
+    static get FA2_CHUNK() { return 15; }
     /** 一跳邻域 overlay 最多画多少个邻居（避免 hub 节点画上万条线） */
     static get OVERLAY_NEIGHBOR_LIMIT() { return 600; }
     /** 边默认色（未标注关系类型时使用） */
@@ -174,9 +178,70 @@ class KnowledgeGraphOverview {
      * @param {Function} onProgress 进度文案回调
      * @returns {Promise<{nodes:number, edges:number, skippedEdges:number, elapsedMs:number}>}
      */
+    /**
+     * ForceAtlas2 分块精化：图已在 graphology 实例中，assign 直接改写节点 x/y。
+     * 迭代数按节点规模自适应；先归一到单位圆盘（FA2 的 speed 模型虽尺度自适应，
+     * 归一后常数更稳定），结束后再缩放回外半径 ≈ R 的 spacing 尺度，
+     * 节点大小/点距体系与 LOD 阈值保持不变。库未加载或已 destroy 时静默跳过。
+     */
+    async _refineWithForceAtlas2(graph, nodeCount, R, onProgress) {
+        const FA2 = window.ForceAtlas2;
+        if (!FA2 || typeof FA2.assign !== 'function') return;
+        // 迭代数按规模自适应（Node 实测 20k:100 轮 ≈7s、50k:60 轮 ≈13s）：
+        // 60 轮在 5 万节点下占用率已从实心球 ~0.78 降到 ~0.60（簇间空隙可见）
+        const ITER = nodeCount > 30000 ? 60 : nodeCount > 8000 ? 100 : 250;
+        const CHUNK = KnowledgeGraphOverview.FA2_CHUNK;
+        const settings = {
+            barnesHutOptimize: nodeCount > 1500,   // 大图用 Barnes-Hut：斥力 O(N²) → O(N log N)
+            barnesHutTheta: 1.2,   // 网格搜索：与 0.9 效果相同但快 ~30%
+            gravity: 5,            // 向心引力：防外围节点飞散（过低会爆炸性扩散）
+            scalingRatio: 2,       // 斥力强度：配合 gravity=5 占用率最优
+            slowDown: 4,           // 阻尼：抑制振荡，收敛更平稳
+            edgeWeightInfluence: 0,
+            strongGravityMode: false,
+            adjustSizes: false,
+            linLogMode: false,
+            outboundAttractionDistribution: false
+        };
+        const scaleCoords = (s) => {
+            graph.forEachNode((n, a) => {
+                graph.setNodeAttribute(n, 'x', a.x * s);
+                graph.setNodeAttribute(n, 'y', a.y * s);
+            });
+        };
+        const measureMaxR = () => {
+            let m = 0;
+            graph.forEachNode((n, a) => {
+                const r = Math.sqrt(a.x * a.x + a.y * a.y);
+                if (r > m) m = r;
+            });
+            return m;
+        };
+        this._fa2Debug = { ran: true, iters: ITER };
+        let maxR = measureMaxR();
+        this._fa2Debug.before = maxR;
+        scaleCoords(1 / maxR);                 // 归一到单位圆盘
+        for (let done = 0; done < ITER; done += CHUNK) {
+            if (this._destroyed) {
+                this._fa2Debug.cancelled = done;
+                return;
+            }
+            FA2.assign(graph, { iterations: Math.min(CHUNK, ITER - done), settings });
+            this.report(onProgress,
+                `正在力导向散开（${Math.min(done + CHUNK, ITER)}/${ITER} 轮）...`);
+            await this.yieldFrame();
+        }
+        maxR = measureMaxR();
+        this._fa2Debug.after = maxR;
+        scaleCoords(R / maxR);                 // 缩放回外半径 ≈ R
+        this._fa2Debug.final = measureMaxR();
+    }
+
     async render(nodes, edges, onProgress) {
         const started = (typeof performance !== 'undefined' ? performance.now() : Date.now());
         this.destroy();
+        // destroy() 在这里只作状态重置：随后整个 render 在飞，取消标志必须复位
+        this._destroyed = false;
 
         const G = window.graphology;
         const graph = new G.MultiDirectedGraph(); // 允许同一对节点之间存在多种关系，不丢边
@@ -369,6 +434,11 @@ class KnowledgeGraphOverview {
                 await this.yieldFrame();
             }
         }
+
+        // ⑤ ForceAtlas2 力导向精化：圆盘初始布局只有均匀密度，看不出社区结构；
+        //    FA2 用 Barnes-Hut 近似把相连簇拉开、簇间留出空隙（主流大图的力导向观感）。
+        //    分块执行保证进度条持续刷新、界面不假死；库缺失时静默跳过。
+        await this._refineWithForceAtlas2(graph, nodeCount, R, onProgress);
 
         this.report(onProgress, '正在一次性上传 WebGL 缓冲...');
         await this.yieldFrame();
@@ -911,6 +981,7 @@ class KnowledgeGraphOverview {
 
     /** 释放 WebGL 上下文：避免反复进入/退出导致浏览器上下文数量耗尽 */
     destroy() {
+        this._destroyed = true;
         clearTimeout(this._resizeTimer);
         clearTimeout(this._lodTimer);
         clearTimeout(this._refreshTimer);

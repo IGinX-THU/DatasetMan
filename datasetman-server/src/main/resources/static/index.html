@@ -480,6 +480,11 @@
 <!-- 知识图谱「全图概览」专用：graphology 提供图数据结构，Sigma.js 2.4.0 提供 WebGL 渲染（力导子图仍用 G6） -->
 <script src="./lib/sigma/graphology.umd.min.js"></script>
 <script src="./lib/sigma/sigma.min.js"></script>
+<!-- ForceAtlas2 力导向布局精化（ESM，动态挂到 window.ForceAtlas2；缺失时概览自动退回圆盘布局） -->
+<script type="module">
+    import FA2 from './lib/sigma/forceatlas2.esm.min.js';
+    window.ForceAtlas2 = FA2;
+</script>
 <script src="./components/knowledge-graph-detail/knowledge-graph-overview.js"></script>
 <script src="./components/knowledge-graph-detail/knowledge-graph-detail.js"></script>
 <script src="./components/transform-job/transform-job.js"></script>
