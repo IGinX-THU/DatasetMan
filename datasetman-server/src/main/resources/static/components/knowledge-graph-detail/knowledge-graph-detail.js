@@ -1449,11 +1449,11 @@ class KnowledgeGraphDetail extends HTMLElement {
         clearTimeout(this._locateTimer);
         this._restoreLocateSize();
         try {
-            // 记录原始尺寸再放大：子图节点默认 22，放大到 2 倍且不小于 44px
+            // 记录原始尺寸再放大：子图节点默认 22，放大到 3 倍且不小于 64px，确保一眼锁定
             const orig = Number(item.getModel().size) || 22;
             this._locateItem = item;
             this._locateOrigSize = orig;
-            this.graph.updateItem(item, { size: Math.max(44, orig * 2) });
+            this.graph.updateItem(item, { size: Math.max(64, orig * 3) });
         } catch (e) {
             this._locateItem = null;
             this._locateOrigSize = null;
