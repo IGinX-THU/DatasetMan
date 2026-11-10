@@ -118,7 +118,8 @@ public class ConvertUtil {
             "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",  // 文档
             "zip", "rar", "7z", "tar", "gz",  // 压缩文件
             "mp3", "mp4", "avi", "mov", "wav",  // 音视频
-            "exe", "dll", "so", "bin"  // 可执行文件和二进制文件
+            "exe", "dll", "so", "bin",  // 可执行文件和二进制文件
+            "pmdb", "prt", "stl", "msh", "step", "stp", "iges", "igs"  // CAD/CAE
         ));
 
         return binaryExtensions.contains(lastPart);

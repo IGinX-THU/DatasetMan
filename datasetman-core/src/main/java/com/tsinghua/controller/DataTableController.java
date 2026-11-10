@@ -2,8 +2,10 @@ package com.tsinghua.controller;
 
 import com.tsinghua.dto.*;
 import com.tsinghua.model.Result;
+import com.tsinghua.service.CadFileMetaService;
 import com.tsinghua.service.DataTableService;
 import com.tsinghua.service.RelationalDataService;
+import com.tsinghua.util.ConvertUtil;
 import com.tsinghua.auth.annotation.RequirePermission;
 import com.tsinghua.auth.enums.Permission;
 import com.tsinghua.auth.annotation.OperationLog;
@@ -21,6 +23,11 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -40,6 +47,9 @@ public class DataTableController {
     @Autowired
     private DataTableService dataTableService;
 
+    @Autowired
+    private CadFileMetaService cadFileMetaService;
+
     /**
      * 数据查询
      */
@@ -58,6 +68,31 @@ public class DataTableController {
     @RequirePermission(Permission.DATA_READ)
     public void queryFileData(@Validated @RequestBody DataQueryRequest request, HttpServletResponse response) {
         dataTableService.queryDataStreaming(request, response);
+    }
+
+    /**
+     * 文件元数据识别（CAD/CAE格式：.pmdb/.prt/.stl/.msh/.step/.iges），
+     * 返回格式判定与结构信息（如 PMDB 的 HDF5 结构树），供前端预览卡片渲染
+     */
+    @ApiOperation("文件元数据识别")
+    @PostMapping("/fs/meta")
+    @RequirePermission(Permission.DATA_READ)
+    public com.tsinghua.model.Result<List<Map<String, Object>>> queryFileMeta(@Validated @RequestBody DataQueryRequest request) {
+        List<Map<String, Object>> metas = new ArrayList<>();
+        for (String path : request.getPaths()) {
+            String fileName = ConvertUtil.iginxPathToFileName(path);
+            try {
+                byte[] bytes = dataTableService.queryFileBytes(Collections.singletonList(path));
+                metas.add(cadFileMetaService.analyze(bytes, fileName));
+            } catch (Exception e) {
+                log.error("文件元数据识别失败: {}", path, e);
+                Map<String, Object> fallback = new LinkedHashMap<>();
+                fallback.put("fileName", fileName);
+                fallback.put("error", e.getMessage());
+                metas.add(fallback);
+            }
+        }
+        return com.tsinghua.model.Result.success(metas);
     }
 
     /**

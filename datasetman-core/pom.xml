@@ -96,6 +96,13 @@
             <version>0.1.4</version>
         </dependency>
 
+        <!-- HDF5只读解析库，用于识别ANSYS PMDB(.pmdb，本质为HDF5容器) -->
+        <dependency>
+            <groupId>io.jhdf</groupId>
+            <artifactId>jhdf</artifactId>
+            <version>0.7.0</version>
+        </dependency>
+
     </dependencies>
 
     <build>

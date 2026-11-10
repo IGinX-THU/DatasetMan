@@ -219,8 +219,9 @@ class FileSystemBrowser extends HTMLElement {
         const fileGrid = this.querySelector('#fileGrid');
         if (!fileGrid) return;
 
-        // 清理之前的video.js播放器
+        // 清理之前的video.js播放器与three.js场景
         this.cleanupVideoPlayer();
+        this.cleanupThreeViewer();
 
         // 从路径提取文件名（例如：file_system.fs.video.zkfdv4\mp4 -> zkfdv4.mp4）
         // 支持反斜杠和正斜杠分隔符
@@ -256,14 +257,20 @@ class FileSystemBrowser extends HTMLElement {
         const textExtensions = ['txt', 'csv', 'json', 'xml', 'html', 'htm', 'md', 'log', 'css', 'js', 'java', 'py', 'sql'];
         const documentExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
         const cadExtensions = ['dxf'];
+        const meshExtensions = ['stl', 'msh'];
+        const cadBinaryExtensions = ['pmdb', 'prt'];
+        const cadTextExtensions = ['step', 'stp', 'iges', 'igs'];
         const isImage = imageExtensions.includes(fileExtension);
         const isVideo = videoExtensions.includes(fileExtension);
         const isAudio = audioExtensions.includes(fileExtension);
         const isText = textExtensions.includes(fileExtension);
         const isDocument = documentExtensions.includes(fileExtension);
         const isCad = cadExtensions.includes(fileExtension);
+        const isMesh = meshExtensions.includes(fileExtension);
+        const isCadBinary = cadBinaryExtensions.includes(fileExtension);
+        const isCadText = cadTextExtensions.includes(fileExtension);
         const isCsv = fileExtension === 'csv';
-        const isPreviewable = isImage || isVideo || isAudio || isText || isCad;
+        const isPreviewable = isImage || isVideo || isAudio || isText || isCad || isMesh || isCadBinary || isCadText;
 
         if (isPreviewable) {
             // 创建预览内容
@@ -481,6 +488,24 @@ class FileSystemBrowser extends HTMLElement {
                         </div>
                     `;
                 });
+            } else if (isMesh || isCadBinary || isCadText) {
+                // CAD/CAE 文件（STL/MSH/PMDB/PRT/STEP/IGES）：格式识别与元数据预览
+                const readAsArray = (blob instanceof Blob) ? blob.arrayBuffer()
+                    : Promise.resolve((blob instanceof ArrayBuffer) ? blob : blob.buffer);
+                readAsArray.then(arrayBuffer => {
+                    this.handleCadCaPreview(new Uint8Array(arrayBuffer), fileName, this.currentPath);
+                }).catch(error => {
+                    console.error('CAD/CAE文件数据读取失败:', error);
+                    fileGrid.innerHTML = `
+                        <div class="file-preview">
+                            <div class="preview-content">
+                                <div style="color: #999; text-align: center; padding: 20px;">
+                                    文件数据读取失败: ${error.message}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
             }
         } else if (isDocument) {
             // 文档文件，转换为Uint8Array后调用相应的预览方法
@@ -623,14 +648,20 @@ class FileSystemBrowser extends HTMLElement {
         const textExtensions = ['txt', 'csv', 'json', 'xml', 'html', 'htm', 'md', 'log', 'css', 'js', 'java', 'py', 'sql'];
         const documentExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
         const cadExtensions = ['dxf'];
+        const meshExtensions = ['stl', 'msh'];
+        const cadBinaryExtensions = ['pmdb', 'prt'];
+        const cadTextExtensions = ['step', 'stp', 'iges', 'igs'];
         const isImage = imageExtensions.includes(fileExtension);
         const isVideo = videoExtensions.includes(fileExtension);
         const isAudio = audioExtensions.includes(fileExtension);
         const isText = textExtensions.includes(fileExtension);
         const isDocument = documentExtensions.includes(fileExtension);
         const isCad = cadExtensions.includes(fileExtension);
+        const isMesh = meshExtensions.includes(fileExtension);
+        const isCadBinary = cadBinaryExtensions.includes(fileExtension);
+        const isCadText = cadTextExtensions.includes(fileExtension);
         const isCsv = fileExtension === 'csv';
-        const isPreviewable = isImage || isVideo || isAudio || isText || isCad;
+        const isPreviewable = isImage || isVideo || isAudio || isText || isCad || isMesh || isCadBinary || isCadText;
 
         if (isPreviewable && records.length > 0) {
             // 显示文件预览
@@ -670,6 +701,8 @@ class FileSystemBrowser extends HTMLElement {
                 this.renderCsvPreview(this.base64ToUint8Array(binaryData), fileName);
             } else if (isCad) {
                 this.renderDxfPreview(this.base64ToUint8Array(binaryData), fileName);
+            } else if (isMesh || isCadBinary || isCadText) {
+                this.handleCadCaPreview(this.base64ToUint8Array(binaryData), fileName, fileColumn);
             }
         } else if (isDocument && records.length > 0) {
             // 文档文件，提供下载提示
@@ -1890,6 +1923,670 @@ class FileSystemBrowser extends HTMLElement {
             const btn = fileGrid.querySelector('#downloadDxfBtn');
             if (btn) btn.addEventListener('click', () => this.downloadSelected());
         }
+    }
+
+    // ===== CAD/CAE 文件识别与预览（PMDB/PRT/STL/MSH/STEP/IGES） =====
+
+    /**
+     * CAD/CAE 文件预览总入口：按扩展名路由到对应渲染器
+     * @param sourcePath IGinX 测点路径（用于调用后端 /fs/meta 识别接口）
+     */
+    handleCadCaPreview(uint8Array, fileName, sourcePath) {
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+        if (fileExtension === 'stl' || fileExtension === 'msh') {
+            if (fileExtension === 'stl') {
+                this.renderStlPreview(uint8Array, fileName);
+            } else {
+                this.renderMshPreview(uint8Array, fileName);
+            }
+        } else if (fileExtension === 'pmdb') {
+            this.renderPmdbPreview(uint8Array, fileName, sourcePath);
+        } else if (fileExtension === 'prt') {
+            this.renderCadBinaryPreview(uint8Array, fileName, fileExtension);
+        } else if (['step', 'stp', 'iges', 'igs'].includes(fileExtension)) {
+            this.renderCadTextPreview(uint8Array, fileName, fileExtension);
+        } else {
+            this.renderCadBinaryPreview(uint8Array, fileName, fileExtension);
+        }
+    }
+
+    /**
+     * PMDB（ANSYS Fluent Meshing 几何/网格数据库，本质为 HDF5 容器）预览：
+     * 调用后端 /api/data/fs/meta 用 jhdf 解析 HDF5 结构树，失败降级为通用二进制卡片
+     */
+    renderPmdbPreview(uint8Array, fileName, sourcePath) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        this.prepareBinaryDownload(uint8Array, fileName);
+
+        window.AppConfig.post('data', 'fs/meta', { paths: [sourcePath] }).then(result => {
+            const meta = result && result.data && result.data[0];
+            if (!meta || meta.error) {
+                console.warn('PMDB元数据识别失败，降级为通用二进制卡片:', meta && meta.error);
+                this.renderCadBinaryPreview(uint8Array, fileName, 'pmdb');
+                return;
+            }
+
+            const strings = this.extractAsciiStrings(uint8Array, 6, 50);
+            const hexDump = this.formatHexDump(uint8Array, 256);
+            const hdf5 = meta.hdf5;
+            const treeHtml = hdf5 ? this.renderHdf5TreeNode({ name: '/', children: hdf5.children }, 0) : '';
+            const markerHtml = (meta.markers || []).map(m => `<span class="cad-badge">${this.escapeHtml(m)}</span>`).join(' ');
+
+            fileGrid.classList.add('has-preview');
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header">
+                        <span class="file-name">${this.escapeHtml(fileName)}</span>
+                    </div>
+                    <div class="preview-content" style="overflow: auto; padding: 12px 16px;">
+                        <div style="margin-bottom: 10px;">
+                            <span class="cad-badge cad-badge-primary">${this.escapeHtml(meta.formatName || meta.format || 'PMDB')}</span>
+                            ${markerHtml}
+                            <span style="margin-left: 8px; color: #666; font-size: 13px;">大小: ${this.formatFileSize(meta.sizeBytes || uint8Array.length)}</span>
+                        </div>
+                        ${hdf5 ? `
+                        <div style="margin-bottom: 12px;">
+                            <div style="font-weight: 600; margin-bottom: 6px;">HDF5 结构树${hdf5.truncated ? '（已截断）' : ''}</div>
+                            <div class="cad-tree">${treeHtml || '<div style="color:#999;">空文件</div>'}</div>
+                        </div>` : ''}
+                        ${hdf5 && hdf5.attributes && Object.keys(hdf5.attributes).length ? `
+                        <div style="margin-bottom: 12px;">
+                            <div style="font-weight: 600; margin-bottom: 6px;">根属性</div>
+                            ${this.renderAttributesTable(hdf5.attributes)}
+                        </div>` : ''}
+                        ${meta.hdf5Error ? `<div style="color:#c60; margin-bottom: 12px;">HDF5结构解析失败: ${this.escapeHtml(meta.hdf5Error)}</div>` : ''}
+                        ${strings.length ? `
+                        <div style="margin-bottom: 12px;">
+                            <div style="font-weight: 600; margin-bottom: 6px;">内嵌字符串（前 ${strings.length} 条）</div>
+                            <div style="max-height: 140px; overflow: auto; background: #fafafa; border: 1px solid #eee; padding: 8px;">
+                                ${strings.map(s => `<span class="cad-string">${this.escapeHtml(s)}</span>`).join(' ')}
+                            </div>
+                        </div>` : ''}
+                        <div>
+                            <div style="font-weight: 600; margin-bottom: 6px;">文件头 hex（前 ${Math.min(256, uint8Array.length)} 字节）</div>
+                            <pre class="cad-hex">${hexDump}</pre>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).catch(error => {
+            console.warn('PMDB元数据接口调用失败，降级为通用二进制卡片:', error);
+            this.renderCadBinaryPreview(uint8Array, fileName, 'pmdb');
+        });
+    }
+
+    /**
+     * 递归渲染 HDF5 结构树（groups 用 details/summary 折叠）
+     */
+    renderHdf5TreeNode(node, depth) {
+        if (!node || !node.children || !node.children.length) {
+            return '<div style="color:#999; padding-left: 18px;">（无子节点）</div>';
+        }
+        return node.children.map(child => {
+            const label = this.escapeHtml(child.name || '(unnamed)');
+            if (child.children && child.children.length) {
+                return `
+                    <details ${depth === 0 ? 'open' : ''}>
+                        <summary style="cursor: pointer;">
+                            <span class="cad-type cad-type-group">GROUP</span>
+                            ${label}
+                        </summary>
+                        <div style="padding-left: 16px; border-left: 1px dashed #ddd; margin-left: 8px;">
+                            ${this.renderHdf5TreeNode(child, depth + 1)}
+                        </div>
+                    </details>`;
+            }
+            let info = '';
+            if (child.type === 'DATASET') {
+                const dims = Array.isArray(child.dims) ? child.dims.join('×') : '';
+                info = `${dims ? dims : ''}${child.javaType ? ' : ' + child.javaType : ''}`;
+            } else if (child.type === 'COMMITTED_DATATYPE') {
+                info = 'committed datatype';
+            }
+            const attrs = child.attributes && Object.keys(child.attributes).length
+                ? Object.entries(child.attributes).map(([k, v]) => `${this.escapeHtml(k)}=${this.escapeHtml(String(v))}`).join('; ')
+                : '';
+            return `
+                <div style="padding: 1px 0;">
+                    <span class="cad-type cad-type-${child.type === 'DATASET' ? 'dataset' : 'other'}">${this.escapeHtml(child.type || 'NODE')}</span>
+                    ${label}
+                    ${info ? `<span style="color:#888; font-size: 12px;"> ${this.escapeHtml(info)}</span>` : ''}
+                    ${attrs ? `<div style="color:#999; font-size: 12px; padding-left: 12px;">attrs: ${attrs}</div>` : ''}
+                </div>`;
+        }).join('');
+    }
+
+    renderAttributesTable(attributes) {
+        const rows = Object.entries(attributes).map(([k, v]) =>
+            `<tr><td style="border: 1px solid #eee; padding: 4px 8px; font-size: 12px;">${this.escapeHtml(k)}</td>
+                 <td style="border: 1px solid #eee; padding: 4px 8px; font-size: 12px;">${this.escapeHtml(String(v))}</td></tr>`).join('');
+        return `<table style="border-collapse: collapse;"><tbody>${rows}</tbody></table>`;
+    }
+
+    /**
+     * 通用二进制 CAD 文件卡片（NX .prt 等）：签名 + 字符串 + hex + 下载
+     */
+    renderCadBinaryPreview(uint8Array, fileName, fileExtension) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        this.prepareBinaryDownload(uint8Array, fileName);
+
+        // 签名判定
+        let signature = '未知二进制';
+        const latinHead = new TextDecoder('latin1').decode(uint8Array.subarray(0, 8192));
+        if (latinHead.includes('UGII')) {
+            signature = 'Siemens NX / Unigraphics (UGII 标记)';
+        } else if (uint8Array[0] === 0x89 && uint8Array[1] === 0x48) {
+            signature = 'HDF5 容器';
+        } else if (uint8Array[0] === 0x50 && uint8Array[1] === 0x4B) {
+            signature = 'ZIP 容器';
+        } else if (latinHead.includes('ANSYS') || latinHead.includes('Fluent')) {
+            signature = 'ANSYS 相关数据';
+        }
+
+        const strings = this.extractAsciiStrings(uint8Array, 6, 80);
+        const hexDump = this.formatHexDump(uint8Array, 256);
+
+        fileGrid.classList.add('has-preview');
+        fileGrid.innerHTML = `
+            <div class="file-preview">
+                <div class="preview-header">
+                    <span class="file-name">${this.escapeHtml(fileName)}</span>
+                </div>
+                <div class="preview-content" style="overflow: auto; padding: 12px 16px;">
+                    <div style="margin-bottom: 10px;">
+                        <span class="cad-badge cad-badge-primary">.${this.escapeHtml(fileExtension)} 二进制文件</span>
+                        <span class="cad-badge">${this.escapeHtml(signature)}</span>
+                        <span style="margin-left: 8px; color: #666; font-size: 13px;">大小: ${this.formatFileSize(uint8Array.length)}</span>
+                        <span style="color: #999; font-size: 12px; margin-left: 8px;">专有格式，无法解析几何内容，仅提供识别信息与下载</span>
+                    </div>
+                    ${strings.length ? `
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-weight: 600; margin-bottom: 6px;">内嵌字符串（前 ${strings.length} 条）</div>
+                        <div style="max-height: 140px; overflow: auto; background: #fafafa; border: 1px solid #eee; padding: 8px;">
+                            ${strings.map(s => `<span class="cad-string">${this.escapeHtml(s)}</span>`).join(' ')}
+                        </div>
+                    </div>` : ''}
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 6px;">文件头 hex（前 ${Math.min(256, uint8Array.length)} 字节）</div>
+                        <pre class="cad-hex">${hexDump}</pre>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * STL 预览：解析三角形/包围盒统计，three.js 3D 渲染（可旋转缩放）
+     */
+    renderStlPreview(uint8Array, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        this.prepareBinaryDownload(uint8Array, fileName);
+
+        let parsed;
+        try {
+            parsed = this.parseStl(uint8Array);
+        } catch (error) {
+            fileGrid.classList.add('has-preview');
+            fileGrid.innerHTML = `
+                <div class="file-preview">
+                    <div class="preview-header"><span class="file-name">${this.escapeHtml(fileName)}</span></div>
+                    <div class="preview-content">
+                        <div style="color: #999; text-align: center; padding: 20px;">
+                            STL解析失败: ${this.escapeHtml(error.message)}
+                            <div><button class="btn" id="downloadStlBtn" style="margin-top: 10px;">下载文件</button></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            const btn = fileGrid.querySelector('#downloadStlBtn');
+            if (btn) btn.addEventListener('click', () => this.downloadSelected());
+            return;
+        }
+
+        const { format, triangleCount, bounds, positions } = parsed;
+        const size = [bounds.max[0] - bounds.min[0], bounds.max[1] - bounds.min[1], bounds.max[2] - bounds.min[2]]
+            .map(v => v.toFixed(2)).join(' × ');
+
+        fileGrid.classList.add('has-preview');
+        fileGrid.innerHTML = `
+            <div class="file-preview">
+                <div class="preview-header"><span class="file-name">${this.escapeHtml(fileName)}</span></div>
+                <div class="preview-content">
+                    <div class="stl-stats">
+                        <span class="cad-badge cad-badge-primary">STL (${format === 'binary' ? '二进制' : 'ASCII'})</span>
+                        <span style="margin-left: 8px; color: #666; font-size: 13px;">三角形: ${triangleCount.toLocaleString()}</span>
+                        <span style="color: #666; font-size: 13px; margin-left: 12px;">包围盒: ${size}</span>
+                    </div>
+                    <div id="stlCanvasContainer" style="width: 100%; height: 480px; position: relative; background: #f7f7f9; border-radius: 4px; overflow: hidden;">
+                        <div style="position: absolute; top: 8px; left: 10px; color: #999; font-size: 12px;">左键旋转 / 滚轮缩放 / 右键平移</div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const container = fileGrid.querySelector('#stlCanvasContainer');
+        if (positions && container) {
+            this.ensureThreeJs().then(() => {
+                this.renderThreeStl(container, positions);
+            }).catch(error => {
+                console.warn('three.js加载失败，仅显示统计:', error);
+                container.innerHTML = `<div style="padding: 20px; color: #999; text-align: center;">3D渲染库加载失败: ${this.escapeHtml(error.message)}<br>已显示解析统计信息。</div>`;
+            });
+        } else {
+            container.innerHTML = '<div style="padding: 20px; color: #999; text-align: center;">三角面数据为空，无法渲染。</div>';
+        }
+    }
+
+    /**
+     * 解析 STL（二进制/ASCII），返回三角形数量、包围盒与顶点数据
+     */
+    parseStl(uint8Array) {
+        const view = new DataView(uint8Array.buffer, uint8Array.byteOffset, uint8Array.byteLength);
+        let isBinary = false;
+        let triangleCount = 0;
+        if (uint8Array.length >= 84) {
+            const count = view.getUint32(80, true);
+            if (84 + count * 50 === uint8Array.length) {
+                isBinary = true;
+                triangleCount = count;
+            }
+        }
+
+        if (isBinary) {
+            const positions = new Float32Array(triangleCount * 9);
+            let offset = 84;
+            const min = [Infinity, Infinity, Infinity];
+            const max = [-Infinity, -Infinity, -Infinity];
+            for (let i = 0; i < triangleCount; i++) {
+                offset += 12; // 跳过法向量
+                for (let v = 0; v < 3; v++) {
+                    const x = view.getFloat32(offset, true); offset += 4;
+                    const y = view.getFloat32(offset, true); offset += 4;
+                    const z = view.getFloat32(offset, true); offset += 4;
+                    const base = i * 9 + v * 3;
+                    positions[base] = x; positions[base + 1] = y; positions[base + 2] = z;
+                    if (x < min[0]) min[0] = x; if (x > max[0]) max[0] = x;
+                    if (y < min[1]) min[1] = y; if (y > max[1]) max[1] = y;
+                    if (z < min[2]) min[2] = z; if (z > max[2]) max[2] = z;
+                }
+                offset += 2; // attribute byte count
+            }
+            if (!isFinite(min[0])) throw new Error('无有效顶点');
+            return { format: 'binary', triangleCount, bounds: { min, max }, positions };
+        }
+
+        // ASCII STL
+        let text;
+        try {
+            text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array.subarray(0, Math.min(uint8Array.length, 64 * 1024 * 1024)));
+        } catch (e) {
+            throw new Error('无法解码文件内容');
+        }
+        if (!/^\s*solid/i.test(text)) {
+            throw new Error('既不是合法的二进制STL也不是ASCII STL');
+        }
+        const facets = text.split(/facet\s+normal/i).length - 1;
+        triangleCount = facets;
+        const vertexRe = /vertex\s+([-\d.eE+]+)\s+([-\d.eE+]+)\s+([-\d.eE+]+)/g;
+        const positions = new Float32Array(Math.max(facets, 1) * 9);
+        const min = [Infinity, Infinity, Infinity];
+        const max = [-Infinity, -Infinity, -Infinity];
+        let idx = 0;
+        let m;
+        while ((m = vertexRe.exec(text)) !== null) {
+            if (idx + 2 >= positions.length) break;
+            const x = parseFloat(m[1]), y = parseFloat(m[2]), z = parseFloat(m[3]);
+            positions[idx++] = x; positions[idx++] = y; positions[idx++] = z;
+            if (x < min[0]) min[0] = x; if (x > max[0]) max[0] = x;
+            if (y < min[1]) min[1] = y; if (y > max[1]) max[1] = y;
+            if (z < min[2]) min[2] = z; if (z > max[2]) max[2] = z;
+        }
+        if (idx === 0) throw new Error('ASCII STL中未找到顶点');
+        if (!isFinite(min[0])) throw new Error('无有效顶点');
+        return { format: 'ascii', triangleCount: Math.floor(idx / 9), bounds: { min, max }, positions: positions.subarray(0, idx) };
+    }
+
+    /**
+     * three.js 渲染 STL 网格（懒加载库，OrbitControls 交互）
+     */
+    ensureThreeJs() {
+        if (this._threeJsPromise) return this._threeJsPromise;
+        this._threeJsPromise = new Promise((resolve, reject) => {
+            if (typeof THREE !== 'undefined' && THREE.OrbitControls) {
+                resolve();
+                return;
+            }
+            const three = document.createElement('script');
+            three.src = '/lib/three/three.min.js';
+            three.onload = () => {
+                const controls = document.createElement('script');
+                controls.src = '/lib/three/OrbitControls.js';
+                controls.onload = () => resolve();
+                controls.onerror = () => reject(new Error('OrbitControls加载失败'));
+                document.head.appendChild(controls);
+            };
+            three.onerror = () => reject(new Error('three.js加载失败'));
+            document.head.appendChild(three);
+        });
+        return this._threeJsPromise;
+    }
+
+    cleanupThreeViewer() {
+        if (this._threeViewer) {
+            const { renderer, animationId } = this._threeViewer;
+            if (animationId) cancelAnimationFrame(animationId);
+            if (renderer) renderer.dispose();
+            this._threeViewer = null;
+        }
+    }
+
+    renderThreeStl(container, positions) {
+        this.cleanupThreeViewer();
+        const width = container.clientWidth || 800;
+        const height = container.clientHeight || 480;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf7f7f9);
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.computeVertexNormals();
+        geometry.center();
+        geometry.computeBoundingSphere();
+        const radius = Math.max(geometry.boundingSphere.radius, 1e-6);
+
+        const material = new THREE.MeshPhongMaterial({
+            color: 0x7fa8c9,
+            side: THREE.DoubleSide,
+            flatShading: true,
+            specular: 0x222222,
+            shininess: 30
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        const grid = new THREE.GridHelper(radius * 4, 20, 0xcccccc, 0xe5e5e5);
+        scene.add(grid);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+        const keyLight = new THREE.DirectionalLight(0xffffff, 0.75);
+        keyLight.position.set(radius * 2, radius * 3, radius * 2.5);
+        scene.add(keyLight);
+
+        const camera = new THREE.PerspectiveCamera(55, width / height, radius / 100, radius * 50);
+        camera.position.set(radius * 1.6, radius * 1.3, radius * 1.8);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio || 1);
+        renderer.setSize(width, height);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.12;
+        controls.update();
+
+        const animate = () => {
+            this._threeViewer.animationId = requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        };
+        this._threeViewer = { renderer, animationId: null };
+        animate();
+    }
+
+    /**
+     * Fluent .msh 网格文件预览：解析段头统计（维度/节点/cell/face/zone）
+     */
+    renderMshPreview(uint8Array, fileName) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        this.prepareBinaryDownload(uint8Array, fileName);
+
+        const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array.subarray(0, Math.min(uint8Array.length, 32 * 1024 * 1024)));
+        const stats = this.parseMshSections(text);
+
+        const textPreview = this.escapeHtml(text.split(/\r?\n/).slice(0, 40).join('\n'));
+
+        fileGrid.classList.add('has-preview');
+        fileGrid.innerHTML = `
+            <div class="file-preview">
+                <div class="preview-header"><span class="file-name">${this.escapeHtml(fileName)}</span></div>
+                <div class="preview-content" style="overflow: auto; padding: 12px 16px;">
+                    <div style="margin-bottom: 10px;">
+                        <span class="cad-badge cad-badge-primary">Fluent Mesh (.msh)</span>
+                        <span style="margin-left: 8px; color: #666; font-size: 13px;">大小: ${this.formatFileSize(uint8Array.length)}</span>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-weight: 600; margin-bottom: 6px;">网格统计</div>
+                        <table style="border-collapse: collapse;">
+                            <tbody>
+                                <tr><td style="border: 1px solid #eee; padding: 4px 10px;">维度</td><td style="border: 1px solid #eee; padding: 4px 10px;">${stats.dimension || '未知'}</td></tr>
+                                <tr><td style="border: 1px solid #eee; padding: 4px 10px;">节点数</td><td style="border: 1px solid #eee; padding: 4px 10px;">${stats.nodeCount.toLocaleString()}</td></tr>
+                                <tr><td style="border: 1px solid #eee; padding: 4px 10px;">面区(zones)</td><td style="border: 1px solid #eee; padding: 4px 10px;">${stats.faceZoneCount}</td></tr>
+                                <tr><td style="border: 1px solid #eee; padding: 4px 10px;">面数</td><td style="border: 1px solid #eee; padding: 4px 10px;">${stats.faceCount.toLocaleString()}</td></tr>
+                                <tr><td style="border: 1px solid #eee; padding: 4px 10px;">体区(zones)</td><td style="border: 1px solid #eee; padding: 4px 10px;">${stats.cellZoneCount}</td></tr>
+                                <tr><td style="border: 1px solid #eee; padding: 4px 10px;">体单元数</td><td style="border: 1px solid #eee; padding: 4px 10px;">${stats.cellCount.toLocaleString()}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    ${stats.zoneNames.length ? `
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-weight: 600; margin-bottom: 6px;">Zone 名称（前 ${stats.zoneNames.length} 个）</div>
+                        <div style="max-height: 120px; overflow: auto;">
+                            ${stats.zoneNames.map(n => `<span class="cad-string">${this.escapeHtml(n)}</span>`).join(' ')}
+                        </div>
+                    </div>` : ''}
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 6px;">文件头预览（前 40 行）</div>
+                        <pre class="cad-hex">${textPreview}</pre>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    parseMshSections(text) {
+        const stats = { dimension: '', nodeCount: 0, faceZoneCount: 0, cellZoneCount: 0, faceCount: 0, cellCount: 0, zoneNames: [] };
+        const dimRe = /\(2\s*(2|3)D?\s*\)/;
+        const dimMatch = text.match(dimRe);
+        if (dimMatch) {
+            stats.dimension = dimMatch[1] + 'D';
+        }
+        // (10 zone-id first-index last-index type) — 节点数 = last - first + 1
+        const nodeRe = /\(10\s+(\d+)\s+(\d+)\s+(\d+)[^)]*\)/g;
+        let m;
+        while ((m = nodeRe.exec(text)) !== null) {
+            if (m[1] !== '0') {
+                stats.nodeCount = Math.max(stats.nodeCount, parseInt(m[3], 10) - parseInt(m[2], 10) + 1);
+            }
+        }
+        const faceRe = /\(13\s+(\d+)\s+(\d+)\s+(\d+)[^)]*\)/g;
+        while ((m = faceRe.exec(text)) !== null) {
+            if (m[1] !== '0') {
+                stats.faceZoneCount++;
+                stats.faceCount += parseInt(m[3], 10) - parseInt(m[2], 10) + 1;
+            }
+        }
+        const cellRe = /\(12\s+(\d+)\s+(\d+)\s+(\d+)[^)]*\)/g;
+        while ((m = cellRe.exec(text)) !== null) {
+            if (m[1] !== '0') {
+                stats.cellZoneCount++;
+                stats.cellCount += parseInt(m[3], 10) - parseInt(m[2], 10) + 1;
+            }
+        }
+        // (39 (zone-id zone-name ...)())
+        const zoneNameRe = /\(39\s*\(\s*(\d+)\s+([A-Za-z0-9_\-.: ]+?)\s*\)/g;
+        while ((m = zoneNameRe.exec(text)) !== null) {
+            stats.zoneNames.push(m[2].trim());
+            if (stats.zoneNames.length >= 100) break;
+        }
+        return stats;
+    }
+
+    /**
+     * STEP / IGES 文本格式预览：解析文件头元数据
+     */
+    renderCadTextPreview(uint8Array, fileName, fileExtension) {
+        const fileGrid = this.querySelector('#fileGrid');
+        if (!fileGrid) return;
+
+        this.prepareBinaryDownload(uint8Array, fileName);
+
+        const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array.subarray(0, Math.min(uint8Array.length, 32 * 1024 * 1024)));
+        const isStep = fileExtension === 'step' || fileExtension === 'stp';
+
+        let formatBadge;
+        let infoRows = [];
+        let extraHtml = '';
+
+        if (isStep) {
+            formatBadge = 'STEP (ISO 10303-21)';
+            const headerMatch = text.match(/ISO-10303-21;([\s\S]*?)DATA\s*\(/i);
+            const header = headerMatch ? headerMatch[1] : '';
+            const fileNameMatch = header.match(/FILE_NAME\s*\(\s*'([^']*)'/i);
+            const schemaMatch = header.match(/FILE_SCHEMA\s*\(\s*\(\s*'([^']*)'/i);
+            const authorMatch = header.match(/FILE_AUTHOR\s*\(\s*\(\s*'([^']*)'/i);
+            const productRe = /PRODUCT\s*\(\s*'([^']*)'/gi;
+            const products = [];
+            let pm;
+            while ((pm = productRe.exec(text)) !== null) {
+                if (!products.includes(pm[1])) products.push(pm[1]);
+                if (products.length >= 50) break;
+            }
+            const entityCount = (text.match(/^\s*#\d+\s*=/gm) || []).length;
+            if (fileNameMatch) infoRows.push(['FILE_NAME', fileNameMatch[1]]);
+            if (authorMatch) infoRows.push(['FILE_AUTHOR', authorMatch[1]]);
+            if (schemaMatch) infoRows.push(['FILE_SCHEMA', schemaMatch[1]]);
+            infoRows.push(['实体数', entityCount.toLocaleString()]);
+            if (products.length) {
+                extraHtml = `
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-weight: 600; margin-bottom: 6px;">PRODUCT 名称（前 ${products.length} 个）</div>
+                        <div style="max-height: 120px; overflow: auto;">
+                            ${products.map(p => `<span class="cad-string">${this.escapeHtml(p)}</span>`).join(' ')}
+                        </div>
+                    </div>`;
+            }
+        } else {
+            formatBadge = 'IGES';
+            const countsMatch = text.match(/S\s*(\d+)\s*G\s*(\d+)\s*D\s*(\d+)\s*P\s*(\d+)/);
+            if (countsMatch) {
+                infoRows.push(['起始段(S)', countsMatch[1]]);
+                infoRows.push(['全局段(G)', countsMatch[2]]);
+                infoRows.push(['目录段(D)', countsMatch[3]]);
+                infoRows.push(['参数段(P)', countsMatch[4]]);
+            }
+            const unitsMatch = text.match(/(\d)H\s*(MM|INCH|IN|FT|MI|K|M|CM|UM)\b/i);
+            if (unitsMatch) infoRows.push(['单位', unitsMatch[2].toUpperCase()]);
+        }
+
+        const textPreview = this.escapeHtml(text.split(/\r?\n/).slice(0, 40).join('\n'));
+
+        fileGrid.classList.add('has-preview');
+        fileGrid.innerHTML = `
+            <div class="file-preview">
+                <div class="preview-header"><span class="file-name">${this.escapeHtml(fileName)}</span></div>
+                <div class="preview-content" style="overflow: auto; padding: 12px 16px;">
+                    <div style="margin-bottom: 10px;">
+                        <span class="cad-badge cad-badge-primary">${formatBadge}</span>
+                        <span style="margin-left: 8px; color: #666; font-size: 13px;">大小: ${this.formatFileSize(uint8Array.length)}</span>
+                    </div>
+                    ${infoRows.length ? `
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-weight: 600; margin-bottom: 6px;">文件头信息</div>
+                        <table style="border-collapse: collapse;">
+                            <tbody>
+                                ${infoRows.map(([k, v]) => `<tr><td style="border: 1px solid #eee; padding: 4px 10px;">${this.escapeHtml(String(k))}</td><td style="border: 1px solid #eee; padding: 4px 10px;">${this.escapeHtml(String(v))}</td></tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>` : ''}
+                    ${extraHtml}
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 6px;">文件头预览（前 40 行）</div>
+                        <pre class="cad-hex">${textPreview}</pre>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * 设置二进制下载信息（工具栏下载按钮复用）
+     */
+    prepareBinaryDownload(uint8Array, fileName) {
+        this.currentImageUrl = URL.createObjectURL(new Blob([uint8Array], { type: 'application/octet-stream' }));
+        this.currentFileName = fileName;
+    }
+
+    /**
+     * 从二进制数据提取可打印ASCII字符串（去重保序，限量限量长）
+     */
+    extractAsciiStrings(uint8Array, minLength = 6, maxCount = 50) {
+        const strings = [];
+        const seen = new Set();
+        const scanLength = Math.min(uint8Array.length, 4 * 1024 * 1024);
+        let start = -1;
+        for (let i = 0; i <= scanLength; i++) {
+            const b = i < scanLength ? uint8Array[i] : 0;
+            const printable = b >= 0x20 && b <= 0x7E;
+            if (printable && start < 0) {
+                start = i;
+            } else if (!printable && start >= 0) {
+                if (i - start >= minLength) {
+                    let s = '';
+                    for (let j = start; j < i; j++) s += String.fromCharCode(uint8Array[j]);
+                    if (!seen.has(s)) {
+                        seen.add(s);
+                        strings.push(s);
+                        if (strings.length >= maxCount) return strings;
+                    }
+                }
+                start = -1;
+            }
+        }
+        return strings;
+    }
+
+    /**
+     * hex转储（每行16字节：偏移 + hex + ASCII）
+     */
+    formatHexDump(uint8Array, numBytes = 256) {
+        const bytes = uint8Array.subarray(0, Math.min(numBytes, uint8Array.length));
+        const lines = [];
+        for (let row = 0; row < bytes.length; row += 16) {
+            const chunk = bytes.subarray(row, Math.min(row + 16, bytes.length));
+            const offset = row.toString(16).padStart(8, '0');
+            const hexParts = [];
+            let ascii = '';
+            for (let i = 0; i < 16; i++) {
+                if (i < chunk.length) {
+                    hexParts.push(chunk[i].toString(16).padStart(2, '0'));
+                    ascii += (chunk[i] >= 0x20 && chunk[i] <= 0x7E) ? String.fromCharCode(chunk[i]) : '.';
+                } else {
+                    hexParts.push('  ');
+                    ascii += ' ';
+                }
+                if (i === 7) hexParts.push(' ');
+            }
+            lines.push(`${offset}  ${hexParts.join(' ')}  |${ascii}|`);
+        }
+        return this.escapeHtml(lines.join('\n'));
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === null || bytes === undefined || isNaN(bytes)) return 'N/A';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
     }
 
     // ===== CSV 表格 / 文本 双 Tab 预览 =====
