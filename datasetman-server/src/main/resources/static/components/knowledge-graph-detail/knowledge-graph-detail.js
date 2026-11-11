@@ -32,6 +32,10 @@ class KnowledgeGraphDetail extends HTMLElement {
 
     // 首屏一次全量查询 + 渲染连通子图（对齐Neo4j Browser的渲染上限），单击节点展开一跳邻接
     static get MAX_RENDER_NODES() { return 500; }
+    // 子图缩放阈值：缩小到该比例自动升级为全图概览（语义缩放）
+    static get RETURN_ZOOM() { return 0.45; }
+    // 模式切换冷却（毫秒），防止阈值附近反复横跳
+    static get SWITCH_COOLDOWN_MS() { return 600; }
     static get NEIGHBOR_LIMIT() { return 50; }
     static get RENDER_BATCH_SIZE() { return 300; }
     // 渲染节点数超过该值时隐藏标签（缩略下不可读），悬浮/属性面板/搜索仍可查看
@@ -520,6 +524,7 @@ class KnowledgeGraphDetail extends HTMLElement {
                         <span class="header-meta-item" id="metaNodePath" title=""></span>
                         <span class="header-meta-item" id="metaEdgePath" title=""></span>
                         <span class="header-meta-item" id="metaTime" title=""></span>
+                        <span class="header-meta-item" id="breadcrumb" style="color:#4c89ff;display:none;font-weight:600;"></span>
                         <div class="header-stats">
                             <span>节点 <strong id="statLoadedNodes">0</strong>/<span id="statTotalNodes">-</span></span>
                             <span>边 <strong id="statEdges">0</strong>/<span id="statTotalEdges">-</span></span>
@@ -536,8 +541,6 @@ class KnowledgeGraphDetail extends HTMLElement {
                     <button class="tool-btn" id="relayoutBtn">重新布局</button>
                     <button class="tool-btn" id="overviewEdgesBtn" hidden>隐藏边</button>
                     <button class="tool-btn" id="edgeLevelBtn" hidden title="默认随缩放自动增减边密度（LOD）；点击可锁定精简/均衡/全量三档；全部边始终在 GPU 缓冲中">边: 自适应</button>
-                    <button class="tool-btn primary" id="overviewBtn">全图概览</button>
-                    <button class="tool-btn primary" id="backSubgraphBtn" hidden>返回子图</button>
                     <span class="mode-label" id="modeLabel">力导子图 · G6</span>
                 </div>
 
@@ -582,15 +585,19 @@ class KnowledgeGraphDetail extends HTMLElement {
         });
         $('#zoomOutBtn')?.addEventListener('click', () => {
             if (this.viewMode === 'overview') this.overview && this.overview.zoomOut();
-            else if (this.graph) this.graph.zoom(1 / 1.2);
+            else if (this.graph) {
+                this.graph.zoom(1 / 1.2);
+                this.maybeUpgradeToOverview();
+            }
         });
         $('#fitBtn')?.addEventListener('click', () => {
             if (this.viewMode === 'overview') this.overview && this.overview.fit();
-            else if (this.graph) this.graph.fitView(30);
+            else if (this.graph) {
+                this.graph.fitView(30);
+                this._fitZoom = this.graph.getZoom();
+            }
         });
         $('#relayoutBtn')?.addEventListener('click', () => this.graph && this.graph.layout());
-        $('#overviewBtn')?.addEventListener('click', () => this.enterOverview());
-        $('#backSubgraphBtn')?.addEventListener('click', () => this.backToSubgraph());
         $('#overviewEdgesBtn')?.addEventListener('click', () => {
             if (!this.overview) return;
             const hidden = this.overview.toggleEdges();
@@ -731,12 +738,17 @@ class KnowledgeGraphDetail extends HTMLElement {
                     onHoverMove: (model, x, y) => this.renderTooltip('节点', model, x, y),
                     onLeaveNode: () => this.hideTooltip(),
                     onSelectNode: (model) => this.updatePropsPanel('节点', model),
-                    onClearSelection: () => this.hideTooltip(),
+                    onClearSelection: () => {
+                        this.hideTooltip();
+                        if (this.overview) this.overview.clearSpotlight();
+                    },
                     // 全图概览充当 minimap/规模导航：单击节点 → 返回子图并搜索定位展开
                     onOpenInSubgraph: (model) => this.openInSubgraph(model),
                     // LOD 档位变化 → 同步按钮文案与角标点亮数
                     onLodChange: () => this.syncEdgeLevelButton(),
-                    onEdgeModeChange: () => this.syncEdgeLevelButton()
+                    onEdgeModeChange: () => this.syncEdgeLevelButton(),
+                    // 缩放下钻：概览深放大停留 → 以相机中心最近节点为种子切子图
+                    onZoomDrill: (nodeId) => this.drillToSubgraph(nodeId)
                 });
             }
 
@@ -771,6 +783,9 @@ class KnowledgeGraphDetail extends HTMLElement {
     backToSubgraph() {
         if (this.viewMode !== 'overview') return;
         this.viewMode = 'subgraph';
+        // 返回子图时保留聚光灯：再次进入概览可看到「我刚才在看哪」
+        const bc = this.shadowRoot.querySelector('#breadcrumb');
+        if (bc) bc.style.display = '';
         this.applyViewMode();
         this.hideTooltip();
         if (!this.graph || this.graph.get('destroyed')) return;
@@ -786,7 +801,8 @@ class KnowledgeGraphDetail extends HTMLElement {
             if (this.viewMode !== 'subgraph' || !this.graph || this.graph.get('destroyed')) return;
             try {
                 this.graph.refresh();
-                this.graph.fitView(30);
+                this._fitZoom = this.graph.getZoom();
+            this.graph.fitView(30);
             } catch (e) { /* 忽略切换瞬间的竞态 */ }
         };
         requestAnimationFrame(restore);
@@ -802,12 +818,33 @@ class KnowledgeGraphDetail extends HTMLElement {
         const id = String((model && model.id != null) ? model.id : (model || ''));
         if (!id || id === 'null' || id === 'undefined') return;
         const label = (model && (model.rawLabel || model.label)) || id;
+        // ⓪ 下钻连贯体验：概览侧聚光灯（该节点+一跳邻域高亮、其余变暗）+ 相机飞入 350ms，
+        //    飞入完成后无缝切子图 —— 概览与子图因此成为同一张图的两级缩放，而非两张独立图
+        if (this.viewMode === 'overview' && this.overview) {
+            this.overview.setSpotlight(id);
+            if (this.overview.cancelDrill) this.overview.cancelDrill();
+            this.overview.flyToNode(id);
+        }
         // ① 搜索框回填节点 ID：概览单击 = 「按 ID 搜索定位」语义
         //    （节点 label 可能是「部件」这类类别词，ID 才是唯一定位标识）
         const input = this.shadowRoot.querySelector('#searchInput');
         if (input) input.value = id;
-        if (this.viewMode === 'overview') this.backToSubgraph();
+        // ⓪.5 面包屑：标识当前子图来自哪次下钻
+        this.setBreadcrumb(label);
+        if (this.viewMode === 'overview') {
+            // 等 350ms 飞入动画播完再切（聚光灯预览成为「起跳」动作）
+            setTimeout(() => {
+                if (this.viewMode === 'overview') this.backToSubgraph();
+                if (this.viewMode === 'subgraph') this.locateAndExpandInSubgraph(id, label);
+            }, 380);
+            return;
+        }
         if (this.viewMode !== 'subgraph') return;
+        this.locateAndExpandInSubgraph(id, label);
+    }
+
+    /** 子图内定位指定节点：增量加入（如未含）→ 展开一跳邻接 → 聚焦 + 属性面板 */
+    locateAndExpandInSubgraph(id, label) {
         // backToSubgraph 的重绘走 rAF + 24ms 兜底，等它完成后再定位
         setTimeout(() => {
             if (this.viewMode !== 'subgraph' || !this.graph || this.graph.get('destroyed')) return;
@@ -815,10 +852,9 @@ class KnowledgeGraphDetail extends HTMLElement {
                 this.showMessage(`子图中未找到节点「${label}」`);
                 return;
             }
-            // ③ 触发搜索定位：按精确 ID 命中 + focusItem 聚焦 + 属性面板同步（等价于输入关键字后回车）
+            // 搜索定位：按精确 ID 命中 + focusItem 聚焦 + 属性面板同步
             const searchLocate = () => setTimeout(() => this.focusSearch(id), 350);
             if (this.graph.findById(id)) {
-                // ② 自动触发点击语义：展开一跳邻接（幂等）
                 this.expandNode(id)
                     .then(searchLocate)
                     .catch((e) => console.warn('子图定位失败:', e));
@@ -829,6 +865,163 @@ class KnowledgeGraphDetail extends HTMLElement {
                     .catch((e) => console.warn('子图定位失败:', e));
             }
         }, 80);
+    }
+
+    /** 面包屑：标识当前子图的来源（全图概览 › 节点名） */
+    setBreadcrumb(label) {
+        const bc = this.shadowRoot.querySelector('#breadcrumb');
+        if (!bc) return;
+        if (label) {
+            bc.textContent = '全图 › ' + label;
+            bc.style.display = '';
+        } else {
+            bc.style.display = 'none';
+        }
+    }
+
+    /**
+     * 子图缩小跨过阈值 → 自动升级为全图概览（语义缩放，250ms节流后触发）
+     */
+    maybeUpgradeToOverview() {
+        if (!this.graph || this.graph.get('destroyed')) return;
+        if (this.viewMode !== 'subgraph') return;
+        const now = Date.now();
+        if (this._lastModeSwitch && now - this._lastModeSwitch < KnowledgeGraphDetail.SWITCH_COOLDOWN_MS) return;
+        // 固定zoom阈值：缩小到适配比例的0.45以下（所有节点都进入视窗且明显变小）才升级
+        if (this.graph.getZoom() >= KnowledgeGraphDetail.RETURN_ZOOM) return;
+        this._lastModeSwitch = now;
+        this.upgradeToOverview();
+    }
+
+    /**
+     * 升级为全图概览：记录当前缩放比供返回时衔接，复用 enterOverview（FA2 refine/canReuse 均保留）
+     */
+    async upgradeToOverview() {
+        if (this.viewMode === 'overview' || this._switching) return;
+        try {
+            this._preDrillZoom = this.graph ? this.graph.getZoom() : 1;
+            await this.enterOverview();
+            // 清除下钻时的聚光灯（否则概览里除邻域外全被调暗，看起来像「啥也不显示」）
+            if (this.overview) this.overview.clearSpotlight();
+            // 概览相机从「近景」档继续（衔接感：从子图缩出一路放大到全图）
+            if (this.overview) this.overview.zoomToNearLevel();
+        } catch (error) {
+            console.error('升级全图概览失败:', error);
+            this.showMessage('升级全图概览失败: ' + error.message);
+        }
+    }
+
+    /**
+     * 全图概览缩放跨过下钻阈值 → 以相机中心最近节点为种子下钻子图（由概览组件检测并回调）
+     */
+    drillToSubgraph(seedId) {
+        const seed = this.nodeById.get(String(seedId));
+        if (!seed) return;
+        this._switching = true;
+        this.viewMode = 'subgraph';
+        const finish = () => {
+            this._switching = false;
+        };
+        // 相机飞向种子节点（250ms），随后切换画布并以该节点为种子渲染子图
+        this.overview.flyToNode(String(seedId));
+        setTimeout(() => {
+            try {
+                this.renderSeedSubgraph(String(seedId));
+            } catch (error) {
+                console.error('下钻渲染失败:', error);
+                this.showMessage('下钻渲染失败: ' + error.message);
+            } finally {
+                finish();
+            }
+        }, 260);
+    }
+
+    /**
+     * 以种子节点为根 BFS 收集至多 MAX_RENDER_NODES 个节点的邻域子图，
+     * 种子置画布中心、按 BFS 层环形摆位（层=扩散圈层，观感即「以该节点为中心逐圈展开」）。
+     * 渲染后 fitView，聚光灯设为种子+邻域（返回概览可回看）。
+     */
+    async renderSeedSubgraph(seedId) {
+        const cap = KnowledgeGraphDetail.MAX_RENDER_NODES;
+        // BFS 收集（含种子）
+        const order = [seedId];
+        const seen = new Set([seedId]);
+        for (let head = 0; head < order.length && order.length < cap; head++) {
+            const cur = order[head];
+            const links = (this.adjacency && this.adjacency.get(cur)) || [];
+            for (const e of links) {
+                const other = cur === String(e.source) ? String(e.target) : String(e.source);
+                if (!seen.has(other)) {
+                    seen.add(other);
+                    order.push(other);
+                }
+                if (order.length >= cap) break;
+            }
+            if (order.length >= cap) break;
+        }
+
+        // BFS 层深（用于环形摆位）
+        const depthOf = new Map([[seedId, 0]]);
+        for (let i = 0; i < order.length; i++) {
+            const cur = order[i];
+            const d = depthOf.get(cur) || 0;
+            const links = (this.adjacency && this.adjacency.get(cur)) || [];
+            for (const e of links) {
+                const other = cur === String(e.source) ? String(e.target) : String(e.source);
+                if (!depthOf.has(other)) depthOf.set(other, d + 1);
+            }
+        }
+
+        const hideLabels = order.length > KnowledgeGraphDetail.LABEL_MAX_NODES;
+        const nodeModels = order.map(id => {
+            const raw = this.nodeById.get(id);
+            if (!raw) return null;
+            const label = raw.label || id;
+            const color = this.labelColorOf(raw.labelType || '未分类');
+            return {
+                id: String(id),
+                label: hideLabels ? '' : (String(label).length > 16 ? String(label).slice(0, 15) + '…' : String(label)),
+                rawLabel: String(label),
+                properties: raw.properties || {},
+                labelType: raw.labelType || '',
+                style: { fill: color }
+            };
+        }).filter(Boolean);
+        const idSet = new Set(nodeModels.map(m => m.id));
+        const edgeModels = [];
+        this.allEdges.forEach((e, i) => {
+            const src = String(e.source), tgt = String(e.target);
+            if (idSet.has(src) && idSet.has(tgt)) {
+                edgeModels.push({
+                    id: 'seed-e-' + i,
+                    source: src,
+                    target: tgt,
+                    label: String(e.label || ''),
+                    rawLabel: String(e.label || ''),
+                    properties: e.properties || {},
+                    style: {}
+                });
+            }
+        });
+
+        this.destroyGraph();
+        // 复用 initGraph：创建 G6 画布（含力导布局配置）并绑定事件，单击展开等交互随之可用
+        this.initGraph();
+        await this.appendIncrementally(nodeModels, edgeModels);
+
+        // 切换画布可见性（概览隐藏、子图显示）——这是"下钻生效"的关键一步
+        this.applyViewMode();
+        this.overview.clearSpotlight();
+
+        this.renderedIds = new Set(nodeModels.map(m => String(m.id)));
+        this.loadedNodeCount = this.renderedIds.size;
+        this.renderedEdgeCount = edgeModels.length;
+        this.hasMore = this.renderedIds.size < this.allNodes.length;
+        this.setBreadcrumb('全图 › ' + seedId);
+        this.overview.setSpotlight(seedId);
+        this.updateStats();
+        this.graph.fitView(30);
+        this._fitZoom = this.graph.getZoom();
     }
 
     /** 子图内相机聚焦到指定节点，并同步右下角属性面板 */
@@ -853,8 +1046,6 @@ class KnowledgeGraphDetail extends HTMLElement {
             const el = $(id);
             if (el) el.hidden = !visible;
         };
-        show('#overviewBtn', !overview);
-        show('#backSubgraphBtn', overview);
         show('#relayoutBtn', !overview);   // 重新布局只对 G6 力导子图有意义
         show('#overviewEdgesBtn', overview);
         show('#edgeLevelBtn', overview);
@@ -914,6 +1105,7 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.totalNodes = 0;
         this.totalEdges = 0;
         this.hasMore = false;
+        this._fitZoom = 1;
         this.labelColorMap = {};
         this.expandedNodeIds = new Set();
         this.allNodes = null;
@@ -982,7 +1174,12 @@ class KnowledgeGraphDetail extends HTMLElement {
             this.updateStats();
             this.graph.layout();
             setTimeout(() => {
-                try { this.graph && this.graph.fitView(30); } catch (e) { /* 忽略 */ }
+                try {
+                    if (this.graph) {
+                        this._fitZoom = this.graph.getZoom();
+                        this.graph.fitView(30);
+                    }
+                } catch (e) { /* 忽略 */ }
             }, 100);
             this.hideLoading();
         } catch (error) {
@@ -1150,6 +1347,14 @@ class KnowledgeGraphDetail extends HTMLElement {
             const model = evt.item.getModel();
             this.expandNode(String(model.id));
         });
+        // 缩小跨过阈值 → 自动升级为全图概览（语义缩放；容器wheel事件，250ms节流后检查缩放比）
+        const graphContainer = this.shadowRoot.querySelector('#graphContainer');
+        if (graphContainer) {
+            graphContainer.addEventListener('wheel', () => {
+                clearTimeout(this._zoomCheckTimer);
+                this._zoomCheckTimer = setTimeout(() => this.maybeUpgradeToOverview(), 250);
+            }, { passive: true });
+        }
         this.graph.on('node:mousemove', (evt) => this.showTooltip('节点', evt));
         this.graph.on('edge:mousemove', (evt) => this.showTooltip('边', evt));
         // 右下角属性面板：悬浮时同步更新

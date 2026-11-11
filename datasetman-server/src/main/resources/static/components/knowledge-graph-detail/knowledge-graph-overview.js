@@ -37,6 +37,12 @@ class KnowledgeGraphOverview {
         this._sourceNodes = null;
         this._sourceEdges = null;
         this.nodeIndex = new Map();   // id -> { rawLabel, labelType, properties, degree }
+        this._spotlight = null;       // 聚光灯节点集合（下钻预览/返回回看）
+        this._dimNodeCache = new Map();
+        this._dimEdgeCache = null;
+        this._drillArmed = true;      // 缩放下钻武装位（浅放大时武装，深放大停留触发）
+        this._drillTimer = null;
+        this._lastWheelTs = 0;        // 最近一次滚轮事件时间戳
         this.selectedNode = null;
         this.selectedNeighbors = [];
         this.neighborCount = 0;
@@ -130,6 +136,11 @@ class KnowledgeGraphOverview {
      * 20 万条边在 Sigma 的矩形边程序下约 120 万顶点，超过 Uint16 索引上限，
      * 必须是 WebGL2 或带 OES_element_index_uint 扩展的 WebGL1。
      */
+    // 缩放下钻阈值：相机 ratio 低于该值视为「细看」意图（比 LOD「细看」档 minRatio 0.12 略深）
+    static get DRILL_RATIO() { return 0.09; }
+    // 相机 ratio 高于该值时重新武装下钻检测（滞回）
+    static get ARM_RATIO() { return 0.15; }
+
     static isSupported() {
         if (KnowledgeGraphOverview._supported !== undefined) return KnowledgeGraphOverview._supported;
         if (!window.Sigma || !window.graphology) return (KnowledgeGraphOverview._supported = false);
@@ -172,6 +183,43 @@ class KnowledgeGraphOverview {
     }
 
     /**
+     * 聚光灯：仅高亮指定节点及其一跳邻域（下钻预览/返回回看）。传空清除。
+     */
+    setSpotlight(id) {
+        if (!id || !this.graph || !this.graph.hasNode(id)) {
+            this.clearSpotlight();
+            return;
+        }
+        const neigh = new Set([id]);
+        this.graph.forEachNeighbor(id, (nb) => neigh.add(nb));
+        this._spotlight = neigh;
+        this.renderer.refresh();
+    }
+
+    clearSpotlight() {
+        if (!this._spotlight) return;
+        this._spotlight = null;
+        if (this.renderer) this.renderer.refresh();
+    }
+
+    /**
+     * 相机飞入指定节点邻域（350ms 动画），营造「下钻进入」的连贯体验
+     */
+    flyToNode(id) {
+        if (!this.graph || !this.graph.hasNode(id)) return;
+        const attrs = this.graph.getNodeAttributes(id);
+        const camera = this.renderer.getCamera();
+        camera.animate({ x: attrs.x, y: attrs.y, ratio: 0.12 }, { duration: 350 });
+    }
+
+    /** 渲染概览所需的节点度数（供聚光灯外的常规显示） */
+    nodeDegree(id) {
+        const m = this.nodeIndex.get(id);
+        return m ? m.degree : 0;
+    }
+
+    /**
+     * 一次性构建并渲染全图。    /**
      * 一次性构建并渲染全图。
      * @param {Array} nodes 全量节点 [{id, label, labelType, properties}]
      * @param {Array} edges 全量边   [{source, target, label, properties}]
@@ -508,6 +556,14 @@ class KnowledgeGraphOverview {
         const renderer = this.renderer;
         const toModel = (key) => this.nodeModel(key);
 
+        // 滚轮手势标记：语义缩放下钻只响应「用户滚轮缩放」，
+        // 按钮/动画驱动的相机变化（flyTo/返回子图等）不会误触发自动切换
+        if (this.container) {
+            this.container.addEventListener('wheel', () => {
+                this._lastWheelTs = Date.now();
+            }, { passive: true });
+        }
+
         renderer.on('enterNode', ({ node, event }) => {
             this.hoveredKey = node;
             if (this.hooks.onHoverNode) {
@@ -769,6 +825,58 @@ class KnowledgeGraphOverview {
         clearTimeout(this._lodTimer);
         // 拖动/缩放过程中绝不 refresh；停止 260ms 后若跨档或线宽漂移则做一次重算
         this._lodTimer = setTimeout(() => this._applyLod(false), KnowledgeGraphOverview.LOD_SETTLE_MS);
+        // 缩放下钻检测：手势停更 420ms 后若处于深放大（ratio < 0.09），以相机中心最近节点为种子下钻子图
+        clearTimeout(this._drillTimer);
+        this._drillTimer = setTimeout(() => this._maybeDrill(), 600);
+    }
+
+    /**
+     * 缩放下钻检测：深放大状态停留后，以相机中心最近节点为种子回调宿主（onZoomDrill）。
+     * 一次性触发后解除武装；相机回到浅放大（ratio > 0.15）时重新武装。
+     */
+    _maybeDrill() {
+        if (this._destroyed || !this.renderer) return;
+        if (this._camRatio >= KnowledgeGraphOverview.DRILL_RATIO) {
+            this._drillArmed = true;
+            return;
+        }
+        if (!this._drillArmed) return;
+        this._drillArmed = false;
+        console.log('[kg-overview] 深放大确认，触发下钻: ratio=', this._camRatio);
+        const id = this.getNodeNearCamera();
+        if (id && this.hooks.onZoomDrill) this.hooks.onZoomDrill(id);
+    }
+
+    /**
+     * 相机中心最近的节点id（O(N) 遍历；调用侧已节流）
+     */
+    getNodeNearCamera() {
+        if (!this.renderer || !this.graph) return null;
+        const state = this.renderer.getCamera().getState();
+        const cx = state.x, cy = state.y;
+        let best = null, bestD = Infinity;
+        this.graph.forEachNode((node, attrs) => {
+            const dx = attrs.x - cx, dy = attrs.y - cy;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < bestD) { bestD = d2; best = node; }
+        });
+        return best;
+    }
+
+    /**
+     * 相机回到「近景」档比例（返回子图前的衔接位）
+     */
+    zoomToNearLevel() {
+        if (!this.renderer) return;
+        this.renderer.getCamera().animate({ ratio: 0.35 }, { duration: 300 });
+    }
+
+    /**
+     * 取消待触发的缩放下钻（按钮/动画驱动的相机变化时使用）
+     */
+    cancelDrill() {
+        clearTimeout(this._drillTimer);
+        this._drillArmed = false;
     }
 
     /** 相机 ratio 相对上次边宽补偿的漂移是否超过 18%（超过则需要 refresh 重算补偿） */
@@ -870,6 +978,19 @@ class KnowledgeGraphOverview {
 
     /** Sigma process() 时对每个节点调用：节点 LOD 隐藏低度数节点 + 被过滤的类别整类隐藏 */
     _reduceNode(node, data) {
+        // 聚光灯（下钻预览/返回回看）：仅高亮选中节点及其一跳邻域，其余变暗缩小
+        if (this._spotlight && this._spotlight.size && !this._spotlight.has(node)) {
+            let dim = this._dimNodeCache.get(data.color);
+            if (!dim) {
+                dim = Object.assign({}, data, {
+                    color: '#D3DAE6',
+                    label: null,
+                    size: Math.max(1, (data.size || 2) * 0.3)
+                });
+                this._dimNodeCache.set(data.color, dim);
+            }
+            return dim;
+        }
         if (this._lodHiddenNodes && this._lodHiddenNodes.size && this._lodHiddenNodes.has(node)) {
             return this._hiddenNodeOf(data);
         }
@@ -897,6 +1018,18 @@ class KnowledgeGraphOverview {
      *   ③ 按 currentEdgePercent（LOD 或手动档）做稳定哈希抽样，同一档位点亮的总是同一批边。
      */
     _reduceEdge(edge, data) {
+        // 聚光灯激活：两端点均在聚光灯内的边才显示
+        if (this._spotlight && this._spotlight.size) {
+            const ends = this.graph.extremities(edge);
+            if (!this._spotlight.has(ends[0]) || !this._spotlight.has(ends[1])) {
+                let dim = this._dimEdgeCache;
+                if (!dim) {
+                    dim = Object.assign({}, data, { color: '#E2E7EF', size: 0.4 });
+                    this._dimEdgeCache = dim;
+                }
+                return dim;
+            }
+        }
         if (this._edgeTypeFilter.size) {
             const idx = Number(edge.slice(1)) || 0;
             if (this._edgeTypeFilter.has(this._edgeTypeByIndex[idx])) return this._hiddenEdgeOf(data);
