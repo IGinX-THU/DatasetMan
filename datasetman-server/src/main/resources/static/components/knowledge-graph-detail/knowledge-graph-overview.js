@@ -901,6 +901,8 @@ class KnowledgeGraphOverview {
      */
     _maybeDrill() {
         if (this._destroyed || !this.renderer) return;
+        // 手动切换后的抑制窗口内不做自动判定，避免刚点完层级标签就被反向切回
+        if (this.hooks.isSwitchLocked && this.hooks.isSwitchLocked()) return;
         const thresholds = this.hooks.switchThresholds && this.hooks.switchThresholds();
         if (!thresholds) return;
         const px = this.nodeSizePx();   // 读实时相机，不用动画期间的缓存值

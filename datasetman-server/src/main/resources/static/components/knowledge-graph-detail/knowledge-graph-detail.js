@@ -3,7 +3,8 @@
  * show({name}) 后一次全量查询，缓存全量 nodes/edges，再按视图模式渲染：
  * - 力导子图（默认）：G6 4.8.22 + force layout，截取连通子图，单击节点展开一跳邻接；
  * - 全图概览：Sigma.js 2.4.0 (WebGL) + graphology，一次性渲染全部节点+边，
- *   平移缩放只改相机矩阵由 GPU 承担，可承载 5万节点/20万边，工具栏「返回子图」切回 G6。
+ *   平移缩放只改相机矩阵由 GPU 承担，可承载 5万节点/20万边。
+ * 两图按「节点屏幕尺寸」自动双向切换，工具栏层级标签提供手动切换兜底（共用同一入口与阈值）。
  * 两种模式的画布共存（互斥可见），切换时不销毁、不重建，返回子图保持原有布局与展开状态。
  */
 class KnowledgeGraphDetail extends HTMLElement {
@@ -24,6 +25,9 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.labelColorMap = {};
         this._fitZoom = 1;          // 子图「适应画布」时的 zoom（尺寸判据基准）
         this._medianDegree = 0;     // 全量图度数中位数（概览构建前估算节点尺寸）
+        this._manualLockUntil = 0;  // 手动切换后抑制自动切换的截止时间戳
+        this._pendingManualLock = false; // 异步切换完成后需要重新起算锁定窗口
+        this._locateShapes = null;  // 定位圈定的两个圆环 shape（8 秒或下次定位时移除）
         this.attachShadow({ mode: 'open' });
     }
 
@@ -48,6 +52,8 @@ class KnowledgeGraphDetail extends HTMLElement {
     static get SWITCH_MAX_PX() { return 48; }
     // 模式切换冷却（毫秒），防止阈值附近反复横跳
     static get SWITCH_COOLDOWN_MS() { return 600; }
+    // 手动切换后的「自动切换」抑制窗口：避免刚点完层级标签就被滚轮判定反向切回
+    static get MANUAL_LOCK_MS() { return 1500; }
     static get NEIGHBOR_LIMIT() { return 50; }
     static get RENDER_BATCH_SIZE() { return 300; }
     // 渲染节点数超过该值时隐藏标签（缩略下不可读），悬浮/属性面板/搜索仍可查看
@@ -179,13 +185,24 @@ class KnowledgeGraphDetail extends HTMLElement {
 
                 .tool-btn[hidden] { display: none; }
 
+                /* 层级标签是手动切换按钮：与 .tool-btn 同款边框/白底，一眼可辨可点 */
                 .mode-label {
                     margin-left: auto;
-                    font-size: 11px;
-                    color: #8c96a8;
+                    font-size: 12px;
+                    color: #4b5563;
                     white-space: nowrap;
-                    padding-left: 10px;
+                    padding: 5px 12px;
+                    border: 1px solid #d1d5db;
+                    border-radius: 4px;
+                    background: #fff;
+                    font-family: inherit;
+                    line-height: 1.3;
+                    cursor: pointer;
+                    transition: all .2s;
                 }
+                .mode-label:hover { color: #4c89ff; background: #f5f8ff; border-color: #4c89ff; }
+                .mode-label:active { transform: translateY(1px); }
+                .mode-label:focus-visible { outline: 2px solid #4c7cf3; outline-offset: 2px; }
 
                 .search-input {
                     width: 220px;
@@ -553,7 +570,7 @@ class KnowledgeGraphDetail extends HTMLElement {
                     <button class="tool-btn" id="relayoutBtn">重新布局</button>
                     <button class="tool-btn" id="overviewEdgesBtn" hidden>隐藏边</button>
                     <button class="tool-btn" id="edgeLevelBtn" hidden title="默认随缩放自动增减边密度（LOD）；点击可锁定精简/均衡/全量三档；全部边始终在 GPU 缓冲中">边: 自适应</button>
-                    <span class="mode-label" id="modeLabel">力导子图 · G6</span>
+                    <button type="button" class="mode-label" id="modeLabel" title="点击切换到全图概览">力导子图 · G6 ⇄</button>
                 </div>
 
                 <div class="main-area">
@@ -610,6 +627,8 @@ class KnowledgeGraphDetail extends HTMLElement {
             }
         });
         $('#relayoutBtn')?.addEventListener('click', () => this.graph && this.graph.layout());
+        // 层级标签 = 手动切换兜底入口（与滚轮自动切换共用同一套入口/阈值/守卫）
+        $('#modeLabel')?.addEventListener('click', () => this.toggleViewMode());
         $('#overviewEdgesBtn')?.addEventListener('click', () => {
             if (!this.overview) return;
             const hidden = this.overview.toggleEdges();
@@ -763,7 +782,9 @@ class KnowledgeGraphDetail extends HTMLElement {
                     // 尺寸判据下钻：概览节点放大到子图尺度 → 以相机中心最近节点为种子切子图
                     onZoomDrill: (nodeId, px) => this.drillToSubgraph(nodeId, px),
                     // 两图共用同一套尺寸阈值（概览侧判定与宿主侧判定不会各算各的）
-                    switchThresholds: () => this.switchThresholds()
+                    switchThresholds: () => this.switchThresholds(),
+                    // 手动切换后短时间内抑制概览侧的自动下钻，避免刚点完就反向切回
+                    isSwitchLocked: () => this.isSwitchLocked()
                 });
             }
 
@@ -794,8 +815,12 @@ class KnowledgeGraphDetail extends HTMLElement {
         }
     }
 
-    /** 返回力导子图：G6 画布一直在，重新可见后做一次轻量重绘与视图适配 */
-    backToSubgraph() {
+    /**
+     * 返回力导子图：G6 画布一直在，重新可见后做一次轻量重绘与视图适配。
+     * entryPx > 0 时（手动切换）把相机接到该节点直径上，保持尺寸连续；
+     * 不传时（单击概览节点定位展开）保持原行为，由后续 focusSearch 接管相机。
+     */
+    backToSubgraph(entryPx) {
         if (this.viewMode !== 'overview') return;
         this.viewMode = 'subgraph';
         // 返回子图时保留聚光灯：再次进入概览可看到「我刚才在看哪」
@@ -818,7 +843,17 @@ class KnowledgeGraphDetail extends HTMLElement {
                 this.graph.refresh();
                 this.graph.fitView(30);
                 this._fitZoom = this.graph.getZoom();
+                // 手动切换：fitView 给出默认视图后，再按尺寸连续接到稳定带中点，
+                // 并始终以画布中心为锚居中。_fitZoom 仍保持 fitView 的值作阈值基准。
+                if (entryPx > 0) {
+                    const target = Math.max(0.02, Math.min(10,
+                        entryPx / KnowledgeGraphDetail.NODE_BASE_PX));
+                    const w = Number(this.graph.get('width')) || 600;
+                    const h = Number(this.graph.get('height')) || 400;
+                    this.graph.zoomTo(target, { x: w / 2, y: h / 2 });
+                }
             } catch (e) { /* 忽略切换瞬间的竞态 */ }
+            if (this._pendingManualLock) { this._pendingManualLock = false; this._armManualLock(); }
         };
         requestAnimationFrame(restore);
         setTimeout(restore, 24);
@@ -896,7 +931,11 @@ class KnowledgeGraphDetail extends HTMLElement {
 
     // ---------- 语义缩放：节点屏幕尺寸（CSS px）作为两图共用的刻度 ----------
 
-    /** 子图当前视图下的节点直径 */
+    /**
+     * 子图当前视图下的节点直径。
+     * 定位改用「圈定」（只改描边/加圆环，不动 model.size），节点尺寸恒定，
+     * 判据天然不会被一次搜索点击带偏。
+     */
     subgraphNodePx() {
         const zoom = (this.graph && !this.graph.get('destroyed'))
             ? this.graph.getZoom() : (this._fitZoom || 1);
@@ -937,15 +976,53 @@ class KnowledgeGraphDetail extends HTMLElement {
         return { crossover, toOverview: crossover / h, toSubgraph: crossover * h };
     }
 
+    /** 起算「手动切换」的冷却与抑制窗口（切换完成时再调一次，覆盖异步构建耗时） */
+    _armManualLock() {
+        const now = Date.now();
+        this._lastModeSwitch = now;
+        this._manualLockUntil = now + KnowledgeGraphDetail.MANUAL_LOCK_MS;
+    }
+
+    /** 自动缩放切换是否正处于手动切换后的抑制窗口 */
+    isSwitchLocked() {
+        return Date.now() < (this._manualLockUntil || 0);
+    }
+
+    /**
+     * 工具栏层级标签点击 = 手动切换（滚轮自动切换的兜底）。
+     * 关键：不新增第二套状态机，只复用 upgradeToOverview / backToSubgraph 两个统一入口；
+     * 进入尺寸取稳定带中点 crossover，既保持节点尺寸连续，又落在两条阈值之间不会立刻反向回跳。
+     */
+    toggleViewMode() {
+        // 手动入口始终优先：手动锁只压制「自动」判定，手动连点仅受 600ms 冷却约束（可立即反悔）
+        if (this._switching) return;
+        const now = Date.now();
+        if (this._lastModeSwitch && now - this._lastModeSwitch < KnowledgeGraphDetail.SWITCH_COOLDOWN_MS) return;
+        const entryPx = this.switchThresholds().crossover;
+        this._armManualLock();
+        this._pendingManualLock = true;   // 异步切换完成后重新起算锁定窗口
+        clearTimeout(this._zoomCheckTimer);
+        if (this.viewMode === 'subgraph') {
+            this.upgradeToOverview(entryPx);
+        } else {
+            // 与 openInSubgraph（单击节点回填 ID + 定位展开）语义不同，这里只做纯视图切换
+            if (this.overview) this.overview.cancelDrill();
+            this.backToSubgraph(entryPx);
+        }
+    }
+
     /** 子图节点缩小到全图概览的尺度 → 自动升级（wheel 缩小手势 / 缩小按钮，250ms 节流后判定） */
     maybeUpgradeToOverview() {
         if (!this.graph || this.graph.get('destroyed')) return;
         if (this.viewMode !== 'subgraph' || this._switching) return;
         const now = Date.now();
+        if (this.isSwitchLocked()) return;
         if (this._lastModeSwitch && now - this._lastModeSwitch < KnowledgeGraphDetail.SWITCH_COOLDOWN_MS) return;
         const px = this.subgraphNodePx();
         const { toOverview } = this.switchThresholds();
         if (px > toOverview) return;   // 节点还没缩到「切换后图」的大小
+        // 切换前清掉定位圈定的描边/圆环，避免带着高亮跨视图（画布隐藏后圈会残留）
+        if (this._locateItem) this._clearLocate();
         this._lastModeSwitch = now;
         this.upgradeToOverview(px);
     }
@@ -966,6 +1043,9 @@ class KnowledgeGraphDetail extends HTMLElement {
         } catch (error) {
             console.error('升级全图概览失败:', error);
             this.showMessage('升级全图概览失败: ' + error.message);
+        } finally {
+            // 首次构建概览可能耗时数秒，锁定窗口从「切换真正完成」起算才有意义
+            if (this._pendingManualLock) { this._pendingManualLock = false; this._armManualLock(); }
         }
     }
 
@@ -1126,13 +1206,17 @@ class KnowledgeGraphDetail extends HTMLElement {
         }
         const levelBtn = $('#edgeLevelBtn');
         if (levelBtn && this.overview) levelBtn.textContent = this.overview.edgeLevelLabel();
-        if ($('#modeLabel')) {
-            $('#modeLabel').textContent = overview ? '全图概览 · 规模导航 / minimap' : '力导子图 · G6';
+        const modeBtn = $('#modeLabel');
+        if (modeBtn) {
+            modeBtn.textContent = overview ? '全图概览 · 规模导航 ⇄' : '力导子图 · G6 ⇄';
+            modeBtn.title = overview
+                ? '点击返回力导子图（滚轮缩放自动切换仍可用）'
+                : '点击切换到全图概览（滚轮缩放自动切换仍可用）';
         }
         if ($('#graphHint')) {
             $('#graphHint').innerHTML = overview
-                ? '远景只显示<b>高度数骨架</b>节点，滚轮放大逐步浮现更多；<b>放大到节点足够大自动进子图</b>；单击节点回子图定位'
-                : '滚轮缩放画布；<b>缩小到节点足够小自动切全图概览</b>；单击节点展开邻接；悬浮查看属性';
+                ? '远景只显示<b>高度数骨架</b>节点，滚轮放大逐步浮现更多；<b>放大到节点足够大自动进子图</b>；单击节点回子图定位；点击层级标签可手动切换'
+                : '滚轮缩放画布；<b>缩小到节点足够小自动切全图概览</b>；单击节点展开邻接；悬浮查看属性；点击层级标签可手动切换';
         }
         this.updateOverviewBadge();
         this.updateStats();
@@ -1403,6 +1487,12 @@ class KnowledgeGraphDetail extends HTMLElement {
                     offset: 4,
                     style: { fontSize: 11, fill: '#4b5563' }
                 }
+            },
+            // 搜索/下钻定位的「圈定」状态：金色粗描边。
+            // 只保留 stroke/lineWidth 两个常规属性（G6 撤销状态时能干净还原），
+            // 发光放在自建圆环上，环移除即彻底消失；全程不动 size，尺寸判据不受影响。
+            nodeStateStyles: {
+                locate: { stroke: '#ff9500', lineWidth: 4 }
             },
             defaultEdge: {
                 type: 'line',
@@ -1708,15 +1798,22 @@ class KnowledgeGraphDetail extends HTMLElement {
         }
         if (target) {
             this.graph.focusItem(target, true, { easing: 'easeCubic', duration: 400 });
-            // 金色光圈圈定命中节点，一眼可辨；8 秒后自动取消
+            // 金色描边 + 双层圆环「圈定」命中节点，一眼可辨；8 秒后自动消失
             this._markLocate(target);
-            // 当前缩放过小（节点在屏幕上太小难以辨认）时，放大到该节点处
-            if (this.graph.getZoom() < 0.8) {
+            // 画布不再强行拉到固定 zoom=0.8：从概览单击节点回子图时，fitView 给出约 0.25，
+            // 这段老逻辑会在 430ms 后把节点直径从约 5.5px 抬到 17.6px，
+            // 结果要滚近 20 档才够到「升全图概览」的尺寸阈值。
+            // 现在只在当前视图节点确实过小（小于稳定带中点）时补到中点，
+            // 命中节点已由描边+双层圆环圈定，无需放大整张画布；相机始终落在两条自动切换阈值之间。
+            const { crossover } = this.switchThresholds();
+            if (this.subgraphNodePx() < crossover) {
+                const targetZoom = Math.max(0.02, Math.min(10,
+                    crossover / KnowledgeGraphDetail.NODE_BASE_PX));
                 setTimeout(() => {
                     if (!this.graph || this.graph.get('destroyed')) return;
                     try {
                         const pos = this.graph.getItemPosition(target);
-                        this.graph.zoomTo(0.8, this.graph.graphToCanvasPoint(pos));
+                        this.graph.zoomTo(targetZoom, this.graph.graphToCanvasPoint(pos));
                     } catch (e) { /* 忽略 */ }
                 }, 430);
             }
@@ -1728,38 +1825,61 @@ class KnowledgeGraphDetail extends HTMLElement {
     }
 
     /**
-     * 圈定高亮：把搜索定位命中的节点直接放大到约 2 倍，一眼认出。
-     * 下一次定位先恢复上一个节点的原始尺寸；8 秒后自动恢复。
+     * 圈定命中节点：节点本身金色粗描边 + 外发光，再叠一圈实线金环和一圈虚线大环（靶心式圈定）。
+     * 刻意不放大节点：放大既改变视觉尺寸，又会让「缩小回全图概览」看起来遥遥无期，
+     * 而且会让基于节点屏幕尺寸的语义缩放判据变得不可信。
+     * 只改状态样式 + 额外 shape，不动 model.size；下一次定位先清旧圈，8 秒后自动消失。
      */
     _markLocate(item) {
         if (!this.graph || this.graph.get('destroyed')) return;
         clearTimeout(this._locateTimer);
-        this._restoreLocateSize();
+        this._clearLocate();
         try {
-            // 记录原始尺寸再放大：子图节点默认 22，放大到 3 倍且不小于 64px，确保一眼锁定
-            const orig = Number(item.getModel().size) || 22;
             this._locateItem = item;
-            this._locateOrigSize = orig;
-            this.graph.updateItem(item, { size: Math.max(64, orig * 3) });
+            this.graph.setItemState(item, 'locate', true);
+            const group = item.getContainer();
+            const size = Number(item.getModel().size) || KnowledgeGraphDetail.NODE_BASE_PX;
+            const r = size / 2;
+            // 环半径均大于节点半径，不会遮挡节点本体；capture:false 保证不拦截单击展开
+            this._locateShapes = [
+                group.addShape('circle', {
+                    attrs: {
+                        x: 0, y: 0, r: r + 8,
+                        stroke: '#ff9500', lineWidth: 3,
+                        shadowColor: 'rgba(255,149,0,0.9)', shadowBlur: 16
+                    },
+                    name: 'kg-locate-ring', capture: false
+                }),
+                group.addShape('circle', {
+                    attrs: {
+                        x: 0, y: 0, r: r + 17,
+                        stroke: '#ffb84d', lineWidth: 2, lineDash: [7, 5],
+                        opacity: 0.95
+                    },
+                    name: 'kg-locate-ring', capture: false
+                })
+            ];
+            // 置于节点下层，标签与节点始终可读
+            this._locateShapes.forEach((s) => { try { s.toBack(); } catch (e) { /* 忽略 */ } });
         } catch (e) {
-            this._locateItem = null;
-            this._locateOrigSize = null;
+            this._clearLocate();
             return;
         }
-        this._locateTimer = setTimeout(() => {
-            this._restoreLocateSize();
-        }, 8000);
+        this._locateTimer = setTimeout(() => this._clearLocate(), 8000);
     }
 
-    /** 恢复当前被放大节点的原始尺寸 */
-    _restoreLocateSize() {
+    /** 清除圈定：撤掉 locate 状态样式并移除两个圆环（节点尺寸从未改变，无需恢复） */
+    _clearLocate() {
         try {
-            if (this._locateItem && !this._locateItem.destroyed && this._locateOrigSize != null) {
-                this.graph.updateItem(this._locateItem, { size: this._locateOrigSize });
+            if (this._locateItem && !this._locateItem.destroyed) {
+                this.graph.setItemState(this._locateItem, 'locate', false);
             }
         } catch (e) { /* 项已被移除则忽略 */ }
+        (this._locateShapes || []).forEach((s) => {
+            try { s.remove(true); } catch (e) { /* group 已重建则忽略 */ }
+        });
         this._locateItem = null;
-        this._locateOrigSize = null;
+        this._locateShapes = null;
     }
 
     /**
