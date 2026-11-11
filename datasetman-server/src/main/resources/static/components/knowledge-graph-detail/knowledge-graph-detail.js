@@ -52,16 +52,16 @@ class KnowledgeGraphDetail extends HTMLElement {
      * 阈值只由这两个冻结值推导：T = √(ov0 × sub0) 为交界基准，
      * toOverview = T/√H（缩小侧）、toSubgraph = T×SWITCH_ZOOM_IN_FACTOR（放大侧）。
      * 两侧刻意不对称：G6 滚轮缩小每档 ×0.9（约 1.11 倍/档），Sigma 放大每档
-     * ratio÷1.7 ⇒ 节点 ×√1.7（约 1.30 倍/档）；同样的倍率在概览侧只要 2~3 档就跨过，
-     * 观感就是「还没放大够就切了」，所以放大侧需要更长的行程。
+     * ratio÷1.7 ⇒ 节点 ×√1.7（约 1.30 倍/档）；同样的倍率在概览侧档数明显更少就跨过，
+     * 观感就是「还没放大够就切了」，所以放大侧倍率单独调大、给足放大行程。
      * 切换瞬间目标图一律回到自己的初始大小（ov0 / sub0），不继承源图放大或缩小后的尺寸，
      * 基准不随相机历史漂移，每轮切换所需缩放距离恒定。
      */
     static get NODE_BASE_PX() { return 22; }   // G6 defaultNode.size
     // 缩小侧：以 T 为中心的滞回带（√1.5 ≈ 1.225 倍），保证触发后不会立刻反向回跳
     static get SWITCH_HYSTERESIS() { return 1.5; }
-    // 放大侧：相对 T 的倍率。调大 = 概览要放得更大才进子图（2.0 → 约 4 档滚轮、节点 ≈7.7px）
-    static get SWITCH_ZOOM_IN_FACTOR() { return 2.0; }
+    // 放大侧：相对 T 的倍率。调大 = 概览要放得更大才进子图（3.0 → 约 6 档滚轮、节点 ≈11.5px）
+    static get SWITCH_ZOOM_IN_FACTOR() { return 3.0; }
     static get SWITCH_MIN_PX() { return 1.2; }
     static get SWITCH_MAX_PX() { return 48; }
     // 模式切换冷却（毫秒），防止阈值附近反复横跳
