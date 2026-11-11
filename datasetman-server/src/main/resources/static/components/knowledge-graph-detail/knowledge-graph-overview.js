@@ -244,9 +244,9 @@ class KnowledgeGraphOverview {
     defaultNodeSizePx() { return this.nodeSizePx(1); }
 
     /**
-     * 切换瞬间保持「尺寸连续」：由 D = 2*size/√r 反解 r = (2*size/D)²，
-     * 把目标图相机设成节点直径恰好等于切换前直径的视图，并居中整张图。
-     * 这样切过去的一帧里点不放大也不缩小，视觉上只是同一张图换了渲染器。
+     * 切换瞬间把相机设成节点直径等于「本图初始大小」（ratio≈1 的默认视图）并居中。
+     * 宿主给的 px 取自冻结的初始大小，不再继承源图放大/缩小后的相机，
+     * 因此每次切进来节点都是同一尺寸，下一轮切换所需的缩放距离恒定。
      */
     setCameraForNodeSize(px) {
         if (!this.renderer) return;
@@ -895,8 +895,8 @@ class KnowledgeGraphOverview {
     }
 
     /**
-     * 尺寸判据下钻：节点放大到与子图默认视图相当（toSubgraph）时才回调宿主，
-     * 并把切换瞬间的节点直径一起传过去，让子图把相机接到同一尺寸上。
+     * 尺寸判据下钻：节点放大到宿主给出的 toSubgraph（由两图冻结的初始大小推导）时才回调。
+     * 传出的 px 只是触发瞬间的尺寸，宿主不再用它决定子图相机（落点固定为子图初始大小）。
      * 缩回 toOverview 以下重新武装；触发一次后解除武装，避免边界反复横跳。
      */
     _maybeDrill() {

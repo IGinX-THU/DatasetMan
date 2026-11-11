@@ -5,6 +5,8 @@
  * - 全图概览：Sigma.js 2.4.0 (WebGL) + graphology，一次性渲染全部节点+边，
  *   平移缩放只改相机矩阵由 GPU 承担，可承载 5万节点/20万边。
  * 两图按「节点屏幕尺寸」自动双向切换，工具栏层级标签提供手动切换兜底（共用同一入口与阈值）。
+ * 判据基准是两张图「初始视图」的节点直径（首帧冻结，不再随缩放/重排/切换改变），
+ * 切换后目标图一律回到自己的初始节点大小，不继承源图放大或缩小后的尺寸。
  * 两种模式的画布共存（互斥可见），切换时不销毁、不重建，返回子图保持原有布局与展开状态。
  */
 class KnowledgeGraphDetail extends HTMLElement {
@@ -23,8 +25,12 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.hasMore = false;
         this.isLoadingMore = false;
         this.labelColorMap = {};
-        this._fitZoom = 1;          // 子图「适应画布」时的 zoom（尺寸判据基准）
+        this._fitZoom = 1;          // 子图最近一次 fitView 的 zoom（仅用于相机，不再当切换基准）
         this._medianDegree = 0;     // 全量图度数中位数（概览构建前估算节点尺寸）
+        // 语义缩放的「初始大小」基准：整次图谱会话只冻结一次，之后的缩放/重排/切换都不改
+        this._baseSubgraphPx = null;      // 子图首帧节点直径（CSS px）
+        this._baseOverviewPx = null;      // 概览 ratio=1 时的节点直径（CSS px）
+        this._switchThresholdsCache = null;
         this._manualLockUntil = 0;  // 手动切换后抑制自动切换的截止时间戳
         this._pendingManualLock = false; // 异步切换完成后需要重新起算锁定窗口
         this._locateShapes = null;  // 定位圈定的两个圆环 shape（8 秒或下次定位时移除）
@@ -42,11 +48,14 @@ class KnowledgeGraphDetail extends HTMLElement {
      * 语义缩放不再比较 G6 zoom / Sigma ratio 两套数值，统一用「节点屏幕直径（CSS px）」：
      *   子图 G6   D = NODE_BASE_PX * zoom
      *   概览 Sigma D = 2 * size / √ratio（size 公式见 Overview.nodeSizeOf）
-     * 取两图默认视图尺寸的几何平均 T 作为交界尺寸，T/H 与 T*H 分别为
-     * 「缩到足够小 → 升概览」「放大到足够大 → 进子图」的阈值，H 为滞回带。
-     * 切换瞬间把目标图相机反解到同一个 D，节点尺寸不跳变，形成平滑过渡。
+     * 两张图各自的「初始视图节点直径」在首帧冻结为 sub0 / ov0，此后永不改写。
+     * 阈值只由这两个冻结值推导：T = √(ov0 × sub0) 为交界基准，
+     * T/√H、T×√H 分别是「缩到足够小 → 升概览」「放到足够大 → 进子图」的触发点。
+     * 切换瞬间目标图一律回到自己的初始大小（ov0 / sub0），不继承源图放大或缩小后的尺寸；
+     * 于是每张图从初始视图出发都只需固定的约 √H 倍缩放即可切换，距离不会一轮轮变远。
      */
     static get NODE_BASE_PX() { return 22; }   // G6 defaultNode.size
+    // 以 T 为中心的滞回带倍率（√1.5 ≈ 1.225 倍），保证触发后不会立刻反向回跳
     static get SWITCH_HYSTERESIS() { return 1.5; }
     static get SWITCH_MIN_PX() { return 1.2; }
     static get SWITCH_MAX_PX() { return 48; }
@@ -792,6 +801,9 @@ class KnowledgeGraphDetail extends HTMLElement {
                 (text) => this.showLoading(text));
             this.overviewNodeCount = result.nodes;
             this.overviewEdgeCount = result.edges;
+            // 冻结概览「初始视图（ratio=1）」的节点直径。必须在 render 完成后取真实统计值，
+            // 且只记这一次：之后概览被缩到多小 / 放到多大都不能改写切换基准。
+            this.captureInitialOverviewPx();
             this.viewMode = 'overview';
             this.applyViewMode();
             this.overview.resume();
@@ -817,10 +829,11 @@ class KnowledgeGraphDetail extends HTMLElement {
 
     /**
      * 返回力导子图：G6 画布一直在，重新可见后做一次轻量重绘与视图适配。
-     * entryPx > 0 时（手动切换）把相机接到该节点直径上，保持尺寸连续；
-     * 不传时（单击概览节点定位展开）保持原行为，由后续 focusSearch 接管相机。
+     * 无论从「手动切换 / 单击概览节点 / 缩放阈下钻」哪条路径回来，相机一律对齐到
+     * 子图自己的初始节点大小，不继承概览刚放大到的尺寸；
+     * 单击概览节点定位展开时，后续的 focusSearch / focusItem 仍负责平移到目标节点。
      */
-    backToSubgraph(entryPx) {
+    backToSubgraph() {
         if (this.viewMode !== 'overview') return;
         this.viewMode = 'subgraph';
         // 返回子图时保留聚光灯：再次进入概览可看到「我刚才在看哪」
@@ -841,17 +854,16 @@ class KnowledgeGraphDetail extends HTMLElement {
             if (this.viewMode !== 'subgraph' || !this.graph || this.graph.get('destroyed')) return;
             try {
                 this.graph.refresh();
-                this.graph.fitView(30);
+                this.graph.fitView(30);   // 只用来重绘并把图居中，不作为切换基准
                 this._fitZoom = this.graph.getZoom();
-                // 手动切换：fitView 给出默认视图后，再按尺寸连续接到稳定带中点，
-                // 并始终以画布中心为锚居中。_fitZoom 仍保持 fitView 的值作阈值基准。
-                if (entryPx > 0) {
-                    const target = Math.max(0.02, Math.min(10,
-                        entryPx / KnowledgeGraphDetail.NODE_BASE_PX));
-                    const w = Number(this.graph.get('width')) || 600;
-                    const h = Number(this.graph.get('height')) || 400;
-                    this.graph.zoomTo(target, { x: w / 2, y: h / 2 });
-                }
+                // fitView 只保证「当前数据适应画布」（展开过邻居 / 重建过种子子图后会变），
+                // 再按冻结的子图初始尺寸反解 zoom，保证每次回来节点都是同一初始大小。
+                const px = this.switchThresholds().entrySubgraphPx;
+                const target = Math.max(0.02, Math.min(10,
+                    px / KnowledgeGraphDetail.NODE_BASE_PX));
+                const w = Number(this.graph.get('width')) || 600;
+                const h = Number(this.graph.get('height')) || 400;
+                this.graph.zoomTo(target, { x: w / 2, y: h / 2 });
             } catch (e) { /* 忽略切换瞬间的竞态 */ }
             if (this._pendingManualLock) { this._pendingManualLock = false; this._armManualLock(); }
         };
@@ -929,7 +941,43 @@ class KnowledgeGraphDetail extends HTMLElement {
         }
     }
 
-    // ---------- 语义缩放：节点屏幕尺寸（CSS px）作为两图共用的刻度 ----------
+    // ---------- 语义缩放：以「两张图初始视图的节点大小」为固定基准 ----------
+
+    /** 把节点直径钳到安全区间，避免空图 / 极端布局算出 0 或几百 px 的阈值 */
+    static clampNodePx(v) {
+        const n = Number(v);
+        if (!(n > 0)) return KnowledgeGraphDetail.SWITCH_MIN_PX;
+        return Math.max(KnowledgeGraphDetail.SWITCH_MIN_PX,
+            Math.min(KnowledgeGraphDetail.SWITCH_MAX_PX, n));
+    }
+
+    /**
+     * 冻结子图初始节点直径：只在首张「有节点、已完成首次 fitView」的子图上记一次。
+     * 旧实现把 _fitZoom（每次 fitView 都重算）当基准：返回子图、下钻重建种子子图、
+     * 窗口 resize、点「适应画布」都会改写它，而且力导布局未收敛时的 fitView 会虚高，
+     * 于是阈值一轮一轮往下漂，用户必须把图缩得非常小才够得到切换点。
+     */
+    captureInitialSubgraphPx() {
+        if (this._baseSubgraphPx != null) return;
+        if (!this.graph || this.graph.get('destroyed')) return;
+        const nodes = this.graph.getNodes ? this.graph.getNodes() : [];
+        if (!nodes || !nodes.length) return;
+        const zoom = Number(this.graph.getZoom());
+        if (!(zoom > 0)) return;
+        this._baseSubgraphPx = KnowledgeGraphDetail.clampNodePx(
+            KnowledgeGraphDetail.NODE_BASE_PX * zoom);
+        this._switchThresholdsCache = null;
+    }
+
+    /** 冻结概览初始节点直径（ratio=1 的默认视图，与当前相机无关） */
+    captureInitialOverviewPx() {
+        if (this._baseOverviewPx != null) return;
+        if (!this.overview || !this.overview.defaultNodeSizePx) return;
+        const px = Number(this.overview.defaultNodeSizePx());
+        if (!(px > 0)) return;
+        this._baseOverviewPx = KnowledgeGraphDetail.clampNodePx(px);
+        this._switchThresholdsCache = null;
+    }
 
     /**
      * 子图当前视图下的节点直径。
@@ -942,38 +990,54 @@ class KnowledgeGraphDetail extends HTMLElement {
         return KnowledgeGraphDetail.NODE_BASE_PX * zoom;
     }
 
-    /** 子图「适应画布」默认视图下的节点直径 */
-    subgraphDefaultNodePx() {
-        return KnowledgeGraphDetail.NODE_BASE_PX * (Number(this._fitZoom) || 1);
+    /** 子图初始节点直径：优先用冻结值，冻结前用 fitView 值兜底 */
+    subgraphInitialNodePx() {
+        if (this._baseSubgraphPx != null) return this._baseSubgraphPx;
+        return KnowledgeGraphDetail.clampNodePx(
+            KnowledgeGraphDetail.NODE_BASE_PX * (Number(this._fitZoom) || 1));
     }
 
     /**
-     * 概览 ratio=1 默认视图下的节点直径。
-     * 概览还没构建时按同一公式估算（nodeSizeOf + 度数中位数），构建后用真实统计值。
+     * 概览初始节点直径：冻结值 > 实例真实统计值 > 构建前公式估算。
+     * 这些都是 ratio=1 的默认视图尺寸，与用户当前把概览缩到多小 / 放多大无关。
      */
-    overviewDefaultNodePx() {
+    overviewInitialNodePx() {
+        if (this._baseOverviewPx != null) return this._baseOverviewPx;
         if (this.overview && this.overview.defaultNodeSizePx) {
-            return this.overview.defaultNodeSizePx();
+            return KnowledgeGraphDetail.clampNodePx(this.overview.defaultNodeSizePx());
         }
         const O = window.KnowledgeGraphOverview;
         if (!O || !O.nodeSizeOf) return 4;
         const count = (this.allNodes && this.allNodes.length) || 0;
-        return 2 * O.nodeSizeOf(this._medianDegree || 0, count);
+        return KnowledgeGraphDetail.clampNodePx(2 * O.nodeSizeOf(this._medianDegree || 0, count));
     }
 
     /**
-     * 双向切换阈值：交界尺寸 T = √(概览默认尺寸 × 子图默认尺寸)，
-     * 加滞回带 H 后得到 toOverview（缩小侧）与 toSubgraph（放大侧）。
-     * 切换后节点尺寸落在两阈值之间，天然不会立刻反向触发。
+     * 双向切换阈值：只由两张图冻结的「初始大小」推导，与当前相机无关。
+     * 交界基准 T = √(ov0 × sub0)，触发点对称落在 T/√H 与 T×√H，
+     * 因此从任一图的初始视图出发，切换所需的缩放倍率是固定且相等的。
+     * 另给出 entryOverviewPx / entrySubgraphPx（就是两个初始大小）：切换后目标图的落点尺寸。
      */
     switchThresholds() {
-        const clamp = (v) => Math.max(KnowledgeGraphDetail.SWITCH_MIN_PX,
-            Math.min(KnowledgeGraphDetail.SWITCH_MAX_PX, v));
-        const ov = clamp(this.overviewDefaultNodePx());
-        const sub = clamp(this.subgraphDefaultNodePx());
-        const crossover = clamp(Math.sqrt(ov * sub));
-        const h = KnowledgeGraphDetail.SWITCH_HYSTERESIS;
-        return { crossover, toOverview: crossover / h, toSubgraph: crossover * h };
+        const frozen = this._baseSubgraphPx != null && this._baseOverviewPx != null;
+        if (frozen && this._switchThresholdsCache) return this._switchThresholdsCache;
+        const clamp = (v) => KnowledgeGraphDetail.clampNodePx(v);
+        const ov = clamp(this.overviewInitialNodePx());
+        const sub = clamp(this.subgraphInitialNodePx());
+        const crossover = Math.sqrt(ov * sub);
+        const h = Math.sqrt(KnowledgeGraphDetail.SWITCH_HYSTERESIS);
+        const toOverview = clamp(crossover / h);
+        const toSubgraph = clamp(crossover * h);
+        const result = {
+            overviewInitial: ov,
+            subgraphInitial: sub,
+            // 切换后目标图的节点大小 = 它自己的初始大小，绝不继承源图缩放后的尺寸
+            entryOverviewPx: ov,
+            entrySubgraphPx: sub,
+            crossover, toOverview, toSubgraph
+        };
+        if (frozen) this._switchThresholdsCache = result;
+        return result;
     }
 
     /** 起算「手动切换」的冷却与抑制窗口（切换完成时再调一次，覆盖异步构建耗时） */
@@ -991,23 +1055,22 @@ class KnowledgeGraphDetail extends HTMLElement {
     /**
      * 工具栏层级标签点击 = 手动切换（滚轮自动切换的兜底）。
      * 关键：不新增第二套状态机，只复用 upgradeToOverview / backToSubgraph 两个统一入口；
-     * 进入尺寸取稳定带中点 crossover，既保持节点尺寸连续，又落在两条阈值之间不会立刻反向回跳。
+     * 落点尺寸由 switchThresholds 给出的「目标图初始大小」决定，不看当前缩放状态。
      */
     toggleViewMode() {
         // 手动入口始终优先：手动锁只压制「自动」判定，手动连点仅受 600ms 冷却约束（可立即反悔）
         if (this._switching) return;
         const now = Date.now();
         if (this._lastModeSwitch && now - this._lastModeSwitch < KnowledgeGraphDetail.SWITCH_COOLDOWN_MS) return;
-        const entryPx = this.switchThresholds().crossover;
         this._armManualLock();
         this._pendingManualLock = true;   // 异步切换完成后重新起算锁定窗口
         clearTimeout(this._zoomCheckTimer);
         if (this.viewMode === 'subgraph') {
-            this.upgradeToOverview(entryPx);
+            this.upgradeToOverview();
         } else {
             // 与 openInSubgraph（单击节点回填 ID + 定位展开）语义不同，这里只做纯视图切换
             if (this.overview) this.overview.cancelDrill();
-            this.backToSubgraph(entryPx);
+            this.backToSubgraph();
         }
     }
 
@@ -1020,18 +1083,18 @@ class KnowledgeGraphDetail extends HTMLElement {
         if (this._lastModeSwitch && now - this._lastModeSwitch < KnowledgeGraphDetail.SWITCH_COOLDOWN_MS) return;
         const px = this.subgraphNodePx();
         const { toOverview } = this.switchThresholds();
-        if (px > toOverview) return;   // 节点还没缩到「切换后图」的大小
+        if (px > toOverview) return;   // 节点还没缩到触发点
         // 切换前清掉定位圈定的描边/圆环，避免带着高亮跨视图（画布隐藏后圈会残留）
         if (this._locateItem) this._clearLocate();
         this._lastModeSwitch = now;
-        this.upgradeToOverview(px);
+        this.upgradeToOverview();
     }
 
     /**
-     * 升级为全图概览：把切换瞬间的节点直径交给概览反解相机，
-     * 使切过去的一帧里节点大小不变、整图居中（尺寸连续 + 视觉平滑）。
+     * 升级为全图概览：切过去后概览节点一律是它自己的初始大小（ratio≈1 的默认视图、整图居中），
+     * 不继承子图刚缩小到的尺寸。触发点 T/√H 与初始大小只差约 15%，视觉上仍是平滑衔接。
      */
-    async upgradeToOverview(entryPx) {
+    async upgradeToOverview() {
         if (this.viewMode === 'overview' || this._switching) return;
         try {
             this._preDrillZoom = this.graph ? this.graph.getZoom() : 1;
@@ -1039,7 +1102,7 @@ class KnowledgeGraphDetail extends HTMLElement {
             if (!this.overview) return;
             // 清除下钻时的聚光灯（否则概览里除邻域外全被调暗，看起来像「啥也不显示」）
             this.overview.clearSpotlight();
-            this.overview.setCameraForNodeSize(entryPx || this.switchThresholds().toOverview);
+            this.overview.setCameraForNodeSize(this.switchThresholds().entryOverviewPx);
         } catch (error) {
             console.error('升级全图概览失败:', error);
             this.showMessage('升级全图概览失败: ' + error.message);
@@ -1052,9 +1115,11 @@ class KnowledgeGraphDetail extends HTMLElement {
     /**
      * 全图概览缩放跨过下钻阈值 → 以相机中心最近节点为种子下钻子图（由概览组件检测并回调）
      */
-    drillToSubgraph(seedId, entryPx) {
+    drillToSubgraph(seedId, _entryPx) {
         const seed = this.nodeById.get(String(seedId));
         if (!seed) return;
+        // entryPx 是触发瞬间概览的节点尺寸，只用于回调契约；目标图落点固定为子图初始大小，
+        // 不把它透传下去，避免子图带着「放大后的尺寸」开始、下一轮要缩得更小才能切回。
         this._switching = true;
         this._lastModeSwitch = Date.now();   // 与升概览共用冷却，杜绝双向连跳
         this.viewMode = 'subgraph';
@@ -1067,7 +1132,7 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.overview.flyToNode(String(seedId));
         setTimeout(() => {
             try {
-                this.renderSeedSubgraph(String(seedId), entryPx);
+                this.renderSeedSubgraph(String(seedId));
             } catch (error) {
                 console.error('下钻渲染失败:', error);
                 this.showMessage('下钻渲染失败: ' + error.message);
@@ -1082,7 +1147,7 @@ class KnowledgeGraphDetail extends HTMLElement {
      * 种子置画布中心、按 BFS 层环形摆位（层=扩散圈层，观感即「以该节点为中心逐圈展开」）。
      * 渲染后 fitView，聚光灯设为种子+邻域（返回概览可回看）。
      */
-    async renderSeedSubgraph(seedId, entryPx) {
+    async renderSeedSubgraph(seedId) {
         const cap = KnowledgeGraphDetail.MAX_RENDER_NODES;
         // BFS 收集（含种子）
         const order = [seedId];
@@ -1161,18 +1226,17 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.setBreadcrumb('全图 › ' + seedId);
         this.overview.setSpotlight(seedId);
         this.updateStats();
-        // fitView 先给出「子图默认视图」，_fitZoom 必须在其后取值（此前记在前面，恒为布局 zoom=1）
+        // fitView 只负责重绘 + 居中；_fitZoom 记的是「当前种子子图」的 zoom，不再作为切换基准。
         this.graph.fitView(30);
         this._fitZoom = this.graph.getZoom();
-        // 尺寸连续：下钻后节点直径 = 概览切换前直径（比 fitView 略大，衔接用户的放大手势）。
-        // _fitZoom 仍保持 fitView 的值，作为后续切换阈值的固定基准。
-        if (entryPx > 0) {
-            const target = Math.max(0.02, Math.min(10,
-                entryPx / KnowledgeGraphDetail.NODE_BASE_PX));
-            const w = Number(this.graph.get('width')) || 600;
-            const h = Number(this.graph.get('height')) || 400;
-            this.graph.zoomTo(target, { x: w / 2, y: h / 2 });
-        }
+        // 下钻后节点直径固定为冻结的「子图初始大小」，而不是概览里刚放大到的尺寸：
+        // 触发点 T×√H 与初始大小只差约 15%，视觉衔接平滑，且下一轮缩回概览的距离恒定。
+        const px = this.switchThresholds().entrySubgraphPx;
+        const target = Math.max(0.02, Math.min(10,
+            px / KnowledgeGraphDetail.NODE_BASE_PX));
+        const w = Number(this.graph.get('width')) || 600;
+        const h = Number(this.graph.get('height')) || 400;
+        this.graph.zoomTo(target, { x: w / 2, y: h / 2 });
     }
 
     /** 子图内相机聚焦到指定节点，并同步右下角属性面板 */
@@ -1262,6 +1326,10 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.hasMore = false;
         this._fitZoom = 1;
         this._medianDegree = 0;
+        // 换一张图谱 = 换一套初始大小基准，必须清空后重新冻结
+        this._baseSubgraphPx = null;
+        this._baseOverviewPx = null;
+        this._switchThresholdsCache = null;
         this.labelColorMap = {};
         this.expandedNodeIds = new Set();
         this.allNodes = null;
@@ -1342,6 +1410,9 @@ class KnowledgeGraphDetail extends HTMLElement {
                     if (this.graph) {
                         this.graph.fitView(30);
                         this._fitZoom = this.graph.getZoom();
+                        // 唯一一次冻结「子图初始大小」：首张有数据、已 fitView 的子图。
+                        // 后续所有 fitView / zoomTo / 返回子图 / 重建种子子图都不再改写它。
+                        this.captureInitialSubgraphPx();
                     }
                 } catch (e) { /* 忽略 */ }
             }, 100);
