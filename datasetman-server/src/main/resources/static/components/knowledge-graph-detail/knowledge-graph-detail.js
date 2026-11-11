@@ -22,6 +22,8 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.hasMore = false;
         this.isLoadingMore = false;
         this.labelColorMap = {};
+        this._fitZoom = 1;          // 子图「适应画布」时的 zoom（尺寸判据基准）
+        this._medianDegree = 0;     // 全量图度数中位数（概览构建前估算节点尺寸）
         this.attachShadow({ mode: 'open' });
     }
 
@@ -32,8 +34,18 @@ class KnowledgeGraphDetail extends HTMLElement {
 
     // 首屏一次全量查询 + 渲染连通子图（对齐Neo4j Browser的渲染上限），单击节点展开一跳邻接
     static get MAX_RENDER_NODES() { return 500; }
-    // 子图缩放阈值：缩小到该比例自动升级为全图概览（语义缩放）
-    static get RETURN_ZOOM() { return 0.45; }
+    /**
+     * 语义缩放不再比较 G6 zoom / Sigma ratio 两套数值，统一用「节点屏幕直径（CSS px）」：
+     *   子图 G6   D = NODE_BASE_PX * zoom
+     *   概览 Sigma D = 2 * size / √ratio（size 公式见 Overview.nodeSizeOf）
+     * 取两图默认视图尺寸的几何平均 T 作为交界尺寸，T/H 与 T*H 分别为
+     * 「缩到足够小 → 升概览」「放大到足够大 → 进子图」的阈值，H 为滞回带。
+     * 切换瞬间把目标图相机反解到同一个 D，节点尺寸不跳变，形成平滑过渡。
+     */
+    static get NODE_BASE_PX() { return 22; }   // G6 defaultNode.size
+    static get SWITCH_HYSTERESIS() { return 1.5; }
+    static get SWITCH_MIN_PX() { return 1.2; }
+    static get SWITCH_MAX_PX() { return 48; }
     // 模式切换冷却（毫秒），防止阈值附近反复横跳
     static get SWITCH_COOLDOWN_MS() { return 600; }
     static get NEIGHBOR_LIMIT() { return 50; }
@@ -679,6 +691,7 @@ class KnowledgeGraphDetail extends HTMLElement {
                         graph.refresh();
                         graph.paint();
                         graph.fitView(30);
+                        this._fitZoom = graph.getZoom();
                     } catch (e) { /* 忽略 */ }
                 };
                 requestAnimationFrame(() => setTimeout(repaint, 0));
@@ -747,8 +760,10 @@ class KnowledgeGraphDetail extends HTMLElement {
                     // LOD 档位变化 → 同步按钮文案与角标点亮数
                     onLodChange: () => this.syncEdgeLevelButton(),
                     onEdgeModeChange: () => this.syncEdgeLevelButton(),
-                    // 缩放下钻：概览深放大停留 → 以相机中心最近节点为种子切子图
-                    onZoomDrill: (nodeId) => this.drillToSubgraph(nodeId)
+                    // 尺寸判据下钻：概览节点放大到子图尺度 → 以相机中心最近节点为种子切子图
+                    onZoomDrill: (nodeId, px) => this.drillToSubgraph(nodeId, px),
+                    // 两图共用同一套尺寸阈值（概览侧判定与宿主侧判定不会各算各的）
+                    switchThresholds: () => this.switchThresholds()
                 });
             }
 
@@ -801,8 +816,8 @@ class KnowledgeGraphDetail extends HTMLElement {
             if (this.viewMode !== 'subgraph' || !this.graph || this.graph.get('destroyed')) return;
             try {
                 this.graph.refresh();
+                this.graph.fitView(30);
                 this._fitZoom = this.graph.getZoom();
-            this.graph.fitView(30);
             } catch (e) { /* 忽略切换瞬间的竞态 */ }
         };
         requestAnimationFrame(restore);
@@ -818,8 +833,8 @@ class KnowledgeGraphDetail extends HTMLElement {
         const id = String((model && model.id != null) ? model.id : (model || ''));
         if (!id || id === 'null' || id === 'undefined') return;
         const label = (model && (model.rawLabel || model.label)) || id;
-        // ⓪ 下钻连贯体验：概览侧聚光灯（该节点+一跳邻域高亮、其余变暗）+ 相机飞入 350ms，
-        //    飞入完成后无缝切子图 —— 概览与子图因此成为同一张图的两级缩放，而非两张独立图
+        // ⓪ 下钻连贯体验：概览侧聚光灯（该节点+一跳邻域高亮、其余变暗）+ 相机平移到该节点，
+        //    250ms 后无缝切子图 —— 概览与子图因此成为同一张图的两级缩放，而非两张独立图
         if (this.viewMode === 'overview' && this.overview) {
             this.overview.setSpotlight(id);
             if (this.overview.cancelDrill) this.overview.cancelDrill();
@@ -832,7 +847,7 @@ class KnowledgeGraphDetail extends HTMLElement {
         // ⓪.5 面包屑：标识当前子图来自哪次下钻
         this.setBreadcrumb(label);
         if (this.viewMode === 'overview') {
-            // 等 350ms 飞入动画播完再切（聚光灯预览成为「起跳」动作）
+            // 等平移动画播完再切（聚光灯预览成为「起跳」动作）
             setTimeout(() => {
                 if (this.viewMode === 'overview') this.backToSubgraph();
                 if (this.viewMode === 'subgraph') this.locateAndExpandInSubgraph(id, label);
@@ -879,32 +894,75 @@ class KnowledgeGraphDetail extends HTMLElement {
         }
     }
 
-    /**
-     * 子图缩小跨过阈值 → 自动升级为全图概览（语义缩放，250ms节流后触发）
-     */
-    maybeUpgradeToOverview() {
-        if (!this.graph || this.graph.get('destroyed')) return;
-        if (this.viewMode !== 'subgraph') return;
-        const now = Date.now();
-        if (this._lastModeSwitch && now - this._lastModeSwitch < KnowledgeGraphDetail.SWITCH_COOLDOWN_MS) return;
-        // 固定zoom阈值：缩小到适配比例的0.45以下（所有节点都进入视窗且明显变小）才升级
-        if (this.graph.getZoom() >= KnowledgeGraphDetail.RETURN_ZOOM) return;
-        this._lastModeSwitch = now;
-        this.upgradeToOverview();
+    // ---------- 语义缩放：节点屏幕尺寸（CSS px）作为两图共用的刻度 ----------
+
+    /** 子图当前视图下的节点直径 */
+    subgraphNodePx() {
+        const zoom = (this.graph && !this.graph.get('destroyed'))
+            ? this.graph.getZoom() : (this._fitZoom || 1);
+        return KnowledgeGraphDetail.NODE_BASE_PX * zoom;
+    }
+
+    /** 子图「适应画布」默认视图下的节点直径 */
+    subgraphDefaultNodePx() {
+        return KnowledgeGraphDetail.NODE_BASE_PX * (Number(this._fitZoom) || 1);
     }
 
     /**
-     * 升级为全图概览：记录当前缩放比供返回时衔接，复用 enterOverview（FA2 refine/canReuse 均保留）
+     * 概览 ratio=1 默认视图下的节点直径。
+     * 概览还没构建时按同一公式估算（nodeSizeOf + 度数中位数），构建后用真实统计值。
      */
-    async upgradeToOverview() {
+    overviewDefaultNodePx() {
+        if (this.overview && this.overview.defaultNodeSizePx) {
+            return this.overview.defaultNodeSizePx();
+        }
+        const O = window.KnowledgeGraphOverview;
+        if (!O || !O.nodeSizeOf) return 4;
+        const count = (this.allNodes && this.allNodes.length) || 0;
+        return 2 * O.nodeSizeOf(this._medianDegree || 0, count);
+    }
+
+    /**
+     * 双向切换阈值：交界尺寸 T = √(概览默认尺寸 × 子图默认尺寸)，
+     * 加滞回带 H 后得到 toOverview（缩小侧）与 toSubgraph（放大侧）。
+     * 切换后节点尺寸落在两阈值之间，天然不会立刻反向触发。
+     */
+    switchThresholds() {
+        const clamp = (v) => Math.max(KnowledgeGraphDetail.SWITCH_MIN_PX,
+            Math.min(KnowledgeGraphDetail.SWITCH_MAX_PX, v));
+        const ov = clamp(this.overviewDefaultNodePx());
+        const sub = clamp(this.subgraphDefaultNodePx());
+        const crossover = clamp(Math.sqrt(ov * sub));
+        const h = KnowledgeGraphDetail.SWITCH_HYSTERESIS;
+        return { crossover, toOverview: crossover / h, toSubgraph: crossover * h };
+    }
+
+    /** 子图节点缩小到全图概览的尺度 → 自动升级（wheel 缩小手势 / 缩小按钮，250ms 节流后判定） */
+    maybeUpgradeToOverview() {
+        if (!this.graph || this.graph.get('destroyed')) return;
+        if (this.viewMode !== 'subgraph' || this._switching) return;
+        const now = Date.now();
+        if (this._lastModeSwitch && now - this._lastModeSwitch < KnowledgeGraphDetail.SWITCH_COOLDOWN_MS) return;
+        const px = this.subgraphNodePx();
+        const { toOverview } = this.switchThresholds();
+        if (px > toOverview) return;   // 节点还没缩到「切换后图」的大小
+        this._lastModeSwitch = now;
+        this.upgradeToOverview(px);
+    }
+
+    /**
+     * 升级为全图概览：把切换瞬间的节点直径交给概览反解相机，
+     * 使切过去的一帧里节点大小不变、整图居中（尺寸连续 + 视觉平滑）。
+     */
+    async upgradeToOverview(entryPx) {
         if (this.viewMode === 'overview' || this._switching) return;
         try {
             this._preDrillZoom = this.graph ? this.graph.getZoom() : 1;
             await this.enterOverview();
+            if (!this.overview) return;
             // 清除下钻时的聚光灯（否则概览里除邻域外全被调暗，看起来像「啥也不显示」）
-            if (this.overview) this.overview.clearSpotlight();
-            // 概览相机从「近景」档继续（衔接感：从子图缩出一路放大到全图）
-            if (this.overview) this.overview.zoomToNearLevel();
+            this.overview.clearSpotlight();
+            this.overview.setCameraForNodeSize(entryPx || this.switchThresholds().toOverview);
         } catch (error) {
             console.error('升级全图概览失败:', error);
             this.showMessage('升级全图概览失败: ' + error.message);
@@ -914,19 +972,22 @@ class KnowledgeGraphDetail extends HTMLElement {
     /**
      * 全图概览缩放跨过下钻阈值 → 以相机中心最近节点为种子下钻子图（由概览组件检测并回调）
      */
-    drillToSubgraph(seedId) {
+    drillToSubgraph(seedId, entryPx) {
         const seed = this.nodeById.get(String(seedId));
         if (!seed) return;
         this._switching = true;
+        this._lastModeSwitch = Date.now();   // 与升概览共用冷却，杜绝双向连跳
         this.viewMode = 'subgraph';
         const finish = () => {
             this._switching = false;
         };
-        // 相机飞向种子节点（250ms），随后切换画布并以该节点为种子渲染子图
+        // 切换前先取消待触发的下钻，避免飞入动画再次回调
+        if (this.overview) this.overview.cancelDrill();
+        // 概览相机只平移到种子（不改 ratio，保持节点尺寸连续），随后切换画布
         this.overview.flyToNode(String(seedId));
         setTimeout(() => {
             try {
-                this.renderSeedSubgraph(String(seedId));
+                this.renderSeedSubgraph(String(seedId), entryPx);
             } catch (error) {
                 console.error('下钻渲染失败:', error);
                 this.showMessage('下钻渲染失败: ' + error.message);
@@ -941,7 +1002,7 @@ class KnowledgeGraphDetail extends HTMLElement {
      * 种子置画布中心、按 BFS 层环形摆位（层=扩散圈层，观感即「以该节点为中心逐圈展开」）。
      * 渲染后 fitView，聚光灯设为种子+邻域（返回概览可回看）。
      */
-    async renderSeedSubgraph(seedId) {
+    async renderSeedSubgraph(seedId, entryPx) {
         const cap = KnowledgeGraphDetail.MAX_RENDER_NODES;
         // BFS 收集（含种子）
         const order = [seedId];
@@ -1020,8 +1081,18 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.setBreadcrumb('全图 › ' + seedId);
         this.overview.setSpotlight(seedId);
         this.updateStats();
+        // fitView 先给出「子图默认视图」，_fitZoom 必须在其后取值（此前记在前面，恒为布局 zoom=1）
         this.graph.fitView(30);
         this._fitZoom = this.graph.getZoom();
+        // 尺寸连续：下钻后节点直径 = 概览切换前直径（比 fitView 略大，衔接用户的放大手势）。
+        // _fitZoom 仍保持 fitView 的值，作为后续切换阈值的固定基准。
+        if (entryPx > 0) {
+            const target = Math.max(0.02, Math.min(10,
+                entryPx / KnowledgeGraphDetail.NODE_BASE_PX));
+            const w = Number(this.graph.get('width')) || 600;
+            const h = Number(this.graph.get('height')) || 400;
+            this.graph.zoomTo(target, { x: w / 2, y: h / 2 });
+        }
     }
 
     /** 子图内相机聚焦到指定节点，并同步右下角属性面板 */
@@ -1060,8 +1131,8 @@ class KnowledgeGraphDetail extends HTMLElement {
         }
         if ($('#graphHint')) {
             $('#graphHint').innerHTML = overview
-                ? '远景只显示<b>高度数骨架</b>节点，滚轮放大逐步浮现更多；图例可点击过滤；<b>单击节点</b>回子图定位展开'
-                : '滚轮缩放画布；<b>单击节点展开其邻接关系</b>；悬浮查看属性';
+                ? '远景只显示<b>高度数骨架</b>节点，滚轮放大逐步浮现更多；<b>放大到节点足够大自动进子图</b>；单击节点回子图定位'
+                : '滚轮缩放画布；<b>缩小到节点足够小自动切全图概览</b>；单击节点展开邻接；悬浮查看属性';
         }
         this.updateOverviewBadge();
         this.updateStats();
@@ -1106,6 +1177,7 @@ class KnowledgeGraphDetail extends HTMLElement {
         this.totalEdges = 0;
         this.hasMore = false;
         this._fitZoom = 1;
+        this._medianDegree = 0;
         this.labelColorMap = {};
         this.expandedNodeIds = new Set();
         this.allNodes = null;
@@ -1144,6 +1216,14 @@ class KnowledgeGraphDetail extends HTMLElement {
                 this.adjacency.get(src).push(e);
                 this.adjacency.get(dst).push(e);
             });
+            // 概览节点 size 由度数决定；抽样统计中位数，供概览构建前估算「切换后图的节点大小」
+            const degSamples = [];
+            for (let i = 0; i < this.allNodes.length; i += 4) {
+                degSamples.push((this.adjacency.get(String(this.allNodes[i].id)) || []).length);
+            }
+            degSamples.sort((a, b) => a - b);
+            this._medianDegree = degSamples.length
+                ? degSamples[Math.floor(degSamples.length / 2)] : 0;
 
             if (!this.totalNodes) {
                 this.hideLoading();
@@ -1176,8 +1256,8 @@ class KnowledgeGraphDetail extends HTMLElement {
             setTimeout(() => {
                 try {
                     if (this.graph) {
-                        this._fitZoom = this.graph.getZoom();
                         this.graph.fitView(30);
+                        this._fitZoom = this.graph.getZoom();
                     }
                 } catch (e) { /* 忽略 */ }
             }, 100);
@@ -1314,7 +1394,7 @@ class KnowledgeGraphDetail extends HTMLElement {
             // 导致「返回子图」/窗口缩放后出现空白画布。
             enableOptimize: false,
             defaultNode: {
-                size: 22,
+                size: KnowledgeGraphDetail.NODE_BASE_PX,
                 style: {
                     lineWidth: 1
                 },
@@ -1347,10 +1427,12 @@ class KnowledgeGraphDetail extends HTMLElement {
             const model = evt.item.getModel();
             this.expandNode(String(model.id));
         });
-        // 缩小跨过阈值 → 自动升级为全图概览（语义缩放；容器wheel事件，250ms节流后检查缩放比）
+        // 缩小手势 → 按节点屏幕尺寸判定是否升级全图概览（250ms 节流）。
+        // 放大手势不参与判定，避免刚从概览下钻回来又被反向检查。
         const graphContainer = this.shadowRoot.querySelector('#graphContainer');
         if (graphContainer) {
-            graphContainer.addEventListener('wheel', () => {
+            graphContainer.addEventListener('wheel', (e) => {
+                if (e.deltaY <= 0) return;
                 clearTimeout(this._zoomCheckTimer);
                 this._zoomCheckTimer = setTimeout(() => this.maybeUpgradeToOverview(), 250);
             }, { passive: true });

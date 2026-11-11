@@ -40,9 +40,11 @@ class KnowledgeGraphOverview {
         this._spotlight = null;       // 聚光灯节点集合（下钻预览/返回回看）
         this._dimNodeCache = new Map();
         this._dimEdgeCache = null;
-        this._drillArmed = true;      // 缩放下钻武装位（浅放大时武装，深放大停留触发）
+        this._drillArmed = true;      // 缩放下钻武装位（缩回远景时重新武装）
         this._drillTimer = null;
-        this._lastWheelTs = 0;        // 最近一次滚轮事件时间戳
+        this._userZoomIn = false;     // 只有用户滚轮/按钮「放大」才允许自动下钻
+        this._wheelHandler = null;    // mouseCaptor 的 wheel 订阅（destroy 时解绑）
+        this._nodeSizeRef = 2;        // 概览节点 size 中位数（ratio=1 时的像素半径）
         this.selectedNode = null;
         this.selectedNeighbors = [];
         this.neighborCount = 0;
@@ -136,10 +138,22 @@ class KnowledgeGraphOverview {
      * 20 万条边在 Sigma 的矩形边程序下约 120 万顶点，超过 Uint16 索引上限，
      * 必须是 WebGL2 或带 OES_element_index_uint 扩展的 WebGL1。
      */
-    // 缩放下钻阈值：相机 ratio 低于该值视为「细看」意图（比 LOD「细看」档 minRatio 0.12 略深）
-    static get DRILL_RATIO() { return 0.09; }
-    // 相机 ratio 高于该值时重新武装下钻检测（滞回）
-    static get ARM_RATIO() { return 0.15; }
+    /**
+     * 语义缩放的共用刻度：节点的屏幕直径（CSS px）。
+     * - 概览 Sigma：节点 shader 里 u_ratio = 1/√camera.ratio、u_scale = pixelRatio，
+     *   gl_PointSize = size * 2 * u_ratio * u_scale ⇒ CSS 直径 D = 2*size/√ratio。
+     * - 子图 G6：圆形节点随画布矩阵线性缩放 ⇒ D = defaultNode.size * zoom（见宿主 NODE_BASE_PX）。
+     * 两图各自换算成同一个 px 量再比较，切换判据与两套 zoom/ratio 数值彻底解耦。
+     */
+    /** 概览节点半径 size：布局写图与宿主「构建前估算」共用同一公式，保证阈值不失真 */
+    static nodeSizeOf(deg, nodeCount) {
+        const sizeScale = Math.min(1, Math.sqrt(3500 / Math.max(1, nodeCount)));
+        return Math.max(0.9, Math.min(14, (3.4 + 2.4 * Math.log10(1 + deg)) * sizeScale));
+    }
+    static get MIN_CAMERA_RATIO() { return 0.0005; }  // 与 renderer 设置一致
+    static get MAX_CAMERA_RATIO() { return 4; }
+    /** 缩放停更后多久才做切换判定 */
+    static get DRILL_SETTLE_MS() { return 600; }
 
     static isSupported() {
         if (KnowledgeGraphOverview._supported !== undefined) return KnowledgeGraphOverview._supported;
@@ -203,13 +217,52 @@ class KnowledgeGraphOverview {
     }
 
     /**
-     * 相机飞入指定节点邻域（350ms 动画），营造「下钻进入」的连贯体验
+     * 相机飞入指定节点（250ms 平移）。只平移、不改 ratio：
+     * 切换前后节点尺寸必须连续，若这里顺带把 ratio 压到 0.12，节点会突然胀大 3 倍。
+     * getNodeDisplayData 返回归一化 [0,1] 坐标，与相机 x/y 同坐标系；
+     * graph 原始坐标是布局半径上千的数，直接拿来设置相机会飞到图外。
      */
     flyToNode(id) {
-        if (!this.graph || !this.graph.hasNode(id)) return;
-        const attrs = this.graph.getNodeAttributes(id);
-        const camera = this.renderer.getCamera();
-        camera.animate({ x: attrs.x, y: attrs.y, ratio: 0.12 }, { duration: 350 });
+        if (!this.renderer || !this.graph || !this.graph.hasNode(id)) return;
+        const d = this.renderer.getNodeDisplayData(String(id));
+        if (!d) return;
+        this.renderer.getCamera().animate({ x: d.x, y: d.y }, { duration: 250 });
+    }
+
+    /** 当前（或指定 ratio）视图下代表节点的屏幕直径，CSS px */
+    nodeSizePx(ratio) {
+        let r = Number(ratio);
+        if (!(r > 0)) {
+            r = this.renderer ? this.renderer.getCamera().getState().ratio : 1;
+        }
+        r = Math.max(KnowledgeGraphOverview.MIN_CAMERA_RATIO,
+            Math.min(KnowledgeGraphOverview.MAX_CAMERA_RATIO, r));
+        return 2 * this._nodeSizeRef / Math.sqrt(r);
+    }
+
+    /** 全图默认视图（ratio=1）下的节点直径 */
+    defaultNodeSizePx() { return this.nodeSizePx(1); }
+
+    /**
+     * 切换瞬间保持「尺寸连续」：由 D = 2*size/√r 反解 r = (2*size/D)²，
+     * 把目标图相机设成节点直径恰好等于切换前直径的视图，并居中整张图。
+     * 这样切过去的一帧里点不放大也不缩小，视觉上只是同一张图换了渲染器。
+     */
+    setCameraForNodeSize(px) {
+        if (!this.renderer) return;
+        const target = Math.max(0.5, Number(px) || this.defaultNodeSizePx());
+        const ratio = Math.max(KnowledgeGraphOverview.MIN_CAMERA_RATIO,
+            Math.min(KnowledgeGraphOverview.MAX_CAMERA_RATIO,
+                Math.pow(2 * this._nodeSizeRef / target, 2)));
+        const cam = this.renderer.getCamera();
+        cam.setState({ x: 0.5, y: 0.5, ratio });
+        this._camRatio = cam.getState().ratio;
+        // 程序化相机变化不允许触发下钻；重新武装但不置用户手势位
+        this._userZoomIn = false;
+        clearTimeout(this._drillTimer);
+        this._drillArmed = true;
+        this._applyLod(false);
+        this.renderer.render();
     }
 
     /** 渲染概览所需的节点度数（供聚光灯外的常规显示） */
@@ -219,7 +272,6 @@ class KnowledgeGraphOverview {
     }
 
     /**
-     * 一次性构建并渲染全图。    /**
      * 一次性构建并渲染全图。
      * @param {Array} nodes 全量节点 [{id, label, labelType, properties}]
      * @param {Array} edges 全量边   [{source, target, label, properties}]
@@ -334,8 +386,9 @@ class KnowledgeGraphOverview {
         // Sigma 的 node.size 是「相机 ratio=1 时的像素半径」（最终直径 = 2*size/√ratio）。
         // 5 万节点铺在 1200×700 视口里，平均点距只有约 4px，大节点会连成色块；
         // 因此按节点总数自动收缩半径，hub 仍比普通点大，但不再糊成一片。
-        const sizeScale = Math.min(1, Math.sqrt(3500 / Math.max(1, nodeCount)));
+        // 公式抽到 nodeSizeOf：宿主在概览构建之前也能算出「切换后图的节点大小」。
         const largeGraph = nodeCount > 10000;
+        const sizeSamples = [];   // 抽样统计代表节点尺寸，作为语义缩放的尺寸基准
 
         // FNV-1a 哈希 → [0,1)：同一条数据每次布局结果完全一致
         const hash01 = (s, salt) => {
@@ -408,12 +461,13 @@ class KnowledgeGraphOverview {
             const labelType = String(n.labelType || '未分类');
             this.nodeTypeCounts.set(labelType, (this.nodeTypeCounts.get(labelType) || 0) + 1);
 
+            const nodeSize = KnowledgeGraphOverview.nodeSizeOf(deg, nodeCount);
+            if (sizeSamples.length < 4096 && (i % 8 === 0)) sizeSamples.push(nodeSize);
             if (!graph.hasNode(id)) {
                 graph.addNode(id, {
                     x: gx,
                     y: gy,
-                    size: Math.max(0.9, Math.min(14,
-                        (3.4 + 2.4 * Math.log10(1 + deg)) * sizeScale)),
+                    size: nodeSize,
                     color: colorOf(labelType),
                     label: rawLabel.length > 16 ? rawLabel.slice(0, 15) + '…' : rawLabel,
                     zIndex: Math.min(100, deg)
@@ -432,6 +486,11 @@ class KnowledgeGraphOverview {
                 await this.yieldFrame();
             }
         }
+
+        // 代表节点尺寸取抽样中位数：hub 只有少数，用中位节点才符合用户眼里「一个点多大」
+        sizeSamples.sort((a, b) => a - b);
+        this._nodeSizeRef = sizeSamples.length
+            ? sizeSamples[Math.floor(sizeSamples.length / 2)] : 2;
 
         // 节点 LOD 阈值：各档位「度数排名前 K%」的分界线（O(N log N)，一次预计算）
         const degsDesc = Array.from({ length: nodeCount }, (_, i) =>
@@ -556,13 +615,12 @@ class KnowledgeGraphOverview {
         const renderer = this.renderer;
         const toModel = (key) => this.nodeModel(key);
 
-        // 滚轮手势标记：语义缩放下钻只响应「用户滚轮缩放」，
-        // 按钮/动画驱动的相机变化（flyTo/返回子图等）不会误触发自动切换
-        if (this.container) {
-            this.container.addEventListener('wheel', () => {
-                this._lastWheelTs = Date.now();
-            }, { passive: true });
-        }
+        // 只认「用户主动放大」手势：Sigma 的滚轮监听挂在内层 canvas 上并 stopPropagation，
+        // 外层容器收不到 wheel，必须订阅 mouseCaptor。delta > 0 = 放大（getWheelDelta 取反 deltaY）。
+        // 程序化相机动画（切图、飞入、居中）不会置位，因此不会误触发自动切换。
+        const wheelCaptor = renderer.getMouseCaptor();
+        this._wheelHandler = (e) => { if (e && e.delta > 0) this._userZoomIn = true; };
+        wheelCaptor.on('wheel', this._wheelHandler);
 
         renderer.on('enterNode', ({ node, event }) => {
             this.hoveredKey = node;
@@ -738,16 +796,21 @@ class KnowledgeGraphOverview {
     }
 
     zoomIn() {
-        if (this.renderer) this.renderer.getCamera().animatedZoom({ duration: 180 });
+        if (!this.renderer) return;
+        this._userZoomIn = true;   // 工具栏主动放大同样算「用户放大意图」
+        this.renderer.getCamera().animatedZoom({ duration: 180 });
     }
 
     zoomOut() {
-        if (this.renderer) this.renderer.getCamera().animatedUnzoom({ duration: 180 });
+        if (!this.renderer) return;
+        this._userZoomIn = false;
+        this.renderer.getCamera().animatedUnzoom({ duration: 180 });
     }
 
     fit() {
         if (!this.renderer) return;
         this.clearSelection();
+        this._userZoomIn = false;
         this.renderer.getCamera().animatedReset({ duration: 300 });
     }
 
@@ -825,38 +888,47 @@ class KnowledgeGraphOverview {
         clearTimeout(this._lodTimer);
         // 拖动/缩放过程中绝不 refresh；停止 260ms 后若跨档或线宽漂移则做一次重算
         this._lodTimer = setTimeout(() => this._applyLod(false), KnowledgeGraphOverview.LOD_SETTLE_MS);
-        // 缩放下钻检测：手势停更 420ms 后若处于深放大（ratio < 0.09），以相机中心最近节点为种子下钻子图
+        // 缩放停更后按「节点屏幕尺寸」判定是否该进子图（阈值由宿主统一给出）
         clearTimeout(this._drillTimer);
-        this._drillTimer = setTimeout(() => this._maybeDrill(), 600);
+        this._drillTimer = setTimeout(() => this._maybeDrill(),
+            KnowledgeGraphOverview.DRILL_SETTLE_MS);
     }
 
     /**
-     * 缩放下钻检测：深放大状态停留后，以相机中心最近节点为种子回调宿主（onZoomDrill）。
-     * 一次性触发后解除武装；相机回到浅放大（ratio > 0.15）时重新武装。
+     * 尺寸判据下钻：节点放大到与子图默认视图相当（toSubgraph）时才回调宿主，
+     * 并把切换瞬间的节点直径一起传过去，让子图把相机接到同一尺寸上。
+     * 缩回 toOverview 以下重新武装；触发一次后解除武装，避免边界反复横跳。
      */
     _maybeDrill() {
         if (this._destroyed || !this.renderer) return;
-        if (this._camRatio >= KnowledgeGraphOverview.DRILL_RATIO) {
+        const thresholds = this.hooks.switchThresholds && this.hooks.switchThresholds();
+        if (!thresholds) return;
+        const px = this.nodeSizePx();   // 读实时相机，不用动画期间的缓存值
+        if (px <= thresholds.toOverview) {
             this._drillArmed = true;
+            this._userZoomIn = false;
             return;
         }
-        if (!this._drillArmed) return;
+        if (px < thresholds.toSubgraph || !this._drillArmed || !this._userZoomIn) return;
         this._drillArmed = false;
-        console.log('[kg-overview] 深放大确认，触发下钻: ratio=', this._camRatio);
+        this._userZoomIn = false;
         const id = this.getNodeNearCamera();
-        if (id && this.hooks.onZoomDrill) this.hooks.onZoomDrill(id);
+        if (id && this.hooks.onZoomDrill) this.hooks.onZoomDrill(id, px);
     }
 
     /**
-     * 相机中心最近的节点id（O(N) 遍历；调用侧已节流）
+     * 相机中心最近的节点id（O(N) 遍历；调用侧已节流）。
+     * 必须用归一化后的显示坐标：graph 原始坐标与相机 x/y 不在同一量纲。
      */
     getNodeNearCamera() {
         if (!this.renderer || !this.graph) return null;
         const state = this.renderer.getCamera().getState();
         const cx = state.x, cy = state.y;
         let best = null, bestD = Infinity;
-        this.graph.forEachNode((node, attrs) => {
-            const dx = attrs.x - cx, dy = attrs.y - cy;
+        this.graph.forEachNode((node) => {
+            const d = this.renderer.getNodeDisplayData(node);
+            if (!d) return;
+            const dx = d.x - cx, dy = d.y - cy;
             const d2 = dx * dx + dy * dy;
             if (d2 < bestD) { bestD = d2; best = node; }
         });
@@ -877,6 +949,7 @@ class KnowledgeGraphOverview {
     cancelDrill() {
         clearTimeout(this._drillTimer);
         this._drillArmed = false;
+        this._userZoomIn = false;
     }
 
     /** 相机 ratio 相对上次边宽补偿的漂移是否超过 18%（超过则需要 refresh 重算补偿） */
@@ -1118,8 +1191,14 @@ class KnowledgeGraphOverview {
         clearTimeout(this._resizeTimer);
         clearTimeout(this._lodTimer);
         clearTimeout(this._refreshTimer);
-        this._resizeTimer = this._lodTimer = this._refreshTimer = null;
+        clearTimeout(this._drillTimer);
+        this._resizeTimer = this._lodTimer = this._refreshTimer = this._drillTimer = null;
         this._lastClick = null;
+        this._userZoomIn = false;
+        if (this._wheelHandler && this.renderer) {
+            try { this.renderer.getMouseCaptor().off('wheel', this._wheelHandler); } catch (e) { /* 已释放 */ }
+            this._wheelHandler = null;
+        }
         this._nodeTypeFilter.clear();
         this._edgeTypeFilter.clear();
         this._hiddenNodeCache.clear();
