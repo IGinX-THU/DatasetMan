@@ -50,13 +50,18 @@ class KnowledgeGraphDetail extends HTMLElement {
      *   概览 Sigma D = 2 * size / √ratio（size 公式见 Overview.nodeSizeOf）
      * 两张图各自的「初始视图节点直径」在首帧冻结为 sub0 / ov0，此后永不改写。
      * 阈值只由这两个冻结值推导：T = √(ov0 × sub0) 为交界基准，
-     * T/√H、T×√H 分别是「缩到足够小 → 升概览」「放到足够大 → 进子图」的触发点。
-     * 切换瞬间目标图一律回到自己的初始大小（ov0 / sub0），不继承源图放大或缩小后的尺寸；
-     * 于是每张图从初始视图出发都只需固定的约 √H 倍缩放即可切换，距离不会一轮轮变远。
+     * toOverview = T/√H（缩小侧）、toSubgraph = T×SWITCH_ZOOM_IN_FACTOR（放大侧）。
+     * 两侧刻意不对称：G6 滚轮缩小每档 ×0.9（约 1.11 倍/档），Sigma 放大每档
+     * ratio÷1.7 ⇒ 节点 ×√1.7（约 1.30 倍/档）；同样的倍率在概览侧只要 2~3 档就跨过，
+     * 观感就是「还没放大够就切了」，所以放大侧需要更长的行程。
+     * 切换瞬间目标图一律回到自己的初始大小（ov0 / sub0），不继承源图放大或缩小后的尺寸，
+     * 基准不随相机历史漂移，每轮切换所需缩放距离恒定。
      */
     static get NODE_BASE_PX() { return 22; }   // G6 defaultNode.size
-    // 以 T 为中心的滞回带倍率（√1.5 ≈ 1.225 倍），保证触发后不会立刻反向回跳
+    // 缩小侧：以 T 为中心的滞回带（√1.5 ≈ 1.225 倍），保证触发后不会立刻反向回跳
     static get SWITCH_HYSTERESIS() { return 1.5; }
+    // 放大侧：相对 T 的倍率。调大 = 概览要放得更大才进子图（2.0 → 约 4 档滚轮、节点 ≈7.7px）
+    static get SWITCH_ZOOM_IN_FACTOR() { return 2.0; }
     static get SWITCH_MIN_PX() { return 1.2; }
     static get SWITCH_MAX_PX() { return 48; }
     // 模式切换冷却（毫秒），防止阈值附近反复横跳
@@ -1014,9 +1019,10 @@ class KnowledgeGraphDetail extends HTMLElement {
 
     /**
      * 双向切换阈值：只由两张图冻结的「初始大小」推导，与当前相机无关。
-     * 交界基准 T = √(ov0 × sub0)，触发点对称落在 T/√H 与 T×√H，
-     * 因此从任一图的初始视图出发，切换所需的缩放倍率是固定且相等的。
-     * 另给出 entryOverviewPx / entrySubgraphPx（就是两个初始大小）：切换后目标图的落点尺寸。
+     * 交界基准 T = √(ov0 × sub0)；缩小侧 toOverview = T/√H，
+     * 放大侧 toSubgraph = T×SWITCH_ZOOM_IN_FACTOR（比缩小侧宽，补偿 Sigma 更大的滚轮步长）。
+     * 另给出 entryOverviewPx / entrySubgraphPx（就是两个初始大小）：切换后目标图的落点尺寸，
+     * 落点不随阈值调整而变，保证下一轮「缩回概览」的距离仍然恒定。
      */
     switchThresholds() {
         const frozen = this._baseSubgraphPx != null && this._baseOverviewPx != null;
@@ -1027,7 +1033,7 @@ class KnowledgeGraphDetail extends HTMLElement {
         const crossover = Math.sqrt(ov * sub);
         const h = Math.sqrt(KnowledgeGraphDetail.SWITCH_HYSTERESIS);
         const toOverview = clamp(crossover / h);
-        const toSubgraph = clamp(crossover * h);
+        const toSubgraph = clamp(crossover * KnowledgeGraphDetail.SWITCH_ZOOM_IN_FACTOR);
         const result = {
             overviewInitial: ov,
             subgraphInitial: sub,
@@ -1229,8 +1235,10 @@ class KnowledgeGraphDetail extends HTMLElement {
         // fitView 只负责重绘 + 居中；_fitZoom 记的是「当前种子子图」的 zoom，不再作为切换基准。
         this.graph.fitView(30);
         this._fitZoom = this.graph.getZoom();
-        // 下钻后节点直径固定为冻结的「子图初始大小」，而不是概览里刚放大到的尺寸：
-        // 触发点 T×√H 与初始大小只差约 15%，视觉衔接平滑，且下一轮缩回概览的距离恒定。
+        // 下钻后节点直径固定为冻结的「子图初始大小」，而不是概览里刚放大到的尺寸。
+        // 放大侧触发点被刻意推后（节点会比初始大小大），落点仍回初始大小：
+        // 画布内容从 5 万点全图换成 500 点带标签的力导子图，观感是「换了一级视图」；
+        // 更重要的是落点不随放大行程变化，下一轮缩回概览的距离才恒定、不会越滚越远。
         const px = this.switchThresholds().entrySubgraphPx;
         const target = Math.max(0.02, Math.min(10,
             px / KnowledgeGraphDetail.NODE_BASE_PX));
