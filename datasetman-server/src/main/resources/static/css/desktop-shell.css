@@ -77,6 +77,9 @@
 .bottom-sidebar-spacer {
     flex: 1;
     text-align: center;
+    font-size: 12px;
+    color: rgba(102, 102, 102, 0.7);
+    user-select: none;
 }
 
 .bottom-sidebar-icons {
@@ -561,6 +564,10 @@
 html.dark-mode .bottom-sidebar-tabs {
     background: linear-gradient(to bottom, #2d2d2d 0%, #252525 100%);
     border-top: 1px solid #404040;
+}
+
+html.dark-mode .bottom-sidebar-spacer {
+    color: rgba(200, 200, 200, 0.5);
 }
 
 html.dark-mode .bottom-sidebar-label {
