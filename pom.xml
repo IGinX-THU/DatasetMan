@@ -9,7 +9,7 @@
     <packaging>pom</packaging>
 
     <name>datasetman Parent</name>
-    <description>数据集管理软件 - 父项目</description>
+    <description>多模态知识底座 - 父项目</description>
 
     <modules>
         <module>datasetman-common</module>
